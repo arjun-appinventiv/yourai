@@ -54,27 +54,82 @@ export const AnalysisResults = ({ analysis }: AnalysisResultsProps) => {
           </div>
           <h3 className="text-xl font-semibold">Draft Scope of Work</h3>
         </div>
-        <div className="space-y-6">
-          <div className="border-l-4 border-primary pl-6 py-4 bg-muted/30 rounded-r-lg">
-            <div className="prose prose-sm max-w-none">
-              <div className="text-foreground/90 leading-relaxed space-y-4 font-serif">
-                {analysis.scopeOfWork.split('\n\n').map((paragraph, idx) => (
-                  <div key={idx} className="whitespace-pre-wrap">
-                    {paragraph}
-                  </div>
-                ))}
-              </div>
-            </div>
+        <div className="space-y-4">
+          <div className="prose prose-slate max-w-none">
+            {analysis.scopeOfWork.split('\n').map((line, idx) => {
+              // H1 headers
+              if (line.startsWith('# ')) {
+                return (
+                  <h1 key={idx} className="text-3xl font-bold mt-8 mb-4 text-foreground border-b-2 border-primary pb-2">
+                    {line.substring(2)}
+                  </h1>
+                );
+              }
+              // H2 headers
+              if (line.startsWith('## ')) {
+                return (
+                  <h2 key={idx} className="text-2xl font-semibold mt-6 mb-3 text-foreground">
+                    {line.substring(3)}
+                  </h2>
+                );
+              }
+              // H3 headers
+              if (line.startsWith('### ')) {
+                return (
+                  <h3 key={idx} className="text-xl font-semibold mt-4 mb-2 text-primary">
+                    {line.substring(4)}
+                  </h3>
+                );
+              }
+              // Bold text
+              if (line.startsWith('**') && line.endsWith('**')) {
+                return (
+                  <p key={idx} className="font-semibold text-foreground mt-2">
+                    {line.substring(2, line.length - 2)}
+                  </p>
+                );
+              }
+              // List items
+              if (line.startsWith('- ')) {
+                return (
+                  <li key={idx} className="ml-6 text-foreground/90 my-1">
+                    {line.substring(2)}
+                  </li>
+                );
+              }
+              // Numbered lists
+              if (/^\d+\.\s/.test(line)) {
+                return (
+                  <li key={idx} className="ml-6 text-foreground/90 my-1 list-decimal">
+                    {line.substring(line.indexOf('.') + 2)}
+                  </li>
+                );
+              }
+              // Horizontal rule
+              if (line === '---') {
+                return <hr key={idx} className="my-8 border-border" />;
+              }
+              // Empty line
+              if (line.trim() === '') {
+                return <div key={idx} className="h-2" />;
+              }
+              // Regular paragraph
+              return (
+                <p key={idx} className="text-foreground/90 leading-relaxed my-2">
+                  {line}
+                </p>
+              );
+            })}
           </div>
-          <div className="flex gap-2 flex-wrap pt-4 border-t border-border/50">
+          <div className="flex gap-2 flex-wrap pt-6 border-t border-border/50">
             <Badge variant="secondary" className="text-xs">
-              YAML Format
+              Professional Document
             </Badge>
             <Badge variant="secondary" className="text-xs">
               Ready for Implementation
             </Badge>
             <Badge variant="secondary" className="text-xs">
-              Professional Document
+              Client-Ready
             </Badge>
           </div>
         </div>
