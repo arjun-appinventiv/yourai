@@ -47,28 +47,36 @@ export const AnalysisResults = ({ analysis }: AnalysisResultsProps) => {
       </Card>
 
       {/* Scope of Work */}
-      <Card className="p-6 border-border/50 shadow-lg">
+      <Card className="p-8 border-border/50 shadow-lg bg-card">
         <div className="flex items-center gap-2 mb-6">
           <div className="p-2 rounded-lg bg-primary/10">
             <FileText className="w-5 h-5 text-primary" />
           </div>
           <h3 className="text-xl font-semibold">Draft Scope of Work</h3>
         </div>
-        <div className="relative">
-          <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-accent/5 rounded-lg -z-10" />
-          <div className="p-6 rounded-lg border border-border/50 bg-background/95 backdrop-blur">
-            <pre className="text-sm leading-relaxed overflow-x-auto whitespace-pre-wrap font-mono">
-              <code className="text-foreground">{analysis.scopeOfWork}</code>
-            </pre>
+        <div className="space-y-6">
+          <div className="border-l-4 border-primary pl-6 py-4 bg-muted/30 rounded-r-lg">
+            <div className="prose prose-sm max-w-none">
+              <div className="text-foreground/90 leading-relaxed space-y-4 font-serif">
+                {analysis.scopeOfWork.split('\n\n').map((paragraph, idx) => (
+                  <div key={idx} className="whitespace-pre-wrap">
+                    {paragraph}
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
-        </div>
-        <div className="mt-4 flex gap-2 flex-wrap">
-          <Badge variant="outline" className="text-xs">
-            YAML Format
-          </Badge>
-          <Badge variant="outline" className="text-xs">
-            Ready for Implementation
-          </Badge>
+          <div className="flex gap-2 flex-wrap pt-4 border-t border-border/50">
+            <Badge variant="secondary" className="text-xs">
+              YAML Format
+            </Badge>
+            <Badge variant="secondary" className="text-xs">
+              Ready for Implementation
+            </Badge>
+            <Badge variant="secondary" className="text-xs">
+              Professional Document
+            </Badge>
+          </div>
         </div>
       </Card>
 
