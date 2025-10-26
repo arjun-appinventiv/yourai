@@ -23,7 +23,8 @@ const readFileAsBase64 = (file: File): Promise<string> => {
 
 export const analyzeProb = async (
   problemText: string,
-  file: File | null
+  file: File | null,
+  platforms: string[]
 ): Promise<AnalysisResult> => {
   const apiKey = getApiKey();
 
@@ -132,7 +133,219 @@ export const analyzeProb = async (
   const featuresJson = JSON.parse(featuresData.choices[0].message.content);
   const features = featuresJson.features || Object.values(featuresJson)[0] || [];
 
-  // Step 4: Generate scope of work
+  // Step 4: Generate scope of work based on platform selection
+  const platformTypes = platforms.length > 0 ? platforms.join(" and ") : "Web App";
+  
+  const webAppTemplate = `project:
+  title: "<Project_Name>"
+  version: "1.0"
+  prepared_by: "<Your_Name>"
+  prepared_for: "<Client_Name>"
+  date: "<Date>"
+
+overview:
+  summary: >
+    The <Project_Name> platform is a web-based system designed to streamline 
+    <Business_Function> through a structured workflow for vendors and administrators. 
+    This document defines the modules, PRD coverage, and core features.
+
+objectives:
+  - "Develop a secure, scalable, and modular web platform."
+  - "Enable vendors to manage submissions, documents, and updates."
+  - "Allow administrators to review, approve, and monitor vendor activity."
+  - "Provide analytics and reporting tools for visibility and control."
+
+deliverables:
+  - "Product Requirements Document (PRD)"
+  - "User Flow & Information Architecture"
+  - "UI/UX Wireframes"
+  - "Module & Feature Implementation"
+  - "API and Integration Documentation"
+  - "Quality Assurance & Testing Plan"
+  - "UAT Support and Technical Documentation"
+
+modules:
+  - name: "Authentication & User Management"
+    description: "Handles all vendor, admin, and sub-user access and control."
+    features:
+      - "User registration and onboarding flow"
+      - "Role-based access control"
+      - "Forgot password and email verification"
+      - "User profile management"
+
+  - name: "Vendor Panel"
+    description: "Vendor-side interface for managing submissions, uploads, and approvals."
+    features:
+      - "Upload and manage documents"
+      - "View submission status and feedback"
+      - "Edit and resubmit rejected items"
+      - "Notification center for updates"
+
+  - name: "Admin Panel"
+    description: "Admin interface for reviewing, approving, and managing vendor activities."
+    features:
+      - "Dashboard with pending reviews and metrics"
+      - "Approve/reject submissions with comments"
+      - "Role & permission management"
+      - "Exportable reports"
+
+  - name: "Communication & Notifications"
+    description: "System-driven communication for status updates and alerts."
+    features:
+      - "Email and in-app notifications"
+      - "Templated messages for approvals and rejections"
+      - "Customizable notification rules"
+
+  - name: "Reports & Analytics"
+    description: "Performance monitoring and insight generation."
+    features:
+      - "Vendor activity reports"
+      - "Submission trends and summary dashboards"
+      - "Export to Excel/PDF"
+      - "Filters and date-based reports"
+
+  - name: "Integrations"
+    description: "Third-party integrations for extended functionality."
+    features:
+      - "Payment gateway integration (if applicable)"
+      - "CRM or ERP sync"
+      - "API/webhook-based data exchange"
+      - "Email service provider integration"
+
+non_functional_requirements:
+  - "Scalable architecture supporting <X> concurrent users."
+  - "Response time under <Y> seconds for key transactions."
+  - "Data encryption at rest and in transit."
+  - "Responsive design for all device sizes."
+  - "Code documentation and maintainability compliance."
+
+assumptions:
+  - "Client provides all content, credentials, and third-party access before development."
+  - "Feature additions or scope changes will trigger a change request."
+  - "APIs from external systems will be available and stable."
+
+out_of_scope:
+  - "Unspecified modules or future enhancements."
+  - "Content creation or data migration beyond defined scope."
+  - "Post-launch support unless explicitly mentioned."
+
+acceptance_criteria:
+  - "All core modules implemented as per PRD."
+  - "QA and UAT sign-off achieved."
+  - "Documentation and code handover completed."`;
+
+  const mobileAppTemplate = `project:
+  title: "<Project_Name>"
+  version: "1.0"
+  prepared_by: "<Your_Name>"
+  prepared_for: "<Client_Name>"
+  date: "<Date>"
+
+overview:
+  summary: >
+    The <Project_Name> mobile application is designed to deliver a seamless, 
+    mobile-first experience focused on <App_Goal> (e.g., crew communication, 
+    learning, or operational efficiency). 
+    This scope outlines modules, PRDs, and features across the mobile ecosystem.
+
+objectives:
+  - "Develop a user-friendly and high-performance mobile app."
+  - "Deliver core experiences across defined modules aligned with business goals."
+  - "Ensure offline support, responsiveness, and optimized performance."
+  - "Establish a scalable foundation for future releases."
+
+deliverables:
+  - "Product Requirements Document (PRD)"
+  - "Information Architecture & User Flows"
+  - "UI/UX Wireframes & Prototypes"
+  - "Functional Modules & Features Implementation"
+  - "API Documentation & Backend Integration Details"
+  - "QA & Testing Plan"
+  - "UAT Support and App Handover"
+
+modules:
+  - name: "Onboarding & Authentication"
+    description: "User registration, login, and onboarding experience."
+    features:
+      - "Login via email/SSO"
+      - "User onboarding screens"
+      - "Password reset and verification"
+      - "Profile setup flow"
+
+  - name: "Home Dashboard"
+    description: "Main landing module with access to primary features."
+    features:
+      - "Personalized welcome and highlights"
+      - "Quick navigation to modules"
+      - "Latest updates and announcements"
+
+  - name: "<Core_Module_Name>"
+    description: "Primary feature module (e.g., Training, Task Management, Ordering, etc.)"
+    features:
+      - "<Feature_1>"
+      - "<Feature_2>"
+      - "<Feature_3>"
+      - "<Feature_4>"
+
+  - name: "Notifications & Alerts"
+    description: "Real-time communication and system alerts."
+    features:
+      - "Push notifications for key updates"
+      - "In-app notification center"
+      - "Customizable alert preferences"
+
+  - name: "Settings & Preferences"
+    description: "Manage personal settings and app preferences."
+    features:
+      - "Dark/light mode toggle"
+      - "Language and region settings"
+      - "Manage permissions and notifications"
+
+  - name: "Admin/Back-office Dashboard (if applicable)"
+    description: "Web dashboard for admin management of app data and users."
+    features:
+      - "Manage user accounts and roles"
+      - "Upload and manage content"
+      - "Track usage metrics"
+      - "Generate reports"
+
+non_functional_requirements:
+  - "Mobile app optimized for both iOS and Android."
+  - "Offline support for critical modules."
+  - "Secure data storage (encrypted local and API)."
+  - "Smooth animations and optimized loading performance."
+  - "Scalable backend architecture supporting <X> active users."
+
+assumptions:
+  - "All assets, content, and credentials will be provided by the client."
+  - "App store accounts (Google/Apple) will be managed by the client or shared for release."
+  - "Third-party SDKs will be provided prior to development."
+
+out_of_scope:
+  - "Feature requests not listed in this document."
+  - "Post-launch analytics setup unless specified."
+  - "Maintenance and support beyond agreed warranty."
+
+acceptance_criteria:
+  - "All defined modules functional as per PRD."
+  - "UAT and store submission completed successfully."
+  - "Documentation and credentials handed over."
+
+sign_off:
+  client_representative: "<Client_Name>"
+  project_owner: "<Your_Name>"
+  approval_status: "Pending"`;
+
+  let sowPrompt = `Based on the problem, insights, and features, draft a comprehensive scope of work in YAML format for a ${platformTypes} project.`;
+  
+  if (platforms.includes("Web App") && platforms.includes("Mobile App")) {
+    sowPrompt += `\n\nGenerate TWO complete SOWs:\n1. First, generate the Web App SOW using this template:\n${webAppTemplate}\n\n2. Then, generate the Mobile App SOW using this template:\n${mobileAppTemplate}\n\nFill in all placeholders with relevant information based on the problem statement. Replace <Project_Name>, <Business_Function>, <App_Goal>, <Core_Module_Name>, <Feature_X>, etc. with actual values.`;
+  } else if (platforms.includes("Web App")) {
+    sowPrompt += `\n\nUse this YAML template:\n${webAppTemplate}\n\nFill in all placeholders with relevant information based on the problem statement. Replace <Project_Name>, <Business_Function>, etc. with actual values.`;
+  } else if (platforms.includes("Mobile App")) {
+    sowPrompt += `\n\nUse this YAML template:\n${mobileAppTemplate}\n\nFill in all placeholders with relevant information based on the problem statement. Replace <Project_Name>, <App_Goal>, <Core_Module_Name>, <Feature_X>, etc. with actual values.`;
+  }
+
   const scopeResponse = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -149,10 +362,10 @@ export const analyzeProb = async (
         },
         {
           role: "user",
-          content: "Based on the problem, insights, and features, draft a comprehensive scope of work. Include project phases, timeline estimates, deliverables, and key considerations. Be professional and detailed (3-4 paragraphs)."
+          content: sowPrompt
         }
       ],
-      max_tokens: 1000,
+      max_tokens: 3000,
       temperature: 0.7,
     }),
   });

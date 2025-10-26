@@ -7,6 +7,7 @@ import { Upload, Loader2, FileText, Image as ImageIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { analyzeProb } from "@/lib/analysis";
 import type { AnalysisResult } from "@/pages/Index";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface ProblemInputProps {
   onAnalysisComplete: (result: AnalysisResult) => void;
@@ -17,7 +18,16 @@ interface ProblemInputProps {
 export const ProblemInput = ({ onAnalysisComplete, isAnalyzing, setIsAnalyzing }: ProblemInputProps) => {
   const [problemText, setProblemText] = useState("");
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>(["Web App"]);
   const { toast } = useToast();
+
+  const togglePlatform = (platform: string) => {
+    setSelectedPlatforms(prev => 
+      prev.includes(platform) 
+        ? prev.filter(p => p !== platform)
+        : [...prev, platform]
+    );
+  };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -49,9 +59,18 @@ export const ProblemInput = ({ onAnalysisComplete, isAnalyzing, setIsAnalyzing }
       return;
     }
 
+    if (selectedPlatforms.length === 0) {
+      toast({
+        title: "Platform Selection Required",
+        description: "Please select at least one platform type.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsAnalyzing(true);
     try {
-      const result = await analyzeProb(problemText, uploadedFile);
+      const result = await analyzeProb(problemText, uploadedFile, selectedPlatforms);
       onAnalysisComplete(result);
       toast({
         title: "Analysis complete",
@@ -74,11 +93,43 @@ export const ProblemInput = ({ onAnalysisComplete, isAnalyzing, setIsAnalyzing }
         <div>
           <h2 className="text-2xl font-semibold mb-2">Problem Statement</h2>
           <p className="text-muted-foreground">
-            Describe the problem you want to solve or upload a document
+            Select platform type(s) and describe the problem you want to solve
           </p>
         </div>
 
         <div className="space-y-4">
+          {/* Platform Selection */}
+          <div className="space-y-3">
+            <Label className="text-base font-semibold">Platform Type</Label>
+            <div className="flex gap-6">
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="web-app" 
+                  checked={selectedPlatforms.includes("Web App")}
+                  onCheckedChange={() => togglePlatform("Web App")}
+                />
+                <label
+                  htmlFor="web-app"
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                >
+                  1️⃣ Web App
+                </label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="mobile-app" 
+                  checked={selectedPlatforms.includes("Mobile App")}
+                  onCheckedChange={() => togglePlatform("Mobile App")}
+                />
+                <label
+                  htmlFor="mobile-app"
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                >
+                  2️⃣ Mobile App
+                </label>
+              </div>
+            </div>
+          </div>
           <div>
             <Label htmlFor="problem">Problem Description</Label>
             <Textarea
