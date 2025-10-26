@@ -48,14 +48,27 @@ export const AnalysisResults = ({ analysis }: AnalysisResultsProps) => {
 
       {/* Scope of Work */}
       <Card className="p-6 border-border/50 shadow-lg">
-        <div className="flex items-center gap-2 mb-4">
+        <div className="flex items-center gap-2 mb-6">
           <div className="p-2 rounded-lg bg-primary/10">
             <FileText className="w-5 h-5 text-primary" />
           </div>
           <h3 className="text-xl font-semibold">Draft Scope of Work</h3>
         </div>
-        <div className="prose prose-sm max-w-none text-foreground">
-          <p className="whitespace-pre-wrap leading-relaxed">{analysis.scopeOfWork}</p>
+        <div className="relative">
+          <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-accent/5 rounded-lg -z-10" />
+          <div className="p-6 rounded-lg border border-border/50 bg-background/95 backdrop-blur">
+            <pre className="text-sm leading-relaxed overflow-x-auto whitespace-pre-wrap font-mono">
+              <code className="text-foreground">{analysis.scopeOfWork}</code>
+            </pre>
+          </div>
+        </div>
+        <div className="mt-4 flex gap-2 flex-wrap">
+          <Badge variant="outline" className="text-xs">
+            YAML Format
+          </Badge>
+          <Badge variant="outline" className="text-xs">
+            Ready for Implementation
+          </Badge>
         </div>
       </Card>
 

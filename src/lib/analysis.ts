@@ -395,33 +395,39 @@ sign_off:
         },
         {
           role: "user",
-          content: `Based on the features needed for this project, recommend AI tools and APIs that can help build these features quickly and cost-effectively. 
+          content: `Analyze the specific features from the SOW and recommend ONLY the AI tools that are directly needed for this project.
 
-Consider categories like:
-- Voice/Speech (e.g., Whisper API, ElevenLabs, AssemblyAI)
-- Text/LLM (e.g., DeepSeek, ChatGPT, Claude, Gemini - mention which is cheaper)
-- Image Generation (e.g., DALL-E, Midjourney, Stable Diffusion)
-- Image Analysis (e.g., GPT-4 Vision, Claude Vision)
-- Embeddings/Search (e.g., OpenAI Embeddings, Pinecone)
-- Translation (e.g., DeepL, Google Translate)
+For each feature in the SOW that could benefit from AI:
+1. Identify the specific capability needed (e.g., "vendor document OCR", "admin dashboard analytics", "real-time chat support")
+2. Recommend the most cost-effective AI tool for that specific need
+3. Explain WHY this feature needs AI and HOW the tool solves it
+4. Include actual pricing
 
-Return as JSON with this structure:
+Available AI tools by category:
+- Voice/Speech: Whisper API ($0.006/min), ElevenLabs ($0.30/1K chars), AssemblyAI ($0.00025/sec)
+- Text/LLM: DeepSeek ($0.14/$0.28 per 1M tokens - cheapest), GPT-4o-mini ($0.15/$0.60 per 1M tokens), GPT-4o ($2.50/$10.00 per 1M tokens), Claude Sonnet ($3/$15 per 1M tokens), Gemini Flash ($0.075/$0.30 per 1M tokens - fast & cheap)
+- Image Generation: DALL-E 3 ($0.04-0.08/image), Stable Diffusion ($0.002/image via Replicate), Flux Schnell (free via Replicate)
+- Image Analysis: GPT-4o Vision ($2.50 per 1M tokens), Claude Sonnet Vision ($3 per 1M tokens), Gemini Vision ($0.075 per 1M tokens)
+- Embeddings: OpenAI text-embedding-3-small ($0.02 per 1M tokens), Cohere ($0.10 per 1M tokens)
+- Vector DB: Pinecone ($70/mo for 1M vectors), Supabase pgvector (free up to 500MB)
+
+Return as JSON:
 {
   "categories": [
     {
-      "category": "Voice & Speech",
+      "category": "Document Processing",
       "tools": [
         {
-          "name": "Whisper API",
-          "useCase": "Speech-to-text transcription",
-          "reason": "Industry-leading accuracy, supports 99+ languages, cost-effective at $0.006/minute"
+          "name": "GPT-4o Vision",
+          "useCase": "Vendor document verification & OCR",
+          "reason": "Can extract text from invoices/contracts, validate document fields. At $2.50 per 1M input tokens (~1,500 pages), cheaper than dedicated OCR for low volumes. Handles various document formats without preprocessing."
         }
       ]
     }
   ]
 }
 
-Only recommend tools that are relevant to the project features. Be specific about why each tool is recommended and mention pricing when relevant.`
+CRITICAL: Only include tools that map to actual features in the SOW. If no AI is needed for a feature, don't mention it. Be specific about which SOW feature each tool addresses.`
         }
       ],
       max_tokens: 1500,
