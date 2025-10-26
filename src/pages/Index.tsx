@@ -5,7 +5,15 @@ import { ApiKeyConfig } from "@/components/ApiKeyConfig";
 import { Sparkles } from "lucide-react";
 
 export interface AnalysisResult {
-  insights: string;
+  insights: {
+    caseStudies: Array<{
+      company: string;
+      approach: string;
+      features: string[];
+      failures: string[];
+    }>;
+    recommendations: string[];
+  };
   features: string[];
   scopeOfWork: string;
   aiTools: Array<{

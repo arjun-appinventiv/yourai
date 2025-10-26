@@ -82,11 +82,39 @@ export const analyzeProb = async (
         ...messages,
         {
           role: "user",
-          content: "Based on this problem, provide insights on how similar problems have been solved by other companies. Include any notable successes or failures. Be concise but informative (2-3 paragraphs)."
+          content: `Analyze this problem and provide detailed market insights in a structured format.
+
+Research and provide:
+1. **Case Studies** (2-3 companies): Real companies that tried to solve similar problems
+   - Company name
+   - What approach/solution they tried
+   - Key features they implemented (3-5 specific features)
+   - Where and why they failed or struggled (specific reasons)
+
+2. **Recommendations**: Based on these case studies, what should be avoided (3-5 specific recommendations)
+
+Return as JSON:
+{
+  "caseStudies": [
+    {
+      "company": "Company Name",
+      "approach": "Brief description of their solution approach",
+      "features": ["Feature 1", "Feature 2", "Feature 3"],
+      "failures": ["Specific failure/struggle point 1", "Why it failed 2"]
+    }
+  ],
+  "recommendations": [
+    "Avoid X because it leads to Y",
+    "Don't implement Z without considering A"
+  ]
+}
+
+Be specific with real examples, actual company names, and concrete details. Focus on lessons learned.`
         }
       ],
-      max_tokens: 800,
+      max_tokens: 1200,
       temperature: 0.7,
+      response_format: { type: "json_object" }
     }),
   });
 
@@ -96,7 +124,7 @@ export const analyzeProb = async (
   }
 
   const insightsData = await insightsResponse.json();
-  const insights = insightsData.choices[0].message.content;
+  const insights = JSON.parse(insightsData.choices[0].message.content);
 
   // Step 3: Generate feature list
   const featuresResponse = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -111,7 +139,7 @@ export const analyzeProb = async (
         ...messages,
         {
           role: "assistant",
-          content: insights
+          content: JSON.stringify(insights)
         },
         {
           role: "user",
@@ -534,7 +562,7 @@ Format as a well-structured document with clear headings (use # for H1, ## for H
         ...messages,
         {
           role: "assistant",
-          content: `Insights: ${insights}\n\nFeatures: ${features.join(", ")}`
+          content: `Insights: ${JSON.stringify(insights)}\n\nFeatures: ${features.join(", ")}`
         },
         {
           role: "user",

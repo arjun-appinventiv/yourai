@@ -1,6 +1,6 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Lightbulb, CheckCircle2, FileText, Zap } from "lucide-react";
+import { Lightbulb, CheckCircle2, FileText, Zap, AlertTriangle, Building2, TrendingUp, XCircle } from "lucide-react";
 import type { AnalysisResult } from "@/pages/Index";
 
 interface AnalysisResultsProps {
@@ -10,16 +10,97 @@ interface AnalysisResultsProps {
 export const AnalysisResults = ({ analysis }: AnalysisResultsProps) => {
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
-      {/* Insights */}
+      {/* Market Insights */}
       <Card className="p-6 border-border/50 shadow-lg">
-        <div className="flex items-center gap-2 mb-4">
+        <div className="flex items-center gap-2 mb-6">
           <div className="p-2 rounded-lg bg-primary/10">
             <Lightbulb className="w-5 h-5 text-primary" />
           </div>
-          <h3 className="text-xl font-semibold">Market Insights</h3>
+          <h3 className="text-xl font-semibold">Market Insights & Case Studies</h3>
         </div>
-        <div className="prose prose-sm max-w-none text-foreground">
-          <p className="whitespace-pre-wrap leading-relaxed">{analysis.insights}</p>
+        
+        <div className="space-y-6">
+          {/* Case Studies */}
+          {analysis.insights.caseStudies && analysis.insights.caseStudies.length > 0 && (
+            <div className="space-y-4">
+              <h4 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                <Building2 className="w-5 h-5 text-primary" />
+                Company Case Studies
+              </h4>
+              {analysis.insights.caseStudies.map((study, idx) => (
+                <div key={idx} className="border border-border rounded-lg p-5 bg-muted/30 space-y-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <h5 className="text-lg font-bold text-primary">{study.company}</h5>
+                    <Badge variant="outline">Case Study {idx + 1}</Badge>
+                  </div>
+                  
+                  {/* Approach */}
+                  <div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <TrendingUp className="w-4 h-4 text-accent" />
+                      <span className="font-semibold text-sm text-accent">Their Approach</span>
+                    </div>
+                    <p className="text-sm text-foreground/90 leading-relaxed pl-6">
+                      {study.approach}
+                    </p>
+                  </div>
+
+                  {/* Features */}
+                  <div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <CheckCircle2 className="w-4 h-4 text-green-600" />
+                      <span className="font-semibold text-sm text-green-600">Key Features Implemented</span>
+                    </div>
+                    <ul className="space-y-1 pl-6">
+                      {study.features.map((feature, fIdx) => (
+                        <li key={fIdx} className="text-sm text-foreground/90 flex items-start gap-2">
+                          <span className="text-green-600 mt-1">•</span>
+                          <span>{feature}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  {/* Failures */}
+                  <div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <XCircle className="w-4 h-4 text-destructive" />
+                      <span className="font-semibold text-sm text-destructive">Where They Struggled</span>
+                    </div>
+                    <ul className="space-y-1 pl-6">
+                      {study.failures.map((failure, fIdx) => (
+                        <li key={fIdx} className="text-sm text-foreground/90 flex items-start gap-2">
+                          <span className="text-destructive mt-1">•</span>
+                          <span>{failure}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Recommendations */}
+          {analysis.insights.recommendations && analysis.insights.recommendations.length > 0 && (
+            <div className="space-y-3 pt-4 border-t border-border">
+              <h4 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5 text-amber-500" />
+                What to Avoid - Key Recommendations
+              </h4>
+              <div className="space-y-2">
+                {analysis.insights.recommendations.map((rec, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-start gap-3 p-4 rounded-lg bg-amber-500/10 border border-amber-500/20"
+                  >
+                    <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+                    <p className="text-sm leading-relaxed text-foreground/90">{rec}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </Card>
 
