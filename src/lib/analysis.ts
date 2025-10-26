@@ -378,9 +378,71 @@ sign_off:
   const scopeData = await scopeResponse.json();
   const scopeOfWork = scopeData.choices[0].message.content;
 
+  // Step 5: Generate AI tools recommendations
+  const aiToolsResponse = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "gpt-4o-mini",
+      messages: [
+        ...messages,
+        {
+          role: "assistant",
+          content: `Features: ${features.join(", ")}`
+        },
+        {
+          role: "user",
+          content: `Based on the features needed for this project, recommend AI tools and APIs that can help build these features quickly and cost-effectively. 
+
+Consider categories like:
+- Voice/Speech (e.g., Whisper API, ElevenLabs, AssemblyAI)
+- Text/LLM (e.g., DeepSeek, ChatGPT, Claude, Gemini - mention which is cheaper)
+- Image Generation (e.g., DALL-E, Midjourney, Stable Diffusion)
+- Image Analysis (e.g., GPT-4 Vision, Claude Vision)
+- Embeddings/Search (e.g., OpenAI Embeddings, Pinecone)
+- Translation (e.g., DeepL, Google Translate)
+
+Return as JSON with this structure:
+{
+  "categories": [
+    {
+      "category": "Voice & Speech",
+      "tools": [
+        {
+          "name": "Whisper API",
+          "useCase": "Speech-to-text transcription",
+          "reason": "Industry-leading accuracy, supports 99+ languages, cost-effective at $0.006/minute"
+        }
+      ]
+    }
+  ]
+}
+
+Only recommend tools that are relevant to the project features. Be specific about why each tool is recommended and mention pricing when relevant.`
+        }
+      ],
+      max_tokens: 1500,
+      temperature: 0.7,
+      response_format: { type: "json_object" }
+    }),
+  });
+
+  if (!aiToolsResponse.ok) {
+    const error = await aiToolsResponse.json();
+    throw new Error(error.error?.message || "Failed to generate AI tools recommendations");
+  }
+
+  const aiToolsData = await aiToolsResponse.json();
+  const aiToolsJson = JSON.parse(aiToolsData.choices[0].message.content);
+  const aiTools = aiToolsJson.categories || [];
+
   return {
     insights,
     features,
     scopeOfWork,
+    aiTools,
   };
 };

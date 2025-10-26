@@ -8,6 +8,14 @@ export interface AnalysisResult {
   insights: string;
   features: string[];
   scopeOfWork: string;
+  aiTools: Array<{
+    category: string;
+    tools: Array<{
+      name: string;
+      useCase: string;
+      reason: string;
+    }>;
+  }>;
 }
 
 const Index = () => {
