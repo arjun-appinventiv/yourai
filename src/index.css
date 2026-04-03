@@ -2,112 +2,59 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
+:root {
+  --navy:       #0B1D3A;
+  --navy-mid:   #132C54;
+  --navy-light: #1A3A6B;
+  --gold:       #C9A84C;
+  --gold-soft:  #D4B96A;
+  --ice:        #E8EEF4;
+  --ice-warm:   #F4F6F9;
+  --slate:      #3D5A80;
+  --white:      #FFFFFF;
 
-@layer base {
-  :root {
-    --background: 240 20% 99%;
-    --foreground: 240 10% 10%;
-
-    --card: 0 0% 100%;
-    --card-foreground: 240 10% 10%;
-
-    --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 10%;
-
-    --primary: 250 70% 60%;
-    --primary-foreground: 0 0% 100%;
-
-    --secondary: 240 15% 96%;
-    --secondary-foreground: 240 10% 10%;
-
-    --muted: 240 15% 96%;
-    --muted-foreground: 240 5% 50%;
-
-    --accent: 270 70% 65%;
-    --accent-foreground: 0 0% 100%;
-
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 100%;
-
-    --border: 240 15% 90%;
-    --input: 240 15% 92%;
-    --ring: 250 70% 60%;
-
-    --radius: 0.75rem;
-    
-    --gradient-primary: linear-gradient(135deg, hsl(250 70% 60%), hsl(270 70% 65%));
-    --gradient-soft: linear-gradient(180deg, hsl(240 20% 99%), hsl(250 50% 98%));
-    --shadow-elegant: 0 10px 30px -10px hsl(250 70% 60% / 0.2);
-
-    --sidebar-background: 0 0% 98%;
-
-    --sidebar-foreground: 240 5.3% 26.1%;
-
-    --sidebar-primary: 240 5.9% 10%;
-
-    --sidebar-primary-foreground: 0 0% 98%;
-
-    --sidebar-accent: 240 4.8% 95.9%;
-
-    --sidebar-accent-foreground: 240 5.9% 10%;
-
-    --sidebar-border: 220 13% 91%;
-
-    --sidebar-ring: 217.2 91.2% 59.8%;
-  }
-
-  .dark {
-    --background: 240 10% 8%;
-    --foreground: 240 5% 98%;
-
-    --card: 240 8% 12%;
-    --card-foreground: 240 5% 98%;
-
-    --popover: 240 8% 12%;
-    --popover-foreground: 240 5% 98%;
-
-    --primary: 250 70% 60%;
-    --primary-foreground: 0 0% 100%;
-
-    --secondary: 240 8% 18%;
-    --secondary-foreground: 240 5% 98%;
-
-    --muted: 240 8% 18%;
-    --muted-foreground: 240 5% 65%;
-
-    --accent: 270 70% 65%;
-    --accent-foreground: 0 0% 100%;
-
-    --destructive: 0 62.8% 50%;
-    --destructive-foreground: 0 0% 100%;
-
-    --border: 240 8% 18%;
-    --input: 240 8% 18%;
-    --ring: 250 70% 60%;
-    
-    --gradient-primary: linear-gradient(135deg, hsl(250 70% 60%), hsl(270 70% 65%));
-    --gradient-soft: linear-gradient(180deg, hsl(240 10% 8%), hsl(250 30% 12%));
-    --shadow-elegant: 0 10px 30px -10px hsl(250 70% 60% / 0.4);
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
-  }
+  /* Premium palette additions */
+  --border:        #E2E8F0;
+  --border-mid:    #CBD5E1;
+  --text-primary:  #0F172A;
+  --text-secondary:#475569;
+  --text-muted:    #94A3B8;
+  --muted:         #94A3B8;
 }
 
-@layer base {
-  * {
-    @apply border-border;
-  }
-
-  body {
-    @apply bg-background text-foreground;
-  }
+body {
+  font-family: 'DM Sans', sans-serif;
+  background-color: var(--ice-warm);
+  color: var(--text-secondary);
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
+
+/* Focus ring utility */
+input:focus, select:focus, textarea:focus {
+  border-color: var(--navy) !important;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(11,29,58,0.08);
+}
+
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes toast-out {
+  from { opacity: 1; transform: translateY(0); }
+  to { opacity: 0; transform: translateY(20px); }
+}
+
+.toast-enter { animation: toast-in 0.3s ease-out; }
+.toast-exit { animation: toast-out 0.3s ease-in forwards; }
+
+@keyframes fade-out {
+  from { opacity: 1; max-height: 60px; }
+  to { opacity: 0; max-height: 0; overflow: hidden; }
+}
+
+.row-fade-out { animation: fade-out 0.4s ease-in forwards; }
