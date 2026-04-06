@@ -92,7 +92,7 @@ export default function WorkflowTemplates() {
     };
     setFormSteps(Array.from({ length: t.steps }, (_, i) => {
       const taskId = taskOrder[i % 7];
-      return { id: `s${i}`, name: `Step ${i + 1}`, taskType: taskId, instructions: defaultInstructions[taskId] || '', parallel: false, async: false, showAdvanced: false };
+      return { id: `s${i}`, name: `Step ${i + 1}`, taskType: taskId, instructions: defaultInstructions[taskId] || '', referenceFiles: [], parallel: false, async: false, showAdvanced: false };
     }));
     setEditTemplate(t); setShowCreate(true);
   };
@@ -149,132 +149,125 @@ export default function WorkflowTemplates() {
     <div className="space-y-6">
       <PageHeader icon={Workflow} title="Workflow Templates" subtitle="Platform-level workflow templates available to all organisations" />
 
-      {/* Visual Guide */}
-      {!showGuide ? (
-        <div className="rounded-xl overflow-hidden" style={{ background: 'linear-gradient(135deg, #0B1D3A 0%, #1A3A6B 100%)', padding: '20px 24px' }}>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ backgroundColor: 'rgba(255,255,255,0.12)' }}>
-                <Sparkles size={22} style={{ color: 'var(--gold)' }} />
-              </div>
-              <div>
-                <p style={{ fontSize: '15px', fontWeight: 600, color: 'white' }}>New to workflow templates?</p>
-                <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.6)' }}>Learn how to build AI-powered workflows in 4 simple steps.</p>
+      {/* Visual Guide Banner */}
+      <div className="rounded-xl overflow-hidden" style={{ background: 'linear-gradient(135deg, #0B1D3A 0%, #1A3A6B 100%)', padding: '20px 24px' }}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ backgroundColor: 'rgba(255,255,255,0.12)' }}>
+              <Sparkles size={22} style={{ color: 'var(--gold)' }} />
+            </div>
+            <div>
+              <p style={{ fontSize: '15px', fontWeight: 600, color: 'white' }}>New to workflow templates?</p>
+              <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.6)' }}>Learn how to build AI-powered workflows in 4 simple steps.</p>
+            </div>
+          </div>
+          <button onClick={() => { setShowGuide(true); setGuideStep(0); }} className="px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2" style={{ backgroundColor: 'var(--gold)', color: 'var(--navy)' }}>
+            <BookOpen size={15} /> View Guide
+          </button>
+        </div>
+      </div>
+
+      {/* Guide Modal — centered popup */}
+      {showGuide && (() => {
+        const guideSlides = [
+          { num: '01', title: 'Name Your Workflow', desc: 'Give your workflow a clear name and choose the practice area. This helps lawyers find the right template quickly.', emoji: '✏️', visual: (
+            <div className="space-y-2.5">
+              <div className="rounded-lg p-3 bg-white" style={{ border: '1px solid var(--border)' }}><span style={{ fontSize: '10px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Template Name</span><div style={{ fontSize: '15px', fontWeight: 500, color: 'var(--text-primary)', marginTop: 4 }}>Contract Risk Review</div></div>
+              <div className="flex gap-2.5">
+                <div className="flex-1 rounded-lg p-3 bg-white" style={{ border: '1px solid var(--border)' }}><span style={{ fontSize: '10px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Practice Area</span><div className="mt-1"><span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium" style={{ backgroundColor: '#EFF6FF', color: '#1D4ED8' }}>Legal</span></div></div>
+                <div className="flex-1 rounded-lg p-3 bg-white" style={{ border: '1px solid var(--border)' }}><span style={{ fontSize: '10px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Status</span><div className="mt-1"><span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium" style={{ backgroundColor: '#F3F4F6', color: '#374151' }}>Draft</span></div></div>
               </div>
             </div>
-            <button onClick={() => { setShowGuide(true); setGuideStep(0); }} className="px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2" style={{ backgroundColor: 'var(--gold)', color: 'var(--navy)' }}>
-              <BookOpen size={15} /> View Guide
-            </button>
-          </div>
-        </div>
-      ) : (
-        <div className="rounded-xl overflow-hidden" style={{ boxShadow: '0 4px 24px rgba(0,0,0,0.08)' }}>
-          {(() => {
-            const guideSlides = [
-              { num: '01', title: 'Name Your Workflow', desc: 'Give your workflow a clear name and choose the practice area. This helps lawyers find the right template quickly.', emoji: '✏️', color: '#3B82F6', visual: (
-                <div className="space-y-2.5">
-                  <div className="rounded-lg p-3 bg-white" style={{ border: '1px solid var(--border)' }}><span style={{ fontSize: '10px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Template Name</span><div style={{ fontSize: '15px', fontWeight: 500, color: 'var(--text-primary)', marginTop: 4 }}>Contract Risk Review</div></div>
-                  <div className="flex gap-2.5">
-                    <div className="flex-1 rounded-lg p-3 bg-white" style={{ border: '1px solid var(--border)' }}><span style={{ fontSize: '10px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Practice Area</span><div className="mt-1"><span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium" style={{ backgroundColor: '#EFF6FF', color: '#1D4ED8' }}>Legal</span></div></div>
-                    <div className="flex-1 rounded-lg p-3 bg-white" style={{ border: '1px solid var(--border)' }}><span style={{ fontSize: '10px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Status</span><div className="mt-1"><span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium" style={{ backgroundColor: '#F3F4F6', color: '#374151' }}>Draft</span></div></div>
-                  </div>
+          )},
+          { num: '02', title: 'Pick AI Tasks', desc: 'Select what AI should do at each step. Just click a card — read documents, analyse clauses, generate reports. No coding needed.', emoji: '🧩', visual: (
+            <div className="grid grid-cols-4 gap-2">
+              {[{ icon: FileText, label: 'Read Docs', sel: true }, { icon: Search, label: 'Analyse', sel: true }, { icon: Scale, label: 'Compare', sel: false }, { icon: FileOutput, label: 'Report', sel: false }].map((t) => (
+                <div key={t.label} className="p-3 rounded-lg text-center" style={{ border: t.sel ? '2px solid var(--navy)' : '1px solid var(--border)', backgroundColor: t.sel ? '#EFF6FF' : 'white' }}>
+                  <t.icon size={18} style={{ color: t.sel ? 'var(--navy)' : '#CBD5E1', margin: '0 auto 4px' }} />
+                  <div style={{ fontSize: '10px', fontWeight: 600, color: t.sel ? 'var(--navy)' : '#CBD5E1' }}>{t.label}</div>
+                  {t.sel && <div className="mt-1"><span style={{ fontSize: '9px', color: '#166534' }}>✓</span></div>}
                 </div>
-              )},
-              { num: '02', title: 'Pick AI Tasks', desc: 'Select what AI should do at each step. Just click a card — read documents, analyse clauses, generate reports. No coding needed.', emoji: '🧩', color: '#8B5CF6', visual: (
-                <div className="grid grid-cols-4 gap-2">
-                  {[{ icon: FileText, label: 'Read Docs', sel: true }, { icon: Search, label: 'Analyse', sel: true }, { icon: Scale, label: 'Compare', sel: false }, { icon: FileOutput, label: 'Report', sel: false }].map((t) => (
-                    <div key={t.label} className="p-3 rounded-lg text-center transition-all" style={{ border: t.sel ? '2px solid var(--navy)' : '1px solid var(--border)', backgroundColor: t.sel ? '#EFF6FF' : 'white', transform: t.sel ? 'scale(1.03)' : 'none' }}>
-                      <t.icon size={18} style={{ color: t.sel ? 'var(--navy)' : '#CBD5E1', margin: '0 auto 4px' }} />
-                      <div style={{ fontSize: '10px', fontWeight: 600, color: t.sel ? 'var(--navy)' : '#CBD5E1' }}>{t.label}</div>
-                      {t.sel && <div className="mt-1"><span style={{ fontSize: '9px', color: '#166534' }}>✓</span></div>}
+              ))}
+            </div>
+          )},
+          { num: '03', title: 'Give Instructions & Upload References', desc: 'Tell the AI what to focus on in plain English. Upload your playbook, checklist, or standard terms — the AI will read and follow them.', emoji: '📋', visual: (
+            <div className="space-y-2.5">
+              <div className="rounded-lg p-3 bg-white" style={{ border: '1px solid var(--border)' }}>
+                <div style={{ fontSize: '10px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>Which clauses should be analysed?</div>
+                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: '1.5' }}>Focus on non-compete, indemnification, limitation of liability, and IP assignment clauses.</div>
+              </div>
+              <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white" style={{ border: '1px solid var(--border)' }}>
+                <File size={14} style={{ color: 'var(--navy)' }} />
+                <span style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-primary)' }}>NDA_Playbook_2026.pdf</span>
+                <span className="ml-auto inline-flex items-center gap-1 px-2 py-0.5 rounded-full" style={{ backgroundColor: '#DCFCE7', color: '#166534', fontSize: '10px', fontWeight: 600 }}>✓ AI-indexed</span>
+              </div>
+            </div>
+          )},
+          { num: '04', title: 'Preview & Publish', desc: 'See your full pipeline at a glance. Publish it and every firm on the platform can run this workflow instantly.', emoji: '🚀', visual: (
+            <div>
+              <div className="flex items-center gap-2 justify-center mb-3">
+                {[{ icon: FileText, label: 'Read Docs' }, { icon: Search, label: 'Analyse' }, { icon: FileOutput, label: 'Report' }].map((s, i, a) => (
+                  <React.Fragment key={s.label}>
+                    <div className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-white" style={{ border: '1px solid var(--border)' }}>
+                      <s.icon size={13} style={{ color: 'var(--navy)' }} />
+                      <span style={{ fontSize: '11px', fontWeight: 500, color: 'var(--text-primary)' }}>{s.label}</span>
                     </div>
+                    {i < a.length - 1 && <div style={{ color: 'var(--gold)', fontSize: '16px', fontWeight: 700 }}>→</div>}
+                  </React.Fragment>
+                ))}
+              </div>
+              <div className="text-center"><span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full" style={{ backgroundColor: '#DCFCE7', color: '#166534', fontSize: '11px', fontWeight: 500 }}>✓ 3 steps · ~9 seconds · Ready to publish</span></div>
+            </div>
+          )},
+        ];
+        const slide = guideSlides[guideStep];
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ backgroundColor: 'rgba(15,23,42,0.5)' }} onClick={() => setShowGuide(false)}>
+            <div className="overflow-hidden" style={{ width: '90%', maxWidth: 760, borderRadius: '20px', boxShadow: '0 24px 80px rgba(0,0,0,0.2)' }} onClick={(e) => e.stopPropagation()}>
+              {/* Navy header */}
+              <div style={{ background: 'linear-gradient(135deg, #0B1D3A 0%, #1A3A6B 100%)', padding: '20px 28px' }}>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Sparkles size={18} style={{ color: 'var(--gold)' }} />
+                    <span style={{ fontSize: '14px', fontWeight: 600, color: 'white' }}>Getting Started Guide</span>
+                  </div>
+                  <button onClick={() => setShowGuide(false)} className="p-1.5 rounded-lg" style={{ color: 'rgba(255,255,255,0.5)' }}><X size={16} /></button>
+                </div>
+                <div className="flex gap-1 mt-4">
+                  {guideSlides.map((s, i) => (
+                    <button key={i} onClick={() => setGuideStep(i)} className="flex-1 py-1.5 rounded-lg text-center transition-all" style={{ backgroundColor: i === guideStep ? 'rgba(255,255,255,0.15)' : 'transparent', border: i === guideStep ? '1px solid rgba(255,255,255,0.2)' : '1px solid transparent' }}>
+                      <span style={{ fontSize: '10px', fontWeight: 600, color: i === guideStep ? 'white' : 'rgba(255,255,255,0.4)' }}>{s.num}</span>
+                    </button>
                   ))}
                 </div>
-              )},
-              { num: '03', title: 'Give Instructions & Upload References', desc: 'Tell the AI what to focus on in plain English. Upload your playbook, checklist, or standard terms — the AI will read and follow them.', emoji: '📋', color: '#059669', visual: (
-                <div className="space-y-2.5">
-                  <div className="rounded-lg p-3 bg-white" style={{ border: '1px solid var(--border)' }}>
-                    <div style={{ fontSize: '10px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>Which clauses should be analysed?</div>
-                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: '1.5' }}>Focus on non-compete, indemnification, limitation of liability, and IP assignment clauses. Flag any deviation from market-standard terms.</div>
-                  </div>
-                  <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white" style={{ border: '1px solid var(--border)' }}>
-                    <File size={14} style={{ color: 'var(--navy)' }} />
-                    <span style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-primary)' }}>NDA_Playbook_2026.pdf</span>
-                    <span className="ml-auto inline-flex items-center gap-1 px-2 py-0.5 rounded-full" style={{ backgroundColor: '#DCFCE7', color: '#166534', fontSize: '10px', fontWeight: 600 }}>✓ AI-indexed</span>
+              </div>
+              {/* Body — split */}
+              <div className="flex" style={{ backgroundColor: 'white' }}>
+                <div className="flex-1 p-6" style={{ backgroundColor: '#F8FAFC', borderRight: '1px solid var(--border)' }}>
+                  <div className="flex items-center justify-center" style={{ minHeight: 180 }}>
+                    <div className="w-full" style={{ maxWidth: 320 }}>{slide.visual}</div>
                   </div>
                 </div>
-              )},
-              { num: '04', title: 'Preview & Publish', desc: 'See your full pipeline at a glance. Publish it and every firm on the platform can run this workflow instantly from their workspaces.', emoji: '🚀', color: '#C9A84C', visual: (
-                <div>
-                  <div className="flex items-center gap-2 justify-center mb-3">
-                    {[{ icon: FileText, label: 'Read Docs' }, { icon: Search, label: 'Analyse' }, { icon: FileOutput, label: 'Report' }].map((s, i, a) => (
-                      <React.Fragment key={s.label}>
-                        <div className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-white" style={{ border: '1px solid var(--border)' }}>
-                          <s.icon size={13} style={{ color: 'var(--navy)' }} />
-                          <span style={{ fontSize: '11px', fontWeight: 500, color: 'var(--text-primary)' }}>{s.label}</span>
-                        </div>
-                        {i < a.length - 1 && <div style={{ color: 'var(--gold)', fontSize: '16px', fontWeight: 700 }}>→</div>}
-                      </React.Fragment>
-                    ))}
-                  </div>
-                  <div className="text-center"><span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full" style={{ backgroundColor: '#DCFCE7', color: '#166534', fontSize: '11px', fontWeight: 500 }}>✓ 3 steps · ~9 seconds · Ready to publish</span></div>
-                </div>
-              )},
-            ];
-            const slide = guideSlides[guideStep];
-            return (
-              <>
-                {/* Navy gradient header */}
-                <div style={{ background: 'linear-gradient(135deg, #0B1D3A 0%, #1A3A6B 100%)', padding: '20px 28px' }}>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <Sparkles size={18} style={{ color: 'var(--gold)' }} />
-                      <span style={{ fontSize: '14px', fontWeight: 600, color: 'white' }}>Getting Started Guide</span>
-                    </div>
-                    <button onClick={() => setShowGuide(false)} className="p-1.5 rounded-lg" style={{ color: 'rgba(255,255,255,0.5)' }}><X size={16} /></button>
-                  </div>
-                  {/* Step tabs */}
-                  <div className="flex gap-1 mt-4">
-                    {guideSlides.map((s, i) => (
-                      <button key={i} onClick={() => setGuideStep(i)} className="flex-1 py-1.5 rounded-lg text-center transition-all" style={{ backgroundColor: i === guideStep ? 'rgba(255,255,255,0.15)' : 'transparent', border: i === guideStep ? '1px solid rgba(255,255,255,0.2)' : '1px solid transparent' }}>
-                        <span style={{ fontSize: '10px', fontWeight: 600, color: i === guideStep ? 'white' : 'rgba(255,255,255,0.4)' }}>{s.num}</span>
+                <div className="flex-1 p-6 flex flex-col justify-center">
+                  <span className="text-3xl mb-3">{slide.emoji}</span>
+                  <h3 style={{ fontFamily: "'DM Serif Display', serif", fontSize: '18px', color: 'var(--text-primary)', marginBottom: 8 }}>{slide.title}</h3>
+                  <p style={{ fontSize: '13px', color: 'var(--text-muted)', lineHeight: '1.7' }}>{slide.desc}</p>
+                  <div className="flex items-center justify-between mt-6">
+                    <div>{guideStep > 0 && <button onClick={() => setGuideStep(guideStep - 1)} style={{ fontSize: '12px', color: 'var(--text-muted)', border: 'none', background: 'none', cursor: 'pointer' }}>← Back</button>}</div>
+                    {guideStep < guideSlides.length - 1 ? (
+                      <button onClick={() => setGuideStep(guideStep + 1)} className="px-4 py-2 rounded-lg text-xs font-medium text-white flex items-center gap-1" style={{ backgroundColor: 'var(--navy)' }}>Continue →</button>
+                    ) : (
+                      <button onClick={() => { setShowGuide(false); openCreate(); }} className="px-4 py-2 rounded-lg text-xs font-medium text-white flex items-center gap-1" style={{ backgroundColor: 'var(--navy)' }}>
+                        <Plus size={13} /> Create Your First Template
                       </button>
-                    ))}
+                    )}
                   </div>
                 </div>
-                {/* Body */}
-                <div className="flex" style={{ backgroundColor: 'white' }}>
-                  {/* Left: visual preview */}
-                  <div className="flex-1 p-6" style={{ backgroundColor: '#F8FAFC', borderRight: '1px solid var(--border)' }}>
-                    <div className="flex items-center justify-center" style={{ minHeight: 160 }}>
-                      <div className="w-full" style={{ maxWidth: 320 }}>{slide.visual}</div>
-                    </div>
-                  </div>
-                  {/* Right: text */}
-                  <div className="flex-1 p-6 flex flex-col justify-center">
-                    <span className="text-3xl mb-3">{slide.emoji}</span>
-                    <h3 style={{ fontFamily: "'DM Serif Display', serif", fontSize: '18px', color: 'var(--text-primary)', marginBottom: 8 }}>{slide.title}</h3>
-                    <p style={{ fontSize: '13px', color: 'var(--text-muted)', lineHeight: '1.7' }}>{slide.desc}</p>
-                    {/* Nav */}
-                    <div className="flex items-center justify-between mt-6">
-                      <div>
-                        {guideStep > 0 && <button onClick={() => setGuideStep(guideStep - 1)} style={{ fontSize: '12px', color: 'var(--text-muted)', border: 'none', background: 'none', cursor: 'pointer' }}>← Back</button>}
-                      </div>
-                      {guideStep < guideSlides.length - 1 ? (
-                        <button onClick={() => setGuideStep(guideStep + 1)} className="px-4 py-2 rounded-lg text-xs font-medium text-white flex items-center gap-1" style={{ backgroundColor: 'var(--navy)' }}>Continue →</button>
-                      ) : (
-                        <button onClick={() => { setShowGuide(false); openCreate(); }} className="px-4 py-2 rounded-lg text-xs font-medium text-white flex items-center gap-1" style={{ backgroundColor: 'var(--navy)' }}>
-                          <Plus size={13} /> Create Your First Template
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </>
-            );
-          })()}
-        </div>
-      )}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       <div className="flex items-center justify-between">
         <h2 style={{ fontFamily: "'DM Serif Display', serif", color: 'var(--text-primary)', fontSize: '16px' }}>Templates ({templates.length})</h2>
@@ -286,7 +279,7 @@ export default function WorkflowTemplates() {
       {/* Template Cards */}
       <div className="grid grid-cols-2 gap-5">
         {templates.map((t) => (
-          <div key={t.id} className="bg-white rounded-xl p-5 transition-all hover:shadow-md" style={{ border: '1px solid var(--border)', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
+          <div key={t.id} onClick={() => openEdit(t)} className="bg-white rounded-xl p-5 transition-all hover:shadow-md cursor-pointer" style={{ border: '1px solid var(--border)', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
             <div className="flex items-start justify-between mb-3">
               <div className="flex-1">
                 <h3 className="text-base font-medium mb-1" style={{ fontFamily: "'DM Serif Display', serif", color: 'var(--text-primary)' }}>{t.name}</h3>
@@ -300,7 +293,7 @@ export default function WorkflowTemplates() {
                 <span className="text-xs font-medium" style={{ color: 'var(--text-primary)' }}>{t.steps} steps</span>
                 <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Updated {t.lastUpdated}</span>
               </div>
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                 <button onClick={() => openEdit(t)} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors" title="Edit"><Pencil size={15} style={{ color: 'var(--slate)' }} /></button>
                 <button onClick={() => toggleStatus(t.id)} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors" title={t.status === 'Active' ? 'Deactivate' : 'Activate'}>
                   {t.status === 'Active' ? <EyeOff size={15} style={{ color: '#991B1B' }} /> : <Eye size={15} style={{ color: '#166534' }} />}
