@@ -1,6 +1,6 @@
 import React from 'react';
 import { useLocation } from 'react-router-dom';
-import { LayoutDashboard, Search, Bell, Building2, Users, CreditCard, BarChart3, Shield, BookOpen, FileText, Plug, Database, Workflow, FileBarChart, Settings } from 'lucide-react';
+import { LayoutDashboard, Search, Bell, Building2, Users, CreditCard, BarChart3, Shield, BookOpen, FileText, Plug, Database, Workflow, FileBarChart, Settings, BookMarked } from 'lucide-react';
 
 const pageConfig = {
   '/super-admin/dashboard': { title: 'Dashboard', icon: LayoutDashboard },
@@ -17,6 +17,7 @@ const pageConfig = {
   '/super-admin/notifications': { title: 'Notifications', icon: Bell },
   '/super-admin/reports': { title: 'Reports & Analytics', icon: FileBarChart },
   '/super-admin/settings': { title: 'Platform Settings', icon: Settings },
+  '/super-admin/user-stories': { title: 'User Stories', icon: BookMarked },
 };
 
 export default function TopBar() {

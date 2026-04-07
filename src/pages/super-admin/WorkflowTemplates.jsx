@@ -3,6 +3,7 @@ import { Info, Plus, Pencil, Eye, EyeOff, Workflow, X, Trash2, FileText, Search,
 import { useToast } from '../../components/Toast';
 import Badge from '../../components/Badge';
 import PageHeader from '../../components/PageHeader';
+import InfoButton, { InfoSection, InfoText, InfoExample, InfoList } from '../../components/InfoButton';
 
 /* ─── Task types — plain English, maps to agent/skill behind the scenes ─── */
 const taskTypes = [
@@ -270,7 +271,42 @@ export default function WorkflowTemplates() {
       })()}
 
       <div className="flex items-center justify-between">
-        <h2 style={{ fontFamily: "'DM Serif Display', serif", color: 'var(--text-primary)', fontSize: '16px' }}>Templates ({templates.length})</h2>
+        <div className="flex items-center gap-2">
+          <h2 style={{ fontFamily: "'DM Serif Display', serif", color: 'var(--text-primary)', fontSize: '16px' }}>Templates ({templates.length})</h2>
+          <InfoButton title="About Workflow Templates">
+            <InfoSection title="What are workflow templates?">
+              <InfoText>A workflow template is a reusable AI pipeline — a predefined sequence of steps that process documents automatically. Super Admins create templates here, and Org Admins can run them from their workspaces against their own documents.</InfoText>
+            </InfoSection>
+            <InfoSection title="How workflows run">
+              <InfoText>When a user runs a workflow, each step executes in order. Some steps can run in parallel (at the same time as the previous step) or asynchronously (in the background without blocking). The AI handles all orchestration automatically.</InfoText>
+              <InfoExample label="Example — Contract Risk Review">Step 1: Read Documents (parse uploaded contracts) → Step 2: Analyse Clauses (extract key terms and obligations) → Step 3: Compare Against Standard (check against firm playbook) → Step 4: Generate Report (produce risk memo with findings)</InfoExample>
+            </InfoSection>
+            <InfoSection title="Task types explained">
+              <InfoList items={[
+                "Read Documents — parses and processes uploaded files (PDF, DOCX, XLSX, TXT) so the AI can understand them",
+                "Analyse Clauses — extracts and reviews key clauses, terms, obligations, and risk factors",
+                "Compare Against Standard — compares document content against a reference standard or playbook you upload",
+                "Generate Report — produces structured outputs: risk memos, summaries, briefs, or compliance reports",
+                "Research Precedents — searches case law databases and regulations for relevant citations",
+                "Update Knowledge Base — saves extracted entities (parties, dates, obligations) to the knowledge graph for future reference",
+                "Compliance Check — verifies documents against regulatory requirements and generates gap analysis"
+              ]} />
+            </InfoSection>
+            <InfoSection title="Instructions & reference documents">
+              <InfoText>Each step can have custom instructions (in plain English) telling the AI what to focus on. You can also upload a reference document — like a playbook or checklist — that the AI will read and use as context for that specific step.</InfoText>
+              <InfoExample label="Example instruction">Focus on non-compete, indemnification, and IP assignment clauses. Flag any deviation from market-standard terms.</InfoExample>
+            </InfoSection>
+            <InfoSection title="Status: Active vs Draft">
+              <InfoList items={[
+                "Active — the template is visible to all org admins and can be run from any workspace",
+                "Draft — the template is saved but not visible to org admins. Use this to prepare and test templates before publishing."
+              ]} />
+            </InfoSection>
+            <InfoSection title="Impact of changes">
+              <InfoText>Changes to active templates take effect immediately for all organisations on the platform. If you need to make significant changes, consider setting the template to Draft first, making your changes, then reactivating it.</InfoText>
+            </InfoSection>
+          </InfoButton>
+        </div>
         <button onClick={openCreate} className="px-4 py-2 rounded-lg text-sm font-medium text-white flex items-center gap-2" style={{ backgroundColor: 'var(--navy)' }}>
           <Plus size={16} /> Create New Template
         </button>

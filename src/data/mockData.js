@@ -287,3 +287,19 @@ export const alexUnknownLog = [
   { id:4, query:"Can Alex draft client emails for me?", intent_guessed:"unknown", orgName:"Rivera & Kim LLP", time:"Yesterday 14:22", escalated:true },
   { id:5, query:"How does your vector database work?", intent_guessed:"unknown", orgName:"Hartwell & Associates", time:"Yesterday 11:05", escalated:false }
 ];
+
+export const userStoryModules = [
+  { id:"tenant-management", label:"Tenant Management", route:"/super-admin/tenants", icon:"Building2", storyCount:0 },
+  { id:"user-management", label:"User Management", route:"/super-admin/users", icon:"Users", storyCount:0 },
+  { id:"platform-billing", label:"Platform Billing", route:"/super-admin/billing", icon:"CreditCard", storyCount:0 },
+  { id:"usage-analytics", label:"Usage & Analytics", route:"/super-admin/usage", icon:"BarChart2", storyCount:0 },
+  { id:"compliance-audit", label:"Compliance & Audit", route:"/super-admin/compliance", icon:"ShieldCheck", storyCount:0 },
+  { id:"static-content", label:"Static Content", route:"/super-admin/static-content", icon:"FileText", storyCount:0 },
+  { id:"report-templates", label:"Report Templates", route:"/super-admin/report-templates", icon:"FileOutput", storyCount:0 },
+  { id:"workflow-templates", label:"Workflow Templates", route:"/super-admin/workflows", icon:"Workflow", storyCount:0 },
+  { id:"knowledge-base", label:"Knowledge Base", route:"/super-admin/knowledge-base", icon:"Database", storyCount:0 },
+  { id:"integrations", label:"Integrations", route:"/super-admin/integrations", icon:"Plug", storyCount:0 },
+  { id:"notifications", label:"Notifications", route:"/super-admin/notifications", icon:"Bell", storyCount:0 },
+  { id:"platform-settings", label:"Platform Settings", route:"/super-admin/settings", icon:"Settings", storyCount:0 },
+  { id:"auth-flow", label:"Auth Flow", icon:"Lock", storyCount:0 },
+];

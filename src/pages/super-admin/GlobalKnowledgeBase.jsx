@@ -4,6 +4,7 @@ import {
   Sparkles, Shield, BookOpen, Settings, CreditCard, MessageCircle, HelpCircle, ChevronRight, Lightbulb, X, ArrowRight
 } from 'lucide-react';
 import { globalKBDocs as initialDocs, alexIntentTemplates, alexResponseFilters, alexUnknownLog } from '../../data/mockData';
+import InfoButton, { InfoSection, InfoText, InfoExample, InfoList } from '../../components/InfoButton';
 import PageHeader from '../../components/PageHeader';
 import StatCard from '../../components/StatCard';
 import Badge from '../../components/Badge';
@@ -257,9 +258,26 @@ export default function GlobalKnowledgeBase() {
 
           {/* Documents table */}
           <div>
-            <h2 className="mb-4" style={{ fontFamily: "'DM Serif Display', serif", color: 'var(--text-primary)', fontSize: '16px' }}>
-              Documents
-            </h2>
+            <div className="flex items-center gap-2 mb-4">
+              <h2 style={{ fontFamily: "'DM Serif Display', serif", color: 'var(--text-primary)', fontSize: '16px' }}>
+                Documents
+              </h2>
+              <InfoButton title="About Documents">
+                <InfoSection title="What are Knowledge Base documents?">
+                  <InfoText>These are the fallback documents that the AI uses when an internal user doesn't have any workspace-specific documents, or when a Client uses the General Queries mode. Think of this as the platform's default reference library.</InfoText>
+                </InfoSection>
+                <InfoSection title="How the AI uses these documents">
+                  <InfoText>When a user asks a question, the AI first checks their workspace's documents. If no relevant match is found — or if the user has no workspace — the AI falls back to this global knowledge base.</InfoText>
+                  <InfoExample label="Example">A Client asks 'What are the standard NDA terms?' → The AI searches this global KB for NDA-related content → Returns relevant excerpts from 'NDA Standard Clauses Library.docx'</InfoExample>
+                </InfoSection>
+                <InfoSection title="Supported file types">
+                  <InfoList items={["PDF — contracts, court rules, guides (most common)", "DOCX — editable templates, memos, playbooks", "XLSX — glossaries, checklists, structured data", "TXT — plain text reference material"]} />
+                </InfoSection>
+                <InfoSection title="Processing status">
+                  <InfoText>'Ready' means the document has been parsed, chunked, and embedded into the vector store — it's fully searchable by the AI. 'Processing' means chunking and embedding are still in progress (usually takes 30-60 seconds).</InfoText>
+                </InfoSection>
+              </InfoButton>
+            </div>
             <Table columns={['File Name', 'Type', 'Size', 'Uploaded', 'Status', 'Actions']}>
               {filtered.map((doc) => (
                 <tr key={doc.id} className={`transition-colors ${fadingId === doc.id ? 'row-fade-out' : ''}`} style={{ borderBottom: '1px solid var(--border)' }} onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--ice-warm)')} onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'white')}>
@@ -299,9 +317,23 @@ export default function GlobalKnowledgeBase() {
           {/* Links table */}
           <div>
             <div className="flex items-center justify-between mb-4">
-              <h2 style={{ fontFamily: "'DM Serif Display', serif", color: 'var(--text-primary)', fontSize: '16px' }}>
-                Links
-              </h2>
+              <div className="flex items-center gap-2">
+                <h2 style={{ fontFamily: "'DM Serif Display', serif", color: 'var(--text-primary)', fontSize: '16px' }}>
+                  Links
+                </h2>
+                <InfoButton title="About Links">
+                  <InfoSection title="What are Knowledge Links?">
+                    <InfoText>Links are external web resources that the AI can crawl and index. Unlike documents which are static uploads, links are periodically re-crawled to stay up to date.</InfoText>
+                  </InfoSection>
+                  <InfoSection title="How indexing works">
+                    <InfoText>When you add a link, the AI crawler visits the URL, extracts the content, and indexes it into the same vector store as documents. The content becomes searchable alongside your uploaded files.</InfoText>
+                    <InfoExample label="Example">Adding 'https://www.law.cornell.edu' → The crawler extracts legal definitions and case summaries → Users can now ask questions like 'What does the UCC say about...' and get answers from Cornell's content.</InfoExample>
+                  </InfoSection>
+                  <InfoSection title="Status meanings">
+                    <InfoList items={["Indexed — content has been crawled and is available for AI queries", "Indexing — crawler is currently processing the URL (typically 2-5 minutes)", "Failed — the URL could not be reached or content could not be extracted"]} />
+                  </InfoSection>
+                </InfoButton>
+              </div>
               <button onClick={() => setShowAddLink(true)} className="px-3 py-1.5 rounded-lg text-sm font-medium flex items-center gap-1.5" style={{ border: '1px solid var(--border)', color: 'var(--slate)', backgroundColor: 'white' }}>
                 <Plus size={14} /> Add Link
               </button>
@@ -374,9 +406,23 @@ export default function GlobalKnowledgeBase() {
         <>
           {/* Sub-section A: Intent Routing Flow Diagram */}
           <div>
-            <h2 className="mb-4" style={{ fontFamily: "'DM Serif Display', serif", color: 'var(--text-primary)', fontSize: '16px' }}>
-              Intent Routing Flow
-            </h2>
+            <div className="flex items-center gap-2 mb-4">
+              <h2 style={{ fontFamily: "'DM Serif Display', serif", color: 'var(--text-primary)', fontSize: '16px' }}>
+                Intent Routing Flow
+              </h2>
+              <InfoButton title="About Intent Routing">
+                <InfoSection title="What is Intent Routing?">
+                  <InfoText>Alex (the dashboard assistant) classifies every incoming user message into one of 7 intent categories. This classification happens in under 50ms using a lightweight model — no expensive LLM call needed.</InfoText>
+                </InfoSection>
+                <InfoSection title="Why templates instead of full LLM?">
+                  <InfoText>80% of user questions fall into predictable categories — feature questions, how-to requests, billing queries. For these, Alex retrieves a pre-written template and uses a lightweight LLM to personalise it. This is 10x faster and 50x cheaper than a full LLM invocation.</InfoText>
+                  <InfoExample label="Cost comparison">Full LLM call: ~$0.02, ~2 seconds. Template + light rewrite: ~$0.0004, ~200ms.</InfoExample>
+                </InfoSection>
+                <InfoSection title="The flow">
+                  <InfoList items={["1. User sends message to Alex", "2. Intent classifier identifies the category (< 50ms)", "3. If known intent → retrieve template → light LLM rewrite → apply filters → stream response", "4. If unknown intent → full LLM + system prompt → apply filters → stream response", "5. Unknown queries are logged for operator review"]} />
+                </InfoSection>
+              </InfoButton>
+            </div>
             <div className="bg-white rounded-xl p-6" style={{ border: '1px solid var(--border)', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
               <div className="flex items-center justify-center gap-0 flex-wrap" style={{ minHeight: 60 }}>
                 {[
@@ -429,9 +475,24 @@ export default function GlobalKnowledgeBase() {
 
           {/* Sub-section B: Intent Templates */}
           <div>
-            <h2 className="mb-4" style={{ fontFamily: "'DM Serif Display', serif", color: 'var(--text-primary)', fontSize: '16px' }}>
-              Intent Templates
-            </h2>
+            <div className="flex items-center gap-2 mb-4">
+              <h2 style={{ fontFamily: "'DM Serif Display', serif", color: 'var(--text-primary)', fontSize: '16px' }}>
+                Intent Templates
+              </h2>
+              <InfoButton title="About Intent Templates">
+                <InfoSection title="What is a template?">
+                  <InfoText>Each template is a response skeleton with {'{variable}'} placeholders. When Alex matches an intent, it retrieves the template and passes it to a lightweight LLM that fills in the variables with context-appropriate content.</InfoText>
+                  <InfoExample label="Template">YourAI's {'{feature_name}'} works like {'{analogy}'}. {'{one_sentence_explanation}'}.</InfoExample>
+                  <InfoExample label="After LLM rewrite">YourAI's Knowledge Packs work like a private library for your case documents. Every document you upload becomes searchable AI context.</InfoExample>
+                </InfoSection>
+                <InfoSection title="Available variables">
+                  <InfoList items={["{feature_name} — the feature being asked about", "{analogy} — a simple analogy to explain it", "{steps} — numbered step-by-step instructions", "{plan_requirement} — which plan includes this feature", "{answer} — direct answer to the question", "{billing_topic} — the billing subject", "{config_item} — the setting being configured"]} />
+                </InfoSection>
+                <InfoSection title="Editing tips">
+                  <InfoList items={["Keep templates under 150 words — the Length Enforcer filter will flag longer ones", "Always end with a follow-up question to keep the conversation going", "Use simple language — the Jargon Detector will catch technical terms", "Test your changes using the Preview section before saving"]} />
+                </InfoSection>
+              </InfoButton>
+            </div>
             <div className="grid grid-cols-2 gap-4">
               {templates.map((t, idx) => {
                 const IconComp = getIconComponent(t.icon);
@@ -678,9 +739,22 @@ export default function GlobalKnowledgeBase() {
 
           {/* Sub-section C: Response Filters */}
           <div>
-            <h2 className="mb-4" style={{ fontFamily: "'DM Serif Display', serif", color: 'var(--text-primary)', fontSize: '16px' }}>
-              Response Filters
-            </h2>
+            <div className="flex items-center gap-2 mb-4">
+              <h2 style={{ fontFamily: "'DM Serif Display', serif", color: 'var(--text-primary)', fontSize: '16px' }}>
+                Response Filters
+              </h2>
+              <InfoButton title="About Response Filters">
+                <InfoSection title="What are response filters?">
+                  <InfoText>Filters are post-processing rules applied to every Alex response before it reaches the user. They run in under 100ms total and catch issues that the LLM might miss — like accidentally mentioning a competitor, using technical jargon, or giving legal advice.</InfoText>
+                </InfoSection>
+                <InfoSection title="Filter types">
+                  <InfoList items={["Jargon Detector — replaces words like 'RAG', 'pgvector', 'JWT' with plain English", "Legal Advice Block — catches patterns like 'you should sue' or 'this constitutes breach' and redirects to an attorney", "Competitor Block — prevents mention of Clio, Relativity, Harvey AI, etc.", "Hallucination Check — compares mentioned features against the approved feature list", "Length Enforcer — flags responses over 150 words for review", "Confidence Gate — routes low-confidence responses to the operator escalation log"]} />
+                </InfoSection>
+                <InfoSection title="Disabling a filter">
+                  <InfoText>Disabling a filter removes it from the processing pipeline for ALL intents. Use with caution — for example, disabling the Legal Advice Block means Alex could potentially give legal advice to end users.</InfoText>
+                </InfoSection>
+              </InfoButton>
+            </div>
             <div className="grid grid-cols-2 gap-4">
               {filters.map((f) => {
                 const usedBy = templates.filter((t) => t.responseFilters.includes(f.id));
@@ -730,9 +804,23 @@ export default function GlobalKnowledgeBase() {
 
           {/* Sub-section D: Unknown Queries Log */}
           <div>
-            <h2 className="mb-4" style={{ fontFamily: "'DM Serif Display', serif", color: 'var(--text-primary)', fontSize: '16px' }}>
-              Unknown Queries Log
-            </h2>
+            <div className="flex items-center gap-2 mb-4">
+              <h2 style={{ fontFamily: "'DM Serif Display', serif", color: 'var(--text-primary)', fontSize: '16px' }}>
+                Unknown Queries Log
+              </h2>
+              <InfoButton title="About Unknown Queries">
+                <InfoSection title="What is the unknown queries log?">
+                  <InfoText>When Alex can't match a user's question to any of the 7 intent categories, it uses the full LLM with a system prompt as fallback. These queries are logged here so you can review them and identify patterns.</InfoText>
+                </InfoSection>
+                <InfoSection title="Why review these?">
+                  <InfoText>If you see the same type of question appearing repeatedly, it might warrant creating a new intent template. This is how the intent system grows over time — new patterns emerge from real user behaviour.</InfoText>
+                  <InfoExample label="Example">If 5 users ask 'Does this integrate with NetDocuments?' → That's a pattern → Create a new 'integrations' intent → Write a template → Future users get instant answers</InfoExample>
+                </InfoSection>
+                <InfoSection title="Escalated vs Logged">
+                  <InfoList items={["Escalated — the Confidence Gate filter flagged this response as low-confidence. An operator should review the response that was sent.", "Logged — the query was handled by the full LLM and the response passed all filters. No action needed unless you spot a pattern."]} />
+                </InfoSection>
+              </InfoButton>
+            </div>
             <Table columns={['Time', 'Query', 'Organisation', 'Escalated', 'Actions']}>
               {alexUnknownLog.map((row) => (
                 <tr key={row.id} style={{ borderBottom: '1px solid var(--border)' }} onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--ice-warm)')} onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'white')}>

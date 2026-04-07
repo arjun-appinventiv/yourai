@@ -26,6 +26,7 @@ import WorkflowTemplates from './pages/super-admin/WorkflowTemplates';
 import BroadcastNotifications from './pages/super-admin/BroadcastNotifications';
 import ReportsAnalytics from './pages/super-admin/ReportsAnalytics';
 import PlatformSettings from './pages/super-admin/PlatformSettings';
+import UserStories from './pages/super-admin/UserStories';
 
 // Org Admin imports
 import { RoleProvider } from './components/org-admin/RoleContext';
@@ -79,6 +80,7 @@ export default function App() {
               <Route path="/super-admin/notifications" element={<BroadcastNotifications />} />
               <Route path="/super-admin/reports" element={<ReportsAnalytics />} />
               <Route path="/super-admin/settings" element={<PlatformSettings />} />
+              <Route path="/super-admin/user-stories" element={<UserStories />} />
             </Route>
 
             {/* Org Admin routes */}
