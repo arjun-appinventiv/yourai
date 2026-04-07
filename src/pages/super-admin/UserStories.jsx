@@ -296,30 +296,113 @@ export default function UserStories() {
     setShowAIModal(true);
   };
 
-  const handleAIGenerate = () => {
+  const handleAIGenerate = async () => {
     setAiGenerating(true);
     setAiProgress([]);
 
+    const moduleName = currentModuleLabel || activeModule;
     const steps = [
-      `Analysing ${currentModuleLabel || activeModule} module scope...`,
+      `Analysing ${moduleName} module scope...`,
       'Identifying user roles and goals...',
       'Writing acceptance criteria...',
       'Adding error handling and NFRs...',
     ];
 
     steps.forEach((step, i) => {
-      setTimeout(() => {
-        setAiProgress((prev) => [...prev, step]);
-      }, (i + 1) * 1000);
+      setTimeout(() => setAiProgress((prev) => [...prev, step]), (i + 1) * 1000);
     });
 
-    setTimeout(() => {
+    const API_KEY = localStorage.getItem('yourai_anthropic_key') || '';
+
+    // Module context for the AI prompt
+    const moduleContextMap = {
+      'tenant-management': 'Tenant Management: view/create/suspend orgs, org detail (4 tabs: Overview/Users/Workspaces/Usage), impersonate admin, Add Tenant 3-step flow, CSV export. 8 mock orgs with plan badges.',
+      'user-management': 'User Management: cross-tenant user directory, filter by role/org/status, user detail modal, block/unblock, CSV export. 10 users, 3 roles (Admin/Internal User/Client).',
+      'platform-billing': 'Platform Billing: 3 tabs (Subscriptions/Plans/Transactions). Plan CRUD, transaction detail modal, CSV export. Stripe integration.',
+      'knowledge-base': 'Knowledge Base: 2 tabs (Legal Content docs/links + Alex Response Templates with 7 intents, filters, unknown queries log).',
+      'workflow-templates': 'Workflow Templates: lawyer-friendly task builder with 7 task types, reference doc upload, visual guide. 8 templates.',
+      'auth-flow': 'Auth: Login (email/password), Forgot Password (email → OTP → Reset). Protected routes. No signup.',
+    };
+    const moduleCtx = moduleContextMap[activeModule] || `${moduleName} module in YourAI Super Admin — a B2B SaaS platform for US law firms. SOC 2 compliant. All actions audit logged.`;
+
+    const systemPrompt = `You are an expert product manager. Generate ${aiCount} user stories for the ${moduleName} module of YourAI (AI platform for US law firms). Priority focus: ${aiPriority}. Return ONLY a valid JSON array. Each story: { "title": "string", "role": "Super Admin", "goal": "string", "benefit": "string", "preconditions": ["string"], "acceptanceCriteria": [{"given":"string","when":"string","then":"string"}], "errorHandling": [{"scenario":"string","response":"string"}], "nfrs": ["string"], "testScenarios": ["string"], "priority": "Must Have"|"Should Have"|"Could Have", "storyPoints": number }. Min 3 acceptance criteria, 2 error handling, 3 NFRs, 3 test scenarios per story. Include SOC 2 / audit logging NFRs. Return ONLY the JSON array, no markdown fences, no explanation.`;
+
+    try {
+      if (!API_KEY) {
+        console.log('No API key found — using mock stories. Set key: localStorage.setItem("yourai_anthropic_key", "sk-ant-...")');
+        // Fallback to mock
+        await new Promise((r) => setTimeout(r, 4000));
+        const generated = generateMockStories(activeModule, aiCount);
+        console.log('Mock stories generated:', generated);
+        createMany(generated, activeModule);
+        console.log('Stories saved. localStorage:', localStorage.getItem('yourai_user_stories')?.slice(0, 200));
+        setAiGenerating(false);
+        setShowAIModal(false);
+        showToast(`${generated.length} stories generated for ${moduleName}`);
+        return;
+      }
+
+      console.log('Calling Anthropic API for module:', activeModule, 'count:', aiCount);
+
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': API_KEY,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true',
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 8000,
+          system: systemPrompt,
+          messages: [{ role: 'user', content: `Module context: ${moduleCtx}\n\n${aiContext ? `Additional context: ${aiContext}` : ''}` }],
+        }),
+      });
+
+      console.log('API status:', response.status);
+      const data = await response.json();
+      console.log('API response:', data);
+
+      if (!response.ok) {
+        throw new Error(data.error?.message || `API returned ${response.status}`);
+      }
+
+      const rawText = data.content[0].text;
+      console.log('Raw text (first 300 chars):', rawText.slice(0, 300));
+
+      // Robust JSON parsing — strip markdown fences
+      const cleaned = rawText.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/i, '').trim();
+      const stories = JSON.parse(cleaned);
+
+      if (!Array.isArray(stories)) throw new Error('Response is not an array');
+      console.log('Parsed stories:', stories.length);
+
+      const saved = createMany(
+        stories.map((s) => ({
+          ...s,
+          status: 'Draft',
+          generatedByAI: true,
+          createdBy: 'Arjun P (AI)',
+        })),
+        activeModule
+      );
+      console.log('Stories saved to localStorage:', saved.length);
+
+      setAiGenerating(false);
+      setShowAIModal(false);
+      showToast(`${stories.length} stories generated for ${moduleName}`);
+
+    } catch (err) {
+      console.error('AI generate error:', err);
+      // Fallback to mock on any error
+      console.log('Falling back to mock stories due to error');
       const generated = generateMockStories(activeModule, aiCount);
       createMany(generated, activeModule);
       setAiGenerating(false);
       setShowAIModal(false);
-      showToast(`${generated.length} stories generated for ${currentModuleLabel}`);
-    }, 4000);
+      showToast(`${generated.length} stories generated for ${moduleName} (offline mode)`);
+    }
   };
 
   /* ══════════════════════════════════════════════════════════════
