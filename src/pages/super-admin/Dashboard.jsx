@@ -116,6 +116,7 @@ function DailyBarChart({ data }) {
 }
 
 /* ─── Activity Timeline ─── */
+const planColorsMap = { Free: '#64748B', Professional: '#1D4ED8', Team: '#166534', Enterprise: '#92400E' };
 const typeColors = { access: '#1D4ED8', data: '#166534', system: '#94A3B8', comms: '#C9A84C', billing: '#9333EA' };
 const typeIcons = { access: UserCheck, data: Upload, system: Server, comms: Bell, billing: CreditCard };
 

@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import { Building2, Users, AlertTriangle, DollarSign, Eye, Edit3, Ban, CheckCircle, X, Download, Search, Lock, Unlock, Mail, UserPlus, Send, Info, ChevronRight, Save } from 'lucide-react';
-import { tenants as initialTenants } from '../../data/mockData';
+import { Building2, Users, AlertTriangle, DollarSign, Eye, Edit3, Ban, CheckCircle, X, Download, Search, Lock, Unlock, Mail, UserPlus, Send, Info, ChevronRight, Save, Pencil, Check } from 'lucide-react';
+import { tenants as initialTenants, subscriptionPlans, auditLog as initialAuditLog } from '../../data/mockData';
 import PageHeader from '../../components/PageHeader';
 import StatCard from '../../components/StatCard';
 import Badge from '../../components/Badge';
@@ -57,10 +57,14 @@ const firmProfiles = {
 
 const planLimits = {
   Free: { docs: 50, workflows: 10, kpacks: 1 },
-  Professional: { docs: 500, workflows: 100, kpacks: 5 },
-  Team: { docs: 2000, workflows: 500, kpacks: 20 },
+  Professional: { docs: 500, workflows: 100, kpacks: 3 },
+  Team: { docs: 2000, workflows: 500, kpacks: 10 },
   Enterprise: { docs: 99999, workflows: 99999, kpacks: 99999 },
 };
+
+
+const PLAN_ORDER = ['Free', 'Professional', 'Team', 'Enterprise'];
+const OVERRIDE_REASONS = ['Sales agreement', 'Trial extension', 'Support exception', 'Billing adjustment', 'Partner deal', 'Other'];
 
 const roleColors = {
   Admin: { bg: 'var(--navy)', color: 'white' },
@@ -84,7 +88,50 @@ export default function TenantManagement() {
   const [newOrg, setNewOrg] = useState({ name: '', plan: 'Professional', industry: 'Legal Services' });
   const [newAdmin, setNewAdmin] = useState({ firstName: '', lastName: '', email: '', phone: '' });
   const [inviteSent, setInviteSent] = useState(false);
+  const [overrideOrg, setOverrideOrg] = useState(null);
+  const [overrideSelectedPlan, setOverrideSelectedPlan] = useState(null);
+  const [overrideReason, setOverrideReason] = useState('');
+  const [overrideCustomReason, setOverrideCustomReason] = useState('');
+  const [overrideNotes, setOverrideNotes] = useState('');
+  const [overrideEffective, setOverrideEffective] = useState('immediately');
+  const [overrideError, setOverrideError] = useState('');
+  const [auditLog, setAuditLog] = useState(initialAuditLog);
   const showToast = useToast();
+
+  const openPlanOverride = (org) => {
+    setOverrideOrg(org);
+    setOverrideSelectedPlan(null);
+    setOverrideReason('');
+    setOverrideCustomReason('');
+    setOverrideNotes('');
+    setOverrideEffective('immediately');
+    setOverrideError('');
+  };
+
+  const handleApplyPlanChange = () => {
+    if (!overrideSelectedPlan || !overrideReason) return;
+    if (overrideReason === 'Other' && !overrideCustomReason.trim()) {
+      setOverrideError('Please describe the reason');
+      return;
+    }
+    const newPlan = overrideSelectedPlan;
+    const planData = subscriptionPlans.find((p) => p.name === newPlan);
+    const orgData = overrideOrg;
+    const oldPlan = orgData.plan;
+    const newMrr = (planData?.price || 0) * orgData.users;
+    const updatedOrg = { ...orgData, plan: newPlan, mrr: newMrr, planPrice: planData?.price || 0 };
+    setTenantList((prev) => prev.map((t) => t.id === orgData.id ? updatedOrg : t));
+    if (selectedOrg && selectedOrg.id === orgData.id) {
+      setSelectedOrg(updatedOrg);
+    }
+    // Add audit log entry
+    setAuditLog((prev) => [
+      { id: prev.length + 1, operator: 'Arjun P', action: `Changed plan ${oldPlan} → ${newPlan}`, target: orgData.name, time: 'Just now' },
+      ...prev,
+    ]);
+    showToast(`Plan updated to ${newPlan} for ${orgData.name}`);
+    setOverrideOrg(null);
+  };
 
   const filtered = useMemo(() => {
     return tenantList.filter((t) => {
@@ -367,29 +414,67 @@ export default function TenantManagement() {
                     <Edit3 size={14} /> Edit Organisation Details
                   </button>
 
+                  {/* Billing Detail */}
+                  {(() => {
+                    const pricePerUser = selectedOrg.planPrice || 0;
+                    return (
+                      <div className="p-4 rounded-lg" style={{ border: '1px solid var(--border)' }}>
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="text-xs font-semibold uppercase" style={{ color: 'var(--text-muted)' }}>Subscription</div>
+                          <button
+                            onClick={() => openPlanOverride(selectedOrg)}
+                            className="flex items-center gap-1 rounded-lg font-medium"
+                            style={{ height: 28, padding: '0 10px', fontSize: '12px', border: '1px solid var(--border)', color: 'var(--navy)', backgroundColor: 'white' }}
+                          >
+                            <Pencil size={12} /> Change Plan
+                          </button>
+                        </div>
+                        <div className="space-y-2.5">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm" style={{ color: 'var(--text-muted)' }}>Plan</span>
+                            <Badge variant={selectedOrg.plan}>{selectedOrg.plan}</Badge>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm" style={{ color: 'var(--text-muted)' }}>Price per user</span>
+                            <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{pricePerUser > 0 ? `$${pricePerUser}/month` : 'Free'}</span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm" style={{ color: 'var(--text-muted)' }}>Active seats</span>
+                            <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{selectedOrg.users} users</span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm" style={{ color: 'var(--text-muted)' }}>Monthly total</span>
+                            <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>${selectedOrg.mrr.toLocaleString()}/month</span>
+                          </div>
+                          <div style={{ borderTop: '1px solid var(--border)', paddingTop: 8 }} />
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm" style={{ color: 'var(--text-muted)' }}>Billing since</span>
+                            <span className="text-sm" style={{ color: 'var(--text-primary)' }}>{selectedOrg.billedSince}</span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm" style={{ color: 'var(--text-muted)' }}>Next renewal</span>
+                            <span className="text-sm" style={{ color: 'var(--text-primary)' }}>{selectedOrg.nextRenewal}</span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm" style={{ color: 'var(--text-muted)' }}>Payment status</span>
+                            <Badge variant={selectedOrg.paymentStatus}>{selectedOrg.paymentStatus}</Badge>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* General Info */}
                   <div className="grid grid-cols-2 gap-3">
                     {[
-                      ['Plan', selectedOrg.plan],
                       ['Status', selectedOrg.status],
                       ['Created', selectedOrg.created],
                       ['Stripe ID', contact?.stripeId || '—'],
+                      ['Workspaces', selectedOrg.workspaces],
                     ].map(([l, v]) => (
                       <div key={l} className="p-3 rounded-lg" style={{ backgroundColor: 'var(--ice-warm)' }}>
                         <div className="text-xs font-semibold uppercase" style={{ color: 'var(--text-muted)' }}>{l}</div>
                         <div className="text-sm font-medium mt-1" style={{ color: 'var(--text-primary)' }}>{v}</div>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="grid grid-cols-4 gap-3">
-                    {[
-                      ['MRR', `$${selectedOrg.mrr.toLocaleString()}`],
-                      ['Users', selectedOrg.users],
-                      ['Workspaces', selectedOrg.workspaces],
-                      ['Documents', selectedOrg.documents],
-                    ].map(([l, v]) => (
-                      <div key={l} className="p-3 rounded-lg text-center" style={{ backgroundColor: 'var(--ice-warm)' }}>
-                        <div className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>{v}</div>
-                        <div className="text-xs" style={{ color: 'var(--text-muted)' }}>{l}</div>
                       </div>
                     ))}
                   </div>
@@ -758,6 +843,116 @@ export default function TenantManagement() {
             )}
           </div>
         </div>
+      )}
+
+      {/* ═══ Plan Override Modal ═══ */}
+      {overrideOrg && (
+        <>
+          <div onClick={() => setOverrideOrg(null)} style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)', zIndex: 60, backdropFilter: 'blur(4px)' }} />
+          <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 520, maxHeight: '90vh', overflowY: 'auto', backgroundColor: 'white', borderRadius: 16, boxShadow: '0 20px 60px rgba(0,0,0,0.2)', zIndex: 61 }}>
+            <div className="flex items-center justify-between px-6 py-5" style={{ borderBottom: '1px solid var(--border)' }}>
+              <h3 style={{ fontFamily: "'DM Serif Display', serif", fontSize: '18px', color: 'var(--text-primary)' }}>Change Plan — {overrideOrg.name}</h3>
+              <button onClick={() => setOverrideOrg(null)} className="p-1.5 rounded-lg hover:bg-gray-100"><X size={18} style={{ color: 'var(--text-muted)' }} /></button>
+            </div>
+            <div className="px-6 py-5 space-y-5">
+              {/* Current Plan */}
+              <div className="p-4 rounded-lg" style={{ backgroundColor: 'var(--ice-warm)', border: '1px solid var(--border)' }}>
+                <div className="text-xs font-semibold uppercase mb-2" style={{ color: 'var(--text-muted)' }}>Current Plan</div>
+                <div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+                  {overrideOrg.plan} · ${subscriptionPlans.find(p => p.name === overrideOrg.plan)?.price || 0}/user/month
+                </div>
+                <div className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
+                  Seats: {overrideOrg.users} users · ${overrideOrg.mrr.toLocaleString()}/month total
+                </div>
+                <div className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
+                  Active since: {overrideOrg.billedSince || overrideOrg.created} · Next renewal: {billingMeta[overrideOrg.id]?.nextRenewal || '—'}
+                </div>
+              </div>
+              {/* Plan Cards */}
+              <div>
+                <label className="block text-sm font-medium mb-3" style={{ color: 'var(--text-primary)' }}>Select New Plan</label>
+                <div className="grid grid-cols-2 gap-3">
+                  {subscriptionPlans.map((p) => {
+                    const isCurrent = p.name === overrideOrg.plan;
+                    const isSelected = p.name === overrideSelectedPlan;
+                    return (
+                      <div key={p.id} onClick={() => !isCurrent && setOverrideSelectedPlan(p.name)} className="rounded-lg p-4 transition-all" style={{ border: isSelected ? '2px solid var(--navy)' : '1px solid var(--border)', backgroundColor: isCurrent ? '#F9FAFB' : isSelected ? '#EFF6FF' : 'white', cursor: isCurrent ? 'not-allowed' : 'pointer', opacity: isCurrent ? 0.7 : 1, borderLeft: `3px solid ${p.colour}`, position: 'relative' }}>
+                        {isCurrent && <span className="absolute top-2 right-2 text-xs px-1.5 py-0.5 rounded-full" style={{ backgroundColor: '#F3F4F6', color: '#6B7280', fontSize: '10px' }}>Current</span>}
+                        {isSelected && <span className="absolute top-2 right-2 w-5 h-5 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--navy)' }}><Check size={12} color="white" /></span>}
+                        <div style={{ fontFamily: "'DM Serif Display', serif", fontSize: '15px', color: 'var(--navy)' }}>{p.name}</div>
+                        <div className="text-sm font-medium mt-1" style={{ color: 'var(--text-primary)' }}>{p.price === 0 ? 'Free' : `$${p.price}/user/mo`}</div>
+                        <div className="mt-2 space-y-0.5">
+                          <div className="text-xs" style={{ color: 'var(--text-muted)' }}>• {p.docsPerMonth === null ? 'Unlimited' : p.docsPerMonth.toLocaleString()} docs/mo</div>
+                          <div className="text-xs" style={{ color: 'var(--text-muted)' }}>• {p.workflowRuns === null ? 'Unlimited' : p.workflowRuns} workflows/mo</div>
+                          <div className="text-xs" style={{ color: 'var(--text-muted)' }}>• {p.aiModels}</div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                {(() => {
+                  const curIdx = PLAN_ORDER.indexOf(overrideOrg.plan);
+                  const selIdx = overrideSelectedPlan ? PLAN_ORDER.indexOf(overrideSelectedPlan) : -1;
+                  if (selIdx >= 0 && selIdx < curIdx) return (
+                    <div className="flex items-start gap-2.5 p-3 mt-3 rounded-lg" style={{ backgroundColor: '#FFFBEB', borderLeft: '3px solid #F59E0B' }}>
+                      <AlertTriangle size={15} style={{ color: '#92400E', flexShrink: 0, marginTop: 1 }} />
+                      <p className="text-xs" style={{ color: '#92400E' }}>Downgrading takes effect at next billing cycle ({overrideOrg.nextRenewal || 'May 1, 2026'}). Current features remain active until then.</p>
+                    </div>
+                  );
+                  if (selIdx >= 0 && selIdx > curIdx) return (
+                    <div className="flex items-start gap-2.5 p-3 mt-3 rounded-lg" style={{ backgroundColor: '#F0FDF4', borderLeft: '3px solid #166534' }}>
+                      <CheckCircle size={15} style={{ color: '#166534', flexShrink: 0, marginTop: 1 }} />
+                      <p className="text-xs" style={{ color: '#166534' }}>Upgrading takes effect immediately. The org will be charged a prorated amount.</p>
+                    </div>
+                  );
+                  return null;
+                })()}
+              </div>
+              {/* Reason */}
+              <div>
+                <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-primary)' }}>Reason for manual plan change *</label>
+                <select value={overrideReason} onChange={(e) => { setOverrideReason(e.target.value); setOverrideError(''); }} style={{ ...inputStyle, width: '100%', height: 40, cursor: 'pointer', appearance: 'auto' }}>
+                  <option value="">Select a reason...</option>
+                  {OVERRIDE_REASONS.map((r) => <option key={r} value={r}>{r}</option>)}
+                </select>
+                {overrideReason === 'Other' && (
+                  <div className="mt-2">
+                    <input type="text" value={overrideCustomReason} onChange={(e) => { setOverrideCustomReason(e.target.value); setOverrideError(''); }} placeholder="Describe the reason..." style={{ ...inputStyle, width: '100%' }} />
+                    {overrideError && <p className="text-xs mt-1" style={{ color: '#991B1B' }}>{overrideError}</p>}
+                  </div>
+                )}
+              </div>
+              {/* Notes */}
+              <div>
+                <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-primary)' }}>Internal notes</label>
+                <textarea rows={3} value={overrideNotes} onChange={(e) => setOverrideNotes(e.target.value)} placeholder="Add any notes visible only to Super Admins..." style={{ ...inputStyle, width: '100%', height: 'auto', padding: '10px 12px', resize: 'none' }} />
+              </div>
+              {/* Effective */}
+              <div>
+                <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-primary)' }}>When should this take effect?</label>
+                <div className="grid grid-cols-2 gap-3">
+                  {[{ value: 'immediately', label: 'Immediately', desc: 'Takes effect now' }, { value: 'next_cycle', label: 'Next billing cycle', desc: overrideOrg.nextRenewal || 'May 1, 2026' }].map((opt) => (
+                    <div key={opt.value} onClick={() => setOverrideEffective(opt.value)} className="rounded-lg p-3 cursor-pointer transition-all" style={{ border: overrideEffective === opt.value ? '2px solid var(--navy)' : '1px solid var(--border)', backgroundColor: overrideEffective === opt.value ? '#EFF6FF' : 'white' }}>
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 rounded-full flex items-center justify-center" style={{ border: `2px solid ${overrideEffective === opt.value ? 'var(--navy)' : 'var(--border)'}` }}>
+                          {overrideEffective === opt.value && <div className="w-2 h-2 rounded-full" style={{ backgroundColor: 'var(--navy)' }} />}
+                        </div>
+                        <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{opt.label}</span>
+                      </div>
+                      <p className="text-xs mt-1 ml-6" style={{ color: 'var(--text-muted)' }}>{opt.desc}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 px-6 py-4" style={{ borderTop: '1px solid var(--border)' }}>
+              <button onClick={() => setOverrideOrg(null)} className="px-4 py-2.5 rounded-lg text-sm font-medium" style={{ border: '1px solid var(--border)', color: 'var(--slate)', backgroundColor: 'white' }}>Cancel</button>
+              <button onClick={handleApplyPlanChange} disabled={!overrideSelectedPlan || !overrideReason} className="px-5 py-2.5 rounded-lg text-sm font-medium text-white" style={{ backgroundColor: (!overrideSelectedPlan || !overrideReason) ? '#94A3B8' : 'var(--navy)', cursor: (!overrideSelectedPlan || !overrideReason) ? 'not-allowed' : 'pointer' }}>
+                Apply Plan Change
+              </button>
+            </div>
+          </div>
+        </>
       )}
     </div>
   );

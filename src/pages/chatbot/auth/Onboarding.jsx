@@ -16,7 +16,14 @@ import {
   ChevronLeft,
   Lock,
   X,
+  CreditCard,
+  Shield,
+  Zap,
+  Sparkles,
+  CheckCircle,
+  Star,
 } from 'lucide-react';
+import { subscriptionPlans } from '../../../data/mockData';
 
 const PRACTICE_AREAS = [
   'Corporate & M&A',
@@ -249,6 +256,15 @@ export default function Onboarding() {
   const [stateSearch, setStateSearch] = useState('');
   const [stateDropdownOpen, setStateDropdownOpen] = useState(false);
   const [direction, setDirection] = useState('forward');
+  const [selectedPlan, setSelectedPlan] = useState('');
+  const [cardNumber, setCardNumber] = useState('');
+  const [cardExpiry, setCardExpiry] = useState('');
+  const [cardCvc, setCardCvc] = useState('');
+  const [billingName, setBillingName] = useState('');
+  const [paymentProcessing, setPaymentProcessing] = useState(false);
+  const [paymentComplete, setPaymentComplete] = useState(false);
+
+  const TOTAL_STEPS = 7;
 
   const canContinue = () => {
     switch (step) {
@@ -257,34 +273,58 @@ export default function Onboarding() {
       case 3: return !!firmSize;
       case 4: return !!primaryState;
       case 5: return !!firstAction;
+      case 6: return !!selectedPlan;
+      case 7: return selectedPlan === 'free' || paymentComplete || (cardNumber.length >= 15 && cardExpiry.length >= 4 && cardCvc.length >= 3 && billingName.trim().length > 0);
       default: return false;
     }
   };
 
   const goNext = () => {
-    if (step === 5) {
-      const selectedRole = ROLES.find((r) => r.id === role);
-      const selectedFirmSize = FIRM_SIZES.find((s) => s.id === firmSize);
-      const selectedAction = FIRST_ACTIONS.find((a) => a.id === firstAction);
-      localStorage.setItem(
-        'yourai_user_profile',
-        JSON.stringify({
-          role: selectedRole ? selectedRole.title : role,
-          practiceAreas,
-          firmSize: selectedFirmSize ? selectedFirmSize.title : firmSize,
-          primaryState: primaryState,
-          additionalStates: additionalStates,
-          federalPractice: federalPractice,
-          primaryGoal: selectedAction ? selectedAction.title : firstAction,
-          onboardingCompleted: true,
-          onboardingCompletedAt: new Date().toISOString(),
-        })
-      );
-      navigate('/chat');
+    // Step 6 → 7: if free plan, skip payment step entirely
+    if (step === 6 && selectedPlan === 'free') {
+      finishOnboarding();
       return;
     }
+    // Step 7: process payment then finish
+    if (step === 7) {
+      if (paymentComplete) {
+        finishOnboarding();
+        return;
+      }
+      setPaymentProcessing(true);
+      setTimeout(() => {
+        setPaymentProcessing(false);
+        setPaymentComplete(true);
+      }, 2000);
+      return;
+    }
+    if (step >= TOTAL_STEPS) return;
     setDirection('forward');
     setStep((s) => s + 1);
+  };
+
+  const finishOnboarding = () => {
+    const selectedRole = ROLES.find((r) => r.id === role);
+    const selectedFirmSize = FIRM_SIZES.find((s) => s.id === firmSize);
+    const selectedAction = FIRST_ACTIONS.find((a) => a.id === firstAction);
+    const planData = subscriptionPlans.find((p) => p.id === selectedPlan);
+    localStorage.setItem(
+      'yourai_user_profile',
+      JSON.stringify({
+        role: selectedRole ? selectedRole.title : role,
+        practiceAreas,
+        firmSize: selectedFirmSize ? selectedFirmSize.title : firmSize,
+        primaryState: primaryState,
+        additionalStates: additionalStates,
+        federalPractice: federalPractice,
+        primaryGoal: selectedAction ? selectedAction.title : firstAction,
+        plan: planData ? planData.name : 'Free',
+        planId: selectedPlan,
+        onboardingCompleted: true,
+        onboardingCompletedAt: new Date().toISOString(),
+      })
+    );
+    navigate('/chat');
   };
 
   const goBack = () => {
@@ -569,7 +609,177 @@ export default function Onboarding() {
     </div>
   );
 
-  const stepRenderers = [renderStep1, renderStep2, renderStep3, renderStep4, renderStep5];
+  const planFeatures = {
+    free: ['50 documents/month', 'GPT-4o-mini + Gemini Flash', '1 knowledge pack', 'Community support'],
+    professional: ['500 documents/month', 'All AI models', '3 knowledge packs', 'Email support', '5 GB storage'],
+    team: ['2,000 documents/month', 'All AI models + priority', '10 knowledge packs', 'SSO & Client Portal', 'HIPAA eligible', '25 GB storage'],
+    enterprise: ['Unlimited documents', 'Custom fine-tuned models', 'Unlimited knowledge packs', 'Dedicated CSM', 'Private VPC & API', 'HIPAA + SOC 2'],
+  };
+
+  const planIcons = { free: Sparkles, professional: Star, team: Users, enterprise: Shield };
+  const planAccent = { free: '#64748B', professional: '#1D4ED8', team: '#166534', enterprise: '#92400E' };
+
+  const renderStep6 = () => (
+    <div key="step6" style={{ maxWidth: 640 }}>
+      <h2 style={styles.title}>Choose your plan</h2>
+      <p style={styles.subtitle}>Start free and upgrade anytime. All plans include encrypted storage and ABA compliance.</p>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 24 }}>
+        {subscriptionPlans.map((plan) => {
+          const isSelected = selectedPlan === plan.id;
+          const Icon = planIcons[plan.id] || Sparkles;
+          const accent = planAccent[plan.id] || '#64748B';
+          const features = planFeatures[plan.id] || [];
+          return (
+            <button
+              key={plan.id}
+              type="button"
+              onClick={() => setSelectedPlan(plan.id)}
+              style={{
+                position: 'relative',
+                display: 'flex',
+                flexDirection: 'column',
+                padding: 20,
+                borderRadius: 12,
+                border: `2px solid ${isSelected ? accent : 'var(--border)'}`,
+                background: isSelected ? `${accent}08` : '#fff',
+                cursor: 'pointer',
+                textAlign: 'left',
+                transition: 'all 0.2s ease',
+                boxShadow: isSelected ? `0 0 0 1px ${accent}` : 'none',
+              }}
+              onMouseEnter={(e) => { if (!isSelected) e.currentTarget.style.borderColor = accent + '80'; }}
+              onMouseLeave={(e) => { if (!isSelected) e.currentTarget.style.borderColor = 'var(--border)'; }}
+            >
+              {plan.badge && (
+                <span style={{ position: 'absolute', top: -10, right: 12, fontSize: 10, fontWeight: 600, padding: '3px 10px', borderRadius: 999, backgroundColor: accent + '18', color: accent }}>{plan.badge}</span>
+              )}
+              {isSelected && (
+                <div style={{ position: 'absolute', top: 12, right: 12, width: 22, height: 22, borderRadius: '50%', background: accent, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Check size={14} color="#fff" />
+                </div>
+              )}
+              <div style={{ width: 36, height: 36, borderRadius: 8, backgroundColor: accent + '14', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
+                <Icon size={18} style={{ color: accent }} />
+              </div>
+              <div style={{ fontFamily: "'DM Serif Display', serif", fontSize: 18, color: 'var(--text-primary)', marginBottom: 2 }}>{plan.name}</div>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 2, marginBottom: 12 }}>
+                <span style={{ fontSize: 28, fontWeight: 700, color: 'var(--text-primary)' }}>{plan.price === 0 ? 'Free' : `$${plan.price}`}</span>
+                {plan.price > 0 && <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>/user/mo</span>}
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {features.map((f, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-secondary)' }}>
+                    <CheckCircle size={13} style={{ color: accent, flexShrink: 0 }} />
+                    {f}
+                  </div>
+                ))}
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+
+  const formatCardNumber = (val) => {
+    const digits = val.replace(/\D/g, '').slice(0, 16);
+    return digits.replace(/(\d{4})(?=\d)/g, '$1 ');
+  };
+
+  const formatExpiry = (val) => {
+    const digits = val.replace(/\D/g, '').slice(0, 4);
+    if (digits.length > 2) return digits.slice(0, 2) + '/' + digits.slice(2);
+    return digits;
+  };
+
+  const planForPayment = subscriptionPlans.find((p) => p.id === selectedPlan);
+
+  const renderStep7 = () => (
+    <div key="step7">
+      <h2 style={styles.title}>Set up payment</h2>
+      <p style={styles.subtitle}>You won't be charged until your trial ends. Cancel anytime.</p>
+
+      {/* Plan summary */}
+      <div style={{ marginTop: 24, padding: '14px 18px', borderRadius: 10, backgroundColor: 'var(--ice-warm)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div>
+          <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{planForPayment?.name} Plan</span>
+          <span style={{ fontSize: 12, color: 'var(--text-muted)', marginLeft: 8 }}>14-day free trial</span>
+        </div>
+        <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)' }}>${planForPayment?.price}<span style={{ fontSize: 12, fontWeight: 400, color: 'var(--text-muted)' }}>/user/mo</span></div>
+      </div>
+
+      {paymentComplete ? (
+        <div style={{ marginTop: 32, textAlign: 'center' }}>
+          <div style={{ width: 56, height: 56, borderRadius: '50%', background: '#DCFCE7', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+            <CheckCircle size={28} color="#16A34A" />
+          </div>
+          <div style={{ fontFamily: "'DM Serif Display', serif", fontSize: 20, color: 'var(--text-primary)', marginBottom: 6 }}>Payment method saved</div>
+          <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>Your 14-day free trial starts now. You won't be charged until {(() => { const d = new Date(); d.setDate(d.getDate() + 14); return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); })()}.</div>
+        </div>
+      ) : (
+        <div style={{ marginTop: 24, display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {/* Cardholder name */}
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Cardholder name</label>
+            <input
+              type="text"
+              value={billingName}
+              onChange={(e) => setBillingName(e.target.value)}
+              placeholder="Ryan Melade"
+              style={{ width: '100%', height: 42, border: '1.5px solid var(--border)', borderRadius: 8, padding: '0 14px', fontSize: 13, fontFamily: "'DM Sans', sans-serif", outline: 'none', boxSizing: 'border-box' }}
+            />
+          </div>
+
+          {/* Card number */}
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Card number</label>
+            <div style={{ position: 'relative' }}>
+              <CreditCard size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+              <input
+                type="text"
+                value={cardNumber}
+                onChange={(e) => setCardNumber(formatCardNumber(e.target.value))}
+                placeholder="4242 4242 4242 4242"
+                style={{ width: '100%', height: 42, border: '1.5px solid var(--border)', borderRadius: 8, padding: '0 14px 0 38px', fontSize: 13, fontFamily: "'DM Sans', sans-serif", outline: 'none', boxSizing: 'border-box', letterSpacing: '0.5px' }}
+              />
+            </div>
+          </div>
+
+          {/* Expiry + CVC row */}
+          <div style={{ display: 'flex', gap: 12 }}>
+            <div style={{ flex: 1 }}>
+              <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Expiry</label>
+              <input
+                type="text"
+                value={cardExpiry}
+                onChange={(e) => setCardExpiry(formatExpiry(e.target.value))}
+                placeholder="MM/YY"
+                style={{ width: '100%', height: 42, border: '1.5px solid var(--border)', borderRadius: 8, padding: '0 14px', fontSize: 13, fontFamily: "'DM Sans', sans-serif", outline: 'none', boxSizing: 'border-box' }}
+              />
+            </div>
+            <div style={{ flex: 1 }}>
+              <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>CVC</label>
+              <input
+                type="text"
+                value={cardCvc}
+                onChange={(e) => setCardCvc(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                placeholder="123"
+                style={{ width: '100%', height: 42, border: '1.5px solid var(--border)', borderRadius: 8, padding: '0 14px', fontSize: 13, fontFamily: "'DM Sans', sans-serif", outline: 'none', boxSizing: 'border-box' }}
+              />
+            </div>
+          </div>
+
+          {/* Security note */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 8, backgroundColor: '#F0FDF4', border: '1px solid #DCFCE7' }}>
+            <Shield size={14} style={{ color: '#166534', flexShrink: 0 }} />
+            <span style={{ fontSize: 12, color: '#166534' }}>256-bit SSL encryption. We never store your full card number.</span>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  const stepRenderers = [renderStep1, renderStep2, renderStep3, renderStep4, renderStep5, renderStep6, renderStep7];
 
   return (
     <div style={styles.wrapper}>
@@ -590,6 +800,7 @@ export default function Onboarding() {
         <div
           style={{
             ...styles.card,
+            maxWidth: step === 6 ? 680 : 560,
             animation: `${direction === 'forward' ? 'onb-slide-in-right' : 'onb-slide-in-left'} 0.35s ease`,
           }}
         >
@@ -619,7 +830,7 @@ export default function Onboarding() {
                 cursor: canContinue() ? 'pointer' : 'not-allowed',
               }}
             >
-              {step === 5 ? 'Get Started' : 'Continue'}
+              {paymentProcessing ? 'Processing...' : step === 7 ? (paymentComplete ? 'Get Started' : 'Start Free Trial') : step === 6 ? (selectedPlan === 'free' ? 'Get Started — Free' : 'Continue to Payment') : 'Continue'}
             </button>
           </div>
         </div>
@@ -627,7 +838,7 @@ export default function Onboarding() {
 
       {/* Progress dots */}
       <div style={styles.footer}>
-        <ProgressDots current={step} total={5} />
+        <ProgressDots current={step} total={TOTAL_STEPS} />
       </div>
 
       {/* Keyframe animations */}

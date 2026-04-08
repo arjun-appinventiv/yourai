@@ -1,12 +1,12 @@
 export const tenants = [
-  { id:1, name:"Hartwell & Associates", plan:"Team", users:5, workspaces:4, documents:46, status:"Active", created:"Jan 12, 2026", mrr:1495 },
-  { id:2, name:"Morrison Legal Group", plan:"Professional", users:3, workspaces:7, documents:128, status:"Active", created:"Jan 28, 2026", mrr:447 },
-  { id:3, name:"Chen Partners LLC", plan:"Enterprise", users:12, workspaces:15, documents:340, status:"Active", created:"Feb 3, 2026", mrr:7188 },
-  { id:4, name:"Rivera & Kim LLP", plan:"Free", users:1, workspaces:2, documents:12, status:"Active", created:"Feb 14, 2026", mrr:0 },
-  { id:5, name:"Patel Law Office", plan:"Professional", users:2, workspaces:3, documents:67, status:"Active", created:"Feb 20, 2026", mrr:298 },
-  { id:6, name:"Thornton Compliance", plan:"Team", users:8, workspaces:6, documents:210, status:"Suspended", created:"Mar 1, 2026", mrr:2392 },
-  { id:7, name:"Goldstein & Webb", plan:"Free", users:1, workspaces:1, documents:8, status:"Active", created:"Mar 15, 2026", mrr:0 },
-  { id:8, name:"Pacific Rim Legal", plan:"Professional", users:4, workspaces:5, documents:95, status:"Active", created:"Mar 22, 2026", mrr:596 }
+  { id:1, name:"Hartwell & Associates", plan:"Team", users:5, workspaces:4, documents:46, status:"Active", created:"Jan 12, 2026", mrr:1495, planPrice:299, billedSince:"Jan 12, 2026", nextRenewal:"May 1, 2026", paymentStatus:"Paid" },
+  { id:2, name:"Morrison Legal Group", plan:"Professional", users:3, workspaces:7, documents:128, status:"Active", created:"Jan 28, 2026", mrr:447, planPrice:149, billedSince:"Jan 28, 2026", nextRenewal:"May 1, 2026", paymentStatus:"Paid" },
+  { id:3, name:"Chen Partners LLC", plan:"Enterprise", users:12, workspaces:15, documents:340, status:"Active", created:"Feb 3, 2026", mrr:7188, planPrice:599, billedSince:"Feb 3, 2026", nextRenewal:"May 1, 2026", paymentStatus:"Paid" },
+  { id:4, name:"Rivera & Kim LLP", plan:"Free", users:1, workspaces:2, documents:12, status:"Active", created:"Feb 14, 2026", mrr:0, planPrice:0, billedSince:"Feb 14, 2026", nextRenewal:"—", paymentStatus:"N/A" },
+  { id:5, name:"Patel Law Office", plan:"Professional", users:2, workspaces:3, documents:67, status:"Active", created:"Feb 20, 2026", mrr:298, planPrice:149, billedSince:"Feb 20, 2026", nextRenewal:"May 1, 2026", paymentStatus:"Paid" },
+  { id:6, name:"Thornton Compliance", plan:"Team", users:8, workspaces:6, documents:210, status:"Suspended", created:"Mar 1, 2026", mrr:2392, planPrice:299, billedSince:"Mar 1, 2026", nextRenewal:"May 1, 2026", paymentStatus:"Failed" },
+  { id:7, name:"Goldstein & Webb", plan:"Free", users:1, workspaces:1, documents:8, status:"Active", created:"Mar 15, 2026", mrr:0, planPrice:0, billedSince:"Mar 15, 2026", nextRenewal:"—", paymentStatus:"N/A" },
+  { id:8, name:"Pacific Rim Legal", plan:"Professional", users:4, workspaces:5, documents:95, status:"Active", created:"Mar 22, 2026", mrr:596, planPrice:149, billedSince:"Mar 22, 2026", nextRenewal:"May 1, 2026", paymentStatus:"Paid" }
 ];
 
 export const globalKBDocs = [
@@ -159,6 +159,41 @@ export const deliverables = [
   { id:2, workspace:2, title:"TechStart Due Diligence Pack",clientId:2, status:"Draft",    assembledBy:"Ryan Melade",  sharedDate:null,           items:["TechStart Due Diligence Summary","TechStart_TermSheet_v2.pdf"] }
 ];
 
+export const subscriptionPlans = [
+  {
+    id: "free", name: "Free", price: 0, colour: "#64748B",
+    docsPerMonth: 50, workflowRuns: 10, knowledgePacks: "1 pack (500 docs)",
+    storage: "—", aiModels: "GPT-4o-mini + Gemini Flash only",
+    auditLog: "None", sso: false, clientPortal: false, secureMessaging: false,
+    hipaa: false, api: false, whiteLabel: false, privateVPC: false,
+    support: "Community only", badge: null, status: "Active"
+  },
+  {
+    id: "professional", name: "Professional", price: 149, colour: "#1D4ED8",
+    docsPerMonth: 500, workflowRuns: 100, knowledgePacks: "3 packs (2,500 docs each)",
+    storage: "5GB", aiModels: "All 3 providers",
+    auditLog: "30-day", sso: false, clientPortal: false, secureMessaging: false,
+    hipaa: false, api: false, whiteLabel: false, privateVPC: false,
+    support: "Email support", badge: null, status: "Active"
+  },
+  {
+    id: "team", name: "Team", price: 299, colour: "#166534",
+    docsPerMonth: 2000, workflowRuns: 500, knowledgePacks: "10 packs (10,000 docs each)",
+    storage: "25GB", aiModels: "All 3 providers + priority",
+    auditLog: "90-day", sso: true, clientPortal: true, secureMessaging: true,
+    hipaa: true, api: false, whiteLabel: false, privateVPC: false,
+    support: "Priority support", badge: "Most Popular", status: "Active"
+  },
+  {
+    id: "enterprise", name: "Enterprise", price: 599, colour: "#92400E",
+    docsPerMonth: null, workflowRuns: null, knowledgePacks: "Unlimited",
+    storage: "Unlimited", aiModels: "All models + custom fine-tuned",
+    auditLog: "7-year immutable + SIEM export", sso: true, clientPortal: true,
+    secureMessaging: true, hipaa: true, api: true, whiteLabel: true, privateVPC: true,
+    support: "Dedicated CSM", badge: "Enterprise", status: "Active"
+  }
+];
+
 export const billingData = {
   plan: "Team",
   pricePerUser: 299,
@@ -188,10 +223,10 @@ export const dashboardStats = {
     { month: 'Mar', value: 12416 },
   ],
   planDistribution: [
-    { plan: 'Free', count: 2, color: '#94A3B8' },
+    { plan: 'Free', count: 2, color: '#64748B' },
     { plan: 'Professional', count: 3, color: '#1D4ED8' },
     { plan: 'Team', count: 2, color: '#166534' },
-    { plan: 'Enterprise', count: 1, color: '#C9A84C' },
+    { plan: 'Enterprise', count: 1, color: '#92400E' },
   ],
   dailyActiveUsers: [
     { day: 'Mon', value: 28 },
