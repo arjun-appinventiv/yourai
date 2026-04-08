@@ -1,7 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import {
   Info, FileText, HardDrive, Clock, Upload, Trash2, Loader, Link2, Plus, ExternalLink, Database,
-  Sparkles, Shield, BookOpen, Settings, CreditCard, MessageCircle, HelpCircle, ChevronRight, Lightbulb, X, ArrowRight
+  Sparkles, Shield, BookOpen, Settings, CreditCard, MessageCircle, HelpCircle, ChevronRight, Lightbulb, X, ArrowRight,
+  CheckSquare, ChevronDown, Library, File
 } from 'lucide-react';
 import { globalKBDocs as initialDocs, alexIntentTemplates, alexResponseFilters, alexUnknownLog } from '../../data/mockData';
 import InfoButton, { InfoSection, InfoText, InfoExample, InfoList } from '../../components/InfoButton';
@@ -60,7 +61,7 @@ export default function GlobalKnowledgeBase() {
   const [newIntentLabel, setNewIntentLabel] = useState('');
   const [newIntentDesc, setNewIntentDesc] = useState('');
 
-  // State Law Knowledge Packs state
+  // State Law Libraries state
   const [statePacks, setStatePacks] = useState([
     { id: 1, state: 'New York', packs: ['NY Court Rules', 'NY State Laws'], status: 'Active' },
     { id: 2, state: 'California', packs: ['CA Court Rules', 'CA State Laws'], status: 'Active' },
@@ -76,6 +77,8 @@ export default function GlobalKnowledgeBase() {
   const [newStateSelection, setNewStateSelection] = useState('');
   const [newStatePackSelections, setNewStatePackSelections] = useState({});
   const [manageAddPackDropdown, setManageAddPackDropdown] = useState(false);
+  const [manageUploadExpanded, setManageUploadExpanded] = useState(false);
+  const [manageAddDocSelections, setManageAddDocSelections] = useState({});
 
   const filtered = useMemo(() => {
     return docs.filter((d) => {
@@ -233,7 +236,17 @@ export default function GlobalKnowledgeBase() {
     };
     setDocs((prev) => [fakeDoc, ...prev]);
     handleAddPackToState(stateId, fakeDoc.name);
-    showToast('Document uploaded and assigned to state');
+    showToast('Document uploaded and assigned to state library');
+  };
+
+  const handleAssignSelectedDocs = (stateId) => {
+    const selected = Object.entries(manageAddDocSelections).filter(([, v]) => v).map(([k]) => k);
+    if (selected.length === 0) return;
+    selected.forEach((docName) => {
+      handleAddPackToState(stateId, docName);
+    });
+    setManageAddDocSelections({});
+    showToast(`${selected.length} document${selected.length > 1 ? 's' : ''} assigned to ${manageState?.state || 'state'}`);
   };
 
   const handleSaveNewState = () => {
@@ -247,7 +260,7 @@ export default function GlobalKnowledgeBase() {
     setShowAddState(false);
     setNewStateSelection('');
     setNewStatePackSelections({});
-    showToast(`State law pack added for ${newStateSelection}`);
+    showToast(`State library added for ${newStateSelection}`);
   };
 
   const inputStyle = {
@@ -310,26 +323,48 @@ export default function GlobalKnowledgeBase() {
             <StatCard icon={Clock} value="Today" label="Last Updated" />
           </div>
 
-          {/* State Law Knowledge Packs */}
+          {/* State Law Libraries */}
           <div>
-            <div className="flex items-center justify-between mb-4">
-              <div>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
                 <h2 style={{ fontFamily: "'DM Serif Display', serif", color: 'var(--navy)', fontSize: '16px' }}>
-                  State Law Knowledge Packs
+                  State Law Libraries
                 </h2>
-                <p className="text-xs mt-1" style={{ color: 'var(--text-muted)', fontSize: '13px', maxWidth: 600 }}>
-                  Assign pre-built state law packs to jurisdictions. These are automatically suggested to organisations whose primary state matches.
-                </p>
+                <InfoButton title="About State Law Libraries">
+                  <InfoSection title="What are State Law Libraries?">
+                    <InfoText>Each state library is a collection of documents specific to that state's laws, court rules, and regulations. When a law firm user asks a question, the AI automatically pulls from the library that matches their firm's primary jurisdiction.</InfoText>
+                  </InfoSection>
+                  <InfoSection title="How the AI uses state libraries">
+                    <InfoText>During onboarding, each firm selects their primary state. When a user asks a legal question, the AI checks their state library first, then falls back to the global knowledge base. This ensures state-specific answers are prioritised.</InfoText>
+                    <InfoExample label="Example">A New York firm user asks 'What are the discovery deadlines?' → AI searches the NY Library first → Returns NY CPLR rules rather than generic federal rules.</InfoExample>
+                  </InfoSection>
+                  <InfoSection title="Status meanings">
+                    <InfoList items={["Active — 2+ documents assigned, library is fully functional", "Partial — only 1 document assigned, library works but coverage is limited", "Not Set — no documents assigned, users fall back to global KB only"]} />
+                  </InfoSection>
+                  <InfoSection title="Best practices">
+                    <InfoList items={["Assign at least 2 documents per state: court rules + state statutes", "Add state-specific practice guides for common areas (real estate, family law)", "Review libraries quarterly to ensure documents are current"]} />
+                  </InfoSection>
+                </InfoButton>
               </div>
               <button
                 onClick={() => { setShowAddState(true); setNewStateSelection(''); setNewStatePackSelections({}); }}
                 className="px-3 py-1.5 rounded-lg text-sm font-medium text-white flex items-center gap-1.5"
                 style={{ backgroundColor: 'var(--navy)' }}
               >
-                <Plus size={14} /> Add New State
+                <Plus size={14} /> Add State Library
               </button>
             </div>
-            <Table columns={['State', 'Knowledge Packs Assigned', 'Status', 'Actions']}>
+            <p className="text-xs mb-4" style={{ color: 'var(--text-muted)', fontSize: '13px', maxWidth: 700 }}>
+              Assign documents to each state's library. When a firm's primary jurisdiction matches, the AI automatically uses these documents for state-specific legal queries.
+            </p>
+            {/* Info callout */}
+            <div className="flex items-start gap-3 p-3.5 rounded-lg mb-4" style={{ backgroundColor: 'var(--ice-warm)', borderLeft: '4px solid var(--navy)' }}>
+              <Lightbulb size={16} style={{ color: 'var(--navy)', flexShrink: 0, marginTop: 1 }} />
+              <p className="text-xs" style={{ color: 'var(--slate)', lineHeight: '1.5' }}>
+                State libraries are automatically matched to firms based on their onboarding jurisdiction. You don't need to manually assign libraries to organisations — just add the documents here and the AI handles the rest.
+              </p>
+            </div>
+            <Table columns={['State', 'Assigned Documents', 'Status', 'Actions']}>
               {statePacks.map((sp) => (
                 <tr
                   key={sp.id}
@@ -337,16 +372,22 @@ export default function GlobalKnowledgeBase() {
                   onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--ice-warm)')}
                   onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'white')}
                 >
-                  <td className="px-4 py-3 text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{sp.state}</td>
+                  <td className="px-4 py-3 text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+                    <div className="flex items-center gap-2">
+                      <Library size={15} style={{ color: 'var(--navy-light)' }} />
+                      {sp.state}
+                    </div>
+                  </td>
                   <td className="px-4 py-3">
                     {sp.packs.length > 0 ? (
                       <div className="flex flex-wrap gap-1.5">
                         {sp.packs.map((pack) => (
                           <span
                             key={pack}
-                            className="inline-flex items-center px-2 py-0.5 rounded-full"
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full"
                             style={{ backgroundColor: '#F3F4F6', color: '#374151', fontSize: '11px' }}
                           >
+                            <FileText size={10} style={{ color: '#6B7280' }} />
                             {pack}
                           </span>
                         ))}
@@ -356,22 +397,27 @@ export default function GlobalKnowledgeBase() {
                     )}
                   </td>
                   <td className="px-4 py-3">
-                    <span
-                      className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
-                      style={
-                        sp.status === 'Active'
-                          ? { backgroundColor: '#DCFCE7', color: '#166534' }
-                          : sp.status === 'Partial'
-                          ? { backgroundColor: '#FEF3C7', color: '#92400E' }
-                          : { backgroundColor: '#F3F4F6', color: '#374151' }
-                      }
-                    >
-                      {sp.status}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                        style={
+                          sp.status === 'Active'
+                            ? { backgroundColor: '#DCFCE7', color: '#166534' }
+                            : sp.status === 'Partial'
+                            ? { backgroundColor: '#FEF3C7', color: '#92400E' }
+                            : { backgroundColor: '#F3F4F6', color: '#374151' }
+                        }
+                      >
+                        {sp.status}
+                      </span>
+                      <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                        {sp.packs.length > 0 ? `${sp.packs.length} doc${sp.packs.length !== 1 ? 's' : ''}` : ''}
+                      </span>
+                    </div>
                   </td>
                   <td className="px-4 py-3">
                     <button
-                      onClick={() => setManageState({ ...sp })}
+                      onClick={() => { setManageState({ ...sp }); setManageAddDocSelections({}); setManageUploadExpanded(false); }}
                       className="px-3 py-1 rounded-lg font-medium"
                       style={{ border: '1px solid var(--border)', color: 'var(--navy)', fontSize: '12px', backgroundColor: 'white' }}
                     >
@@ -383,103 +429,194 @@ export default function GlobalKnowledgeBase() {
             </Table>
           </div>
 
-          {/* Manage State Slide-over */}
+          {/* Manage State Library Slide-over */}
           {manageState && (
             <>
               <div
-                onClick={() => { setManageState(null); setManageAddPackDropdown(false); }}
+                onClick={() => { setManageState(null); setManageAddPackDropdown(false); setManageAddDocSelections({}); setManageUploadExpanded(false); }}
                 style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.3)', zIndex: 40 }}
               />
               <div style={{
-                position: 'fixed', top: 0, right: 0, bottom: 0, width: 480,
-                backgroundColor: 'white', zIndex: 50, overflowY: 'auto',
+                position: 'fixed', top: 0, right: 0, bottom: 0, width: 520,
+                backgroundColor: 'white', zIndex: 50,
                 boxShadow: '-4px 0 24px rgba(0,0,0,0.12)',
                 display: 'flex', flexDirection: 'column',
               }}>
                 {/* Header */}
                 <div className="flex items-center justify-between p-6" style={{ borderBottom: '1px solid var(--border)' }}>
-                  <h3 style={{ fontFamily: "'DM Serif Display', serif", color: 'var(--text-primary)', fontSize: '18px' }}>
-                    {manageState.state} Knowledge Packs
-                  </h3>
-                  <button onClick={() => { setManageState(null); setManageAddPackDropdown(false); }} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors">
+                  <div>
+                    <h3 style={{ fontFamily: "'DM Serif Display', serif", color: 'var(--text-primary)', fontSize: '18px' }}>
+                      {manageState.state} Library
+                    </h3>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span
+                        className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
+                        style={
+                          manageState.status === 'Active'
+                            ? { backgroundColor: '#DCFCE7', color: '#166534' }
+                            : manageState.status === 'Partial'
+                            ? { backgroundColor: '#FEF3C7', color: '#92400E' }
+                            : { backgroundColor: '#F3F4F6', color: '#374151' }
+                        }
+                      >
+                        {manageState.status}
+                      </span>
+                      <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                        {manageState.packs.length} document{manageState.packs.length !== 1 ? 's' : ''} assigned
+                      </span>
+                    </div>
+                  </div>
+                  <button onClick={() => { setManageState(null); setManageAddPackDropdown(false); setManageAddDocSelections({}); setManageUploadExpanded(false); }} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors">
                     <X size={18} style={{ color: 'var(--text-muted)' }} />
                   </button>
                 </div>
 
                 {/* Body */}
-                <div className="flex-1 p-6 space-y-5" style={{ overflowY: 'auto' }}>
-                  {manageState.packs.length > 0 ? (
-                    <div className="space-y-2">
-                      {manageState.packs.map((pack) => (
-                        <div
-                          key={pack}
-                          className="flex items-center justify-between px-4 py-3 rounded-lg"
-                          style={{ border: '1px solid var(--border)', backgroundColor: 'white' }}
-                        >
-                          <span className="text-sm" style={{ color: 'var(--text-primary)', fontSize: '14px' }}>{pack}</span>
-                          <button
-                            onClick={() => handleRemovePackFromState(manageState.id, pack)}
-                            className="font-medium"
-                            style={{ color: '#991B1B', fontSize: '12px', background: 'none', border: 'none', cursor: 'pointer' }}
-                          >
-                            Remove
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-8">
-                      <p className="text-sm" style={{ color: 'var(--text-muted)' }}>No knowledge packs assigned to this state yet.</p>
-                    </div>
-                  )}
+                <div className="flex-1 p-6 space-y-6" style={{ overflowY: 'auto' }}>
 
-                  {/* Add Knowledge Pack dropdown */}
-                  <div style={{ position: 'relative' }}>
-                    <button
-                      onClick={() => setManageAddPackDropdown((prev) => !prev)}
-                      className="w-full px-4 py-2.5 rounded-lg text-sm font-medium flex items-center justify-center gap-2"
-                      style={{ border: '1px solid var(--border)', color: 'var(--navy)', backgroundColor: 'white' }}
-                    >
-                      <Plus size={14} /> Add Knowledge Pack
-                    </button>
-                    {manageAddPackDropdown && (
-                      <div
-                        className="absolute left-0 right-0 mt-1 bg-white rounded-lg shadow-lg"
-                        style={{ border: '1px solid var(--border)', zIndex: 10, maxHeight: 200, overflowY: 'auto' }}
-                      >
-                        {docs.filter((d) => !manageState.packs.includes(d.name)).length > 0 ? (
-                          docs.filter((d) => !manageState.packs.includes(d.name)).map((d) => (
+                  {/* Section 1: Assigned Documents */}
+                  <div>
+                    <h4 className="text-sm font-medium mb-3" style={{ color: 'var(--text-primary)' }}>Assigned Documents</h4>
+                    {manageState.packs.length > 0 ? (
+                      <div className="space-y-2">
+                        {manageState.packs.map((pack) => (
+                          <div
+                            key={pack}
+                            className="flex items-center justify-between px-4 py-3 rounded-lg"
+                            style={{ border: '1px solid var(--border)', backgroundColor: 'white' }}
+                          >
+                            <div className="flex items-center gap-2.5">
+                              <div className="flex items-center justify-center w-8 h-8 rounded-lg" style={{ backgroundColor: 'var(--ice-warm)' }}>
+                                <FileText size={14} style={{ color: 'var(--navy)' }} />
+                              </div>
+                              <div>
+                                <span className="text-sm font-medium block" style={{ color: 'var(--text-primary)' }}>{pack}</span>
+                                <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                                  {pack.toLowerCase().includes('rules') ? 'Court Rules' : pack.toLowerCase().includes('laws') ? 'State Statutes' : 'Legal Document'} · PDF
+                                </span>
+                              </div>
+                            </div>
                             <button
-                              key={d.id}
-                              onClick={() => handleAddPackToState(manageState.id, d.name)}
-                              className="w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 transition-colors"
-                              style={{ color: 'var(--text-primary)', borderBottom: '1px solid var(--border)' }}
+                              onClick={() => handleRemovePackFromState(manageState.id, pack)}
+                              className="px-2.5 py-1 rounded font-medium transition-colors hover:bg-red-50"
+                              style={{ color: '#991B1B', fontSize: '12px', background: 'none', border: 'none', cursor: 'pointer' }}
                             >
-                              {d.name}
+                              Remove
                             </button>
-                          ))
-                        ) : (
-                          <div className="px-4 py-3 text-xs" style={{ color: 'var(--text-muted)' }}>All documents already assigned</div>
-                        )}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-6 rounded-lg" style={{ border: '1px dashed var(--border)', backgroundColor: 'var(--ice-warm)' }}>
+                        <FileText size={24} style={{ color: 'var(--text-muted)', margin: '0 auto 8px' }} />
+                        <p className="text-sm" style={{ color: 'var(--text-muted)' }}>No documents assigned to this state yet.</p>
+                        <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>Use the section below to add documents.</p>
                       </div>
                     )}
                   </div>
 
-                  {/* Upload New Document */}
-                  <button
-                    onClick={() => handleManageUploadDoc(manageState.id)}
-                    className="w-full px-4 py-2.5 rounded-lg text-sm font-medium text-white flex items-center justify-center gap-2"
-                    style={{ backgroundColor: 'var(--navy)' }}
-                  >
-                    <Upload size={14} /> Upload New Document
-                  </button>
+                  {/* Divider */}
+                  <div style={{ borderTop: '1px solid var(--border)' }} />
+
+                  {/* Section 2: Add More Documents */}
+                  <div>
+                    <h4 className="text-sm font-medium mb-3" style={{ color: 'var(--text-primary)' }}>Add More Documents</h4>
+                    {(() => {
+                      const availableDocs = docs.filter((d) => !manageState.packs.includes(d.name));
+                      const selectedCount = Object.values(manageAddDocSelections).filter(Boolean).length;
+                      if (availableDocs.length === 0) {
+                        return (
+                          <div className="text-center py-4 rounded-lg" style={{ backgroundColor: '#F9FAFB' }}>
+                            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>All available documents are already assigned to this library.</p>
+                          </div>
+                        );
+                      }
+                      return (
+                        <>
+                          <div className="space-y-1.5" style={{ maxHeight: 220, overflowY: 'auto', border: '1px solid var(--border)', borderRadius: '8px' }}>
+                            {availableDocs.map((d) => (
+                              <label
+                                key={d.id}
+                                className="flex items-center gap-3 px-4 py-2.5 cursor-pointer hover:bg-gray-50 transition-colors"
+                                style={{ borderBottom: '1px solid var(--border)' }}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={!!manageAddDocSelections[d.name]}
+                                  onChange={(e) => setManageAddDocSelections((prev) => ({ ...prev, [d.name]: e.target.checked }))}
+                                  style={{ accentColor: 'var(--navy)', width: 16, height: 16 }}
+                                />
+                                <div className="flex items-center gap-2 flex-1">
+                                  <FileText size={14} style={{ color: 'var(--slate)', flexShrink: 0 }} />
+                                  <div className="flex-1 min-w-0">
+                                    <span className="text-sm block truncate" style={{ color: 'var(--text-primary)' }}>{d.name}</span>
+                                    <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{d.type} · {d.size}</span>
+                                  </div>
+                                </div>
+                              </label>
+                            ))}
+                          </div>
+                          {selectedCount > 0 && (
+                            <button
+                              onClick={() => handleAssignSelectedDocs(manageState.id)}
+                              className="w-full mt-3 px-4 py-2.5 rounded-lg text-sm font-medium text-white flex items-center justify-center gap-2"
+                              style={{ backgroundColor: 'var(--navy)' }}
+                            >
+                              <Plus size={14} /> Assign {selectedCount} Selected Document{selectedCount !== 1 ? 's' : ''}
+                            </button>
+                          )}
+                        </>
+                      );
+                    })()}
+                  </div>
+
+                  {/* Divider */}
+                  <div style={{ borderTop: '1px solid var(--border)' }} />
+
+                  {/* Section 3: Upload New Document (collapsed by default) */}
+                  <div>
+                    <button
+                      onClick={() => setManageUploadExpanded((prev) => !prev)}
+                      className="w-full flex items-center justify-between py-2"
+                      style={{ background: 'none', border: 'none', cursor: 'pointer' }}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Upload size={14} style={{ color: 'var(--text-muted)' }} />
+                        <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Upload New Document</span>
+                      </div>
+                      <ChevronDown
+                        size={16}
+                        style={{
+                          color: 'var(--text-muted)',
+                          transform: manageUploadExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                          transition: 'transform 0.2s ease',
+                        }}
+                      />
+                    </button>
+                    {manageUploadExpanded && (
+                      <div className="mt-3">
+                        <div
+                          className="rounded-xl p-5 flex flex-col items-center justify-center gap-2 transition-colors cursor-pointer"
+                          style={{ border: '2px dashed var(--ice)', backgroundColor: 'var(--ice-warm)' }}
+                          onClick={() => handleManageUploadDoc(manageState.id)}
+                        >
+                          <Upload size={22} style={{ color: 'var(--text-muted)' }} />
+                          <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Drag and drop or click to upload</p>
+                          <p className="text-xs" style={{ color: 'var(--text-muted)' }}>PDF, DOCX, XLSX — Max 100MB</p>
+                        </div>
+                        <p className="text-xs mt-2" style={{ color: 'var(--text-muted)' }}>
+                          Uploaded documents will be added to the global knowledge base and automatically assigned to this state library.
+                        </p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </>
           )}
 
-          {/* Add New State Modal */}
-          <Modal open={showAddState} onClose={() => setShowAddState(false)} title="Add State Law Pack">
+          {/* Add State Library Modal */}
+          <Modal open={showAddState} onClose={() => setShowAddState(false)} title="Add State Library">
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-primary)' }}>Select State</label>
@@ -497,24 +634,48 @@ export default function GlobalKnowledgeBase() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-primary)' }}>Assign Knowledge Packs</label>
-                <div className="space-y-2" style={{ maxHeight: 200, overflowY: 'auto' }}>
+                <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-primary)' }}>Assign Documents</label>
+                <p className="text-xs mb-2" style={{ color: 'var(--text-muted)' }}>Select documents from the global knowledge base to include in this state's library.</p>
+                <div style={{ maxHeight: 240, overflowY: 'auto', border: '1px solid var(--border)', borderRadius: '8px' }}>
                   {docs.map((d) => (
-                    <label key={d.id} className="flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer hover:bg-gray-50" style={{ border: '1px solid var(--border)' }}>
+                    <label
+                      key={d.id}
+                      className="flex items-center gap-3 px-4 py-2.5 cursor-pointer hover:bg-gray-50 transition-colors"
+                      style={{ borderBottom: '1px solid var(--border)' }}
+                    >
                       <input
                         type="checkbox"
                         checked={!!newStatePackSelections[d.name]}
                         onChange={(e) => setNewStatePackSelections((prev) => ({ ...prev, [d.name]: e.target.checked }))}
-                        style={{ accentColor: 'var(--navy)' }}
+                        style={{ accentColor: 'var(--navy)', width: 16, height: 16 }}
                       />
-                      <span className="text-sm" style={{ color: 'var(--text-primary)' }}>{d.name}</span>
+                      <div className="flex items-center gap-2 flex-1">
+                        <FileText size={14} style={{ color: 'var(--slate)', flexShrink: 0 }} />
+                        <div className="flex-1 min-w-0">
+                          <span className="text-sm block truncate" style={{ color: 'var(--text-primary)' }}>{d.name}</span>
+                          <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{d.type} · {d.size}</span>
+                        </div>
+                      </div>
                     </label>
                   ))}
                 </div>
+                {(() => {
+                  const count = Object.values(newStatePackSelections).filter(Boolean).length;
+                  return count > 0 ? (
+                    <p className="text-xs mt-2 font-medium" style={{ color: 'var(--navy)' }}>{count} document{count !== 1 ? 's' : ''} selected</p>
+                  ) : null;
+                })()}
               </div>
               <div className="flex justify-end gap-3 pt-2">
                 <button onClick={() => setShowAddState(false)} className="px-4 py-2 rounded-lg text-sm font-medium" style={{ border: '1px solid var(--border)', color: 'var(--slate)', backgroundColor: 'white' }}>Cancel</button>
-                <button onClick={handleSaveNewState} className="px-4 py-2 rounded-lg text-sm font-medium text-white" style={{ backgroundColor: 'var(--navy)' }}>Save</button>
+                <button
+                  onClick={handleSaveNewState}
+                  disabled={!newStateSelection}
+                  className="px-4 py-2 rounded-lg text-sm font-medium text-white"
+                  style={{ backgroundColor: newStateSelection ? 'var(--navy)' : 'var(--navy-mid)', cursor: newStateSelection ? 'pointer' : 'not-allowed' }}
+                >
+                  Create Library
+                </button>
               </div>
             </div>
           </Modal>
