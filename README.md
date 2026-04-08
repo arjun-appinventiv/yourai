@@ -1,18 +1,7 @@
-# Welcome to your Lovable project
-
-## Project info
-
-**URL**: https://lovable.dev/projects/795a40b4-4932-48bf-88f7-24dbd9cd9ca3
-
-## How can I edit this code?
-
-There are several ways of editing your application.
-
-**Use Lovable**
-
-Simply visit the [Lovable Project](https://lovable.dev/projects/795a40b4-4932-48bf-88f7-24dbd9cd9ca3) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
+Super Admin Panel — 15 screens (Dashboard, Tenant Mgmt, Users, Billing, Usage, Compliance, Static Content, Report Templates, Workflows, Knowledge Base, Integrations, Notifications, Reports, Settings, User Stories)
+Org Admin Panel — full role-based UI (Admin/Manager/Team)
+Auth Flow — Login, Forgot Password, OTP, Reset Password
+All components, hooks, mock data, and styling
 
 **Use your preferred IDE**
 
