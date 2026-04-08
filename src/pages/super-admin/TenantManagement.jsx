@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Building2, Users, AlertTriangle, DollarSign, Eye, LogIn, Ban, CheckCircle, X, Download, Search, Lock, Unlock, Mail, UserPlus, Send, Info, ChevronRight } from 'lucide-react';
+import { Building2, Users, AlertTriangle, DollarSign, Eye, Edit3, Ban, CheckCircle, X, Download, Search, Lock, Unlock, Mail, UserPlus, Send, Info, ChevronRight, Save } from 'lucide-react';
 import { tenants as initialTenants } from '../../data/mockData';
 import PageHeader from '../../components/PageHeader';
 import StatCard from '../../components/StatCard';
@@ -63,8 +63,9 @@ export default function TenantManagement() {
   const [search, setSearch] = useState('');
   const [planFilter, setPlanFilter] = useState('All');
   const [statusFilter, setStatusFilter] = useState('All');
-  const [impersonateOrg, setImpersonateOrg] = useState(null);
   const [selectedOrg, setSelectedOrg] = useState(null);
+  const [editingOrg, setEditingOrg] = useState(null);
+  const [editForm, setEditForm] = useState({ name: '', plan: '', industry: 'Legal Services' });
   const [orgTab, setOrgTab] = useState('overview');
   const [orgUserSearch, setOrgUserSearch] = useState('');
   const [showAddTenant, setShowAddTenant] = useState(false);
@@ -96,9 +97,25 @@ export default function TenantManagement() {
     );
   };
 
-  const handleImpersonate = () => {
-    showToast(`Impersonation session started for ${impersonateOrg.name}. Session recorded in audit log.`);
-    setImpersonateOrg(null);
+  const openEditOrg = (org, e) => {
+    if (e) e.stopPropagation();
+    setEditForm({ name: org.name, plan: org.plan, industry: org.industry || 'Legal Services' });
+    setEditingOrg(org);
+  };
+
+  const handleSaveEdit = () => {
+    setTenantList((prev) =>
+      prev.map((t) =>
+        t.id === editingOrg.id
+          ? { ...t, name: editForm.name, plan: editForm.plan, mrr: editForm.plan === 'Free' ? 0 : editForm.plan === 'Professional' ? 149 : editForm.plan === 'Team' ? 299 : 599 }
+          : t
+      )
+    );
+    if (selectedOrg && selectedOrg.id === editingOrg.id) {
+      setSelectedOrg({ ...selectedOrg, name: editForm.name, plan: editForm.plan, mrr: editForm.plan === 'Free' ? 0 : editForm.plan === 'Professional' ? 149 : editForm.plan === 'Team' ? 299 : 599 });
+    }
+    showToast(`${editForm.name} updated successfully`);
+    setEditingOrg(null);
   };
 
   const handleExportCSV = () => {
@@ -232,7 +249,7 @@ export default function TenantManagement() {
             <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
               <div className="flex items-center gap-1">
                 <button className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors" title="View" onClick={() => openOrgDetail(t)}><Eye size={16} style={{ color: 'var(--slate)' }} /></button>
-                <button className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors" title="Impersonate" onClick={() => setImpersonateOrg(t)}><LogIn size={16} style={{ color: 'var(--text-primary)' }} /></button>
+                <button className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors" title="Edit" onClick={(e) => openEditOrg(t, e)}><Edit3 size={16} style={{ color: 'var(--text-primary)' }} /></button>
                 <button className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors" title={t.status === 'Active' ? 'Suspend' : 'Reactivate'} onClick={() => toggleStatus(t.id)}>
                   {t.status === 'Active' ? <Ban size={16} style={{ color: '#991B1B' }} /> : <CheckCircle size={16} style={{ color: '#166534' }} />}
                 </button>
@@ -242,18 +259,36 @@ export default function TenantManagement() {
         ))}
       </Table>
 
-      {/* Impersonate Modal */}
-      <Modal open={!!impersonateOrg} onClose={() => setImpersonateOrg(null)} title="Impersonate Admin Access">
-        <p className="text-sm mb-4" style={{ color: 'var(--slate)' }}>
-          You are about to log in as <strong style={{ color: 'var(--text-primary)' }}>{impersonateOrg?.name}</strong> Admin. This action will be recorded in the full platform audit log with your operator ID, timestamp, and session duration.
-        </p>
-        <div className="rounded-lg p-3 mb-6 flex items-start gap-2" style={{ backgroundColor: '#FFFBEB', border: '1px solid #FDE68A' }}>
-          <AlertTriangle size={18} style={{ color: '#92400E', flexShrink: 0, marginTop: 2 }} />
-          <p className="text-sm" style={{ color: '#92400E' }}>This session grants full Admin access. Use only for support purposes.</p>
+      {/* Edit Tenant Modal */}
+      <Modal open={!!editingOrg} onClose={() => setEditingOrg(null)} title="Edit Tenant">
+        <div className="space-y-4">
+          <div>
+            <label className="block mb-1.5" style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-secondary)' }}>Organisation Name *</label>
+            <input type="text" value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} style={{ ...inputStyle, width: '100%' }} onFocus={(e) => (e.target.style.borderColor = 'var(--navy)')} onBlur={(e) => (e.target.style.borderColor = 'var(--border)')} />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block mb-1.5" style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-secondary)' }}>Subscription Plan</label>
+              <select value={editForm.plan} onChange={(e) => setEditForm({ ...editForm, plan: e.target.value })} style={{ ...inputStyle, width: '100%' }}>
+                <option>Free</option><option>Professional</option><option>Team</option><option>Enterprise</option>
+              </select>
+            </div>
+            <div>
+              <label className="block mb-1.5" style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-secondary)' }}>Industry</label>
+              <select value={editForm.industry} onChange={(e) => setEditForm({ ...editForm, industry: e.target.value })} style={{ ...inputStyle, width: '100%' }}>
+                <option>Legal Services</option><option>Corporate Legal</option><option>Compliance & Risk</option><option>Financial Services</option><option>Healthcare</option><option>Other</option>
+              </select>
+            </div>
+          </div>
+          <div className="p-3 rounded-lg" style={{ backgroundColor: 'var(--ice-warm)', border: '1px solid var(--border)' }}>
+            <div className="text-xs" style={{ color: 'var(--text-muted)' }}>Changing the plan will update the MRR and feature limits for this organisation. Current users and data will not be affected.</div>
+          </div>
         </div>
-        <div className="flex justify-end gap-3">
-          <button onClick={() => setImpersonateOrg(null)} className="px-4 py-2 rounded-lg text-sm font-medium" style={{ border: '1px solid var(--border)', color: 'var(--slate)', backgroundColor: 'white' }}>Cancel</button>
-          <button onClick={handleImpersonate} className="px-4 py-2 rounded-lg text-sm font-medium text-white" style={{ backgroundColor: '#9B2C2C' }}>Confirm Impersonation</button>
+        <div className="flex justify-end gap-3 mt-6">
+          <button onClick={() => setEditingOrg(null)} className="px-4 py-2 rounded-lg text-sm font-medium" style={{ border: '1px solid var(--border)', color: 'var(--slate)', backgroundColor: 'white' }}>Cancel</button>
+          <button onClick={handleSaveEdit} disabled={!editForm.name.trim()} className="px-4 py-2 rounded-lg text-sm font-medium text-white flex items-center gap-1.5" style={{ backgroundColor: !editForm.name.trim() ? '#94A3B8' : 'var(--navy)', cursor: !editForm.name.trim() ? 'not-allowed' : 'pointer' }}>
+            <Save size={14} /> Save Changes
+          </button>
         </div>
       </Modal>
 
@@ -284,6 +319,11 @@ export default function TenantManagement() {
               {/* Overview Tab */}
               {orgTab === 'overview' && (
                 <div className="space-y-5">
+                  {/* Edit Tenant Button */}
+                  <button onClick={() => openEditOrg(selectedOrg)} className="w-full flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition-colors" style={{ border: '1px solid var(--border)', color: 'var(--text-primary)', backgroundColor: 'white' }}>
+                    <Edit3 size={14} /> Edit Organisation Details
+                  </button>
+
                   <div className="grid grid-cols-2 gap-3">
                     {[
                       ['Plan', selectedOrg.plan],
