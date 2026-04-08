@@ -11,16 +11,16 @@ import { useToast } from '../../components/Toast';
 // Mock org detail data
 const orgUsers = {
   1: [
-    { name: 'Ryan Melade', email: 'ryan@hartwell.com', role: 'Admin', status: 'Active', lastActive: 'Today' },
-    { name: 'Sarah Chen', email: 'sarah@hartwell.com', role: 'Internal User', status: 'Active', lastActive: 'Today' },
-    { name: 'James Wu', email: 'james@hartwell.com', role: 'Internal User', status: 'Active', lastActive: 'Yesterday' },
-    { name: 'Maria Torres', email: 'maria@hartwell.com', role: 'Client', status: 'Active', lastActive: '2 days ago' },
-    { name: 'Tom Bradley', email: 'tom@hartwell.com', role: 'Internal User', status: 'Invited', lastActive: 'Never' },
+    { name: 'Ryan Melade', email: 'ryan@hartwell.com', role: 'Admin', status: 'Active', lastActive: 'Today', onboardingRole: 'Partner / Senior Attorney' },
+    { name: 'Sarah Chen', email: 'sarah@hartwell.com', role: 'Internal User', status: 'Active', lastActive: 'Today', onboardingRole: 'Associate / Junior Attorney' },
+    { name: 'James Wu', email: 'james@hartwell.com', role: 'Internal User', status: 'Active', lastActive: 'Yesterday', onboardingRole: 'Paralegal / Legal Assistant' },
+    { name: 'Maria Torres', email: 'maria@hartwell.com', role: 'Client', status: 'Active', lastActive: '2 days ago', onboardingRole: 'Paralegal / Legal Assistant' },
+    { name: 'Tom Bradley', email: 'tom@hartwell.com', role: 'Internal User', status: 'Invited', lastActive: 'Never', onboardingRole: null },
   ],
   2: [
-    { name: 'David Park', email: 'david@morrison.com', role: 'Admin', status: 'Active', lastActive: 'Today' },
-    { name: 'Lisa Wong', email: 'lisa@morrison.com', role: 'Internal User', status: 'Active', lastActive: 'Yesterday' },
-    { name: 'Amy Nguyen', email: 'amy@morrison.com', role: 'Client', status: 'Active', lastActive: '3 days ago' },
+    { name: 'David Park', email: 'david@morrison.com', role: 'Admin', status: 'Active', lastActive: 'Today', onboardingRole: 'Partner / Senior Attorney' },
+    { name: 'Lisa Wong', email: 'lisa@morrison.com', role: 'Internal User', status: 'Active', lastActive: 'Yesterday', onboardingRole: 'Associate / Junior Attorney' },
+    { name: 'Amy Nguyen', email: 'amy@morrison.com', role: 'Client', status: 'Active', lastActive: '3 days ago', onboardingRole: null },
   ],
 };
 
@@ -466,6 +466,9 @@ export default function TenantManagement() {
                             </td>
                             <td className="px-3 py-2.5">
                               <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium" style={roleColors[u.role] || { bg: '#F3F4F6', color: '#374151' }}>{u.role}</span>
+                              {u.onboardingRole && (
+                                <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontStyle: 'italic', marginTop: '2px' }}>{u.onboardingRole}</div>
+                              )}
                             </td>
                             <td className="px-3 py-2.5">
                               <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium" style={u.status === 'Active' ? { backgroundColor: '#DCFCE7', color: '#166534' } : u.status === 'Invited' ? { backgroundColor: '#FEF3C7', color: '#92400E' } : { backgroundColor: '#FEE2E2', color: '#991B1B' }}>{u.status}</span>

@@ -25,6 +25,17 @@ const topOrgs = [
   { name: 'Goldstein & Webb', queries: 42, docs: 8, avgSession: '12 min', aiUsage: 18 },
 ];
 
+const orgStates = {
+  'Chen Partners LLC': 'Illinois',
+  'Thornton Compliance': 'Georgia',
+  'Morrison Legal Group': 'California',
+  'Pacific Rim Legal': 'Washington',
+  'Patel Law Office': 'Florida',
+  'Hartwell & Associates': 'New York',
+  'Rivera & Kim LLP': 'Texas',
+  'Goldstein & Webb': 'Massachusetts',
+};
+
 const aiModels = [
   { model: 'GPT-4o', calls: 2840, tokens: '4.2M', cost: '$126.50', pct: 58 },
   { model: 'Claude 3.5 Sonnet', calls: 1420, tokens: '2.1M', cost: '$63.00', pct: 29 },
@@ -127,7 +138,7 @@ export default function UsageAnalytics() {
         <h2 className="mb-4" style={{ fontFamily: "'DM Serif Display', serif", color: 'var(--text-primary)', fontSize: '16px' }}>
           Organisation Usage Rankings
         </h2>
-        <Table columns={['Organisation', 'AI Queries', 'Documents', 'Avg Session', 'AI Adoption', '']}>
+        <Table columns={['Organisation', 'State', 'AI Queries', 'Documents', 'Avg Session', 'AI Adoption', '']}>
           {topOrgs.map((o, i) => (
             <tr
               key={o.name}
@@ -144,6 +155,7 @@ export default function UsageAnalytics() {
                   <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{o.name}</span>
                 </div>
               </td>
+              <td className="px-4 py-3 text-sm" style={{ color: 'var(--text-muted)' }}>{orgStates[o.name] || '—'}</td>
               <td className="px-4 py-3 text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{o.queries.toLocaleString()}</td>
               <td className="px-4 py-3 text-sm">{o.docs}</td>
               <td className="px-4 py-3 text-sm" style={{ color: 'var(--text-muted)' }}>{o.avgSession}</td>

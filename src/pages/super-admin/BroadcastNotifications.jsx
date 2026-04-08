@@ -99,6 +99,20 @@ export default function BroadcastNotifications() {
                 <option>All Org Admins</option>
                 <option>Team and Enterprise Admins</option>
                 <option>Enterprise Admins Only</option>
+                <option disabled style={{ fontWeight: 700 }}>── By State ──</option>
+                <option>New York Firms</option>
+                <option>California Firms</option>
+                <option>Texas Firms</option>
+                <option>Florida Firms</option>
+                <option>Illinois Firms</option>
+                <option disabled style={{ fontWeight: 700 }}>── By Practice Area ──</option>
+                <option>Corporate & M&A Firms</option>
+                <option>Litigation Firms</option>
+                <option>Employment & Labor Firms</option>
+                <option disabled style={{ fontWeight: 700 }}>── By Firm Size ──</option>
+                <option>Large Firms (50+ attorneys)</option>
+                <option>Mid-size Firms (11–50)</option>
+                <option>Small Firms (2–10)</option>
               </select>
             </div>
             <div>

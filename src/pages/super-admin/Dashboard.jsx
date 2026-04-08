@@ -167,6 +167,17 @@ function HealthCard({ icon: Icon, value, label, current, max, color }) {
   );
 }
 
+const orgStates = {
+  1: 'New York',
+  2: 'California',
+  3: 'Illinois',
+  4: 'Texas',
+  5: 'Florida',
+  6: 'Georgia',
+  7: 'Massachusetts',
+  8: 'Washington',
+};
+
 /* ═══════════════════════════════════ DASHBOARD ═══════════════════════════════════ */
 
 export default function SuperAdminDashboard() {
@@ -283,7 +294,7 @@ export default function SuperAdminDashboard() {
             View all <ChevronRight size={14} />
           </button>
         </div>
-        <Table columns={['Rank', 'Organisation', 'Plan', 'MRR', 'Users', 'Trend']}>
+        <Table columns={['Rank', 'Organisation', 'Plan', 'State', 'MRR', 'Users', 'Trend']}>
           {topOrgs.map((t, i) => (
             <tr key={t.id} className="transition-colors" style={{ borderBottom: '1px solid var(--border)' }} onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--ice-warm)')} onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'white')}>
               <td className="px-4 py-3">
@@ -293,6 +304,7 @@ export default function SuperAdminDashboard() {
               </td>
               <td className="px-4 py-3 text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{t.name}</td>
               <td className="px-4 py-3"><Badge variant={t.plan}>{t.plan}</Badge></td>
+              <td className="px-4 py-3 text-sm" style={{ color: 'var(--text-muted)' }}>{orgStates[t.id] || '\u2014'}</td>
               <td className="px-4 py-3 text-sm font-medium" style={{ color: 'var(--text-primary)' }}>${t.mrr.toLocaleString()}</td>
               <td className="px-4 py-3 text-sm" style={{ color: 'var(--text-muted)' }}>{t.users}</td>
               <td className="px-4 py-3">
