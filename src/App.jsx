@@ -48,6 +48,12 @@ import ProfilePage from './pages/org-admin/ProfilePage';
 import OrgSettingsPage from './pages/org-admin/OrgSettingsPage';
 import PlaceholderPage from './pages/org-admin/PlaceholderPage';
 
+// Chatbot pages
+import ChatLogin from './pages/chatbot/auth/Login';
+import ChatSignUp from './pages/chatbot/auth/SignUp';
+import ChatOnboarding from './pages/chatbot/auth/Onboarding';
+import ChatView from './pages/chatbot/ChatView';
+
 import { Clock, Sparkles } from 'lucide-react';
 
 export default function App() {
@@ -82,6 +88,12 @@ export default function App() {
               <Route path="/super-admin/settings" element={<PlatformSettings />} />
               <Route path="/super-admin/user-stories" element={<UserStories />} />
             </Route>
+
+            {/* Chatbot routes */}
+            <Route path="/chat/login" element={<ChatLogin />} />
+            <Route path="/chat/signup" element={<ChatSignUp />} />
+            <Route path="/chat/onboarding" element={<ChatOnboarding />} />
+            <Route path="/chat" element={<ChatView />} />
 
             {/* Org Admin routes */}
             <Route

@@ -1,0 +1,264 @@
+import React, { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { User, Mail, Building2, Lock, Eye, EyeOff, Loader, Check, Circle } from 'lucide-react';
+import ChatAuthLayout from '../../../components/ChatAuthLayout';
+
+export default function SignUp() {
+  const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
+  const [firmName, setFirmName] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [agreed, setAgreed] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const navigate = useNavigate();
+
+  const passwordChecks = [
+    { label: 'At least 8 characters', met: password.length >= 8 },
+    { label: 'Contains uppercase letter', met: /[A-Z]/.test(password) },
+    { label: 'Contains a number', met: /\d/.test(password) },
+    { label: 'Contains special character', met: /[^A-Za-z0-9]/.test(password) },
+  ];
+
+  const passwordsMatch = confirmPassword.length === 0 || password === confirmPassword;
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+
+    if (password !== confirmPassword) {
+      setError('Passwords do not match');
+      return;
+    }
+
+    if (!passwordChecks.every((c) => c.met)) {
+      setError('Please meet all password requirements');
+      return;
+    }
+
+    if (!agreed) {
+      setError('Please agree to the Terms of Service and Privacy Policy');
+      return;
+    }
+
+    setLoading(true);
+    await new Promise((r) => setTimeout(r, 2000));
+    navigate('/chat/onboarding', { replace: true });
+  };
+
+  const inputWrap = 'relative';
+  const inputStyle = {
+    width: '100%',
+    height: 42,
+    border: '1px solid var(--border)',
+    borderRadius: '10px',
+    padding: '0 12px 0 40px',
+    fontSize: '13px',
+    color: 'var(--text-primary)',
+    outline: 'none',
+    fontFamily: "'DM Sans', sans-serif",
+  };
+  const iconStyle = {
+    position: 'absolute',
+    left: 14,
+    top: '50%',
+    transform: 'translateY(-50%)',
+    color: 'var(--text-muted)',
+  };
+
+  return (
+    <ChatAuthLayout>
+      <div className="text-center">
+        <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: '26px', color: 'var(--text-primary)' }}>
+          Create your account
+        </h1>
+        <p className="mt-1" style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
+          Start your firm's AI-powered workspace
+        </p>
+      </div>
+
+      <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+        {/* Full Name */}
+        <div>
+          <label className="block mb-1.5" style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-secondary)' }}>Full Name</label>
+          <div className={inputWrap}>
+            <User size={16} style={iconStyle} />
+            <input
+              type="text"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              placeholder="Ryan Melade"
+              required
+              style={inputStyle}
+            />
+          </div>
+        </div>
+
+        {/* Work Email */}
+        <div>
+          <label className="block mb-1.5" style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-secondary)' }}>Work Email</label>
+          <div className={inputWrap}>
+            <Mail size={16} style={iconStyle} />
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@yourfirm.com"
+              required
+              style={inputStyle}
+            />
+          </div>
+        </div>
+
+        {/* Firm Name */}
+        <div>
+          <label className="block mb-1.5" style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-secondary)' }}>Firm Name</label>
+          <div className={inputWrap}>
+            <Building2 size={16} style={iconStyle} />
+            <input
+              type="text"
+              value={firmName}
+              onChange={(e) => setFirmName(e.target.value)}
+              placeholder="Hartwell & Associates"
+              required
+              style={inputStyle}
+            />
+          </div>
+        </div>
+
+        {/* Password */}
+        <div>
+          <label className="block mb-1.5" style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-secondary)' }}>Password</label>
+          <div className={inputWrap}>
+            <Lock size={16} style={iconStyle} />
+            <input
+              type={showPassword ? 'text' : 'password'}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Create a password"
+              required
+              style={{ ...inputStyle, paddingRight: 40 }}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-1/2 -translate-y-1/2"
+              style={{ color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+            >
+              {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+            </button>
+          </div>
+
+          {/* Password requirement checklist */}
+          <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1">
+            {passwordChecks.map(({ label, met }) => (
+              <div key={label} className="flex items-center gap-1.5">
+                {met ? (
+                  <Check size={13} style={{ color: '#16A34A', flexShrink: 0 }} />
+                ) : (
+                  <Circle size={13} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+                )}
+                <span style={{ fontSize: '11px', color: met ? '#16A34A' : 'var(--text-muted)' }}>{label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Confirm Password */}
+        <div>
+          <label className="block mb-1.5" style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-secondary)' }}>Confirm Password</label>
+          <div className={inputWrap}>
+            <Lock size={16} style={iconStyle} />
+            <input
+              type={showConfirmPassword ? 'text' : 'password'}
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="Confirm your password"
+              required
+              style={{ ...inputStyle, paddingRight: 40 }}
+            />
+            <button
+              type="button"
+              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+              className="absolute right-3 top-1/2 -translate-y-1/2"
+              style={{ color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+            >
+              {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+            </button>
+          </div>
+          {!passwordsMatch && (
+            <p className="mt-1" style={{ fontSize: '12px', color: '#DC2626' }}>Passwords do not match</p>
+          )}
+        </div>
+
+        {/* Terms checkbox */}
+        <div className="flex items-start gap-2">
+          <input
+            type="checkbox"
+            checked={agreed}
+            onChange={(e) => setAgreed(e.target.checked)}
+            id="terms"
+            style={{ marginTop: 3, accentColor: 'var(--navy)', cursor: 'pointer' }}
+          />
+          <label htmlFor="terms" style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: 1.5, cursor: 'pointer' }}>
+            I agree to the{' '}
+            <a href="/terms" style={{ color: 'var(--navy)', textDecoration: 'none' }} onMouseEnter={(e) => (e.target.style.textDecoration = 'underline')} onMouseLeave={(e) => (e.target.style.textDecoration = 'none')}>
+              Terms of Service
+            </a>{' '}
+            and{' '}
+            <a href="/privacy" style={{ color: 'var(--navy)', textDecoration: 'none' }} onMouseEnter={(e) => (e.target.style.textDecoration = 'underline')} onMouseLeave={(e) => (e.target.style.textDecoration = 'none')}>
+              Privacy Policy
+            </a>
+          </label>
+        </div>
+
+        {/* Error message */}
+        {error && (
+          <div className="flex items-start gap-2" style={{ backgroundColor: '#FEF2F2', borderLeft: '3px solid #EF4444', borderRadius: '0 8px 8px 0', padding: '10px 14px' }}>
+            <p style={{ fontSize: '13px', color: '#9B2C2C' }}>{error}</p>
+          </div>
+        )}
+
+        {/* Submit button */}
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full flex items-center justify-center gap-2 text-white transition-colors"
+          style={{
+            backgroundColor: loading ? 'var(--navy-mid, #1a2744)' : 'var(--navy)',
+            height: 42,
+            borderRadius: '10px',
+            fontSize: '14px',
+            fontWeight: 500,
+            border: 'none',
+            cursor: loading ? 'not-allowed' : 'pointer',
+          }}
+        >
+          {loading ? (
+            <>
+              <Loader size={16} className="animate-spin" /> Creating account...
+            </>
+          ) : (
+            'Create Account'
+          )}
+        </button>
+      </form>
+
+      {/* Sign in link */}
+      <p className="text-center mt-4" style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
+        Already have an account?{' '}
+        <Link to="/chat/login" className="hover:underline" style={{ color: 'var(--navy)', fontWeight: 500 }}>
+          Sign In
+        </Link>
+      </p>
+
+      {/* Footer */}
+      <p className="text-center mt-3" style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+        Private &amp; encrypted. Your data never leaves your firm's environment.
+      </p>
+    </ChatAuthLayout>
+  );
+}
