@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
-import { User, Save } from 'lucide-react';
+import {
+  User, Save, Edit3, Briefcase, Scale, FileText, Settings,
+  Users, Building, Building2, FileSearch, Search, LayoutDashboard, Check,
+} from 'lucide-react';
 import PageHeader from '../../components/PageHeader';
 import Badge from '../../components/Badge';
 import { useToast } from '../../components/Toast';
@@ -23,6 +26,72 @@ export default function ProfilePage() {
     classification: false,
     reports: true,
   });
+
+  // --- My Preferences state ---
+  const loadPrefs = () => {
+    try {
+      return JSON.parse(localStorage.getItem('yourai_user_profile')) || {};
+    } catch { return {}; }
+  };
+
+  const [prefsEditing, setPrefsEditing] = useState(false);
+  const [savedPrefs, setSavedPrefs] = useState(loadPrefs);
+  const [draftPrefs, setDraftPrefs] = useState(loadPrefs);
+  const [prefsErrors, setPrefsErrors] = useState({});
+
+  const roleOptions = [
+    { value: 'Partner / Senior Attorney', icon: Briefcase, desc: 'I lead matters and review deliverables' },
+    { value: 'Associate / Junior Attorney', icon: Scale, desc: 'I draft, research, and support cases' },
+    { value: 'Paralegal / Legal Assistant', icon: FileText, desc: 'I manage documents, filings, and scheduling' },
+    { value: 'Legal Operations / IT', icon: Settings, desc: 'I manage tools, vendors, and firm technology' },
+  ];
+
+  const practiceAreaOptions = [
+    'Corporate & M&A', 'Litigation', 'Real Estate', 'Employment & Labor',
+    'Intellectual Property', 'Tax & Compliance', 'Immigration', 'Family Law',
+    'Criminal Defense', 'Healthcare Law', 'Bankruptcy', 'Environmental',
+  ];
+
+  const firmSizeOptions = [
+    { value: 'Solo Practitioner', icon: User, desc: 'Just me' },
+    { value: 'Small Firm', icon: Users, desc: '2\u201310 attorneys' },
+    { value: 'Mid-size Firm', icon: Building, desc: '11\u201350 attorneys' },
+    { value: 'Large Firm', icon: Building2, desc: '50+ attorneys' },
+  ];
+
+  const goalOptions = [
+    { value: 'Analyze a Contract', icon: FileSearch, desc: 'Upload a contract and get AI-powered analysis' },
+    { value: 'Research Legal Questions', icon: Search, desc: 'Ask anything and get cited answers' },
+    { value: 'Set Up My Workspace', icon: LayoutDashboard, desc: 'Organize matters, invite team members' },
+  ];
+
+  const handlePrefsSave = () => {
+    const errors = {};
+    if (!draftPrefs.role) errors.role = true;
+    if (!draftPrefs.practiceAreas || draftPrefs.practiceAreas.length === 0) errors.practiceAreas = true;
+    if (!draftPrefs.firmSize) errors.firmSize = true;
+    if (!draftPrefs.primaryGoal) errors.primaryGoal = true;
+    if (Object.keys(errors).length > 0) { setPrefsErrors(errors); return; }
+    localStorage.setItem('yourai_user_profile', JSON.stringify(draftPrefs));
+    setSavedPrefs({ ...draftPrefs });
+    setPrefsErrors({});
+    setPrefsEditing(false);
+    showToast('Preferences updated');
+  };
+
+  const handlePrefsCancel = () => {
+    setDraftPrefs({ ...savedPrefs });
+    setPrefsErrors({});
+    setPrefsEditing(false);
+  };
+
+  const togglePracticeArea = (area) => {
+    const current = draftPrefs.practiceAreas || [];
+    setDraftPrefs({
+      ...draftPrefs,
+      practiceAreas: current.includes(area) ? current.filter((a) => a !== area) : [...current, area],
+    });
+  };
 
   return (
     <div>
@@ -141,6 +210,174 @@ export default function ProfilePage() {
             ))}
           </div>
         </div>
+      </div>
+
+      {/* ── My Preferences ── */}
+      <div className="bg-white rounded-xl" style={{ border: '1px solid var(--border)', padding: 24, maxWidth: 900, marginTop: 24 }}>
+        {/* Header */}
+        <div className="flex items-center justify-between" style={{ marginBottom: 16 }}>
+          <div>
+            <h3 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 18, color: 'var(--text-primary)', margin: 0 }}>My Preferences</h3>
+            <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: '4px 0 0' }}>Set during onboarding &mdash; you can update these at any time.</p>
+          </div>
+          {!prefsEditing && (
+            <button
+              onClick={() => { setDraftPrefs({ ...savedPrefs }); setPrefsEditing(true); setPrefsErrors({}); }}
+              className="flex items-center gap-1"
+              style={{ fontSize: 13, fontWeight: 500, border: '1px solid var(--border)', borderRadius: 8, padding: '6px 14px', backgroundColor: 'white', color: 'var(--text-secondary)', cursor: 'pointer' }}
+            >
+              <Edit3 size={14} /> Edit
+            </button>
+          )}
+        </div>
+
+        {!prefsEditing ? (
+          /* ── Read-only view ── */
+          <div className="flex flex-col gap-4">
+            {[
+              { label: 'Role', value: savedPrefs.role },
+              { label: 'Practice Areas', value: savedPrefs.practiceAreas && savedPrefs.practiceAreas.length > 0 ? savedPrefs.practiceAreas.join(', ') : null },
+              { label: 'Firm Size', value: savedPrefs.firmSize },
+              { label: 'Primary Goal', value: savedPrefs.primaryGoal },
+            ].map((row) => (
+              <div key={row.label}>
+                <div style={{ fontSize: 12, fontWeight: 600, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 4, fontFamily: "'DM Sans', sans-serif" }}>{row.label}</div>
+                <div style={{ fontSize: 14, color: 'var(--text-primary)', fontFamily: "'DM Sans', sans-serif" }}>{row.value || 'Not set'}</div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          /* ── Edit mode ── */
+          <div className="flex flex-col gap-6">
+            {/* Role */}
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 600, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 8 }}>Role</div>
+              <div className="grid gap-3" style={{ gridTemplateColumns: '1fr 1fr' }}>
+                {roleOptions.map((opt) => {
+                  const Icon = opt.icon;
+                  const selected = draftPrefs.role === opt.value;
+                  return (
+                    <button
+                      key={opt.value}
+                      onClick={() => setDraftPrefs({ ...draftPrefs, role: opt.value })}
+                      className="flex items-start gap-3 text-left"
+                      style={{
+                        border: selected ? '2px solid var(--navy)' : '1px solid var(--border)',
+                        borderRadius: 10, padding: 14, backgroundColor: 'white', cursor: 'pointer',
+                      }}
+                    >
+                      <Icon size={18} style={{ color: selected ? 'var(--navy)' : 'var(--text-muted)', flexShrink: 0, marginTop: 2 }} />
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{opt.value}</div>
+                        <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>{opt.desc}</div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+              {prefsErrors.role && <p style={{ fontSize: 12, color: '#dc2626', margin: '6px 0 0' }}>Please make a selection</p>}
+            </div>
+
+            {/* Practice Areas */}
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 600, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 8 }}>Practice Areas</div>
+              <div className="grid gap-2" style={{ gridTemplateColumns: '1fr 1fr 1fr' }}>
+                {practiceAreaOptions.map((area) => {
+                  const selected = (draftPrefs.practiceAreas || []).includes(area);
+                  return (
+                    <button
+                      key={area}
+                      onClick={() => togglePracticeArea(area)}
+                      className="flex items-center justify-center gap-1"
+                      style={{
+                        border: selected ? 'none' : '1px solid var(--border)',
+                        borderRadius: 20, padding: '7px 12px', fontSize: 13, fontWeight: 500, cursor: 'pointer',
+                        backgroundColor: selected ? 'var(--navy)' : 'white',
+                        color: selected ? 'white' : 'var(--text-primary)',
+                      }}
+                    >
+                      {selected && <Check size={13} />} {area}
+                    </button>
+                  );
+                })}
+              </div>
+              {prefsErrors.practiceAreas && <p style={{ fontSize: 12, color: '#dc2626', margin: '6px 0 0' }}>Please make a selection</p>}
+            </div>
+
+            {/* Firm Size */}
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 600, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 8 }}>Firm Size</div>
+              <div className="grid gap-3" style={{ gridTemplateColumns: '1fr 1fr' }}>
+                {firmSizeOptions.map((opt) => {
+                  const Icon = opt.icon;
+                  const selected = draftPrefs.firmSize === opt.value;
+                  return (
+                    <button
+                      key={opt.value}
+                      onClick={() => setDraftPrefs({ ...draftPrefs, firmSize: opt.value })}
+                      className="flex items-start gap-3 text-left"
+                      style={{
+                        border: selected ? '2px solid var(--navy)' : '1px solid var(--border)',
+                        borderRadius: 10, padding: 14, backgroundColor: 'white', cursor: 'pointer',
+                      }}
+                    >
+                      <Icon size={18} style={{ color: selected ? 'var(--navy)' : 'var(--text-muted)', flexShrink: 0, marginTop: 2 }} />
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{opt.value}</div>
+                        <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>{opt.desc}</div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+              {prefsErrors.firmSize && <p style={{ fontSize: 12, color: '#dc2626', margin: '6px 0 0' }}>Please make a selection</p>}
+            </div>
+
+            {/* Primary Goal */}
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 600, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 8 }}>Primary Goal</div>
+              <div className="grid gap-3" style={{ gridTemplateColumns: '1fr 1fr 1fr' }}>
+                {goalOptions.map((opt) => {
+                  const Icon = opt.icon;
+                  const selected = draftPrefs.primaryGoal === opt.value;
+                  return (
+                    <button
+                      key={opt.value}
+                      onClick={() => setDraftPrefs({ ...draftPrefs, primaryGoal: opt.value })}
+                      className="flex flex-col items-center gap-2 text-center"
+                      style={{
+                        border: selected ? '2px solid var(--navy)' : '1px solid var(--border)',
+                        borderRadius: 10, padding: 16, backgroundColor: 'white', cursor: 'pointer',
+                      }}
+                    >
+                      <Icon size={20} style={{ color: selected ? 'var(--navy)' : 'var(--text-muted)' }} />
+                      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{opt.value}</div>
+                      <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{opt.desc}</div>
+                    </button>
+                  );
+                })}
+              </div>
+              {prefsErrors.primaryGoal && <p style={{ fontSize: 12, color: '#dc2626', margin: '6px 0 0' }}>Please make a selection</p>}
+            </div>
+
+            {/* Footer buttons */}
+            <div className="flex items-center gap-3 justify-end" style={{ marginTop: 4 }}>
+              <button
+                onClick={handlePrefsCancel}
+                style={{ fontSize: 13, fontWeight: 500, border: '1px solid var(--border)', borderRadius: 8, padding: '8px 20px', backgroundColor: 'white', color: 'var(--text-secondary)', cursor: 'pointer' }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handlePrefsSave}
+                className="flex items-center gap-2"
+                style={{ fontSize: 13, fontWeight: 500, border: 'none', borderRadius: 8, padding: '8px 20px', backgroundColor: 'var(--navy)', color: 'white', cursor: 'pointer' }}
+              >
+                <Save size={14} /> Save Preferences
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

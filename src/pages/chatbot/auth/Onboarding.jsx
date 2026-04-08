@@ -245,6 +245,20 @@ export default function Onboarding() {
 
   const goNext = () => {
     if (step === 4) {
+      const selectedRole = ROLES.find((r) => r.id === role);
+      const selectedFirmSize = FIRM_SIZES.find((s) => s.id === firmSize);
+      const selectedAction = FIRST_ACTIONS.find((a) => a.id === firstAction);
+      localStorage.setItem(
+        'yourai_user_profile',
+        JSON.stringify({
+          role: selectedRole ? selectedRole.title : role,
+          practiceAreas,
+          firmSize: selectedFirmSize ? selectedFirmSize.title : firmSize,
+          primaryGoal: selectedAction ? selectedAction.title : firstAction,
+          onboardingCompleted: true,
+          onboardingCompletedAt: new Date().toISOString(),
+        })
+      );
       navigate('/chat');
       return;
     }
@@ -360,15 +374,6 @@ export default function Onboarding() {
             AI
           </span>
         </div>
-        <button
-          type="button"
-          onClick={() => navigate('/chat')}
-          style={styles.skipBtn}
-          onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--text-primary)')}
-          onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-muted)')}
-        >
-          Skip for now
-        </button>
       </div>
 
       {/* Center card area */}
@@ -452,16 +457,6 @@ const styles = {
     display: 'flex',
     alignItems: 'baseline',
     gap: 0,
-  },
-  skipBtn: {
-    background: 'none',
-    border: 'none',
-    color: 'var(--text-muted)',
-    fontSize: 13,
-    fontFamily: "'DM Sans', sans-serif",
-    cursor: 'pointer',
-    transition: 'color 0.2s',
-    padding: '4px 0',
   },
   center: {
     flex: 1,
