@@ -65,7 +65,7 @@ export default function TenantManagement() {
   const [statusFilter, setStatusFilter] = useState('All');
   const [selectedOrg, setSelectedOrg] = useState(null);
   const [editingOrg, setEditingOrg] = useState(null);
-  const [editForm, setEditForm] = useState({ name: '', plan: '', industry: 'Legal Services' });
+  const [editForm, setEditForm] = useState({ name: '' });
   const [orgTab, setOrgTab] = useState('overview');
   const [orgUserSearch, setOrgUserSearch] = useState('');
   const [showAddTenant, setShowAddTenant] = useState(false);
@@ -99,22 +99,35 @@ export default function TenantManagement() {
 
   const openEditOrg = (org, e) => {
     if (e) e.stopPropagation();
-    setEditForm({ name: org.name, plan: org.plan, industry: org.industry || 'Legal Services' });
+    setEditForm({ name: org.name });
     setEditingOrg(org);
   };
 
   const handleSaveEdit = () => {
     setTenantList((prev) =>
       prev.map((t) =>
-        t.id === editingOrg.id
-          ? { ...t, name: editForm.name, plan: editForm.plan, mrr: editForm.plan === 'Free' ? 0 : editForm.plan === 'Professional' ? 149 : editForm.plan === 'Team' ? 299 : 599 }
-          : t
+        t.id === editingOrg.id ? { ...t, name: editForm.name } : t
       )
     );
     if (selectedOrg && selectedOrg.id === editingOrg.id) {
-      setSelectedOrg({ ...selectedOrg, name: editForm.name, plan: editForm.plan, mrr: editForm.plan === 'Free' ? 0 : editForm.plan === 'Professional' ? 149 : editForm.plan === 'Team' ? 299 : 599 });
+      setSelectedOrg({ ...selectedOrg, name: editForm.name });
     }
-    showToast(`${editForm.name} updated successfully`);
+    showToast(`Organisation renamed to "${editForm.name}"`);
+    setEditingOrg(null);
+  };
+
+  const handleSuspendFromModal = () => {
+    const newStatus = editingOrg.status === 'Active' ? 'Suspended' : 'Active';
+    setTenantList((prev) =>
+      prev.map((t) => t.id === editingOrg.id ? { ...t, status: newStatus } : t)
+    );
+    if (selectedOrg && selectedOrg.id === editingOrg.id) {
+      setSelectedOrg({ ...selectedOrg, status: newStatus });
+    }
+    showToast(newStatus === 'Suspended'
+      ? `${editingOrg.name} suspended. All user access has been blocked.`
+      : `${editingOrg.name} reactivated. User access has been restored.`
+    );
     setEditingOrg(null);
   };
 
@@ -261,34 +274,52 @@ export default function TenantManagement() {
 
       {/* Edit Tenant Modal */}
       <Modal open={!!editingOrg} onClose={() => setEditingOrg(null)} title="Edit Tenant">
-        <div className="space-y-4">
+        <div className="space-y-5">
+          {/* Current status indicator */}
+          <div className="flex items-center gap-2 p-3 rounded-lg" style={{ backgroundColor: 'var(--ice-warm)', border: '1px solid var(--border)' }}>
+            <span className="text-xs font-semibold uppercase" style={{ color: 'var(--text-muted)' }}>Current Status:</span>
+            <Badge variant={editingOrg?.status}>{editingOrg?.status}</Badge>
+            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>·</span>
+            <Badge variant={editingOrg?.plan}>{editingOrg?.plan} Plan</Badge>
+          </div>
+
+          {/* Organisation Name */}
           <div>
             <label className="block mb-1.5" style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-secondary)' }}>Organisation Name *</label>
             <input type="text" value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} style={{ ...inputStyle, width: '100%' }} onFocus={(e) => (e.target.style.borderColor = 'var(--navy)')} onBlur={(e) => (e.target.style.borderColor = 'var(--border)')} />
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block mb-1.5" style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-secondary)' }}>Subscription Plan</label>
-              <select value={editForm.plan} onChange={(e) => setEditForm({ ...editForm, plan: e.target.value })} style={{ ...inputStyle, width: '100%' }}>
-                <option>Free</option><option>Professional</option><option>Team</option><option>Enterprise</option>
-              </select>
-            </div>
-            <div>
-              <label className="block mb-1.5" style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-secondary)' }}>Industry</label>
-              <select value={editForm.industry} onChange={(e) => setEditForm({ ...editForm, industry: e.target.value })} style={{ ...inputStyle, width: '100%' }}>
-                <option>Legal Services</option><option>Corporate Legal</option><option>Compliance & Risk</option><option>Financial Services</option><option>Healthcare</option><option>Other</option>
-              </select>
-            </div>
+
+          {/* Save name */}
+          <div className="flex justify-end gap-3">
+            <button onClick={() => setEditingOrg(null)} className="px-4 py-2 rounded-lg text-sm font-medium" style={{ border: '1px solid var(--border)', color: 'var(--slate)', backgroundColor: 'white' }}>Cancel</button>
+            <button onClick={handleSaveEdit} disabled={!editForm.name.trim() || editForm.name === editingOrg?.name} className="px-4 py-2 rounded-lg text-sm font-medium text-white flex items-center gap-1.5" style={{ backgroundColor: (!editForm.name.trim() || editForm.name === editingOrg?.name) ? '#94A3B8' : 'var(--navy)', cursor: (!editForm.name.trim() || editForm.name === editingOrg?.name) ? 'not-allowed' : 'pointer' }}>
+              <Save size={14} /> Save Name
+            </button>
           </div>
-          <div className="p-3 rounded-lg" style={{ backgroundColor: 'var(--ice-warm)', border: '1px solid var(--border)' }}>
-            <div className="text-xs" style={{ color: 'var(--text-muted)' }}>Changing the plan will update the MRR and feature limits for this organisation. Current users and data will not be affected.</div>
+
+          {/* Divider */}
+          <div style={{ height: 1, backgroundColor: 'var(--border)' }} />
+
+          {/* Suspend / Reactivate Section */}
+          <div className="p-4 rounded-lg" style={{ border: `1px solid ${editingOrg?.status === 'Active' ? '#FEE2E2' : '#DCFCE7'}`, backgroundColor: editingOrg?.status === 'Active' ? '#FEF2F2' : '#F0FDF4' }}>
+            <div className="text-xs font-semibold uppercase mb-2" style={{ color: editingOrg?.status === 'Active' ? '#991B1B' : '#166534' }}>
+              {editingOrg?.status === 'Active' ? 'Suspend Organisation' : 'Reactivate Organisation'}
+            </div>
+            <p className="text-xs mb-3" style={{ color: editingOrg?.status === 'Active' ? '#991B1B' : '#166534' }}>
+              {editingOrg?.status === 'Active'
+                ? 'Suspending this organisation will immediately block all user access. No users from this organisation will be able to log in, access documents, or run workflows until the organisation is reactivated.'
+                : 'Reactivating this organisation will restore access for all users. They will be able to log in and resume using the platform immediately.'}
+            </p>
+            <div className="flex items-center gap-2">
+              <AlertTriangle size={14} style={{ color: editingOrg?.status === 'Active' ? '#991B1B' : '#166534' }} />
+              <span className="text-xs font-medium" style={{ color: editingOrg?.status === 'Active' ? '#991B1B' : '#166534' }}>
+                {editingOrg?.status === 'Active' ? `This will affect ${editingOrg?.users || 0} user(s)` : 'All users will regain access'}
+              </span>
+            </div>
+            <button onClick={handleSuspendFromModal} className="mt-3 px-4 py-2 rounded-lg text-sm font-medium text-white flex items-center gap-1.5" style={{ backgroundColor: editingOrg?.status === 'Active' ? '#991B1B' : '#166534' }}>
+              {editingOrg?.status === 'Active' ? <><Ban size={14} /> Suspend &amp; Block Access</> : <><CheckCircle size={14} /> Reactivate &amp; Restore Access</>}
+            </button>
           </div>
-        </div>
-        <div className="flex justify-end gap-3 mt-6">
-          <button onClick={() => setEditingOrg(null)} className="px-4 py-2 rounded-lg text-sm font-medium" style={{ border: '1px solid var(--border)', color: 'var(--slate)', backgroundColor: 'white' }}>Cancel</button>
-          <button onClick={handleSaveEdit} disabled={!editForm.name.trim()} className="px-4 py-2 rounded-lg text-sm font-medium text-white flex items-center gap-1.5" style={{ backgroundColor: !editForm.name.trim() ? '#94A3B8' : 'var(--navy)', cursor: !editForm.name.trim() ? 'not-allowed' : 'pointer' }}>
-            <Save size={14} /> Save Changes
-          </button>
         </div>
       </Modal>
 
@@ -355,10 +386,17 @@ export default function TenantManagement() {
                     <div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{contact?.admin}</div>
                     <div className="text-sm" style={{ color: 'var(--text-muted)' }}>{contact?.email}</div>
                   </div>
-                  <div className="p-4 rounded-lg" style={{ border: '1px solid #FEE2E2', backgroundColor: '#FEF2F2' }}>
-                    <div className="text-xs font-semibold uppercase mb-3" style={{ color: '#991B1B' }}>Danger Zone</div>
-                    <button onClick={() => { toggleStatus(selectedOrg.id); setSelectedOrg({...selectedOrg, status: selectedOrg.status === 'Active' ? 'Suspended' : 'Active'}); showToast(`${selectedOrg.name} ${selectedOrg.status === 'Active' ? 'suspended' : 'reactivated'}`); }} className="px-4 py-2 rounded-lg text-sm font-medium text-white" style={{ backgroundColor: selectedOrg.status === 'Active' ? '#991B1B' : '#166534' }}>
-                      {selectedOrg.status === 'Active' ? 'Suspend Organisation' : 'Reactivate Organisation'}
+                  <div className="p-4 rounded-lg" style={{ border: `1px solid ${selectedOrg.status === 'Active' ? '#FEE2E2' : '#DCFCE7'}`, backgroundColor: selectedOrg.status === 'Active' ? '#FEF2F2' : '#F0FDF4' }}>
+                    <div className="text-xs font-semibold uppercase mb-1" style={{ color: selectedOrg.status === 'Active' ? '#991B1B' : '#166534' }}>
+                      {selectedOrg.status === 'Active' ? 'Danger Zone' : 'Reactivate'}
+                    </div>
+                    <p className="text-xs mb-3" style={{ color: selectedOrg.status === 'Active' ? '#991B1B' : '#166534' }}>
+                      {selectedOrg.status === 'Active'
+                        ? `Suspending will block all ${selectedOrg.users} user(s) from accessing the platform.`
+                        : 'Reactivating will restore access for all users in this organisation.'}
+                    </p>
+                    <button onClick={() => { const newStatus = selectedOrg.status === 'Active' ? 'Suspended' : 'Active'; toggleStatus(selectedOrg.id); setSelectedOrg({...selectedOrg, status: newStatus}); showToast(newStatus === 'Suspended' ? `${selectedOrg.name} suspended. All user access blocked.` : `${selectedOrg.name} reactivated. User access restored.`); }} className="px-4 py-2 rounded-lg text-sm font-medium text-white flex items-center gap-1.5" style={{ backgroundColor: selectedOrg.status === 'Active' ? '#991B1B' : '#166534' }}>
+                      {selectedOrg.status === 'Active' ? <><Ban size={14} /> Suspend &amp; Block Access</> : <><CheckCircle size={14} /> Reactivate &amp; Restore Access</>}
                     </button>
                   </div>
                 </div>
