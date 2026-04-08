@@ -1,12 +1,79 @@
 import React from 'react';
-import { Shield, Lock, Eye, FileText, Sparkles, Scale, BarChart3, Users, Zap, CheckCircle, ArrowRight } from 'lucide-react';
+import { Shield, Lock, Sparkles, FileText, Scale, Search, ShieldCheck, ArrowRight, Database, Cpu, CloudOff } from 'lucide-react';
+
+/* ─── Miniature architecture diagram ─── */
+function ArchitectureDiagram() {
+  const boxStyle = (bg, border) => ({
+    padding: '6px 10px', borderRadius: 6, fontSize: 10, fontWeight: 600,
+    backgroundColor: bg, border: `1px solid ${border}`, color: 'white',
+    textAlign: 'center', lineHeight: 1.3,
+  });
+  const subText = { fontSize: 8, fontWeight: 400, opacity: 0.7, marginTop: 1 };
+
+  return (
+    <div style={{ padding: '16px 14px', borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+      <div style={{ fontSize: 9, fontWeight: 600, letterSpacing: '0.08em', color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', marginBottom: 10, textAlign: 'center' }}>
+        How YourAI Works — Your Data + AI Engines = Your Asset
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        {/* Data sources */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: '0 0 auto' }}>
+          {[
+            { label: 'Files & Docs', color: '#166534' },
+            { label: 'CRM & SaaS', color: '#166534' },
+            { label: 'Your Data', color: '#166534' },
+          ].map(s => (
+            <div key={s.label} style={{ ...boxStyle(s.color + '30', s.color + '50'), color: '#86EFAC', fontSize: 9, padding: '4px 8px' }}>{s.label}</div>
+          ))}
+        </div>
+
+        {/* Arrow */}
+        <div style={{ color: 'rgba(255,255,255,0.2)', fontSize: 14 }}>→</div>
+
+        {/* YourAI core */}
+        <div style={{ flex: 1, padding: '10px 12px', borderRadius: 10, border: '1.5px solid rgba(201,168,76,0.3)', backgroundColor: 'rgba(201,168,76,0.08)', textAlign: 'center' }}>
+          <div style={{ fontFamily: "'DM Serif Display', serif", fontSize: 13, color: 'white', marginBottom: 2 }}>
+            <span style={{ color: 'white' }}>Your</span><span style={{ color: '#C9A84C' }}>AI</span>
+          </div>
+          <div style={{ fontSize: 8, color: 'rgba(255,255,255,0.45)', lineHeight: 1.4 }}>
+            Private AI Infrastructure
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, justifyContent: 'center', marginTop: 6 }}>
+            {['Zero retention', 'Encrypted', 'SOC 2'].map(t => (
+              <span key={t} style={{ fontSize: 7, padding: '2px 5px', borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.55)' }}>{t}</span>
+            ))}
+          </div>
+        </div>
+
+        {/* Arrow */}
+        <div style={{ color: 'rgba(255,255,255,0.2)', fontSize: 14 }}>→</div>
+
+        {/* AI Asset */}
+        <div style={{ flex: '0 0 auto', padding: '8px 10px', borderRadius: 8, border: '1px solid rgba(96,165,250,0.3)', backgroundColor: 'rgba(96,165,250,0.08)', textAlign: 'center' }}>
+          <div style={{ fontSize: 10, fontWeight: 600, color: '#93C5FD' }}>Your AI Asset</div>
+          <div style={{ fontSize: 7, color: 'rgba(255,255,255,0.4)', marginTop: 3, lineHeight: 1.4 }}>
+            Grows daily<br />100% yours
+          </div>
+        </div>
+      </div>
+
+      {/* AI Engines row */}
+      <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 8 }}>
+        {['OpenAI', 'Anthropic', 'Google'].map(e => (
+          <span key={e} style={{ fontSize: 8, padding: '3px 8px', borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.4)', border: '1px solid rgba(255,255,255,0.06)' }}>{e}</span>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export default function ChatAuthLayout({ children }) {
   return (
     <div className="min-h-screen flex">
-      {/* Left column — 45% navy with rich visuals */}
+      {/* Left column — 45% navy */}
       <div className="hidden lg:flex flex-col" style={{ width: '45%', backgroundColor: 'var(--navy)', padding: 0, position: 'relative', overflow: 'hidden' }}>
-        {/* Animated background grid pattern */}
+        {/* Background grid */}
         <div style={{ position: 'absolute', inset: 0, opacity: 0.03 }}>
           <svg width="100%" height="100%">
             <defs>
@@ -19,106 +86,100 @@ export default function ChatAuthLayout({ children }) {
         </div>
 
         {/* Glowing orbs */}
-        <div style={{ position: 'absolute', top: '15%', right: '-10%', width: 300, height: 300, borderRadius: '50%', background: 'radial-gradient(circle, rgba(201,168,76,0.12) 0%, transparent 70%)', filter: 'blur(40px)' }} />
-        <div style={{ position: 'absolute', bottom: '10%', left: '-5%', width: 250, height: 250, borderRadius: '50%', background: 'radial-gradient(circle, rgba(29,78,216,0.1) 0%, transparent 70%)', filter: 'blur(40px)' }} />
+        <div style={{ position: 'absolute', top: '10%', right: '-8%', width: 280, height: 280, borderRadius: '50%', background: 'radial-gradient(circle, rgba(201,168,76,0.12) 0%, transparent 70%)', filter: 'blur(40px)' }} />
+        <div style={{ position: 'absolute', bottom: '15%', left: '-5%', width: 220, height: 220, borderRadius: '50%', background: 'radial-gradient(circle, rgba(96,165,250,0.08) 0%, transparent 70%)', filter: 'blur(40px)' }} />
 
-        <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', height: '100%', padding: '32px 40px' }}>
+        <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', height: '100%', padding: '28px 36px' }}>
           {/* Logo */}
-          <div>
-            <div className="flex items-center gap-3">
-              <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(201,168,76,0.15)', border: '1px solid rgba(201,168,76,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Sparkles size={18} color="#C9A84C" />
+          <div className="flex items-center gap-3">
+            <div style={{ width: 34, height: 34, borderRadius: 9, background: 'rgba(201,168,76,0.15)', border: '1px solid rgba(201,168,76,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Sparkles size={16} color="#C9A84C" />
+            </div>
+            <div>
+              <div style={{ fontSize: 19, lineHeight: 1.2 }}>
+                <span style={{ fontFamily: "'DM Serif Display', serif", color: 'white', fontWeight: 700 }}>Your</span>
+                <span style={{ fontFamily: "'DM Serif Display', serif", color: '#C9A84C', fontWeight: 700 }}>AI</span>
               </div>
-              <div>
-                <div style={{ fontSize: 20, lineHeight: 1.2 }}>
-                  <span style={{ fontFamily: "'DM Serif Display', serif", color: 'white', fontWeight: 700 }}>Your</span>
-                  <span style={{ fontFamily: "'DM Serif Display', serif", color: '#C9A84C', fontWeight: 700 }}>AI</span>
-                </div>
-                <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, marginTop: 1 }}>Private AI Intelligence for Law Firms</div>
-              </div>
+              <div style={{ color: 'rgba(255,255,255,0.35)', fontSize: 10 }}>Private AI Infrastructure</div>
             </div>
           </div>
 
           {/* Center content */}
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 32 }}>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 24 }}>
+            {/* Badge */}
+            <span style={{ alignSelf: 'flex-start', display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 14px', borderRadius: 20, backgroundColor: 'rgba(201,168,76,0.12)', border: '1px solid rgba(201,168,76,0.2)', fontSize: 11, fontWeight: 600, color: '#C9A84C', letterSpacing: '0.04em' }}>
+              <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: '#C9A84C' }} />
+              PRIVATE AI INFRASTRUCTURE
+            </span>
+
             {/* Hero text */}
-            <div style={{ maxWidth: 360 }}>
-              <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 30, color: 'white', lineHeight: 1.35, margin: 0 }}>
-                The AI workspace your firm has been waiting for.
-              </p>
-              <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.55)', marginTop: 12, lineHeight: 1.6 }}>
-                Analyze contracts, research case law, and generate deliverables — all from one secure platform.
+            <div style={{ maxWidth: 380 }}>
+              <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 32, color: 'white', lineHeight: 1.25, margin: 0, fontWeight: 400 }}>
+                Own Your AI.<br />
+                <span style={{ fontStyle: 'italic', color: 'rgba(255,255,255,0.85)' }}>Run a Better</span><br />
+                <span style={{ borderBottom: '3px solid #C9A84C', paddingBottom: 2 }}>Business.</span>
+              </h1>
+              <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', marginTop: 14, lineHeight: 1.65 }}>
+                Built for environments where confidentiality is non-negotiable. Your data stays yours — forever.
               </p>
             </div>
 
-            {/* Feature cards */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {/* Stats — from the legal page */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
               {[
-                { icon: FileText, title: 'Contract Analysis', desc: 'AI reviews 23 clause types in under 5 seconds', accent: '#C9A84C' },
-                { icon: Scale, title: 'Legal Research', desc: 'Cited answers from your documents + case law', accent: '#60A5FA' },
-                { icon: BarChart3, title: 'Risk Reports', desc: 'Auto-generated risk memos ready for partner review', accent: '#34D399' },
+                { value: '70%', label: 'Reduction in contract review time', bg: 'rgba(201,168,76,0.08)', border: 'rgba(201,168,76,0.15)' },
+                { value: '3.5x', label: 'Faster case law research', bg: 'rgba(96,165,250,0.08)', border: 'rgba(96,165,250,0.15)' },
+                { value: '100%', label: 'Data stays within your firm', bg: 'rgba(52,211,153,0.08)', border: 'rgba(52,211,153,0.15)' },
+                { value: '$0', label: 'Exposure to third-party data sharing', bg: 'rgba(255,255,255,0.04)', border: 'rgba(255,255,255,0.1)' },
+              ].map(({ value, label, bg, border }) => (
+                <div key={label} style={{ padding: '14px 14px', borderRadius: 10, backgroundColor: bg, border: `1px solid ${border}`, textAlign: 'center' }}>
+                  <div style={{ fontSize: 24, fontWeight: 700, color: 'white', fontFamily: "'DM Sans', sans-serif" }}>{value}</div>
+                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.45)', marginTop: 3, lineHeight: 1.3 }}>{label}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* How YourAI helps — feature list */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {[
+                { icon: FileText, title: 'Privilege-Preserving Contract Analysis', desc: 'AI that never sends clause language to external servers', accent: '#C9A84C' },
+                { icon: Search, title: 'Accelerated Case Research', desc: 'Cross-reference past work with public legal databases in seconds', accent: '#60A5FA' },
+                { icon: Scale, title: 'Compliant Document Drafting', desc: 'Traceable outputs matching your firm\'s tone and standards', accent: '#34D399' },
               ].map(({ icon: Icon, title, desc, accent }) => (
-                <div key={title} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px', borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', backdropFilter: 'blur(10px)', transition: 'all 0.2s' }}
-                  onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)'; }}
-                  onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; }}
+                <div key={title} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 14px', borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', transition: 'all 0.2s' }}
+                  onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.07)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.04)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)'; }}
                 >
-                  <div style={{ width: 36, height: 36, borderRadius: 8, backgroundColor: accent + '20', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <Icon size={18} style={{ color: accent }} />
+                  <div style={{ width: 32, height: 32, borderRadius: 7, backgroundColor: accent + '18', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <Icon size={16} style={{ color: accent }} />
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: 'white' }}>{title}</div>
-                    <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginTop: 2 }}>{desc}</div>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: 'white' }}>{title}</div>
+                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginTop: 1 }}>{desc}</div>
                   </div>
-                  <ArrowRight size={14} style={{ color: 'rgba(255,255,255,0.25)', flexShrink: 0 }} />
                 </div>
               ))}
             </div>
 
-            {/* Stats row */}
-            <div style={{ display: 'flex', gap: 0 }}>
-              {[
-                { value: '500+', label: 'Law firms' },
-                { value: '2M+', label: 'Documents analyzed' },
-                { value: '99.8%', label: 'Uptime SLA' },
-              ].map(({ value, label }, i) => (
-                <div key={label} style={{ flex: 1, textAlign: 'center', padding: '12px 0', borderRight: i < 2 ? '1px solid rgba(255,255,255,0.1)' : 'none' }}>
-                  <div style={{ fontSize: 22, fontWeight: 700, color: '#C9A84C', fontFamily: "'DM Sans', sans-serif" }}>{value}</div>
-                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', marginTop: 2 }}>{label}</div>
-                </div>
-              ))}
-            </div>
+            {/* Architecture diagram */}
+            <ArchitectureDiagram />
 
             {/* Trust badges */}
             <div className="flex flex-wrap gap-2">
               {[
-                { icon: Shield, label: 'SOC 2 Compliant' },
-                { icon: Lock, label: 'Bank-grade Encryption' },
-                { icon: Eye, label: 'Attorney-Client Privilege' },
-                { icon: Zap, label: 'Zero Data Retention' },
+                { icon: CloudOff, label: 'Zero Data Retention' },
+                { icon: ShieldCheck, label: 'SOC 2 Ready' },
+                { icon: Lock, label: 'You Own Your IP' },
               ].map(({ icon: Icon, label }) => (
-                <span key={label} className="inline-flex items-center gap-1.5" style={{ backgroundColor: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.7)', fontSize: 11, borderRadius: 20, padding: '5px 12px', border: '1px solid rgba(255,255,255,0.08)' }}>
-                  <Icon size={12} style={{ color: '#C9A84C' }} /> {label}
+                <span key={label} className="inline-flex items-center gap-1.5" style={{ backgroundColor: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.6)', fontSize: 10, borderRadius: 20, padding: '4px 11px', border: '1px solid rgba(255,255,255,0.08)' }}>
+                  <Icon size={11} style={{ color: '#C9A84C' }} /> {label}
                 </span>
               ))}
             </div>
           </div>
 
-          {/* Testimonial */}
-          <div style={{ padding: '16px 18px', borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
-            <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)', lineHeight: 1.6, fontStyle: 'italic', margin: 0 }}>
-              "YourAI cut our contract review time by 70%. What used to take a full day now takes two hours with better accuracy."
-            </p>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 12 }}>
-              <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg, #C9A84C 0%, #E8D48B 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 600, color: 'white' }}>JC</div>
-              <div>
-                <div style={{ fontSize: 12, fontWeight: 600, color: 'white' }}>Jennifer Chen</div>
-                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>Managing Partner, Chen Partners LLC</div>
-              </div>
-            </div>
-          </div>
-
           {/* Footer */}
-          <div style={{ color: 'rgba(255,255,255,0.25)', fontSize: 11, marginTop: 20 }}>
+          <div style={{ color: 'rgba(255,255,255,0.2)', fontSize: 10 }}>
             &copy; 2026 YourAI &middot; Appinventiv
           </div>
         </div>
