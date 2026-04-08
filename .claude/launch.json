@@ -5,7 +5,10 @@
       "name": "dev",
       "runtimeExecutable": "/usr/local/bin/npx",
       "runtimeArgs": ["vite", "--port", "5173"],
-      "port": 5173
+      "port": 5173,
+      "env": {
+        "PATH": "/usr/local/bin:/usr/bin:/bin"
+      }
     }
   ]
 }

@@ -289,6 +289,7 @@ export const alexUnknownLog = [
 ];
 
 export const userStoryModules = [
+  { id:"dashboard", label:"Dashboard", route:"/super-admin/dashboard", icon:"BarChart2", storyCount:0 },
   { id:"tenant-management", label:"Tenant Management", route:"/super-admin/tenants", icon:"Building2", storyCount:0 },
   { id:"user-management", label:"User Management", route:"/super-admin/users", icon:"Users", storyCount:0 },
   { id:"platform-billing", label:"Platform Billing", route:"/super-admin/billing", icon:"CreditCard", storyCount:0 },
@@ -300,6 +301,8 @@ export const userStoryModules = [
   { id:"knowledge-base", label:"Knowledge Base", route:"/super-admin/knowledge-base", icon:"Database", storyCount:0 },
   { id:"integrations", label:"Integrations", route:"/super-admin/integrations", icon:"Plug", storyCount:0 },
   { id:"notifications", label:"Notifications", route:"/super-admin/notifications", icon:"Bell", storyCount:0 },
+  { id:"reports-analytics", label:"Reports & Analytics", route:"/super-admin/reports", icon:"FileOutput", storyCount:0 },
   { id:"platform-settings", label:"Platform Settings", route:"/super-admin/settings", icon:"Settings", storyCount:0 },
   { id:"auth-flow", label:"Auth Flow", icon:"Lock", storyCount:0 },
+  { id:"user-stories", label:"User Stories", route:"/super-admin/user-stories", icon:"FileText", storyCount:0 },
 ];
