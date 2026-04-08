@@ -4,7 +4,8 @@ import {
   CheckCircle, MessageSquare, Clock, Share2, Grid3X3, Calendar, Users,
   FolderOpen, ChevronDown, ChevronRight, MoreVertical, Plus, Download,
   Search, Bell, ArrowUp, Shield, Sparkles, FileText, Building2, Scale,
-  LayoutDashboard, Send, MapPin, FileSearch, Lock, X, AlertTriangle, Info, Zap
+  LayoutDashboard, Send, MapPin, FileSearch, Lock, X, AlertTriangle, Info, Zap,
+  BookOpen, UserPlus, Trash2, Edit3, Copy, Phone, Mail, Briefcase, Hash
 } from 'lucide-react';
 import { billingData, subscriptionPlans } from '../../data/mockData';
 
@@ -56,6 +57,22 @@ const QUICK_ACTIONS = [
   { emoji: '\ud83d\udd0d', label: 'Run web search' },
 ];
 const QUICK_ACTIONS_2 = [{ emoji: '\u2728', label: 'Generate artifact' }];
+
+/* ─── Default Prompt Templates ─── */
+const DEFAULT_PROMPT_TEMPLATES = [
+  { id: 1, title: 'Contract Risk Analysis', prompt: 'Analyze the following contract and identify all high-risk clauses, non-standard terms, and potential liabilities. Compare against our standard playbook and flag deviations.', category: 'Analysis', createdAt: 'Apr 1, 2026' },
+  { id: 2, title: 'Due Diligence Summary', prompt: 'Perform a comprehensive due diligence review on the attached documents. Summarize key findings, red flags, and recommended next steps in a structured report format.', category: 'Review', createdAt: 'Mar 28, 2026' },
+  { id: 3, title: 'Legal Research Memo', prompt: 'Research the following legal question and provide a detailed memo with relevant case law, statutes, and regulatory guidance. Include citations and a brief analysis of how each authority applies.', category: 'Research', createdAt: 'Mar 25, 2026' },
+  { id: 4, title: 'Clause Comparison', prompt: 'Compare the clauses in the uploaded document against our standard NDA template. Highlight additions, deletions, and modifications with risk level for each change.', category: 'Analysis', createdAt: 'Mar 20, 2026' },
+  { id: 5, title: 'Executive Brief', prompt: 'Generate a concise executive brief summarizing the key terms, obligations, and risks of this agreement. Keep it under 500 words and suitable for senior partner review.', category: 'Summary', createdAt: 'Mar 15, 2026' },
+];
+
+/* ─── Default Clients ─── */
+const DEFAULT_CLIENTS = [
+  { id: 1, name: 'Acme Corp', contactName: 'John Mitchell', email: 'john@acmecorp.com', phone: '(212) 555-0142', type: 'Corporate', status: 'Active', addedBy: 'Ryan Melade', addedAt: 'Jan 15, 2026', matters: 3 },
+  { id: 2, name: 'Meridian Health', contactName: 'Sarah Park', email: 'sarah@meridianhealth.com', phone: '(415) 555-0198', type: 'Healthcare', status: 'Active', addedBy: 'Sarah Chen', addedAt: 'Feb 3, 2026', matters: 2 },
+  { id: 3, name: 'NovaTech Solutions', contactName: 'Alex Rivera', email: 'alex@novatech.io', phone: '(310) 555-0267', type: 'Technology', status: 'Active', addedBy: 'Ryan Melade', addedAt: 'Mar 10, 2026', matters: 1 },
+];
 
 /* ─── AI Models by plan ─── */
 const AI_MODELS_BY_PLAN = {
@@ -111,14 +128,15 @@ const libraryItems = [
   { icon: FolderOpen, label: 'Document Vault', badge: '128', badgeStyle: 'navy', subtitle: 'Recent: Vendor_Agreement.pdf \u00b7 1h...' },
 ];
 
-function Sidebar() {
-  const [clientsOpen, setClientsOpen] = useState(true);
+function Sidebar({ onOpenPromptTemplates, onOpenClients, promptCount, clientCount }) {
   const renderItem = (item, idx) => {
     const Icon = item.icon;
-    const isClients = item.collapsible;
     return (
       <div key={idx}>
-        <div onClick={isClients ? () => setClientsOpen((o) => !o) : undefined} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '8px 12px', borderRadius: 8, cursor: isClients ? 'pointer' : 'default', background: item.active ? '#EDF3FA' : 'transparent', position: 'relative', userSelect: 'none' }}>
+        <div onClick={item.onClick || undefined} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '8px 12px', borderRadius: 8, cursor: item.onClick ? 'pointer' : 'default', background: item.active ? '#EDF3FA' : 'transparent', position: 'relative', userSelect: 'none' }}
+          onMouseEnter={(e) => { if (item.onClick) e.currentTarget.style.background = item.active ? '#EDF3FA' : '#F8FAFC'; }}
+          onMouseLeave={(e) => { if (item.onClick) e.currentTarget.style.background = item.active ? '#EDF3FA' : 'transparent'; }}
+        >
           {item.dotColor && <span style={{ position: 'absolute', left: 4, top: 14, width: 6, height: 6, borderRadius: '50%', background: item.dotColor }} />}
           <Icon size={16} style={{ marginTop: 2, color: 'var(--text-secondary)', flexShrink: 0 }} />
           <div style={{ flex: 1, minWidth: 0 }}>
@@ -127,29 +145,19 @@ function Sidebar() {
               {item.badge && (
                 <span style={{ fontSize: 10, fontWeight: 600, padding: '1px 7px', borderRadius: 999, ...(item.badgeStyle === 'navy' ? { background: 'var(--navy)', color: '#fff' } : { background: '#DCFCE7', color: '#166534' }) }}>{item.badge}</span>
               )}
-              {isClients && <span style={{ marginLeft: 'auto' }}>{clientsOpen ? <ChevronDown size={14} color="var(--text-muted)" /> : <ChevronRight size={14} color="var(--text-muted)" />}</span>}
             </div>
             {item.subtitle && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.subtitle}</div>}
           </div>
         </div>
-        {isClients && clientsOpen && item.children && (
-          <div style={{ paddingLeft: 32, marginTop: 2 }}>
-            {item.children.map((child, ci) =>
-              child.isSubNav ? (
-                <div key={ci} style={{ fontSize: 12, color: 'var(--text-muted)', padding: '4px 0', cursor: 'pointer' }}>{child.label}</div>
-              ) : (
-                <div key={ci} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, padding: '3px 0' }}>
-                  <span style={{ color: 'var(--text-muted)' }}>{'\u2022'}</span>
-                  <span style={{ color: 'var(--text-primary)' }}>{child.label}</span>
-                  <span style={{ fontSize: 11, color: child.statusColor, marginLeft: 'auto' }}>{child.status}</span>
-                </div>
-              ),
-            )}
-          </div>
-        )}
       </div>
     );
   };
+
+  const allMainItems = [
+    ...sidebarItems,
+    { icon: BookOpen, label: 'Prompt Templates', badge: String(promptCount), badgeStyle: 'navy', subtitle: 'Saved prompts for quick access', onClick: onOpenPromptTemplates },
+    { icon: Users, label: 'Clients', badge: String(clientCount), badgeStyle: 'navy', subtitle: 'Manage your client directory', onClick: onOpenClients },
+  ];
 
   return (
     <div style={{ width: 248, minWidth: 248, background: '#fff', borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
@@ -160,7 +168,7 @@ function Sidebar() {
       </div>
       <div style={{ flex: 1, overflowY: 'auto', padding: '0 8px' }}>
         <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', padding: '20px 12px 6px' }}>Main</div>
-        {sidebarItems.map(renderItem)}
+        {allMainItems.map(renderItem)}
         <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', padding: '18px 12px 6px' }}>Library</div>
         {libraryItems.map(renderItem)}
       </div>
@@ -179,6 +187,283 @@ function Sidebar() {
         </div>
       </div>
     </div>
+  );
+}
+
+/* ─────────────────── Prompt Templates Panel ─────────────────── */
+function PromptTemplatesPanel({ templates, onUsePrompt, onClose, onCreateNew, onDelete }) {
+  const [search, setSearch] = useState('');
+  const [filterCat, setFilterCat] = useState('All');
+  const categories = ['All', ...Array.from(new Set(templates.map(t => t.category)))];
+  const filtered = templates.filter(t => {
+    if (search && !t.title.toLowerCase().includes(search.toLowerCase()) && !t.prompt.toLowerCase().includes(search.toLowerCase())) return false;
+    if (filterCat !== 'All' && t.category !== filterCat) return false;
+    return true;
+  });
+
+  return (
+    <>
+      <div onClick={onClose} style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)', zIndex: 60, backdropFilter: 'blur(4px)' }} />
+      <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 580, maxHeight: '85vh', backgroundColor: 'white', borderRadius: 16, boxShadow: '0 20px 60px rgba(0,0,0,0.2)', zIndex: 61, display: 'flex', flexDirection: 'column' }}>
+        {/* Header */}
+        <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid var(--border)' }}>
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 18, color: 'var(--text-primary)', margin: 0 }}>Prompt Templates</h3>
+              <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>{templates.length} saved prompts · Click to use in chat</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button onClick={onCreateNew} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 14px', borderRadius: 8, backgroundColor: 'var(--navy)', color: 'white', border: 'none', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}><Plus size={14} /> New Template</button>
+              <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100"><X size={18} style={{ color: 'var(--text-muted)' }} /></button>
+            </div>
+          </div>
+          {/* Search + filter */}
+          <div className="flex items-center gap-3" style={{ marginTop: 12 }}>
+            <div style={{ position: 'relative', flex: 1 }}>
+              <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+              <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search templates..." style={{ width: '100%', height: 34, borderRadius: 8, border: '1px solid var(--border)', paddingLeft: 32, fontSize: 13, outline: 'none', boxSizing: 'border-box', fontFamily: "'DM Sans', sans-serif" }} />
+            </div>
+            <div className="flex gap-1">
+              {categories.map(c => (
+                <button key={c} onClick={() => setFilterCat(c)} style={{ padding: '4px 10px', borderRadius: 6, fontSize: 11, fontWeight: 500, border: '1px solid ' + (filterCat === c ? 'var(--navy)' : 'var(--border)'), background: filterCat === c ? 'var(--navy)' : 'white', color: filterCat === c ? 'white' : 'var(--text-muted)', cursor: 'pointer' }}>{c}</button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Template list */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '8px 16px 16px' }}>
+          {filtered.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-muted)' }}>
+              <BookOpen size={32} style={{ margin: '0 auto 12px', opacity: 0.4 }} />
+              <div style={{ fontSize: 14, fontWeight: 500 }}>No templates found</div>
+              <div style={{ fontSize: 12, marginTop: 4 }}>Try a different search or create a new template</div>
+            </div>
+          ) : (
+            filtered.map(t => (
+              <div key={t.id} style={{ padding: '14px 16px', borderRadius: 10, border: '1px solid var(--border)', marginTop: 8, cursor: 'pointer', transition: 'all 0.15s' }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--navy)'; e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.06)'; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.boxShadow = 'none'; }}
+              >
+                <div className="flex items-start justify-between">
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div className="flex items-center gap-2">
+                      <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{t.title}</span>
+                      <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 999, backgroundColor: '#EFF6FF', color: '#1D4ED8', fontWeight: 500 }}>{t.category}</span>
+                    </div>
+                    <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 6, lineHeight: 1.5, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{t.prompt}</p>
+                  </div>
+                  <div className="flex items-center gap-1" style={{ marginLeft: 12, flexShrink: 0 }}>
+                    <button onClick={(e) => { e.stopPropagation(); onUsePrompt(t.prompt); onClose(); }} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 6, backgroundColor: 'var(--navy)', color: 'white', border: 'none', fontSize: 11, fontWeight: 500, cursor: 'pointer' }} title="Use this prompt"><Copy size={12} /> Use</button>
+                    <button onClick={(e) => { e.stopPropagation(); onDelete(t.id); }} style={{ padding: '5px', borderRadius: 6, background: 'none', border: '1px solid var(--border)', cursor: 'pointer', display: 'flex' }} title="Delete"><Trash2 size={13} style={{ color: '#991B1B' }} /></button>
+                  </div>
+                </div>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6 }}>Created {t.createdAt}</div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    </>
+  );
+}
+
+/* ─────────────────── Create Prompt Template Modal ─────────────────── */
+function CreatePromptModal({ onClose, onSave }) {
+  const [title, setTitle] = useState('');
+  const [prompt, setPrompt] = useState('');
+  const [category, setCategory] = useState('Analysis');
+  const categories = ['Analysis', 'Review', 'Research', 'Summary', 'Drafting', 'Other'];
+
+  const handleSave = () => {
+    if (!title.trim() || !prompt.trim()) return;
+    onSave({ title: title.trim(), prompt: prompt.trim(), category });
+    onClose();
+  };
+
+  return (
+    <>
+      <div onClick={onClose} style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)', zIndex: 70, backdropFilter: 'blur(4px)' }} />
+      <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 500, backgroundColor: 'white', borderRadius: 16, boxShadow: '0 20px 60px rgba(0,0,0,0.2)', zIndex: 71 }}>
+        <div className="flex items-center justify-between" style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)' }}>
+          <h3 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 18, color: 'var(--text-primary)', margin: 0 }}>New Prompt Template</h3>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100"><X size={18} style={{ color: 'var(--text-muted)' }} /></button>
+        </div>
+        <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Template name</label>
+            <input value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g., Contract Risk Analysis" style={{ width: '100%', height: 40, border: '1px solid var(--border)', borderRadius: 8, padding: '0 12px', fontSize: 13, outline: 'none', boxSizing: 'border-box', fontFamily: "'DM Sans', sans-serif" }} />
+          </div>
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Category</label>
+            <div className="flex gap-2 flex-wrap">
+              {categories.map(c => (
+                <button key={c} onClick={() => setCategory(c)} style={{ padding: '5px 12px', borderRadius: 6, fontSize: 12, fontWeight: 500, border: '1px solid ' + (category === c ? 'var(--navy)' : 'var(--border)'), background: category === c ? 'var(--navy)' : 'white', color: category === c ? 'white' : 'var(--text-muted)', cursor: 'pointer' }}>{c}</button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Prompt text</label>
+            <textarea value={prompt} onChange={e => setPrompt(e.target.value)} placeholder="Write your reusable prompt here..." rows={5} style={{ width: '100%', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 12px', fontSize: 13, outline: 'none', resize: 'vertical', boxSizing: 'border-box', fontFamily: "'DM Sans', sans-serif", lineHeight: 1.5 }} />
+          </div>
+        </div>
+        <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+          <button onClick={onClose} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid var(--border)', background: 'white', fontSize: 13, cursor: 'pointer', color: 'var(--text-muted)' }}>Cancel</button>
+          <button onClick={handleSave} disabled={!title.trim() || !prompt.trim()} style={{ padding: '8px 20px', borderRadius: 8, border: 'none', background: (!title.trim() || !prompt.trim()) ? '#94A3B8' : 'var(--navy)', color: 'white', fontSize: 13, fontWeight: 500, cursor: (!title.trim() || !prompt.trim()) ? 'not-allowed' : 'pointer' }}>Save Template</button>
+        </div>
+      </div>
+    </>
+  );
+}
+
+/* ─────────────────── Clients Panel ─────────────────── */
+function ClientsPanel({ clients, onClose, onAddClient, onDeleteClient }) {
+  const [search, setSearch] = useState('');
+  const filtered = clients.filter(c => {
+    if (!search) return true;
+    const q = search.toLowerCase();
+    return c.name.toLowerCase().includes(q) || c.contactName.toLowerCase().includes(q) || c.email.toLowerCase().includes(q);
+  });
+
+  const typeColors = {
+    Corporate: { bg: '#EFF6FF', color: '#1D4ED8' },
+    Healthcare: { bg: '#F0FDF4', color: '#166534' },
+    Technology: { bg: '#FFFBEB', color: '#92400E' },
+    'Real Estate': { bg: '#FDF2F8', color: '#9D174D' },
+    Other: { bg: '#F1F5F9', color: '#475569' },
+  };
+
+  return (
+    <>
+      <div onClick={onClose} style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)', zIndex: 60, backdropFilter: 'blur(4px)' }} />
+      <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 620, maxHeight: '85vh', backgroundColor: 'white', borderRadius: 16, boxShadow: '0 20px 60px rgba(0,0,0,0.2)', zIndex: 61, display: 'flex', flexDirection: 'column' }}>
+        {/* Header */}
+        <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid var(--border)' }}>
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 18, color: 'var(--text-primary)', margin: 0 }}>Clients</h3>
+              <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>{clients.length} clients · Manage your client directory</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button onClick={onAddClient} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 14px', borderRadius: 8, backgroundColor: 'var(--navy)', color: 'white', border: 'none', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}><UserPlus size={14} /> Add Client</button>
+              <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100"><X size={18} style={{ color: 'var(--text-muted)' }} /></button>
+            </div>
+          </div>
+          <div style={{ position: 'relative', marginTop: 12 }}>
+            <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search clients by name, contact, or email..." style={{ width: '100%', height: 34, borderRadius: 8, border: '1px solid var(--border)', paddingLeft: 32, fontSize: 13, outline: 'none', boxSizing: 'border-box', fontFamily: "'DM Sans', sans-serif" }} />
+          </div>
+        </div>
+
+        {/* Client list */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '8px 16px 16px' }}>
+          {filtered.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-muted)' }}>
+              <Users size={32} style={{ margin: '0 auto 12px', opacity: 0.4 }} />
+              <div style={{ fontSize: 14, fontWeight: 500 }}>No clients found</div>
+              <div style={{ fontSize: 12, marginTop: 4 }}>Add your first client to get started</div>
+            </div>
+          ) : (
+            filtered.map(c => {
+              const tc = typeColors[c.type] || typeColors.Other;
+              return (
+                <div key={c.id} style={{ padding: '14px 16px', borderRadius: 10, border: '1px solid var(--border)', marginTop: 8, transition: 'all 0.15s' }}
+                  onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.06)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.boxShadow = 'none'; }}
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-start gap-3">
+                      <div style={{ width: 38, height: 38, borderRadius: 10, backgroundColor: 'var(--ice-warm)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <Building2 size={18} style={{ color: 'var(--navy)' }} />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{c.name}</span>
+                          <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 999, backgroundColor: tc.bg, color: tc.color, fontWeight: 500 }}>{c.type}</span>
+                          <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 999, backgroundColor: c.status === 'Active' ? '#DCFCE7' : '#FEE2E2', color: c.status === 'Active' ? '#166534' : '#991B1B', fontWeight: 500 }}>{c.status}</span>
+                        </div>
+                        <div className="flex items-center gap-4" style={{ marginTop: 6 }}>
+                          <span className="flex items-center gap-1" style={{ fontSize: 12, color: 'var(--text-muted)' }}><Users size={12} /> {c.contactName}</span>
+                          <span className="flex items-center gap-1" style={{ fontSize: 12, color: 'var(--text-muted)' }}><Mail size={12} /> {c.email}</span>
+                        </div>
+                        <div className="flex items-center gap-4" style={{ marginTop: 4 }}>
+                          <span className="flex items-center gap-1" style={{ fontSize: 12, color: 'var(--text-muted)' }}><Phone size={12} /> {c.phone}</span>
+                          <span className="flex items-center gap-1" style={{ fontSize: 12, color: 'var(--text-muted)' }}><Briefcase size={12} /> {c.matters} matter{c.matters !== 1 ? 's' : ''}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <button onClick={() => onDeleteClient(c.id)} style={{ padding: 5, borderRadius: 6, background: 'none', border: '1px solid var(--border)', cursor: 'pointer', display: 'flex' }} title="Remove client"><Trash2 size={13} style={{ color: '#991B1B' }} /></button>
+                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 8 }}>Added by {c.addedBy} · {c.addedAt}</div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
+    </>
+  );
+}
+
+/* ─────────────────── Add Client Modal ─────────────────── */
+function AddClientModal({ onClose, onSave }) {
+  const [name, setName] = useState('');
+  const [contactName, setContactName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [type, setType] = useState('Corporate');
+  const types = ['Corporate', 'Healthcare', 'Technology', 'Real Estate', 'Other'];
+
+  const handleSave = () => {
+    if (!name.trim() || !contactName.trim() || !email.trim()) return;
+    onSave({ name: name.trim(), contactName: contactName.trim(), email: email.trim(), phone: phone.trim(), type });
+    onClose();
+  };
+
+  const inputStyle = { width: '100%', height: 40, border: '1px solid var(--border)', borderRadius: 8, padding: '0 12px', fontSize: 13, outline: 'none', boxSizing: 'border-box', fontFamily: "'DM Sans', sans-serif" };
+
+  return (
+    <>
+      <div onClick={onClose} style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)', zIndex: 70, backdropFilter: 'blur(4px)' }} />
+      <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 480, backgroundColor: 'white', borderRadius: 16, boxShadow: '0 20px 60px rgba(0,0,0,0.2)', zIndex: 71 }}>
+        <div className="flex items-center justify-between" style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)' }}>
+          <h3 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 18, color: 'var(--text-primary)', margin: 0 }}>Add Client</h3>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100"><X size={18} style={{ color: 'var(--text-muted)' }} /></button>
+        </div>
+        <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Company / Client name *</label>
+            <input value={name} onChange={e => setName(e.target.value)} placeholder="e.g., Acme Corp" style={inputStyle} />
+          </div>
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Primary contact name *</label>
+            <input value={contactName} onChange={e => setContactName(e.target.value)} placeholder="e.g., John Mitchell" style={inputStyle} />
+          </div>
+          <div className="flex gap-3">
+            <div style={{ flex: 1 }}>
+              <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Email *</label>
+              <input value={email} onChange={e => setEmail(e.target.value)} placeholder="john@acmecorp.com" type="email" style={inputStyle} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Phone</label>
+              <input value={phone} onChange={e => setPhone(e.target.value)} placeholder="(212) 555-0142" style={inputStyle} />
+            </div>
+          </div>
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Client type</label>
+            <div className="flex gap-2 flex-wrap">
+              {types.map(t => (
+                <button key={t} onClick={() => setType(t)} style={{ padding: '5px 12px', borderRadius: 6, fontSize: 12, fontWeight: 500, border: '1px solid ' + (type === t ? 'var(--navy)' : 'var(--border)'), background: type === t ? 'var(--navy)' : 'white', color: type === t ? 'white' : 'var(--text-muted)', cursor: 'pointer' }}>{t}</button>
+              ))}
+            </div>
+          </div>
+        </div>
+        <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+          <button onClick={onClose} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid var(--border)', background: 'white', fontSize: 13, cursor: 'pointer', color: 'var(--text-muted)' }}>Cancel</button>
+          <button onClick={handleSave} disabled={!name.trim() || !contactName.trim() || !email.trim()} style={{ padding: '8px 20px', borderRadius: 8, border: 'none', background: (!name.trim() || !contactName.trim() || !email.trim()) ? '#94A3B8' : 'var(--navy)', color: 'white', fontSize: 13, fontWeight: 500, cursor: (!name.trim() || !contactName.trim() || !email.trim()) ? 'not-allowed' : 'pointer' }}>Add Client</button>
+        </div>
+      </div>
+    </>
   );
 }
 
@@ -624,6 +909,12 @@ export default function ChatView() {
   const [showLockedCard, setShowLockedCard] = useState(null);
   const [showPlanModal, setShowPlanModal] = useState(false);
   const [docLimitBannerDismissed, setDocLimitBannerDismissed] = useState(false);
+  const [promptTemplates, setPromptTemplates] = useState(DEFAULT_PROMPT_TEMPLATES);
+  const [showPromptPanel, setShowPromptPanel] = useState(false);
+  const [showCreatePrompt, setShowCreatePrompt] = useState(false);
+  const [clients, setClients] = useState(DEFAULT_CLIENTS);
+  const [showClientsPanel, setShowClientsPanel] = useState(false);
+  const [showAddClient, setShowAddClient] = useState(false);
   const scrollRef = useRef(null);
   const inputRef = useRef(null);
   const responseIdx = useRef(0);
@@ -678,9 +969,49 @@ export default function ChatView() {
     setShowLockedCard(model);
   };
 
+  const handleCreatePrompt = (data) => {
+    const newTemplate = {
+      id: Date.now(),
+      title: data.title,
+      prompt: data.prompt,
+      category: data.category,
+      createdAt: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+    };
+    setPromptTemplates(prev => [newTemplate, ...prev]);
+  };
+
+  const handleDeletePrompt = (id) => {
+    setPromptTemplates(prev => prev.filter(t => t.id !== id));
+  };
+
+  const handleAddClient = (data) => {
+    const newClient = {
+      id: Date.now(),
+      name: data.name,
+      contactName: data.contactName,
+      email: data.email,
+      phone: data.phone || '—',
+      type: data.type,
+      status: 'Active',
+      addedBy: 'Ryan Melade',
+      addedAt: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+      matters: 0,
+    };
+    setClients(prev => [newClient, ...prev]);
+  };
+
+  const handleDeleteClient = (id) => {
+    setClients(prev => prev.filter(c => c.id !== id));
+  };
+
   return (
     <div style={{ display: 'flex', height: '100vh', width: '100%', overflow: 'hidden' }}>
-      <Sidebar />
+      <Sidebar
+        onOpenPromptTemplates={() => setShowPromptPanel(true)}
+        onOpenClients={() => setShowClientsPanel(true)}
+        promptCount={promptTemplates.length}
+        clientCount={clients.length}
+      />
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
         <TopNav plan={plan} usage={usage} />
 
@@ -776,6 +1107,43 @@ export default function ChatView() {
 
       {/* Plan Comparison Modal */}
       {showPlanModal && <PlanComparisonModal currentPlan={plan} onClose={() => setShowPlanModal(false)} navigate={navigate} />}
+
+      {/* Prompt Templates Panel */}
+      {showPromptPanel && (
+        <PromptTemplatesPanel
+          templates={promptTemplates}
+          onUsePrompt={(prompt) => { setInput(prompt); if (inputRef.current) inputRef.current.focus(); if (showEmptyState) { /* keep empty state, user will manually send */ } }}
+          onClose={() => setShowPromptPanel(false)}
+          onCreateNew={() => { setShowPromptPanel(false); setShowCreatePrompt(true); }}
+          onDelete={handleDeletePrompt}
+        />
+      )}
+
+      {/* Create Prompt Template Modal */}
+      {showCreatePrompt && (
+        <CreatePromptModal
+          onClose={() => setShowCreatePrompt(false)}
+          onSave={handleCreatePrompt}
+        />
+      )}
+
+      {/* Clients Panel */}
+      {showClientsPanel && (
+        <ClientsPanel
+          clients={clients}
+          onClose={() => setShowClientsPanel(false)}
+          onAddClient={() => { setShowClientsPanel(false); setShowAddClient(true); }}
+          onDeleteClient={handleDeleteClient}
+        />
+      )}
+
+      {/* Add Client Modal */}
+      {showAddClient && (
+        <AddClientModal
+          onClose={() => setShowAddClient(false)}
+          onSave={handleAddClient}
+        />
+      )}
     </div>
   );
 }

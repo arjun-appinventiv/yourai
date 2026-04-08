@@ -19,7 +19,7 @@ const navSections = [
     label: 'CONTENT',
     items: [
       { label: 'Static Content', icon: BookOpen, path: '/super-admin/static-content' },
-      { label: 'Report Templates', icon: FileText, path: '/super-admin/report-templates' },
+      // { label: 'Report Templates', icon: FileText, path: '/super-admin/report-templates' }, // Hidden — kept for future
       { label: 'Workflow Templates', icon: Workflow, path: '/super-admin/workflows' },
     ],
   },
@@ -27,7 +27,7 @@ const navSections = [
     label: 'LIBRARY',
     items: [
       { label: 'Knowledge Base', icon: Database, path: '/super-admin/knowledge-base' },
-      { label: 'Integrations', icon: Plug, path: '/super-admin/integrations' },
+      // { label: 'Integrations', icon: Plug, path: '/super-admin/integrations' }, // Hidden — kept for future
     ],
   },
   {
@@ -35,7 +35,7 @@ const navSections = [
     items: [
       { label: 'Notifications', icon: Bell, path: '/super-admin/notifications' },
       { label: 'User Stories', icon: BookMarked, path: '/super-admin/user-stories' },
-      { label: 'Reports', icon: FileBarChart, path: '/super-admin/reports' },
+      // { label: 'Reports', icon: FileBarChart, path: '/super-admin/reports' }, // Hidden — kept for future
       { label: 'Settings', icon: Settings, path: '/super-admin/settings' },
     ],
   },
