@@ -44,6 +44,17 @@ const orgContacts = {
   8: { admin: 'Karen Tanaka', email: 'karen@pacificrim.com', stripeId: 'cus_Xs9qW3cEwT' },
 };
 
+const firmProfiles = {
+  1: { primaryState: 'New York', additionalStates: ['California', 'Connecticut'], federalPractice: true, practiceAreas: ['Corporate & M&A', 'Litigation', 'Real Estate'], firmSize: 'Small Firm' },
+  2: { primaryState: 'California', additionalStates: ['Nevada'], federalPractice: false, practiceAreas: ['Litigation', 'Employment & Labor'], firmSize: 'Mid-size Firm' },
+  3: { primaryState: 'Illinois', additionalStates: [], federalPractice: true, practiceAreas: ['Corporate & M&A', 'Tax & Compliance'], firmSize: 'Small Firm' },
+  4: { primaryState: 'Texas', additionalStates: ['Oklahoma'], federalPractice: false, practiceAreas: ['Family Law', 'Criminal Defense'], firmSize: 'Small Firm' },
+  5: { primaryState: 'Florida', additionalStates: [], federalPractice: false, practiceAreas: ['Real Estate', 'Immigration'], firmSize: 'Solo Practitioner' },
+  6: { primaryState: 'Georgia', additionalStates: ['Alabama'], federalPractice: false, practiceAreas: ['Litigation'], firmSize: 'Mid-size Firm' },
+  7: { primaryState: 'Massachusetts', additionalStates: [], federalPractice: true, practiceAreas: ['Intellectual Property'], firmSize: 'Small Firm' },
+  8: { primaryState: 'Washington', additionalStates: ['Oregon'], federalPractice: false, practiceAreas: ['Employment & Labor', 'Healthcare Law'], firmSize: 'Mid-size Firm' },
+};
+
 const planLimits = {
   Free: { docs: 50, workflows: 10, kpacks: 1 },
   Professional: { docs: 500, workflows: 100, kpacks: 5 },
@@ -184,6 +195,7 @@ export default function TenantManagement() {
   const contact = selectedOrg ? (orgContacts[selectedOrg.id] || { admin: 'Unknown', email: '—', stripeId: null }) : null;
   const users = selectedOrg ? (orgUsers[selectedOrg.id] || [{ name: contact?.admin || 'Admin', email: contact?.email || '—', role: 'Admin', status: 'Active', lastActive: 'Today' }]) : [];
   const workspaces = selectedOrg ? (orgWorkspaces[selectedOrg.id] || [{ name: 'Default Workspace', members: selectedOrg.users, documents: selectedOrg.documents, created: selectedOrg.created, status: 'Active' }]) : [];
+  const firmProfile = selectedOrg ? (firmProfiles[selectedOrg.id] || null) : null;
   const limits = selectedOrg ? planLimits[selectedOrg.plan] : null;
 
   const filteredOrgUsers = users.filter((u) =>
@@ -386,6 +398,36 @@ export default function TenantManagement() {
                     <div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{contact?.admin}</div>
                     <div className="text-sm" style={{ color: 'var(--text-muted)' }}>{contact?.email}</div>
                   </div>
+                  {/* Firm Profile */}
+                  <div style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 16 }}>
+                    <div className="text-xs font-semibold uppercase mb-3" style={{ color: 'var(--text-muted)' }}>Firm Profile</div>
+                    <div className="grid grid-cols-2 gap-3">
+                      {[
+                        ['Primary State', firmProfile?.primaryState || 'Not set'],
+                        ['Federal Practice', firmProfile ? (firmProfile.federalPractice ? 'Yes' : 'No') : 'Not set'],
+                        ['Firm Size', firmProfile?.firmSize || 'Not set'],
+                        ['Additional States', firmProfile ? (firmProfile.additionalStates.length > 0 ? firmProfile.additionalStates.join(', ') : 'None') : 'Not set'],
+                      ].map(([l, v]) => (
+                        <div key={l} className="p-3 rounded-lg" style={{ backgroundColor: 'var(--ice-warm)' }}>
+                          <div className="text-xs font-semibold uppercase" style={{ color: 'var(--text-muted)' }}>{l}</div>
+                          <div className="text-sm font-medium mt-1" style={{ color: 'var(--text-primary)' }}>{v}</div>
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{ marginTop: 12 }}>
+                      <div className="text-xs" style={{ color: 'var(--text-muted)', marginBottom: 6 }}>Practice Areas</div>
+                      {firmProfile && firmProfile.practiceAreas.length > 0 ? (
+                        <div className="flex flex-wrap gap-1.5">
+                          {firmProfile.practiceAreas.map((area) => (
+                            <span key={area} style={{ backgroundColor: '#F3F4F6', color: '#374151', fontSize: 11, borderRadius: 20, padding: '2px 10px', display: 'inline-block' }}>{area}</span>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-sm" style={{ color: 'var(--text-muted)' }}>Not set</div>
+                      )}
+                    </div>
+                  </div>
+
                   <div className="p-4 rounded-lg" style={{ border: `1px solid ${selectedOrg.status === 'Active' ? '#FEE2E2' : '#DCFCE7'}`, backgroundColor: selectedOrg.status === 'Active' ? '#FEF2F2' : '#F0FDF4' }}>
                     <div className="text-xs font-semibold uppercase mb-1" style={{ color: selectedOrg.status === 'Active' ? '#991B1B' : '#166534' }}>
                       {selectedOrg.status === 'Active' ? 'Danger Zone' : 'Reactivate'}

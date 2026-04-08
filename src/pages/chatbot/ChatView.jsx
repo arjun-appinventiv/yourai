@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   CheckCircle, MessageSquare, Clock, Share2, Grid3X3, Calendar, Users,
   FolderOpen, ChevronDown, ChevronRight, MoreVertical, Plus, Download,
   Search, Bell, ArrowUp, Shield, Sparkles, FileText, Building2, Scale,
-  LayoutDashboard, Send
+  LayoutDashboard, Send, MapPin, FileSearch
 } from 'lucide-react';
 
 /* ─── mock data ─── */
@@ -712,14 +713,235 @@ function TypingIndicator() {
   );
 }
 
+/* ─────────────────── Empty State ─────────────────── */
+function getGreeting() {
+  const h = new Date().getHours();
+  if (h < 12) return 'Good morning';
+  if (h < 18) return 'Good afternoon';
+  return 'Good evening';
+}
+
+function getSuggestedPrompts(profile) {
+  if (!profile || !profile.onboardingCompleted) {
+    return [
+      { icon: FileSearch, title: 'Analyze a Contract', prompt: 'Upload a contract and I\'ll identify key risks, unusual clauses, and recommended changes' },
+      { icon: Search, title: 'Legal Research', prompt: 'Ask me any legal question and I\'ll provide cited answers from your documents' },
+      { icon: LayoutDashboard, title: 'Set Up Workspace', prompt: 'Help me organize my first workspace and invite my team members' },
+    ];
+  }
+
+  const prompts = [];
+  const state = profile.primaryState || '';
+  const areas = profile.practiceAreas || [];
+  const goal = profile.primaryGoal || '';
+
+  // Priority 1 — primaryState
+  if (state && prompts.length < 3) {
+    prompts.push({
+      icon: MapPin,
+      title: `${state} Legal Research`,
+      prompt: `What are the current ${state} state laws on ${areas[0] || 'corporate law'}?`,
+    });
+  }
+
+  // Priority 2 — practiceArea-based
+  if (prompts.length < 3) {
+    for (const area of areas) {
+      if (prompts.length >= 3) break;
+      if (area === 'Corporate & M&A') {
+        prompts.push({ icon: FileText, title: 'Contract Analysis', prompt: 'Analyze this M&A agreement and flag any unusual indemnification clauses' });
+      } else if (area === 'Litigation') {
+        prompts.push({ icon: Scale, title: 'Case Research', prompt: `Research recent ${state || 'state'} court decisions on summary judgment standards` });
+      } else if (area === 'Employment & Labor') {
+        prompts.push({ icon: Users, title: 'Employment Law', prompt: `Summarize ${state || 'state'} employment law requirements for non-compete agreements` });
+      } else if (area === 'Real Estate') {
+        prompts.push({ icon: Building2, title: 'Real Estate', prompt: `Review this lease agreement for ${state || 'state'} compliance issues` });
+      }
+    }
+  }
+
+  // Priority 3 — primaryGoal-based
+  if (prompts.length < 3) {
+    if (goal === 'Analyze a Contract') {
+      prompts.push({ icon: FileSearch, title: 'Analyze a Contract', prompt: 'Upload a contract and I\'ll identify key risks, unusual clauses, and recommended changes' });
+    } else if (goal === 'Research Legal Questions') {
+      prompts.push({ icon: Search, title: 'Legal Research', prompt: 'Ask me any legal question and I\'ll provide cited answers from your documents' });
+    } else if (goal === 'Set Up My Workspace') {
+      prompts.push({ icon: LayoutDashboard, title: 'Set Up Workspace', prompt: 'Help me organize my first workspace and invite my team members' });
+    }
+  }
+
+  // Fill remaining with defaults
+  const defaults = [
+    { icon: FileSearch, title: 'Analyze a Contract', prompt: 'Upload a contract and I\'ll identify key risks, unusual clauses, and recommended changes' },
+    { icon: Search, title: 'Legal Research', prompt: 'Ask me any legal question and I\'ll provide cited answers from your documents' },
+    { icon: LayoutDashboard, title: 'Set Up Workspace', prompt: 'Help me organize my first workspace and invite my team members' },
+  ];
+  for (const d of defaults) {
+    if (prompts.length >= 3) break;
+    if (!prompts.find((p) => p.title === d.title)) {
+      prompts.push(d);
+    }
+  }
+
+  return prompts.slice(0, 3);
+}
+
+function EmptyState({ profile, onPromptClick, navigate }) {
+  const currentUserName = 'Ryan';
+  const prompts = getSuggestedPrompts(profile);
+
+  return (
+    <div
+      style={{
+        flex: 1,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '24px 40px',
+      }}
+    >
+      <div style={{ maxWidth: 560, width: '100%', textAlign: 'center' }}>
+        {/* YourAI logo mark */}
+        <div
+          style={{
+            width: 40,
+            height: 40,
+            borderRadius: '50%',
+            background: 'linear-gradient(135deg, #C9A84C 0%, #E8D48B 100%)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            margin: '0 auto 16px',
+          }}
+        >
+          <Sparkles size={20} color="#fff" />
+        </div>
+
+        {/* Greeting */}
+        <h2
+          style={{
+            fontFamily: "'DM Serif Display', serif",
+            fontSize: 22,
+            fontWeight: 400,
+            color: 'var(--navy)',
+            margin: '0 0 8px',
+          }}
+        >
+          {getGreeting()}, {currentUserName}
+        </h2>
+
+        {/* Subtitle */}
+        <p
+          style={{
+            fontFamily: "'DM Sans', sans-serif",
+            fontSize: 14,
+            color: 'var(--text-muted)',
+            margin: '0 0 28px',
+          }}
+        >
+          Your AI assistant is ready. Based on your profile, here's where you can start:
+        </p>
+
+        {/* Prompt cards */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, textAlign: 'left' }}>
+          {prompts.map((p, i) => {
+            const Icon = p.icon;
+            return (
+              <div
+                key={i}
+                onClick={() => onPromptClick(p.prompt)}
+                style={{
+                  background: '#fff',
+                  border: '1px solid var(--border)',
+                  borderRadius: 12,
+                  padding: 16,
+                  cursor: 'pointer',
+                  transition: 'border-color 0.15s, box-shadow 0.15s',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = '#C9A84C';
+                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = 'var(--border)';
+                  e.currentTarget.style.boxShadow = 'none';
+                }}
+              >
+                <Icon size={18} color="var(--navy)" style={{ marginBottom: 6 }} />
+                <div
+                  style={{
+                    fontFamily: "'DM Sans', sans-serif",
+                    fontSize: 14,
+                    fontWeight: 500,
+                    color: 'var(--navy)',
+                    marginBottom: 4,
+                  }}
+                >
+                  {p.title}
+                </div>
+                <div
+                  style={{
+                    fontFamily: "'DM Sans', sans-serif",
+                    fontSize: 13,
+                    color: 'var(--text-muted)',
+                    lineHeight: 1.4,
+                    display: '-webkit-box',
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: 'vertical',
+                    overflow: 'hidden',
+                  }}
+                >
+                  {p.prompt}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Edit preferences link */}
+        <button
+          onClick={() => navigate('/app/profile')}
+          style={{
+            fontFamily: "'DM Sans', sans-serif",
+            fontSize: 12,
+            color: 'var(--text-muted)',
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            marginTop: 20,
+            padding: 0,
+            textDecoration: 'none',
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.textDecoration = 'underline'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.textDecoration = 'none'; }}
+        >
+          &#9998; Edit your preferences
+        </button>
+      </div>
+    </div>
+  );
+}
+
 /* ═══════════════════ ChatView ═══════════════════ */
 export default function ChatView() {
+  const navigate = useNavigate();
   const [messages, setMessages] = useState(INITIAL_MESSAGES);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [showEmptyState, setShowEmptyState] = useState(true);
+  const [profile, setProfile] = useState(null);
   const scrollRef = useRef(null);
   const inputRef = useRef(null);
   const responseIdx = useRef(0);
+
+  // Read profile from localStorage on mount
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('yourai_user_profile');
+      if (raw) setProfile(JSON.parse(raw));
+    } catch (_) { /* ignore */ }
+  }, []);
 
   const scrollToBottom = useCallback(() => {
     if (scrollRef.current) {
@@ -731,10 +953,25 @@ export default function ChatView() {
     scrollToBottom();
   }, [messages, isTyping, scrollToBottom]);
 
+  // Contextual placeholder
+  const inputPlaceholder = profile && profile.primaryState
+    ? `Ask anything about ${profile.primaryState} law or your documents...`
+    : 'Ask anything, analyze files, or search the web...';
+
+  const handlePromptClick = useCallback((promptText) => {
+    setInput(promptText);
+    if (inputRef.current) inputRef.current.focus();
+  }, []);
+
   const sendMessage = useCallback(
     (text) => {
       const trimmed = (text || '').trim();
       if (!trimmed || isTyping) return;
+
+      // First message transitions out of empty state
+      if (showEmptyState) {
+        setShowEmptyState(false);
+      }
 
       const userMsg = {
         id: Date.now(),
@@ -758,7 +995,7 @@ export default function ChatView() {
         setIsTyping(false);
       }, 1500);
     },
-    [isTyping],
+    [isTyping, showEmptyState],
   );
 
   const handleKeyDown = (e) => {
@@ -788,70 +1025,74 @@ export default function ChatView() {
             minHeight: 0,
           }}
         >
-          {/* Scrollable messages */}
-          <div
-            ref={scrollRef}
-            style={{
-              flex: 1,
-              overflowY: 'auto',
-              padding: '24px 40px',
-            }}
-          >
-            {messages.map((msg) => (
-              <MessageBubble key={msg.id} msg={msg} />
-            ))}
-            {isTyping && <TypingIndicator />}
+          {/* Scrollable messages OR empty state */}
+          {showEmptyState ? (
+            <EmptyState profile={profile} onPromptClick={handlePromptClick} navigate={navigate} />
+          ) : (
+            <div
+              ref={scrollRef}
+              style={{
+                flex: 1,
+                overflowY: 'auto',
+                padding: '24px 40px',
+              }}
+            >
+              {messages.map((msg) => (
+                <MessageBubble key={msg.id} msg={msg} />
+              ))}
+              {isTyping && <TypingIndicator />}
 
-            {/* Quick actions */}
-            {!isTyping && (
-              <div style={{ marginTop: 8, marginBottom: 8 }}>
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                  {QUICK_ACTIONS.map((a) => (
-                    <button
-                      key={a.label}
-                      onClick={() => sendMessage(a.label)}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 6,
-                        border: '1px solid var(--border)',
-                        borderRadius: 8,
-                        background: '#fff',
-                        padding: '8px 16px',
-                        fontSize: 13,
-                        color: 'var(--text-secondary)',
-                        cursor: 'pointer',
-                      }}
-                    >
-                      <span>{a.emoji}</span> {a.label}
-                    </button>
-                  ))}
+              {/* Quick actions */}
+              {!isTyping && (
+                <div style={{ marginTop: 8, marginBottom: 8 }}>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    {QUICK_ACTIONS.map((a) => (
+                      <button
+                        key={a.label}
+                        onClick={() => sendMessage(a.label)}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 6,
+                          border: '1px solid var(--border)',
+                          borderRadius: 8,
+                          background: '#fff',
+                          padding: '8px 16px',
+                          fontSize: 13,
+                          color: 'var(--text-secondary)',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        <span>{a.emoji}</span> {a.label}
+                      </button>
+                    ))}
+                  </div>
+                  <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                    {QUICK_ACTIONS_2.map((a) => (
+                      <button
+                        key={a.label}
+                        onClick={() => sendMessage(a.label)}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 6,
+                          border: '1px solid var(--border)',
+                          borderRadius: 8,
+                          background: '#fff',
+                          padding: '8px 16px',
+                          fontSize: 13,
+                          color: 'var(--text-secondary)',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        <span>{a.emoji}</span> {a.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-                <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-                  {QUICK_ACTIONS_2.map((a) => (
-                    <button
-                      key={a.label}
-                      onClick={() => sendMessage(a.label)}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 6,
-                        border: '1px solid var(--border)',
-                        borderRadius: 8,
-                        background: '#fff',
-                        padding: '8px 16px',
-                        fontSize: 13,
-                        color: 'var(--text-secondary)',
-                        cursor: 'pointer',
-                      }}
-                    >
-                      <span>{a.emoji}</span> {a.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          )}
 
           {/* Chat input — pinned bottom */}
           <div style={{ padding: '16px 40px 12px', background: 'transparent' }}>
@@ -889,7 +1130,7 @@ export default function ChatView() {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Ask anything, analyze files, or search the web..."
+                placeholder={inputPlaceholder}
                 style={{
                   flex: 1,
                   border: 'none',

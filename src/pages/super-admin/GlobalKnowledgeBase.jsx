@@ -22,6 +22,16 @@ const initialLinks = [
   { id: 103, name: 'SEC EDGAR — Company Filings', url: 'https://www.sec.gov/cgi-bin/browse-edgar', added: 'Mar 15, 2026', status: 'Indexing' },
 ];
 
+const US_STATES = [
+  'Alabama','Alaska','Arizona','Arkansas','California','Colorado','Connecticut','Delaware',
+  'District of Columbia','Florida','Georgia','Hawaii','Idaho','Illinois','Indiana','Iowa',
+  'Kansas','Kentucky','Louisiana','Maine','Maryland','Massachusetts','Michigan','Minnesota',
+  'Mississippi','Missouri','Montana','Nebraska','Nevada','New Hampshire','New Jersey',
+  'New Mexico','New York','North Carolina','North Dakota','Ohio','Oklahoma','Oregon',
+  'Pennsylvania','Rhode Island','South Carolina','South Dakota','Tennessee','Texas','Utah',
+  'Vermont','Virginia','Washington','West Virginia','Wisconsin','Wyoming',
+];
+
 export default function GlobalKnowledgeBase() {
   const [docs, setDocs] = useState(initialDocs);
   const [links, setLinks] = useState(initialLinks);
@@ -49,6 +59,23 @@ export default function GlobalKnowledgeBase() {
   const [createIntentFrom, setCreateIntentFrom] = useState(null);
   const [newIntentLabel, setNewIntentLabel] = useState('');
   const [newIntentDesc, setNewIntentDesc] = useState('');
+
+  // State Law Knowledge Packs state
+  const [statePacks, setStatePacks] = useState([
+    { id: 1, state: 'New York', packs: ['NY Court Rules', 'NY State Laws'], status: 'Active' },
+    { id: 2, state: 'California', packs: ['CA Court Rules', 'CA State Laws'], status: 'Active' },
+    { id: 3, state: 'Texas', packs: ['TX Court Rules', 'TX State Laws'], status: 'Active' },
+    { id: 4, state: 'Florida', packs: ['FL Court Rules'], status: 'Partial' },
+    { id: 5, state: 'Illinois', packs: ['IL State Laws'], status: 'Active' },
+    { id: 6, state: 'Georgia', packs: [], status: 'Not Set' },
+    { id: 7, state: 'Washington', packs: ['WA Court Rules', 'WA State Laws'], status: 'Active' },
+    { id: 8, state: 'Massachusetts', packs: ['MA Court Rules'], status: 'Partial' },
+  ]);
+  const [manageState, setManageState] = useState(null);
+  const [showAddState, setShowAddState] = useState(false);
+  const [newStateSelection, setNewStateSelection] = useState('');
+  const [newStatePackSelections, setNewStatePackSelections] = useState({});
+  const [manageAddPackDropdown, setManageAddPackDropdown] = useState(false);
 
   const filtered = useMemo(() => {
     return docs.filter((d) => {
@@ -156,6 +183,73 @@ export default function GlobalKnowledgeBase() {
     showToast('New intent template created');
   };
 
+  const handleRemovePackFromState = (stateId, packName) => {
+    setStatePacks((prev) =>
+      prev.map((s) => {
+        if (s.id !== stateId) return s;
+        const newPacks = s.packs.filter((p) => p !== packName);
+        const newStatus = newPacks.length >= 2 ? 'Active' : newPacks.length === 1 ? 'Partial' : 'Not Set';
+        return { ...s, packs: newPacks, status: newStatus };
+      })
+    );
+    if (manageState && manageState.id === stateId) {
+      setManageState((prev) => {
+        const newPacks = prev.packs.filter((p) => p !== packName);
+        const newStatus = newPacks.length >= 2 ? 'Active' : newPacks.length === 1 ? 'Partial' : 'Not Set';
+        return { ...prev, packs: newPacks, status: newStatus };
+      });
+    }
+  };
+
+  const handleAddPackToState = (stateId, packName) => {
+    setStatePacks((prev) =>
+      prev.map((s) => {
+        if (s.id !== stateId) return s;
+        if (s.packs.includes(packName)) return s;
+        const newPacks = [...s.packs, packName];
+        const newStatus = newPacks.length >= 2 ? 'Active' : newPacks.length === 1 ? 'Partial' : 'Not Set';
+        return { ...s, packs: newPacks, status: newStatus };
+      })
+    );
+    if (manageState && manageState.id === stateId) {
+      setManageState((prev) => {
+        if (prev.packs.includes(packName)) return prev;
+        const newPacks = [...prev.packs, packName];
+        const newStatus = newPacks.length >= 2 ? 'Active' : newPacks.length === 1 ? 'Partial' : 'Not Set';
+        return { ...prev, packs: newPacks, status: newStatus };
+      });
+    }
+    setManageAddPackDropdown(false);
+  };
+
+  const handleManageUploadDoc = (stateId) => {
+    const fakeDoc = {
+      id: Date.now(),
+      name: `Uploaded_${Date.now()}.pdf`,
+      type: 'PDF',
+      size: '1.2 MB',
+      uploaded: 'Just now',
+      status: 'Processing',
+    };
+    setDocs((prev) => [fakeDoc, ...prev]);
+    handleAddPackToState(stateId, fakeDoc.name);
+    showToast('Document uploaded and assigned to state');
+  };
+
+  const handleSaveNewState = () => {
+    if (!newStateSelection) return;
+    const selectedPacks = Object.entries(newStatePackSelections).filter(([, v]) => v).map(([k]) => k);
+    const newStatus = selectedPacks.length >= 2 ? 'Active' : selectedPacks.length === 1 ? 'Partial' : 'Not Set';
+    setStatePacks((prev) => [
+      ...prev,
+      { id: Date.now(), state: newStateSelection, packs: selectedPacks, status: newStatus },
+    ]);
+    setShowAddState(false);
+    setNewStateSelection('');
+    setNewStatePackSelections({});
+    showToast(`State law pack added for ${newStateSelection}`);
+  };
+
   const inputStyle = {
     border: '1px solid var(--border)',
     borderRadius: '8px',
@@ -215,6 +309,215 @@ export default function GlobalKnowledgeBase() {
             <StatCard icon={HardDrive} value="22.9 MB" label="Total Size" />
             <StatCard icon={Clock} value="Today" label="Last Updated" />
           </div>
+
+          {/* State Law Knowledge Packs */}
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 style={{ fontFamily: "'DM Serif Display', serif", color: 'var(--navy)', fontSize: '16px' }}>
+                  State Law Knowledge Packs
+                </h2>
+                <p className="text-xs mt-1" style={{ color: 'var(--text-muted)', fontSize: '13px', maxWidth: 600 }}>
+                  Assign pre-built state law packs to jurisdictions. These are automatically suggested to organisations whose primary state matches.
+                </p>
+              </div>
+              <button
+                onClick={() => { setShowAddState(true); setNewStateSelection(''); setNewStatePackSelections({}); }}
+                className="px-3 py-1.5 rounded-lg text-sm font-medium text-white flex items-center gap-1.5"
+                style={{ backgroundColor: 'var(--navy)' }}
+              >
+                <Plus size={14} /> Add New State
+              </button>
+            </div>
+            <Table columns={['State', 'Knowledge Packs Assigned', 'Status', 'Actions']}>
+              {statePacks.map((sp) => (
+                <tr
+                  key={sp.id}
+                  style={{ borderBottom: '1px solid var(--border)' }}
+                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--ice-warm)')}
+                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'white')}
+                >
+                  <td className="px-4 py-3 text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{sp.state}</td>
+                  <td className="px-4 py-3">
+                    {sp.packs.length > 0 ? (
+                      <div className="flex flex-wrap gap-1.5">
+                        {sp.packs.map((pack) => (
+                          <span
+                            key={pack}
+                            className="inline-flex items-center px-2 py-0.5 rounded-full"
+                            style={{ backgroundColor: '#F3F4F6', color: '#374151', fontSize: '11px' }}
+                          >
+                            {pack}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="text-sm" style={{ color: 'var(--text-muted)' }}>&mdash;</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
+                    <span
+                      className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                      style={
+                        sp.status === 'Active'
+                          ? { backgroundColor: '#DCFCE7', color: '#166534' }
+                          : sp.status === 'Partial'
+                          ? { backgroundColor: '#FEF3C7', color: '#92400E' }
+                          : { backgroundColor: '#F3F4F6', color: '#374151' }
+                      }
+                    >
+                      {sp.status}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <button
+                      onClick={() => setManageState({ ...sp })}
+                      className="px-3 py-1 rounded-lg font-medium"
+                      style={{ border: '1px solid var(--border)', color: 'var(--navy)', fontSize: '12px', backgroundColor: 'white' }}
+                    >
+                      Manage
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </Table>
+          </div>
+
+          {/* Manage State Slide-over */}
+          {manageState && (
+            <>
+              <div
+                onClick={() => { setManageState(null); setManageAddPackDropdown(false); }}
+                style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.3)', zIndex: 40 }}
+              />
+              <div style={{
+                position: 'fixed', top: 0, right: 0, bottom: 0, width: 480,
+                backgroundColor: 'white', zIndex: 50, overflowY: 'auto',
+                boxShadow: '-4px 0 24px rgba(0,0,0,0.12)',
+                display: 'flex', flexDirection: 'column',
+              }}>
+                {/* Header */}
+                <div className="flex items-center justify-between p-6" style={{ borderBottom: '1px solid var(--border)' }}>
+                  <h3 style={{ fontFamily: "'DM Serif Display', serif", color: 'var(--text-primary)', fontSize: '18px' }}>
+                    {manageState.state} Knowledge Packs
+                  </h3>
+                  <button onClick={() => { setManageState(null); setManageAddPackDropdown(false); }} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors">
+                    <X size={18} style={{ color: 'var(--text-muted)' }} />
+                  </button>
+                </div>
+
+                {/* Body */}
+                <div className="flex-1 p-6 space-y-5" style={{ overflowY: 'auto' }}>
+                  {manageState.packs.length > 0 ? (
+                    <div className="space-y-2">
+                      {manageState.packs.map((pack) => (
+                        <div
+                          key={pack}
+                          className="flex items-center justify-between px-4 py-3 rounded-lg"
+                          style={{ border: '1px solid var(--border)', backgroundColor: 'white' }}
+                        >
+                          <span className="text-sm" style={{ color: 'var(--text-primary)', fontSize: '14px' }}>{pack}</span>
+                          <button
+                            onClick={() => handleRemovePackFromState(manageState.id, pack)}
+                            className="font-medium"
+                            style={{ color: '#991B1B', fontSize: '12px', background: 'none', border: 'none', cursor: 'pointer' }}
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <p className="text-sm" style={{ color: 'var(--text-muted)' }}>No knowledge packs assigned to this state yet.</p>
+                    </div>
+                  )}
+
+                  {/* Add Knowledge Pack dropdown */}
+                  <div style={{ position: 'relative' }}>
+                    <button
+                      onClick={() => setManageAddPackDropdown((prev) => !prev)}
+                      className="w-full px-4 py-2.5 rounded-lg text-sm font-medium flex items-center justify-center gap-2"
+                      style={{ border: '1px solid var(--border)', color: 'var(--navy)', backgroundColor: 'white' }}
+                    >
+                      <Plus size={14} /> Add Knowledge Pack
+                    </button>
+                    {manageAddPackDropdown && (
+                      <div
+                        className="absolute left-0 right-0 mt-1 bg-white rounded-lg shadow-lg"
+                        style={{ border: '1px solid var(--border)', zIndex: 10, maxHeight: 200, overflowY: 'auto' }}
+                      >
+                        {docs.filter((d) => !manageState.packs.includes(d.name)).length > 0 ? (
+                          docs.filter((d) => !manageState.packs.includes(d.name)).map((d) => (
+                            <button
+                              key={d.id}
+                              onClick={() => handleAddPackToState(manageState.id, d.name)}
+                              className="w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 transition-colors"
+                              style={{ color: 'var(--text-primary)', borderBottom: '1px solid var(--border)' }}
+                            >
+                              {d.name}
+                            </button>
+                          ))
+                        ) : (
+                          <div className="px-4 py-3 text-xs" style={{ color: 'var(--text-muted)' }}>All documents already assigned</div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Upload New Document */}
+                  <button
+                    onClick={() => handleManageUploadDoc(manageState.id)}
+                    className="w-full px-4 py-2.5 rounded-lg text-sm font-medium text-white flex items-center justify-center gap-2"
+                    style={{ backgroundColor: 'var(--navy)' }}
+                  >
+                    <Upload size={14} /> Upload New Document
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* Add New State Modal */}
+          <Modal open={showAddState} onClose={() => setShowAddState(false)} title="Add State Law Pack">
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-primary)' }}>Select State</label>
+                <select
+                  value={newStateSelection}
+                  onChange={(e) => setNewStateSelection(e.target.value)}
+                  style={{ ...inputStyle, width: '100%', height: 40, cursor: 'pointer', appearance: 'auto' }}
+                  onFocus={(e) => (e.target.style.borderColor = 'var(--navy)')}
+                  onBlur={(e) => (e.target.style.borderColor = 'var(--border)')}
+                >
+                  <option value="">Choose a state...</option>
+                  {US_STATES.filter((s) => !statePacks.some((sp) => sp.state === s)).map((s) => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-primary)' }}>Assign Knowledge Packs</label>
+                <div className="space-y-2" style={{ maxHeight: 200, overflowY: 'auto' }}>
+                  {docs.map((d) => (
+                    <label key={d.id} className="flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer hover:bg-gray-50" style={{ border: '1px solid var(--border)' }}>
+                      <input
+                        type="checkbox"
+                        checked={!!newStatePackSelections[d.name]}
+                        onChange={(e) => setNewStatePackSelections((prev) => ({ ...prev, [d.name]: e.target.checked }))}
+                        style={{ accentColor: 'var(--navy)' }}
+                      />
+                      <span className="text-sm" style={{ color: 'var(--text-primary)' }}>{d.name}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+              <div className="flex justify-end gap-3 pt-2">
+                <button onClick={() => setShowAddState(false)} className="px-4 py-2 rounded-lg text-sm font-medium" style={{ border: '1px solid var(--border)', color: 'var(--slate)', backgroundColor: 'white' }}>Cancel</button>
+                <button onClick={handleSaveNewState} className="px-4 py-2 rounded-lg text-sm font-medium text-white" style={{ backgroundColor: 'var(--navy)' }}>Save</button>
+              </div>
+            </div>
+          </Modal>
 
           {/* Upload area */}
           <div className="grid grid-cols-2 gap-4">

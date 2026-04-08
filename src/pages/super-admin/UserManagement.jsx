@@ -8,16 +8,16 @@ import Modal from '../../components/Modal';
 import { useToast } from '../../components/Toast';
 
 const initialUsers = [
-  { id: 1, name: 'Ryan Melade', email: 'ryan@hartwell.com', org: 'Hartwell & Associates', plan: 'Team', role: 'Admin', status: 'Active', lastActive: 'Today', created: 'Jan 12, 2026', logins: 142, docsUploaded: 38, reportsGenerated: 12 },
-  { id: 2, name: 'Sarah Chen', email: 'sarah@hartwell.com', org: 'Hartwell & Associates', plan: 'Team', role: 'Internal User', status: 'Active', lastActive: 'Today', created: 'Jan 15, 2026', logins: 98, docsUploaded: 22, reportsGenerated: 8 },
-  { id: 3, name: 'James Wu', email: 'james@hartwell.com', org: 'Hartwell & Associates', plan: 'Team', role: 'Internal User', status: 'Active', lastActive: 'Yesterday', created: 'Feb 1, 2026', logins: 64, docsUploaded: 15, reportsGenerated: 3 },
-  { id: 4, name: 'Maria Torres', email: 'maria@hartwell.com', org: 'Hartwell & Associates', plan: 'Team', role: 'Client', status: 'Active', lastActive: '2 days ago', created: 'Feb 5, 2026', logins: 45, docsUploaded: 11, reportsGenerated: 2 },
-  { id: 5, name: 'Tom Bradley', email: 'tom@hartwell.com', org: 'Hartwell & Associates', plan: 'Team', role: 'Internal User', status: 'Invited', lastActive: 'Never', created: 'Mar 28, 2026', logins: 0, docsUploaded: 0, reportsGenerated: 0 },
-  { id: 6, name: 'David Park', email: 'david@morrison.com', org: 'Morrison Legal Group', plan: 'Professional', role: 'Admin', status: 'Active', lastActive: 'Today', created: 'Jan 28, 2026', logins: 120, docsUploaded: 45, reportsGenerated: 15 },
-  { id: 7, name: 'Lisa Wong', email: 'lisa@morrison.com', org: 'Morrison Legal Group', plan: 'Professional', role: 'Client', status: 'Active', lastActive: 'Yesterday', created: 'Feb 10, 2026', logins: 78, docsUploaded: 28, reportsGenerated: 5 },
-  { id: 8, name: 'Jennifer Chen', email: 'jen@chenpartners.com', org: 'Chen Partners LLC', plan: 'Enterprise', role: 'Admin', status: 'Active', lastActive: 'Today', created: 'Feb 3, 2026', logins: 210, docsUploaded: 95, reportsGenerated: 28 },
-  { id: 9, name: 'Mark Rivera', email: 'mark@riverakim.com', org: 'Rivera & Kim LLP', plan: 'Free', role: 'Admin', status: 'Active', lastActive: '3 days ago', created: 'Feb 14, 2026', logins: 32, docsUploaded: 8, reportsGenerated: 1 },
-  { id: 10, name: 'Carlos Patel', email: 'carlos@patel.com', org: 'Patel Law Office', plan: 'Professional', role: 'Admin', status: 'Blocked', lastActive: 'Apr 1, 2026', created: 'Feb 20, 2026', logins: 55, docsUploaded: 20, reportsGenerated: 6 },
+  { id: 1, name: 'Ryan Melade', email: 'ryan@hartwell.com', org: 'Hartwell & Associates', plan: 'Team', role: 'Admin', status: 'Active', lastActive: 'Today', created: 'Jan 12, 2026', logins: 142, docsUploaded: 38, reportsGenerated: 12, onboardingCompleted: true, onboardingRole: 'Partner / Senior Attorney', onboardingAreas: ['Corporate & M&A', 'Litigation'], onboardingFirmSize: 'Small Firm', onboardingState: 'New York' },
+  { id: 2, name: 'Sarah Chen', email: 'sarah@hartwell.com', org: 'Hartwell & Associates', plan: 'Team', role: 'Internal User', status: 'Active', lastActive: 'Today', created: 'Jan 15, 2026', logins: 98, docsUploaded: 22, reportsGenerated: 8, onboardingCompleted: true, onboardingRole: 'Associate / Junior Attorney', onboardingAreas: ['Employment & Labor'], onboardingFirmSize: 'Small Firm', onboardingState: 'New York' },
+  { id: 3, name: 'James Wu', email: 'james@hartwell.com', org: 'Hartwell & Associates', plan: 'Team', role: 'Internal User', status: 'Active', lastActive: 'Yesterday', created: 'Feb 1, 2026', logins: 64, docsUploaded: 15, reportsGenerated: 3, onboardingCompleted: true, onboardingRole: 'Paralegal / Legal Assistant', onboardingAreas: ['Corporate & M&A'], onboardingFirmSize: 'Small Firm', onboardingState: 'New York' },
+  { id: 4, name: 'Maria Torres', email: 'maria@hartwell.com', org: 'Hartwell & Associates', plan: 'Team', role: 'Client', status: 'Active', lastActive: '2 days ago', created: 'Feb 5, 2026', logins: 45, docsUploaded: 11, reportsGenerated: 2, onboardingCompleted: true, onboardingRole: 'Paralegal / Legal Assistant', onboardingAreas: ['Litigation', 'Criminal Defense'], onboardingFirmSize: 'Small Firm', onboardingState: 'New York' },
+  { id: 5, name: 'Tom Bradley', email: 'tom@hartwell.com', org: 'Hartwell & Associates', plan: 'Team', role: 'Internal User', status: 'Invited', lastActive: 'Never', created: 'Mar 28, 2026', logins: 0, docsUploaded: 0, reportsGenerated: 0, onboardingCompleted: false },
+  { id: 6, name: 'David Park', email: 'david@morrison.com', org: 'Morrison Legal Group', plan: 'Professional', role: 'Admin', status: 'Active', lastActive: 'Today', created: 'Jan 28, 2026', logins: 120, docsUploaded: 45, reportsGenerated: 15, onboardingCompleted: true, onboardingRole: 'Partner / Senior Attorney', onboardingAreas: ['Litigation'], onboardingFirmSize: 'Mid-size Firm', onboardingState: 'California' },
+  { id: 7, name: 'Lisa Wong', email: 'lisa@morrison.com', org: 'Morrison Legal Group', plan: 'Professional', role: 'Client', status: 'Active', lastActive: 'Yesterday', created: 'Feb 10, 2026', logins: 78, docsUploaded: 28, reportsGenerated: 5, onboardingCompleted: true, onboardingRole: 'In-house Counsel', onboardingAreas: ['Real Estate', 'Corporate & M&A'], onboardingFirmSize: 'Mid-size Firm', onboardingState: 'California' },
+  { id: 8, name: 'Jennifer Chen', email: 'jen@chenpartners.com', org: 'Chen Partners LLC', plan: 'Enterprise', role: 'Admin', status: 'Active', lastActive: 'Today', created: 'Feb 3, 2026', logins: 210, docsUploaded: 95, reportsGenerated: 28, onboardingCompleted: true, onboardingRole: 'Partner / Senior Attorney', onboardingAreas: ['Intellectual Property', 'Corporate & M&A', 'Technology'], onboardingFirmSize: 'Large Firm', onboardingState: 'Illinois' },
+  { id: 9, name: 'Mark Rivera', email: 'mark@riverakim.com', org: 'Rivera & Kim LLP', plan: 'Free', role: 'Admin', status: 'Active', lastActive: '3 days ago', created: 'Feb 14, 2026', logins: 32, docsUploaded: 8, reportsGenerated: 1, onboardingCompleted: true, onboardingRole: 'Solo Practitioner', onboardingAreas: ['Immigration'], onboardingFirmSize: 'Solo Practice', onboardingState: 'Texas' },
+  { id: 10, name: 'Carlos Patel', email: 'carlos@patel.com', org: 'Patel Law Office', plan: 'Professional', role: 'Admin', status: 'Blocked', lastActive: 'Apr 1, 2026', created: 'Feb 20, 2026', logins: 55, docsUploaded: 20, reportsGenerated: 6, onboardingCompleted: true, onboardingRole: 'Partner / Senior Attorney', onboardingAreas: ['Family Law', 'Estate Planning'], onboardingFirmSize: 'Small Firm', onboardingState: 'Florida' },
 ];
 
 const roleColors = {
@@ -194,6 +194,43 @@ export default function UserManagement() {
                 ))}
               </div>
             </div>
+            {/* Onboarding Profile */}
+            <div className="p-4 rounded-lg" style={{ border: '1px solid var(--border)' }}>
+              <div className="text-xs font-semibold uppercase mb-3" style={{ color: 'var(--text-muted)', letterSpacing: '0.05em' }}>Onboarding Profile</div>
+              {selectedUser.onboardingCompleted === false ? (
+                <div className="rounded-lg p-3 text-sm italic" style={{ backgroundColor: 'var(--ice-warm)', border: '1px solid var(--border)', color: 'var(--text-muted)' }}>
+                  This user has not completed onboarding.
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="p-3 rounded-lg" style={{ backgroundColor: 'var(--ice-warm)' }}>
+                    <div className="text-xs uppercase" style={{ color: 'var(--text-muted)' }}>Role</div>
+                    <div className="text-sm font-medium mt-1" style={{ color: 'var(--text-primary)' }}>{selectedUser.onboardingRole}</div>
+                  </div>
+                  <div className="p-3 rounded-lg" style={{ backgroundColor: 'var(--ice-warm)' }}>
+                    <div className="text-xs uppercase" style={{ color: 'var(--text-muted)' }}>Primary State</div>
+                    <div className="text-sm font-medium mt-1" style={{ color: 'var(--text-primary)' }}>{selectedUser.onboardingState}</div>
+                  </div>
+                  <div className="p-3 rounded-lg" style={{ backgroundColor: 'var(--ice-warm)' }}>
+                    <div className="text-xs uppercase" style={{ color: 'var(--text-muted)' }}>Firm Size</div>
+                    <div className="text-sm font-medium mt-1" style={{ color: 'var(--text-primary)' }}>{selectedUser.onboardingFirmSize}</div>
+                  </div>
+                  <div className="p-3 rounded-lg" style={{ backgroundColor: 'var(--ice-warm)' }}>
+                    <div className="text-xs uppercase" style={{ color: 'var(--text-muted)' }}>Practice Areas</div>
+                    <div className="flex flex-wrap gap-1.5 mt-1">
+                      {selectedUser.onboardingAreas && selectedUser.onboardingAreas.length > 0 ? (
+                        selectedUser.onboardingAreas.map((area) => (
+                          <span key={area} className="rounded-full text-xs px-2 py-0.5" style={{ backgroundColor: '#F3F4F6', color: '#374151' }}>{area}</span>
+                        ))
+                      ) : (
+                        <span className="text-sm" style={{ color: 'var(--text-muted)' }}>Not set</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
             <div className="flex justify-end gap-3 pt-2">
               {selectedUser.status !== 'Invited' && (
                 <button onClick={() => { toggleBlock(selectedUser.id); setSelectedUser(null); }} className="px-4 py-2 rounded-lg text-sm font-medium text-white" style={{ backgroundColor: selectedUser.status === 'Blocked' ? '#166534' : '#991B1B' }}>

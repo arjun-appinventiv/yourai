@@ -14,6 +14,8 @@ import {
   LayoutDashboard,
   Check,
   ChevronLeft,
+  Lock,
+  X,
 } from 'lucide-react';
 
 const PRACTICE_AREAS = [
@@ -29,6 +31,16 @@ const PRACTICE_AREAS = [
   'Healthcare Law',
   'Bankruptcy',
   'Environmental',
+];
+
+const US_STATES = [
+  'Alabama','Alaska','Arizona','Arkansas','California','Colorado','Connecticut','Delaware',
+  'District of Columbia','Florida','Georgia','Hawaii','Idaho','Illinois','Indiana','Iowa',
+  'Kansas','Kentucky','Louisiana','Maine','Maryland','Massachusetts','Michigan','Minnesota',
+  'Mississippi','Missouri','Montana','Nebraska','Nevada','New Hampshire','New Jersey',
+  'New Mexico','New York','North Carolina','North Dakota','Ohio','Oklahoma','Oregon',
+  'Pennsylvania','Rhode Island','South Carolina','South Dakota','Tennessee','Texas','Utah',
+  'Vermont','Virginia','Washington','West Virginia','Wisconsin','Wyoming'
 ];
 
 const ROLES = [
@@ -231,6 +243,11 @@ export default function Onboarding() {
   const [practiceAreas, setPracticeAreas] = useState([]);
   const [firmSize, setFirmSize] = useState('');
   const [firstAction, setFirstAction] = useState('');
+  const [primaryState, setPrimaryState] = useState('');
+  const [additionalStates, setAdditionalStates] = useState([]);
+  const [federalPractice, setFederalPractice] = useState(false);
+  const [stateSearch, setStateSearch] = useState('');
+  const [stateDropdownOpen, setStateDropdownOpen] = useState(false);
   const [direction, setDirection] = useState('forward');
 
   const canContinue = () => {
@@ -238,13 +255,14 @@ export default function Onboarding() {
       case 1: return !!role;
       case 2: return practiceAreas.length > 0;
       case 3: return !!firmSize;
-      case 4: return !!firstAction;
+      case 4: return !!primaryState;
+      case 5: return !!firstAction;
       default: return false;
     }
   };
 
   const goNext = () => {
-    if (step === 4) {
+    if (step === 5) {
       const selectedRole = ROLES.find((r) => r.id === role);
       const selectedFirmSize = FIRM_SIZES.find((s) => s.id === firmSize);
       const selectedAction = FIRST_ACTIONS.find((a) => a.id === firstAction);
@@ -254,6 +272,9 @@ export default function Onboarding() {
           role: selectedRole ? selectedRole.title : role,
           practiceAreas,
           firmSize: selectedFirmSize ? selectedFirmSize.title : firmSize,
+          primaryState: primaryState,
+          additionalStates: additionalStates,
+          federalPractice: federalPractice,
           primaryGoal: selectedAction ? selectedAction.title : firstAction,
           onboardingCompleted: true,
           onboardingCompletedAt: new Date().toISOString(),
@@ -341,8 +362,196 @@ export default function Onboarding() {
     </div>
   );
 
+  const filteredStates = US_STATES.filter((s) =>
+    s.toLowerCase().includes(stateSearch.toLowerCase())
+  );
+
+  const toggleAdditionalState = (state) => {
+    if (state === primaryState) return;
+    setAdditionalStates((prev) =>
+      prev.includes(state) ? prev.filter((s) => s !== state) : [...prev, state]
+    );
+  };
+
+  const handleNoneSingleJurisdiction = () => {
+    setAdditionalStates([]);
+  };
+
   const renderStep4 = () => (
     <div key="step4">
+      <h2 style={styles.title}>Where does your firm practice?</h2>
+      <p style={styles.subtitle}>This helps us load the right legal knowledge for your jurisdiction</p>
+
+      {/* SECTION 1 — Primary State */}
+      <div style={{ marginTop: 24 }}>
+        <div style={{ fontSize: 12, fontWeight: 600, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 8, fontFamily: "'DM Sans', sans-serif" }}>
+          Primary State
+        </div>
+        <div style={{ position: 'relative' }}>
+          {primaryState ? (
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 8,
+              padding: '10px 14px', borderRadius: 8,
+              border: '1.5px solid var(--navy)', background: 'rgba(11,29,58,0.04)',
+              fontSize: 13, fontFamily: "'DM Sans', sans-serif",
+            }}>
+              <span style={{ flex: 1, color: 'var(--text-primary)' }}>{primaryState}</span>
+              <button type="button" onClick={() => { setPrimaryState(''); setAdditionalStates((prev) => prev.filter((s) => s !== primaryState)); }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', color: 'var(--text-muted)' }}>
+                <X size={16} />
+              </button>
+            </div>
+          ) : (
+            <>
+              <input
+                type="text"
+                placeholder="Search states..."
+                value={stateSearch}
+                onChange={(e) => { setStateSearch(e.target.value); setStateDropdownOpen(true); }}
+                onFocus={() => setStateDropdownOpen(true)}
+                style={{
+                  width: '100%', padding: '10px 14px', borderRadius: 8,
+                  border: '1.5px solid var(--border)', fontSize: 13,
+                  fontFamily: "'DM Sans', sans-serif", outline: 'none',
+                  boxSizing: 'border-box',
+                }}
+              />
+              {stateDropdownOpen && (
+                <div style={{
+                  position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 10,
+                  maxHeight: 200, overflowY: 'auto', background: '#fff',
+                  border: '1.5px solid var(--border)', borderRadius: 8, marginTop: 4,
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+                }}>
+                  {filteredStates.length === 0 ? (
+                    <div style={{ padding: '10px 14px', fontSize: 13, color: 'var(--text-muted)' }}>No states found</div>
+                  ) : (
+                    filteredStates.map((s) => (
+                      <button
+                        key={s}
+                        type="button"
+                        onClick={() => {
+                          setPrimaryState(s);
+                          setStateSearch('');
+                          setStateDropdownOpen(false);
+                          if (!additionalStates.includes(s)) {
+                            setAdditionalStates((prev) => [...prev, s]);
+                          }
+                        }}
+                        style={{
+                          display: 'block', width: '100%', textAlign: 'left',
+                          padding: '8px 14px', border: 'none', background: 'none',
+                          fontSize: 13, fontFamily: "'DM Sans', sans-serif",
+                          cursor: 'pointer', color: 'var(--text-primary)',
+                        }}
+                        onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--ice-warm)')}
+                        onMouseLeave={(e) => (e.currentTarget.style.background = 'none')}
+                      >
+                        {s}
+                      </button>
+                    ))
+                  )}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* SECTION 2 — Additional States */}
+      <div style={{ marginTop: 28 }}>
+        <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)', fontFamily: "'DM Sans', sans-serif" }}>
+          Do you also practice in other states?
+        </div>
+        <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4, marginBottom: 12 }}>
+          Select all that apply
+        </div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+          {US_STATES.map((s) => {
+            const isPrimary = s === primaryState;
+            const isSelected = isPrimary || additionalStates.includes(s);
+            return (
+              <button
+                key={s}
+                type="button"
+                onClick={() => { if (!isPrimary) toggleAdditionalState(s); }}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 5,
+                  padding: '7px 12px', borderRadius: 20,
+                  border: `1.5px solid ${isSelected ? 'var(--navy)' : 'var(--border)'}`,
+                  background: isSelected ? 'var(--navy)' : '#fff',
+                  color: isSelected ? '#fff' : 'var(--text-primary)',
+                  fontSize: 12, fontFamily: "'DM Sans', sans-serif", fontWeight: 500,
+                  cursor: isPrimary ? 'default' : 'pointer',
+                  opacity: isPrimary ? 0.75 : 1,
+                  transition: 'all 0.2s ease', whiteSpace: 'nowrap',
+                }}
+              >
+                {isPrimary && <Lock size={11} />}
+                {isSelected && !isPrimary && <Check size={12} />}
+                {s}
+              </button>
+            );
+          })}
+          {/* None pill */}
+          <button
+            type="button"
+            onClick={handleNoneSingleJurisdiction}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 5,
+              padding: '7px 12px', borderRadius: 20,
+              border: `1.5px solid ${additionalStates.length === 0 || (additionalStates.length === 1 && additionalStates[0] === primaryState) ? 'var(--navy)' : 'var(--border)'}`,
+              background: additionalStates.length === 0 || (additionalStates.length === 1 && additionalStates[0] === primaryState) ? 'var(--navy)' : '#fff',
+              color: additionalStates.length === 0 || (additionalStates.length === 1 && additionalStates[0] === primaryState) ? '#fff' : 'var(--text-primary)',
+              fontSize: 12, fontFamily: "'DM Sans', sans-serif", fontWeight: 500,
+              cursor: 'pointer', transition: 'all 0.2s ease', whiteSpace: 'nowrap',
+            }}
+          >
+            None — single jurisdiction only
+          </button>
+        </div>
+      </div>
+
+      {/* SECTION 3 — Federal Practice */}
+      <div style={{ marginTop: 28 }}>
+        <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)', fontFamily: "'DM Sans', sans-serif", marginBottom: 10 }}>
+          Do you handle federal matters?
+        </div>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button
+            type="button"
+            onClick={() => setFederalPractice(true)}
+            style={{
+              flex: 1, padding: '10px 0', borderRadius: 8,
+              border: `1.5px solid ${federalPractice ? 'var(--navy)' : 'var(--border)'}`,
+              background: federalPractice ? 'var(--navy)' : '#fff',
+              color: federalPractice ? '#fff' : 'var(--text-primary)',
+              fontSize: 13, fontFamily: "'DM Sans', sans-serif", fontWeight: 500,
+              cursor: 'pointer', transition: 'all 0.2s ease',
+            }}
+          >
+            Yes — Federal Courts
+          </button>
+          <button
+            type="button"
+            onClick={() => setFederalPractice(false)}
+            style={{
+              flex: 1, padding: '10px 0', borderRadius: 8,
+              border: `1.5px solid ${!federalPractice ? 'var(--navy)' : 'var(--border)'}`,
+              background: !federalPractice ? 'var(--navy)' : '#fff',
+              color: !federalPractice ? '#fff' : 'var(--text-primary)',
+              fontSize: 13, fontFamily: "'DM Sans', sans-serif", fontWeight: 500,
+              cursor: 'pointer', transition: 'all 0.2s ease',
+            }}
+          >
+            No — State only
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderStep5 = () => (
+    <div key="step5">
       <h2 style={styles.title}>What would you like to start with?</h2>
       <p style={styles.subtitle}>You can always change this later</p>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 24 }}>
@@ -360,7 +569,7 @@ export default function Onboarding() {
     </div>
   );
 
-  const stepRenderers = [renderStep1, renderStep2, renderStep3, renderStep4];
+  const stepRenderers = [renderStep1, renderStep2, renderStep3, renderStep4, renderStep5];
 
   return (
     <div style={styles.wrapper}>
@@ -410,7 +619,7 @@ export default function Onboarding() {
                 cursor: canContinue() ? 'pointer' : 'not-allowed',
               }}
             >
-              {step === 4 ? 'Get Started' : 'Continue'}
+              {step === 5 ? 'Get Started' : 'Continue'}
             </button>
           </div>
         </div>
@@ -418,7 +627,7 @@ export default function Onboarding() {
 
       {/* Progress dots */}
       <div style={styles.footer}>
-        <ProgressDots current={step} total={4} />
+        <ProgressDots current={step} total={5} />
       </div>
 
       {/* Keyframe animations */}
