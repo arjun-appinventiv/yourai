@@ -5,7 +5,8 @@ import {
   FolderOpen, ChevronDown, ChevronRight, MoreVertical, Plus, Download,
   Search, Bell, ArrowUp, Shield, Sparkles, FileText, Building2, Scale,
   LayoutDashboard, Send, MapPin, FileSearch, Lock, X, AlertTriangle, Info, Zap,
-  BookOpen, UserPlus, Trash2, Edit3, Copy, Phone, Mail, Briefcase, Hash, Menu
+  BookOpen, UserPlus, Trash2, Edit3, Copy, Phone, Mail, Briefcase, Hash, Menu,
+  Package, Link2, File, Upload, Paperclip
 } from 'lucide-react';
 import { billingData, subscriptionPlans } from '../../data/mockData';
 
@@ -74,6 +75,52 @@ const DEFAULT_CLIENTS = [
   { id: 3, name: 'NovaTech Solutions', contactName: 'Alex Rivera', email: 'alex@novatech.io', phone: '(310) 555-0267', type: 'Technology', status: 'Active', addedBy: 'Ryan Melade', addedAt: 'Mar 10, 2026', matters: 1 },
 ];
 
+/* ─── Default Knowledge Packs ─── */
+const DEFAULT_KNOWLEDGE_PACKS = [
+  {
+    id: 1,
+    name: 'NDA Playbook',
+    description: 'Standard NDA clauses, review guidelines, and firm-approved terms.',
+    docs: [
+      { id: 1, name: 'Standard_NDA_Template.pdf', size: '1.2 MB', uploaded: 'Mar 12, 2026' },
+      { id: 2, name: 'NDA_Risk_Checklist.docx', size: '0.4 MB', uploaded: 'Mar 15, 2026' },
+      { id: 3, name: 'Mutual_NDA_Redline_Example.pdf', size: '0.9 MB', uploaded: 'Mar 18, 2026' },
+    ],
+    links: [
+      { id: 1, name: 'ABA Model NDA Guidelines', url: 'https://americanbar.org/nda-guidelines' },
+    ],
+    createdAt: 'Mar 10, 2026',
+  },
+  {
+    id: 2,
+    name: 'M&A Due Diligence',
+    description: 'Due diligence checklist, templates, and precedent cases for M&A transactions.',
+    docs: [
+      { id: 1, name: 'DD_Checklist_v3.pdf', size: '2.1 MB', uploaded: 'Mar 20, 2026' },
+      { id: 2, name: 'Meridian_Precedent.pdf', size: '5.3 MB', uploaded: 'Mar 22, 2026' },
+      { id: 3, name: 'Indemnification_Clauses.docx', size: '0.8 MB', uploaded: 'Mar 25, 2026' },
+    ],
+    links: [
+      { id: 1, name: 'SEC M&A Filing Requirements', url: 'https://sec.gov/ma-filings' },
+      { id: 2, name: 'Delaware Court of Chancery', url: 'https://courts.delaware.gov/chancery' },
+    ],
+    createdAt: 'Mar 18, 2026',
+  },
+  {
+    id: 3,
+    name: 'Employment Law — California',
+    description: 'California-specific employment and labor regulations, statutes, and precedent.',
+    docs: [
+      { id: 1, name: 'CA_Labor_Code.pdf', size: '8.2 MB', uploaded: 'Feb 28, 2026' },
+      { id: 2, name: 'Non_Compete_Enforcement.docx', size: '0.6 MB', uploaded: 'Mar 2, 2026' },
+    ],
+    links: [
+      { id: 1, name: 'CA Department of Industrial Relations', url: 'https://dir.ca.gov' },
+    ],
+    createdAt: 'Feb 25, 2026',
+  },
+];
+
 /* ─── AI Models by plan ─── */
 const AI_MODELS_BY_PLAN = {
   Free: [
@@ -128,7 +175,7 @@ const libraryItems = [
   { icon: FolderOpen, label: 'Document Vault', badge: '128', badgeStyle: 'navy', subtitle: 'Recent: Vendor_Agreement.pdf \u00b7 1h...' },
 ];
 
-function Sidebar({ onOpenPromptTemplates, onOpenClients, promptCount, clientCount, isOpen, onClose }) {
+function Sidebar({ onOpenPromptTemplates, onOpenClients, onOpenKnowledgePacks, promptCount, clientCount, packCount, isOpen, onClose }) {
   const renderItem = (item, idx) => {
     const Icon = item.icon;
     return (
@@ -155,6 +202,7 @@ function Sidebar({ onOpenPromptTemplates, onOpenClients, promptCount, clientCoun
 
   const allMainItems = [
     ...sidebarItems,
+    { icon: Package, label: 'Knowledge Packs', badge: String(packCount), badgeStyle: 'navy', subtitle: 'Docs & links bundled for chat', onClick: onOpenKnowledgePacks },
     { icon: BookOpen, label: 'Prompt Templates', badge: String(promptCount), badgeStyle: 'navy', subtitle: 'Saved prompts for quick access', onClick: onOpenPromptTemplates },
     { icon: Users, label: 'Clients', badge: String(clientCount), badgeStyle: 'navy', subtitle: 'Manage your client directory', onClick: onOpenClients },
   ];
@@ -496,6 +544,272 @@ function AddClientModal({ onClose, onSave }) {
   );
 }
 
+/* ─────────────────── Knowledge Packs Panel ─────────────────── */
+function KnowledgePacksPanel({ packs, onClose, onCreateNew, onEdit, onDelete }) {
+  const [search, setSearch] = useState('');
+  const filtered = packs.filter(p => {
+    if (!search) return true;
+    const q = search.toLowerCase();
+    return p.name.toLowerCase().includes(q) || (p.description || '').toLowerCase().includes(q);
+  });
+
+  return (
+    <>
+      <div onClick={onClose} style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)', zIndex: 60, backdropFilter: 'blur(4px)' }} />
+      <div
+        className="fixed inset-0 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-[620px] md:max-h-[85vh] md:rounded-2xl"
+        style={{ backgroundColor: 'white', boxShadow: '0 20px 60px rgba(0,0,0,0.2)', zIndex: 61, display: 'flex', flexDirection: 'column' }}
+      >
+        {/* Header */}
+        <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid var(--border)' }}>
+          <div className="flex items-center justify-between gap-2">
+            <div className="min-w-0">
+              <h3 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 18, color: 'var(--text-primary)', margin: 0 }}>Knowledge Packs</h3>
+              <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>{packs.length} packs · Bundle docs & links to attach to chats</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button onClick={onCreateNew} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 14px', borderRadius: 8, backgroundColor: 'var(--navy)', color: 'white', border: 'none', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}><Plus size={14} /> New Pack</button>
+              <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100"><X size={18} style={{ color: 'var(--text-muted)' }} /></button>
+            </div>
+          </div>
+          <div style={{ position: 'relative', marginTop: 12 }}>
+            <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search knowledge packs..." style={{ width: '100%', height: 34, borderRadius: 8, border: '1px solid var(--border)', paddingLeft: 32, fontSize: 13, outline: 'none', boxSizing: 'border-box', fontFamily: "'DM Sans', sans-serif" }} />
+          </div>
+        </div>
+
+        {/* Pack list */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '8px 16px 16px' }}>
+          {filtered.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-muted)' }}>
+              <Package size={32} style={{ margin: '0 auto 12px', opacity: 0.4 }} />
+              <div style={{ fontSize: 14, fontWeight: 500 }}>No knowledge packs found</div>
+              <div style={{ fontSize: 12, marginTop: 4 }}>Create your first pack to get started</div>
+            </div>
+          ) : (
+            filtered.map(p => (
+              <div key={p.id} style={{ padding: '14px 16px', borderRadius: 10, border: '1px solid var(--border)', marginTop: 8, transition: 'all 0.15s' }}
+                onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.06)'; }}
+                onMouseLeave={e => { e.currentTarget.style.boxShadow = 'none'; }}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-start gap-3" style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ width: 38, height: 38, borderRadius: 10, backgroundColor: 'var(--ice-warm)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <Package size={18} style={{ color: 'var(--navy)' }} />
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{p.name}</div>
+                      <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4, lineHeight: 1.5 }}>{p.description}</p>
+                      <div className="flex items-center gap-3 flex-wrap" style={{ marginTop: 8 }}>
+                        <span className="flex items-center gap-1" style={{ fontSize: 11, color: 'var(--text-muted)' }}><FileText size={12} /> {p.docs.length} doc{p.docs.length !== 1 ? 's' : ''}</span>
+                        <span className="flex items-center gap-1" style={{ fontSize: 11, color: 'var(--text-muted)' }}><Link2 size={12} /> {p.links.length} link{p.links.length !== 1 ? 's' : ''}</span>
+                        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Created {p.createdAt}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1" style={{ flexShrink: 0 }}>
+                    <button onClick={() => onEdit(p)} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 6, backgroundColor: 'var(--navy)', color: 'white', border: 'none', fontSize: 11, fontWeight: 500, cursor: 'pointer' }}><Edit3 size={12} /> Edit</button>
+                    <button onClick={() => onDelete(p.id)} style={{ padding: 5, borderRadius: 6, background: 'none', border: '1px solid var(--border)', cursor: 'pointer', display: 'flex' }} title="Delete pack"><Trash2 size={13} style={{ color: '#991B1B' }} /></button>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    </>
+  );
+}
+
+/* ─────────────────── Edit / Create Knowledge Pack Modal ─────────────────── */
+function EditKnowledgePackModal({ pack, onClose, onSave }) {
+  const isNew = !pack;
+  const [name, setName] = useState(pack?.name || '');
+  const [description, setDescription] = useState(pack?.description || '');
+  const [docs, setDocs] = useState(pack?.docs || []);
+  const [links, setLinks] = useState(pack?.links || []);
+  const [linkName, setLinkName] = useState('');
+  const [linkUrl, setLinkUrl] = useState('');
+  const [showAddLink, setShowAddLink] = useState(false);
+
+  const MOCK_DOC_NAMES = ['Clause_Library.pdf', 'Compliance_Checklist.docx', 'Risk_Matrix_Template.xlsx', 'Precedent_Case.pdf', 'Standard_Terms.pdf'];
+
+  const handleAddDoc = () => {
+    const name = MOCK_DOC_NAMES[docs.length % MOCK_DOC_NAMES.length];
+    setDocs(prev => [...prev, { id: Date.now(), name, size: `${(Math.random() * 3 + 0.5).toFixed(1)} MB`, uploaded: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) }]);
+  };
+
+  const handleRemoveDoc = (id) => setDocs(prev => prev.filter(d => d.id !== id));
+
+  const handleAddLink = () => {
+    if (!linkName.trim() || !linkUrl.trim()) return;
+    setLinks(prev => [...prev, { id: Date.now(), name: linkName.trim(), url: linkUrl.trim() }]);
+    setLinkName(''); setLinkUrl(''); setShowAddLink(false);
+  };
+
+  const handleRemoveLink = (id) => setLinks(prev => prev.filter(l => l.id !== id));
+
+  const handleSave = () => {
+    if (!name.trim()) return;
+    onSave({ id: pack?.id || Date.now(), name: name.trim(), description: description.trim(), docs, links, createdAt: pack?.createdAt || new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) });
+    onClose();
+  };
+
+  const inputStyle = { width: '100%', height: 40, border: '1px solid var(--border)', borderRadius: 8, padding: '0 12px', fontSize: 13, outline: 'none', boxSizing: 'border-box', fontFamily: "'DM Sans', sans-serif" };
+
+  return (
+    <>
+      <div onClick={onClose} style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)', zIndex: 70, backdropFilter: 'blur(4px)' }} />
+      <div
+        className="fixed inset-0 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-[600px] md:max-h-[90vh] md:rounded-2xl"
+        style={{ backgroundColor: 'white', boxShadow: '0 20px 60px rgba(0,0,0,0.2)', zIndex: 71, display: 'flex', flexDirection: 'column' }}
+      >
+        <div className="flex items-center justify-between" style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)' }}>
+          <h3 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 18, color: 'var(--text-primary)', margin: 0 }}>{isNew ? 'New Knowledge Pack' : 'Edit Knowledge Pack'}</h3>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100"><X size={18} style={{ color: 'var(--text-muted)' }} /></button>
+        </div>
+
+        <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {/* Name */}
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Pack name *</label>
+            <input value={name} onChange={e => setName(e.target.value)} placeholder="e.g., NDA Playbook" style={inputStyle} />
+          </div>
+
+          {/* Description */}
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Description</label>
+            <textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="Short description of what's in this pack..." rows={2} style={{ ...inputStyle, height: 'auto', padding: '10px 12px', resize: 'vertical', lineHeight: 1.5 }} />
+          </div>
+
+          {/* Documents */}
+          <div>
+            <div className="flex items-center justify-between" style={{ marginBottom: 8 }}>
+              <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)' }}>Documents ({docs.length})</label>
+              <button onClick={handleAddDoc} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 10px', borderRadius: 6, border: '1px dashed var(--border)', background: 'white', fontSize: 11, fontWeight: 500, color: 'var(--navy)', cursor: 'pointer' }}><Upload size={12} /> Add Document</button>
+            </div>
+            {docs.length === 0 ? (
+              <div style={{ padding: 16, border: '1px dashed var(--border)', borderRadius: 8, textAlign: 'center', fontSize: 12, color: 'var(--text-muted)' }}>No documents yet — click Add Document</div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {docs.map(d => (
+                  <div key={d.id} className="flex items-center gap-2" style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', backgroundColor: 'var(--ice-warm)' }}>
+                    <File size={14} style={{ color: 'var(--navy)', flexShrink: 0 }} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.name}</div>
+                      <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{d.size} · {d.uploaded}</div>
+                    </div>
+                    <button onClick={() => handleRemoveDoc(d.id)} style={{ padding: 4, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', flexShrink: 0 }}><Trash2 size={13} /></button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Links */}
+          <div>
+            <div className="flex items-center justify-between" style={{ marginBottom: 8 }}>
+              <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)' }}>Links ({links.length})</label>
+              <button onClick={() => setShowAddLink(!showAddLink)} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 10px', borderRadius: 6, border: '1px dashed var(--border)', background: 'white', fontSize: 11, fontWeight: 500, color: 'var(--navy)', cursor: 'pointer' }}><Plus size={12} /> Add Link</button>
+            </div>
+            {showAddLink && (
+              <div style={{ padding: 12, borderRadius: 8, border: '1px solid var(--border)', backgroundColor: 'var(--ice-warm)', marginBottom: 8, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <input value={linkName} onChange={e => setLinkName(e.target.value)} placeholder="Link title" style={{ ...inputStyle, height: 34, backgroundColor: 'white' }} />
+                <input value={linkUrl} onChange={e => setLinkUrl(e.target.value)} placeholder="https://..." style={{ ...inputStyle, height: 34, backgroundColor: 'white' }} />
+                <div className="flex items-center justify-end gap-2">
+                  <button onClick={() => { setShowAddLink(false); setLinkName(''); setLinkUrl(''); }} style={{ padding: '5px 12px', borderRadius: 6, border: '1px solid var(--border)', background: 'white', fontSize: 11, cursor: 'pointer', color: 'var(--text-muted)' }}>Cancel</button>
+                  <button onClick={handleAddLink} disabled={!linkName.trim() || !linkUrl.trim()} style={{ padding: '5px 12px', borderRadius: 6, border: 'none', background: (!linkName.trim() || !linkUrl.trim()) ? '#94A3B8' : 'var(--navy)', color: 'white', fontSize: 11, fontWeight: 500, cursor: (!linkName.trim() || !linkUrl.trim()) ? 'not-allowed' : 'pointer' }}>Save Link</button>
+                </div>
+              </div>
+            )}
+            {links.length === 0 && !showAddLink ? (
+              <div style={{ padding: 16, border: '1px dashed var(--border)', borderRadius: 8, textAlign: 'center', fontSize: 12, color: 'var(--text-muted)' }}>No links yet — click Add Link</div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {links.map(l => (
+                  <div key={l.id} className="flex items-center gap-2" style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', backgroundColor: 'var(--ice-warm)' }}>
+                    <Link2 size={14} style={{ color: 'var(--navy)', flexShrink: 0 }} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{l.name}</div>
+                      <div style={{ fontSize: 11, color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{l.url}</div>
+                    </div>
+                    <button onClick={() => handleRemoveLink(l.id)} style={{ padding: 4, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', flexShrink: 0 }}><Trash2 size={13} /></button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+          <button onClick={onClose} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid var(--border)', background: 'white', fontSize: 13, cursor: 'pointer', color: 'var(--text-muted)' }}>Cancel</button>
+          <button onClick={handleSave} disabled={!name.trim()} style={{ padding: '8px 20px', borderRadius: 8, border: 'none', background: !name.trim() ? '#94A3B8' : 'var(--navy)', color: 'white', fontSize: 13, fontWeight: 500, cursor: !name.trim() ? 'not-allowed' : 'pointer' }}>{isNew ? 'Create Pack' : 'Save Changes'}</button>
+        </div>
+      </div>
+    </>
+  );
+}
+
+/* ─────────────────── Knowledge Pack Picker (+ icon popover) ─────────────────── */
+function KnowledgePackPicker({ packs, activePack, onSelect, onClear, onManage, onClose }) {
+  return (
+    <>
+      <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 40 }} />
+      <div style={{ position: 'absolute', bottom: 'calc(100% + 8px)', left: 0, width: 300, maxWidth: 'calc(100vw - 24px)', backgroundColor: 'white', borderRadius: 12, border: '1px solid var(--border)', boxShadow: '0 12px 32px rgba(0,0,0,0.14)', zIndex: 41, overflow: 'hidden' }}>
+        <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--border)' }}>
+          <div className="flex items-center gap-2">
+            <Package size={14} style={{ color: 'var(--navy)' }} />
+            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>Attach Knowledge Pack</span>
+          </div>
+          <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 3 }}>YourAI will use the selected pack as context for this conversation.</p>
+        </div>
+
+        {activePack && (
+          <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--border)', backgroundColor: 'var(--ice-warm)' }}>
+            <div className="flex items-center justify-between gap-2">
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Currently attached</div>
+                <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{activePack.name}</div>
+              </div>
+              <button onClick={onClear} style={{ padding: '3px 10px', borderRadius: 6, border: '1px solid var(--border)', background: 'white', fontSize: 11, color: 'var(--text-muted)', cursor: 'pointer', flexShrink: 0 }}>Remove</button>
+            </div>
+          </div>
+        )}
+
+        <div style={{ maxHeight: 260, overflowY: 'auto' }}>
+          {packs.length === 0 ? (
+            <div style={{ padding: 20, textAlign: 'center', color: 'var(--text-muted)', fontSize: 12 }}>No knowledge packs yet</div>
+          ) : (
+            packs.map(p => {
+              const isActive = activePack?.id === p.id;
+              return (
+                <div
+                  key={p.id}
+                  onClick={() => onSelect(p)}
+                  style={{ padding: '10px 14px', cursor: 'pointer', borderBottom: '1px solid var(--border)', backgroundColor: isActive ? '#EDF3FA' : 'white', display: 'flex', alignItems: 'flex-start', gap: 10 }}
+                  onMouseEnter={e => { if (!isActive) e.currentTarget.style.backgroundColor = '#F8FAFC'; }}
+                  onMouseLeave={e => { if (!isActive) e.currentTarget.style.backgroundColor = 'white'; }}
+                >
+                  <Package size={14} style={{ color: isActive ? 'var(--navy)' : 'var(--text-muted)', marginTop: 2, flexShrink: 0 }} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</div>
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{p.docs.length} docs · {p.links.length} links</div>
+                  </div>
+                  {isActive && <CheckCircle size={14} style={{ color: '#16A34A', flexShrink: 0, marginTop: 2 }} />}
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        <button onClick={onManage} style={{ width: '100%', padding: '10px 14px', background: 'white', border: 'none', borderTop: '1px solid var(--border)', fontSize: 12, fontWeight: 500, color: 'var(--navy)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+          <Edit3 size={12} /> Manage Knowledge Packs
+        </button>
+      </div>
+    </>
+  );
+}
+
 /* ─────────────────── Top Nav ─────────────────── */
 function TopNav({ plan, usage, onOpenSidebar }) {
   const [showUsagePopover, setShowUsagePopover] = useState(false);
@@ -632,6 +946,12 @@ function MessageBubble({ msg }) {
           <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>{msg.timestamp}</span>
         </div>
         <div style={{ fontSize: 14, lineHeight: 1.6, color: 'var(--text-primary)', wordBreak: 'break-word' }}>{bold(msg.content)}</div>
+        {msg.knowledgePack && (
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 8, padding: '4px 10px', borderRadius: 999, background: 'rgba(10, 36, 99, 0.06)', border: '1px solid rgba(10, 36, 99, 0.18)' }}>
+            <Package size={12} style={{ color: 'var(--navy)' }} />
+            <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--navy)' }}>Using: {msg.knowledgePack}</span>
+          </div>
+        )}
         {msg.card && <RiskCard card={msg.card} />}
       </div>
     </div>
@@ -947,9 +1267,12 @@ export default function ChatView() {
   const [isTyping, setIsTyping] = useState(false);
   const [showEmptyState, setShowEmptyState] = useState(true);
   const [profile, setProfile] = useState(null);
-  const [selectedModel, setSelectedModel] = useState('gpt4o');
-  const [showLockedCard, setShowLockedCard] = useState(null);
   const [showPlanModal, setShowPlanModal] = useState(false);
+  const [knowledgePacks, setKnowledgePacks] = useState(DEFAULT_KNOWLEDGE_PACKS);
+  const [showKnowledgePacksPanel, setShowKnowledgePacksPanel] = useState(false);
+  const [editingPack, setEditingPack] = useState(null);
+  const [showPackPicker, setShowPackPicker] = useState(false);
+  const [activeKnowledgePack, setActiveKnowledgePack] = useState(null);
   const [docLimitBannerDismissed, setDocLimitBannerDismissed] = useState(false);
   const [promptTemplates, setPromptTemplates] = useState(DEFAULT_PROMPT_TEMPLATES);
   const [showPromptPanel, setShowPromptPanel] = useState(false);
@@ -997,19 +1320,33 @@ export default function ChatView() {
     setInput('');
     setIsTyping(true);
     setTimeout(() => {
-      const botMsg = { id: Date.now() + 1, sender: 'bot', content: MOCK_RESPONSES[responseIdx.current % MOCK_RESPONSES.length], timestamp: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) };
+      const botMsg = { id: Date.now() + 1, sender: 'bot', content: MOCK_RESPONSES[responseIdx.current % MOCK_RESPONSES.length], timestamp: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }), knowledgePack: activeKnowledgePack?.name || null };
       responseIdx.current += 1;
       setMessages((prev) => [...prev, botMsg]);
       setIsTyping(false);
     }, 1500);
-  }, [isTyping, showEmptyState]);
+  }, [isTyping, showEmptyState, activeKnowledgePack]);
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(input); }
   };
 
-  const handleLockedModelClick = (model) => {
-    setShowLockedCard(model);
+  const handleSavePack = (data) => {
+    if (data.id) {
+      setKnowledgePacks(prev => prev.map(p => p.id === data.id ? { ...p, ...data } : p));
+    } else {
+      const newPack = {
+        ...data,
+        id: Date.now(),
+        createdAt: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+      };
+      setKnowledgePacks(prev => [newPack, ...prev]);
+    }
+  };
+
+  const handleDeletePack = (id) => {
+    setKnowledgePacks(prev => prev.filter(p => p.id !== id));
+    if (activeKnowledgePack?.id === id) setActiveKnowledgePack(null);
   };
 
   const handleCreatePrompt = (data) => {
@@ -1052,8 +1389,10 @@ export default function ChatView() {
       <Sidebar
         onOpenPromptTemplates={() => { setShowPromptPanel(true); setSidebarOpen(false); }}
         onOpenClients={() => { setShowClientsPanel(true); setSidebarOpen(false); }}
+        onOpenKnowledgePacks={() => { setShowKnowledgePacksPanel(true); setSidebarOpen(false); }}
         promptCount={promptTemplates.length}
         clientCount={clients.length}
+        packCount={knowledgePacks.length}
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
       />
@@ -1111,35 +1450,29 @@ export default function ChatView() {
 
           {/* Chat input area */}
           <div className="px-3 sm:px-4 md:px-10 py-3" style={{ background: 'transparent' }}>
-            {/* Model selector */}
-            <div className="mb-2 flex items-center gap-2 sm:gap-3 overflow-x-auto whitespace-nowrap pb-1">
-              <ModelSelector plan={plan} selectedModel={selectedModel} onSelect={setSelectedModel} onLockedClick={handleLockedModelClick} />
-              <span className="hidden sm:inline" style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-                Using {(AI_MODELS_BY_PLAN[plan] || []).find(m => m.id === selectedModel)?.label || 'GPT-4o'}
-              </span>
-            </div>
-
-            {/* Locked model inline card */}
-            {showLockedCard && (
-              <div style={{ marginBottom: 8, padding: '12px 16px', borderRadius: 10, border: '1px solid var(--border)', backgroundColor: 'white', display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-                <Lock size={16} style={{ color: 'var(--text-muted)', marginTop: 2, flexShrink: 0 }} />
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>
-                    {showLockedCard.label} is available on {showLockedCard.minPlan} plan (${subscriptionPlans.find(p => p.name === showLockedCard.minPlan)?.price || 149}/user/month)
-                  </div>
-                  <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
-                    Unlock long-form analysis, compliance reviews, and nuanced reasoning
-                  </div>
-                  <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-                    <button onClick={() => setShowLockedCard(null)} style={{ fontSize: 12, color: 'var(--text-muted)', background: 'none', border: '1px solid var(--border)', borderRadius: 6, padding: '4px 12px', cursor: 'pointer' }}>Maybe later</button>
-                    <button onClick={() => { setShowLockedCard(null); setShowPlanModal(true); }} style={{ fontSize: 12, color: 'white', backgroundColor: 'var(--navy)', border: 'none', borderRadius: 6, padding: '4px 12px', cursor: 'pointer', fontWeight: 500 }}>View Plans</button>
-                  </div>
-                </div>
+            {/* Active Knowledge Pack chip */}
+            {activeKnowledgePack && (
+              <div style={{ marginBottom: 8, display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 12px', borderRadius: 999, background: 'rgba(10, 36, 99, 0.06)', border: '1px solid rgba(10, 36, 99, 0.25)' }}>
+                <Package size={13} style={{ color: 'var(--navy)' }} />
+                <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--navy)' }}>Using: {activeKnowledgePack.name}</span>
+                <button onClick={() => setActiveKnowledgePack(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', color: 'var(--navy)' }}><X size={13} /></button>
               </div>
             )}
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, border: '1px solid var(--border)', borderRadius: 16, background: '#fff', height: 48, padding: '0 6px 0 12px' }}>
-              <div style={{ width: 28, height: 28, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--text-muted)' }}><Plus size={20} /></div>
+              <div style={{ position: 'relative' }}>
+                <div onClick={() => setShowPackPicker(v => !v)} title="Attach knowledge pack" style={{ width: 28, height: 28, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: activeKnowledgePack ? 'var(--navy)' : 'var(--text-muted)', background: activeKnowledgePack ? 'rgba(10, 36, 99, 0.08)' : 'transparent' }}><Plus size={20} /></div>
+                {showPackPicker && (
+                  <KnowledgePackPicker
+                    packs={knowledgePacks}
+                    activePack={activeKnowledgePack}
+                    onSelect={(p) => { setActiveKnowledgePack(p); setShowPackPicker(false); }}
+                    onClear={() => { setActiveKnowledgePack(null); setShowPackPicker(false); }}
+                    onManage={() => { setShowPackPicker(false); setShowKnowledgePacksPanel(true); }}
+                    onClose={() => setShowPackPicker(false)}
+                  />
+                )}
+              </div>
               <input ref={inputRef} value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={handleKeyDown} placeholder={inputPlaceholder} style={{ flex: 1, border: 'none', outline: 'none', fontSize: 14, color: 'var(--text-primary)', background: 'transparent' }} />
               <div onClick={() => sendMessage(input)} style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--navy)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}><ArrowUp size={16} color="#fff" /></div>
             </div>
@@ -1187,6 +1520,26 @@ export default function ChatView() {
         <AddClientModal
           onClose={() => setShowAddClient(false)}
           onSave={handleAddClient}
+        />
+      )}
+
+      {/* Knowledge Packs Panel */}
+      {showKnowledgePacksPanel && (
+        <KnowledgePacksPanel
+          packs={knowledgePacks}
+          onClose={() => setShowKnowledgePacksPanel(false)}
+          onCreateNew={() => { setShowKnowledgePacksPanel(false); setEditingPack({ isNew: true }); }}
+          onEdit={(pack) => { setShowKnowledgePacksPanel(false); setEditingPack(pack); }}
+          onDelete={handleDeletePack}
+        />
+      )}
+
+      {/* Edit / Create Knowledge Pack Modal */}
+      {editingPack && (
+        <EditKnowledgePackModal
+          pack={editingPack.isNew ? null : editingPack}
+          onClose={() => setEditingPack(null)}
+          onSave={(data) => { handleSavePack(data); setEditingPack(null); }}
         />
       )}
     </div>
