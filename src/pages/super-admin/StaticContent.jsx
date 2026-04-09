@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
-  BookOpen, FileText, Edit3, Globe, CheckCircle, Clock, Plus, Lock,
+  BookOpen, FileText, Edit3, Globe, CheckCircle, Clock, Plus,
   Bold, Italic, Underline, List, ListOrdered, Heading1, Heading2, Heading3,
   Link2, Quote, Code, Undo2, Redo2, AlignLeft, AlignCenter, AlignRight, X,
 } from 'lucide-react';
@@ -165,7 +165,7 @@ export default function StaticContent() {
   const [editTitle, setEditTitle] = useState('');
   const [editContent, setEditContent] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
-  const [newPage, setNewPage] = useState({ title: '', slug: '', content: '' });
+  const [newPage, setNewPage] = useState({ title: '', content: '' });
   const showToast = useToast();
 
   const filtered = pages.filter((p) => {
@@ -206,15 +206,13 @@ export default function StaticContent() {
   };
 
   const handleAddPage = () => {
-    if (!newPage.title.trim() || !newPage.slug.trim()) {
-      showToast('Please fill title and slug');
+    if (!newPage.title.trim()) {
+      showToast('Please enter a page title');
       return;
     }
-    const slug = newPage.slug.startsWith('/') ? newPage.slug : `/${newPage.slug}`;
     const page = {
       id: Math.max(...pages.map((p) => p.id)) + 1,
       title: newPage.title,
-      slug,
       lastUpdated: 'Just now',
       updatedBy: 'Arjun P',
       status: 'Draft',
@@ -223,7 +221,7 @@ export default function StaticContent() {
     };
     setPages((prev) => [page, ...prev]);
     showToast(`"${newPage.title}" page created as draft`);
-    setNewPage({ title: '', slug: '', content: '' });
+    setNewPage({ title: '', content: '' });
     setShowAddModal(false);
   };
 
@@ -288,7 +286,7 @@ export default function StaticContent() {
       </div>
 
       {/* Table */}
-      <Table columns={['Page Title', 'Slug', 'Version', 'Status', 'Updated By', 'Last Updated', 'Actions']}>
+      <Table columns={['Page Title', 'Version', 'Status', 'Updated By', 'Last Updated', 'Actions']}>
         {filtered.map((p) => (
           <tr
             key={p.id}
@@ -303,7 +301,6 @@ export default function StaticContent() {
                 <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{p.title}</span>
               </div>
             </td>
-            <td className="px-4 py-3 text-sm" style={{ color: 'var(--text-muted)', fontFamily: 'monospace', fontSize: '13px' }}>{p.slug}</td>
             <td className="px-4 py-3 text-sm" style={{ color: 'var(--slate)' }}>{p.version}</td>
             <td className="px-4 py-3">
               <span
@@ -371,39 +368,16 @@ export default function StaticContent() {
 
             {/* Body */}
             <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-primary)' }}>
-                    Page Title
-                  </label>
-                  <input
-                    type="text"
-                    value={editTitle}
-                    onChange={(e) => setEditTitle(e.target.value)}
-                    style={{ ...inputStyle, width: '100%', height: 40 }}
-                  />
-                </div>
-                <div>
-                  <label className="flex items-center gap-1.5 text-sm font-medium mb-1.5" style={{ color: 'var(--text-primary)' }}>
-                    Slug <Lock size={12} style={{ color: 'var(--text-muted)' }} />
-                  </label>
-                  <input
-                    type="text"
-                    value={editPage.slug}
-                    disabled
-                    readOnly
-                    style={{
-                      ...inputStyle, width: '100%', height: 40,
-                      fontFamily: 'monospace',
-                      backgroundColor: 'var(--ice-warm)',
-                      color: 'var(--text-muted)',
-                      cursor: 'not-allowed',
-                    }}
-                  />
-                  <p className="mt-1" style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-                    Slug cannot be changed after page creation
-                  </p>
-                </div>
+              <div>
+                <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-primary)' }}>
+                  Page Title
+                </label>
+                <input
+                  type="text"
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  style={{ ...inputStyle, width: '100%', height: 40 }}
+                />
               </div>
 
               <div>
@@ -464,21 +438,6 @@ export default function StaticContent() {
           </div>
           <div>
             <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-primary)' }}>
-              Slug *
-            </label>
-            <input
-              type="text"
-              value={newPage.slug}
-              onChange={(e) => setNewPage({ ...newPage, slug: e.target.value })}
-              placeholder="/security-policy"
-              style={{ ...inputStyle, width: '100%', height: 40, fontFamily: 'monospace', fontSize: 13 }}
-            />
-            <p className="mt-1" style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-              URL path for this page. This cannot be changed later.
-            </p>
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-primary)' }}>
               Initial Content (optional)
             </label>
             <textarea
@@ -501,7 +460,7 @@ export default function StaticContent() {
           </div>
           <div className="flex justify-end gap-3 pt-2">
             <button
-              onClick={() => { setShowAddModal(false); setNewPage({ title: '', slug: '', content: '' }); }}
+              onClick={() => { setShowAddModal(false); setNewPage({ title: '', content: '' }); }}
               className="px-4 py-2 rounded-lg text-sm font-medium"
               style={{ border: '1px solid var(--border)', color: 'var(--slate)', backgroundColor: 'white', cursor: 'pointer' }}
             >
