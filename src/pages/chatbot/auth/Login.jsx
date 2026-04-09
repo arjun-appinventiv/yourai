@@ -1,10 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Mail, Lock, Eye, EyeOff, Loader, Info } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, Loader, Info, ShieldCheck, ArrowLeft, RefreshCw } from 'lucide-react';
 import ChatAuthLayout from '../../../components/ChatAuthLayout';
 
 const MOCK_EMAIL = 'ryan@hartwell.com';
 const MOCK_PASSWORD = 'Law@2026';
+const MOCK_OTP = '482916';
+const OTP_LENGTH = 6;
+const RESEND_COOLDOWN = 30;
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -14,23 +17,165 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [loadingText, setLoadingText] = useState('');
   const [showCreds, setShowCreds] = useState(false);
+
+  // OTP state
+  const [step, setStep] = useState('credentials'); // 'credentials' | 'otp'
+  const [otp, setOtp] = useState(Array(OTP_LENGTH).fill(''));
+  const [otpVerifying, setOtpVerifying] = useState(false);
+  const [resendTimer, setResendTimer] = useState(0);
+  const [otpSent, setOtpSent] = useState(false);
+  const otpRefs = useRef([]);
+
   const navigate = useNavigate();
 
+  // Resend countdown timer
+  useEffect(() => {
+    if (resendTimer <= 0) return;
+    const interval = setInterval(() => setResendTimer((t) => t - 1), 1000);
+    return () => clearInterval(interval);
+  }, [resendTimer]);
+
+  // Auto-focus first OTP input when step changes
+  useEffect(() => {
+    if (step === 'otp' && otpRefs.current[0]) {
+      setTimeout(() => otpRefs.current[0]?.focus(), 100);
+    }
+  }, [step]);
+
+  // Extract first name from email for display
+  const getUserName = () => {
+    const local = email.split('@')[0] || '';
+    return local.charAt(0).toUpperCase() + local.slice(1);
+  };
+
+  // Mask email for display
+  const getMaskedEmail = () => {
+    const [local, domain] = email.split('@');
+    if (!local || !domain) return email;
+    const visible = local.slice(0, 2);
+    return `${visible}${'•'.repeat(Math.max(local.length - 2, 3))}@${domain}`;
+  };
+
+  // Step 1: Verify credentials
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
-    setLoadingText('Signing in...');
+    setLoadingText('Verifying credentials...');
 
-    await new Promise((r) => setTimeout(r, 1500));
+    await new Promise((r) => setTimeout(r, 1200));
 
     if (email === MOCK_EMAIL && password === MOCK_PASSWORD) {
-      navigate('/chat', { replace: true });
+      setLoading(false);
+      setLoadingText('');
+      setStep('otp');
+      setOtpSent(true);
+      setResendTimer(RESEND_COOLDOWN);
     } else {
       setLoading(false);
       setLoadingText('');
       setError('Invalid email or password. Please check your credentials and try again.');
     }
+  };
+
+  // OTP input handlers
+  const handleOtpChange = (index, value) => {
+    if (!/^\d*$/.test(value)) return; // only digits
+    const newOtp = [...otp];
+    newOtp[index] = value.slice(-1); // take last char
+    setOtp(newOtp);
+    setError('');
+
+    // Auto-advance to next input
+    if (value && index < OTP_LENGTH - 1) {
+      otpRefs.current[index + 1]?.focus();
+    }
+
+    // Auto-submit when all filled
+    if (newOtp.every((d) => d !== '') && newOtp.join('').length === OTP_LENGTH) {
+      verifyOtp(newOtp.join(''));
+    }
+  };
+
+  const handleOtpKeyDown = (index, e) => {
+    if (e.key === 'Backspace' && !otp[index] && index > 0) {
+      otpRefs.current[index - 1]?.focus();
+    }
+    if (e.key === 'ArrowLeft' && index > 0) {
+      otpRefs.current[index - 1]?.focus();
+    }
+    if (e.key === 'ArrowRight' && index < OTP_LENGTH - 1) {
+      otpRefs.current[index + 1]?.focus();
+    }
+  };
+
+  const handleOtpPaste = (e) => {
+    e.preventDefault();
+    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, OTP_LENGTH);
+    if (pasted.length === 0) return;
+    const newOtp = [...otp];
+    for (let i = 0; i < pasted.length; i++) {
+      newOtp[i] = pasted[i];
+    }
+    setOtp(newOtp);
+    const nextIndex = Math.min(pasted.length, OTP_LENGTH - 1);
+    otpRefs.current[nextIndex]?.focus();
+
+    if (newOtp.every((d) => d !== '')) {
+      verifyOtp(newOtp.join(''));
+    }
+  };
+
+  // Step 2: Verify OTP
+  const verifyOtp = async (code) => {
+    setOtpVerifying(true);
+    setError('');
+    setLoadingText('Verifying code...');
+
+    await new Promise((r) => setTimeout(r, 1500));
+
+    if (code === MOCK_OTP) {
+      setLoadingText('Authenticated! Redirecting...');
+      await new Promise((r) => setTimeout(r, 800));
+      navigate('/chat', { replace: true });
+    } else {
+      setOtpVerifying(false);
+      setLoadingText('');
+      setError('Invalid verification code. Please try again.');
+      setOtp(Array(OTP_LENGTH).fill(''));
+      setTimeout(() => otpRefs.current[0]?.focus(), 100);
+    }
+  };
+
+  const handleOtpSubmit = (e) => {
+    e.preventDefault();
+    const code = otp.join('');
+    if (code.length < OTP_LENGTH) {
+      setError('Please enter all 6 digits');
+      return;
+    }
+    verifyOtp(code);
+  };
+
+  const handleResendOtp = async () => {
+    if (resendTimer > 0) return;
+    setError('');
+    setOtp(Array(OTP_LENGTH).fill(''));
+    setOtpVerifying(true);
+    setLoadingText('Sending new code...');
+    await new Promise((r) => setTimeout(r, 1000));
+    setOtpVerifying(false);
+    setLoadingText('');
+    setResendTimer(RESEND_COOLDOWN);
+    setOtpSent(true);
+    setTimeout(() => otpRefs.current[0]?.focus(), 100);
+  };
+
+  const handleBackToCredentials = () => {
+    setStep('credentials');
+    setOtp(Array(OTP_LENGTH).fill(''));
+    setError('');
+    setOtpSent(false);
   };
 
   const inputWrap = 'relative';
@@ -47,6 +192,177 @@ export default function Login() {
   };
   const iconStyle = { position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' };
 
+  // ─── OTP VERIFICATION SCREEN ───
+  if (step === 'otp') {
+    return (
+      <ChatAuthLayout>
+        {/* Back button */}
+        <button
+          type="button"
+          onClick={handleBackToCredentials}
+          className="flex items-center gap-1.5 mb-4 transition-colors"
+          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '13px', padding: 0 }}
+          onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--text-primary)')}
+          onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-muted)')}
+        >
+          <ArrowLeft size={15} /> Back to sign in
+        </button>
+
+        {/* Header */}
+        <div className="text-center">
+          <div
+            className="mx-auto flex items-center justify-center"
+            style={{
+              width: 56, height: 56, borderRadius: '16px',
+              background: 'linear-gradient(135deg, #EFF6FF, #DBEAFE)',
+              marginBottom: 16,
+            }}
+          >
+            <ShieldCheck size={28} style={{ color: 'var(--navy)' }} />
+          </div>
+          <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: '24px', color: 'var(--text-primary)' }}>
+            Two-Factor Authentication
+          </h1>
+          <p className="mt-2" style={{ fontSize: '13px', color: 'var(--text-muted)', lineHeight: 1.6 }}>
+            We've sent a 6-digit verification code to<br />
+            <span style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>{getMaskedEmail()}</span>
+          </p>
+          <p className="mt-1" style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+            Hi {getUserName()}, please enter the code to continue
+          </p>
+        </div>
+
+        {/* Demo OTP hint */}
+        <div className="mt-4">
+          <button
+            type="button"
+            onClick={() => setShowCreds(!showCreds)}
+            className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg transition-colors"
+            style={{ backgroundColor: showCreds ? '#EFF6FF' : 'var(--ice-warm)', color: showCreds ? '#1D4ED8' : 'var(--text-muted)', fontSize: '12px', border: '1px solid transparent' }}
+          >
+            <Info size={14} />
+            {showCreds ? 'Hide demo OTP' : 'Show demo OTP'}
+          </button>
+          {showCreds && (
+            <div className="mt-2 p-3 rounded-lg" style={{ backgroundColor: '#EFF6FF', border: '1px solid #DBEAFE' }}>
+              <div className="flex items-center justify-between mb-1">
+                <span style={{ fontSize: '11px', color: '#1D4ED8', fontWeight: 600 }}>VERIFICATION CODE</span>
+                <button
+                  onClick={() => {
+                    const digits = MOCK_OTP.split('');
+                    setOtp(digits);
+                    setTimeout(() => verifyOtp(MOCK_OTP), 300);
+                  }}
+                  style={{ fontSize: '11px', color: '#1D4ED8', cursor: 'pointer', background: 'none', border: 'none' }}
+                >
+                  Auto-fill & verify
+                </button>
+              </div>
+              <code style={{ fontSize: '16px', color: 'var(--text-primary)', letterSpacing: '3px', fontWeight: 600 }}>{MOCK_OTP}</code>
+            </div>
+          )}
+        </div>
+
+        {/* OTP Input Boxes */}
+        <form onSubmit={handleOtpSubmit} className="mt-6">
+          <div className="flex justify-center gap-3">
+            {otp.map((digit, i) => (
+              <input
+                key={i}
+                ref={(el) => (otpRefs.current[i] = el)}
+                type="text"
+                inputMode="numeric"
+                maxLength={1}
+                value={digit}
+                onChange={(e) => handleOtpChange(i, e.target.value)}
+                onKeyDown={(e) => handleOtpKeyDown(i, e)}
+                onPaste={i === 0 ? handleOtpPaste : undefined}
+                disabled={otpVerifying}
+                style={{
+                  width: 48, height: 56,
+                  textAlign: 'center',
+                  fontSize: '22px',
+                  fontWeight: 700,
+                  fontFamily: "'DM Sans', sans-serif",
+                  color: 'var(--text-primary)',
+                  border: digit ? '2px solid var(--navy)' : '1.5px solid var(--border)',
+                  borderRadius: '12px',
+                  outline: 'none',
+                  backgroundColor: otpVerifying ? '#F8FAFC' : digit ? '#F0F4FF' : '#fff',
+                  transition: 'all 0.2s',
+                  caretColor: 'var(--navy)',
+                }}
+                onFocus={(e) => { e.target.style.borderColor = 'var(--navy)'; e.target.style.boxShadow = '0 0 0 3px rgba(11,29,58,0.08)'; }}
+                onBlur={(e) => { e.target.style.borderColor = digit ? 'var(--navy)' : 'var(--border)'; e.target.style.boxShadow = 'none'; }}
+              />
+            ))}
+          </div>
+
+          {/* Error */}
+          {error && (
+            <div className="flex items-start gap-2 mt-4" style={{ backgroundColor: '#FEF2F2', borderLeft: '3px solid #EF4444', borderRadius: '0 8px 8px 0', padding: '10px 14px' }}>
+              <p style={{ fontSize: '13px', color: '#9B2C2C' }}>{error}</p>
+            </div>
+          )}
+
+          {/* Verify button */}
+          <button
+            type="submit"
+            disabled={otpVerifying || otp.some((d) => d === '')}
+            className="w-full flex items-center justify-center gap-2 text-white transition-colors mt-5"
+            style={{
+              backgroundColor: otpVerifying ? 'var(--navy-mid)' : otp.every((d) => d !== '') ? 'var(--navy)' : '#94A3B8',
+              height: 42,
+              borderRadius: '10px',
+              fontSize: '14px',
+              fontWeight: 500,
+              border: 'none',
+              cursor: otpVerifying ? 'not-allowed' : otp.every((d) => d !== '') ? 'pointer' : 'not-allowed',
+            }}
+          >
+            {otpVerifying ? (
+              <><Loader size={16} className="animate-spin" /> {loadingText}</>
+            ) : (
+              <><ShieldCheck size={16} /> Verify & Sign In</>
+            )}
+          </button>
+        </form>
+
+        {/* Resend OTP */}
+        <div className="text-center mt-5">
+          <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+            Didn't receive the code?
+          </p>
+          <button
+            type="button"
+            onClick={handleResendOtp}
+            disabled={resendTimer > 0}
+            className="flex items-center justify-center gap-1.5 mx-auto mt-1.5 transition-colors"
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: resendTimer > 0 ? 'not-allowed' : 'pointer',
+              color: resendTimer > 0 ? 'var(--text-muted)' : 'var(--navy)',
+              fontSize: '13px',
+              fontWeight: 500,
+              padding: 0,
+            }}
+          >
+            <RefreshCw size={13} />
+            {resendTimer > 0 ? `Resend code in ${resendTimer}s` : 'Resend verification code'}
+          </button>
+        </div>
+
+        {/* Security note */}
+        <div className="text-center mt-5 flex items-center justify-center gap-1.5" style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+          <Lock size={11} />
+          Secured with 256-bit encryption. Code expires in 10 minutes.
+        </div>
+      </ChatAuthLayout>
+    );
+  }
+
+  // ─── CREDENTIALS SCREEN (Step 1) ───
   return (
     <ChatAuthLayout>
       <div className="text-center">
