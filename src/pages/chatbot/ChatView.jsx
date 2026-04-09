@@ -6,7 +6,7 @@ import {
   Search, Bell, ArrowUp, Shield, Sparkles, FileText, Building2, Scale,
   LayoutDashboard, Send, MapPin, FileSearch, Lock, X, AlertTriangle, Info, Zap,
   BookOpen, UserPlus, Trash2, Edit3, Copy, Phone, Mail, Briefcase, Hash, Menu,
-  Package, Link2, File, Upload, Paperclip
+  Package, Link2, File, Upload, Paperclip, Image, Video
 } from 'lucide-react';
 import { billingData, subscriptionPlans } from '../../data/mockData';
 
@@ -751,11 +751,47 @@ function EditKnowledgePackModal({ pack, onClose, onSave }) {
 }
 
 /* ─────────────────── Knowledge Pack Picker (+ icon popover) ─────────────────── */
-function KnowledgePackPicker({ packs, activePack, onSelect, onClear, onManage, onClose }) {
+function KnowledgePackPicker({ packs, activePack, onSelect, onClear, onManage, onClose, onAttachFiles }) {
+  const photoInputRef = useRef(null);
+  const videoInputRef = useRef(null);
+  const docInputRef = useRef(null);
+
+  const handleFiles = (e, kind) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length && onAttachFiles) onAttachFiles(files, kind);
+    e.target.value = '';
+  };
+
+  const QuickAttachBtn = ({ icon: Icon, label, onClick }) => (
+    <button
+      onClick={onClick}
+      style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '12px 6px', borderRadius: 10, border: '1px solid var(--border)', background: 'white', cursor: 'pointer', minWidth: 0 }}
+      onMouseEnter={e => { e.currentTarget.style.backgroundColor = '#F8FAFC'; e.currentTarget.style.borderColor = 'var(--navy)'; }}
+      onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'white'; e.currentTarget.style.borderColor = 'var(--border)'; }}
+    >
+      <Icon size={18} style={{ color: 'var(--navy)' }} />
+      <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--text-primary)' }}>{label}</span>
+    </button>
+  );
+
   return (
     <>
+      <input ref={photoInputRef} type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={(e) => handleFiles(e, 'photo')} />
+      <input ref={videoInputRef} type="file" accept="video/*" multiple style={{ display: 'none' }} onChange={(e) => handleFiles(e, 'video')} />
+      <input ref={docInputRef} type="file" accept=".pdf,.doc,.docx,.txt,.rtf,.odt,.xls,.xlsx,.csv,.ppt,.pptx" multiple style={{ display: 'none' }} onChange={(e) => handleFiles(e, 'doc')} />
+
       <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 40 }} />
-      <div style={{ position: 'absolute', bottom: 'calc(100% + 8px)', left: 0, width: 300, maxWidth: 'calc(100vw - 24px)', backgroundColor: 'white', borderRadius: 12, border: '1px solid var(--border)', boxShadow: '0 12px 32px rgba(0,0,0,0.14)', zIndex: 41, overflow: 'hidden' }}>
+      <div style={{ position: 'absolute', bottom: 'calc(100% + 8px)', left: 0, width: 320, maxWidth: 'calc(100vw - 24px)', backgroundColor: 'white', borderRadius: 12, border: '1px solid var(--border)', boxShadow: '0 12px 32px rgba(0,0,0,0.14)', zIndex: 41, overflow: 'hidden' }}>
+        {/* Quick attach: photos / videos / docs */}
+        <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--border)' }}>
+          <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>Quick Attach</div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <QuickAttachBtn icon={Image} label="Photos" onClick={() => photoInputRef.current?.click()} />
+            <QuickAttachBtn icon={Video} label="Videos" onClick={() => videoInputRef.current?.click()} />
+            <QuickAttachBtn icon={File} label="Docs" onClick={() => docInputRef.current?.click()} />
+          </div>
+        </div>
+
         <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--border)' }}>
           <div className="flex items-center gap-2">
             <Package size={14} style={{ color: 'var(--navy)' }} />
@@ -945,6 +981,19 @@ function MessageBubble({ msg }) {
           <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{isBot ? 'YourAI' : 'Ryan'}</span>
           <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>{msg.timestamp}</span>
         </div>
+        {msg.attachments && msg.attachments.length > 0 && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
+            {msg.attachments.map(a => {
+              const Icon = a.kind === 'photo' ? Image : a.kind === 'video' ? Video : File;
+              return (
+                <div key={a.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 10px', borderRadius: 8, background: 'white', border: '1px solid var(--border)', maxWidth: 220 }}>
+                  <Icon size={12} style={{ color: 'var(--navy)', flexShrink: 0 }} />
+                  <span style={{ fontSize: 11, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{a.name}</span>
+                </div>
+              );
+            })}
+          </div>
+        )}
         <div style={{ fontSize: 14, lineHeight: 1.6, color: 'var(--text-primary)', wordBreak: 'break-word' }}>{bold(msg.content)}</div>
         {msg.knowledgePack && (
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 8, padding: '4px 10px', borderRadius: 999, background: 'rgba(10, 36, 99, 0.06)', border: '1px solid rgba(10, 36, 99, 0.18)' }}>
@@ -1273,6 +1322,7 @@ export default function ChatView() {
   const [editingPack, setEditingPack] = useState(null);
   const [showPackPicker, setShowPackPicker] = useState(false);
   const [activeKnowledgePack, setActiveKnowledgePack] = useState(null);
+  const [pendingAttachments, setPendingAttachments] = useState([]);
   const [docLimitBannerDismissed, setDocLimitBannerDismissed] = useState(false);
   const [promptTemplates, setPromptTemplates] = useState(DEFAULT_PROMPT_TEMPLATES);
   const [showPromptPanel, setShowPromptPanel] = useState(false);
@@ -1313,11 +1363,12 @@ export default function ChatView() {
 
   const sendMessage = useCallback((text) => {
     const trimmed = (text || '').trim();
-    if (!trimmed || isTyping) return;
+    if ((!trimmed && pendingAttachments.length === 0) || isTyping) return;
     if (showEmptyState) setShowEmptyState(false);
-    const userMsg = { id: Date.now(), sender: 'user', content: trimmed, timestamp: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) };
+    const userMsg = { id: Date.now(), sender: 'user', content: trimmed, timestamp: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }), attachments: pendingAttachments };
     setMessages((prev) => [...prev, userMsg]);
     setInput('');
+    setPendingAttachments([]);
     setIsTyping(true);
     setTimeout(() => {
       const botMsg = { id: Date.now() + 1, sender: 'bot', content: MOCK_RESPONSES[responseIdx.current % MOCK_RESPONSES.length], timestamp: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }), knowledgePack: activeKnowledgePack?.name || null };
@@ -1325,7 +1376,21 @@ export default function ChatView() {
       setMessages((prev) => [...prev, botMsg]);
       setIsTyping(false);
     }, 1500);
-  }, [isTyping, showEmptyState, activeKnowledgePack]);
+  }, [isTyping, showEmptyState, activeKnowledgePack, pendingAttachments]);
+
+  const handleAttachFiles = (files, kind) => {
+    const newAtts = files.map((f, i) => ({
+      id: Date.now() + i,
+      name: f.name,
+      size: f.size,
+      kind, // 'photo' | 'video' | 'doc'
+    }));
+    setPendingAttachments(prev => [...prev, ...newAtts]);
+  };
+
+  const removeAttachment = (id) => {
+    setPendingAttachments(prev => prev.filter(a => a.id !== id));
+  };
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(input); }
@@ -1459,6 +1524,22 @@ export default function ChatView() {
               </div>
             )}
 
+            {/* Pending attachment chips */}
+            {pendingAttachments.length > 0 && (
+              <div style={{ marginBottom: 8, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {pendingAttachments.map(a => {
+                  const Icon = a.kind === 'photo' ? Image : a.kind === 'video' ? Video : File;
+                  return (
+                    <div key={a.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 10px', borderRadius: 999, background: 'white', border: '1px solid var(--border)', maxWidth: 220 }}>
+                      <Icon size={12} style={{ color: 'var(--navy)', flexShrink: 0 }} />
+                      <span style={{ fontSize: 11, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{a.name}</span>
+                      <button onClick={() => removeAttachment(a.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', color: 'var(--text-muted)', flexShrink: 0 }}><X size={11} /></button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, border: '1px solid var(--border)', borderRadius: 16, background: '#fff', height: 48, padding: '0 6px 0 12px' }}>
               <div style={{ position: 'relative' }}>
                 <div onClick={() => setShowPackPicker(v => !v)} title="Attach knowledge pack" style={{ width: 28, height: 28, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: activeKnowledgePack ? 'var(--navy)' : 'var(--text-muted)', background: activeKnowledgePack ? 'rgba(10, 36, 99, 0.08)' : 'transparent' }}><Plus size={20} /></div>
@@ -1470,6 +1551,7 @@ export default function ChatView() {
                     onClear={() => { setActiveKnowledgePack(null); setShowPackPicker(false); }}
                     onManage={() => { setShowPackPicker(false); setShowKnowledgePacksPanel(true); }}
                     onClose={() => setShowPackPicker(false)}
+                    onAttachFiles={(files, kind) => { handleAttachFiles(files, kind); setShowPackPicker(false); }}
                   />
                 )}
               </div>
