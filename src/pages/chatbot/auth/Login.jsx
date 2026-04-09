@@ -220,7 +220,7 @@ export default function Login() {
           >
             <ShieldCheck size={28} style={{ color: 'var(--navy)' }} />
           </div>
-          <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: '24px', color: 'var(--text-primary)' }}>
+          <h1 className="text-2xl sm:text-3xl" style={{ fontFamily: "'DM Serif Display', serif", color: 'var(--text-primary)' }}>
             Two-Factor Authentication
           </h1>
           <p className="mt-2" style={{ fontSize: '13px', color: 'var(--text-muted)', lineHeight: 1.6 }}>
@@ -265,7 +265,7 @@ export default function Login() {
 
         {/* OTP Input Boxes */}
         <form onSubmit={handleOtpSubmit} className="mt-6">
-          <div className="flex justify-center gap-3">
+          <div className="flex justify-center gap-1.5 sm:gap-2">
             {otp.map((digit, i) => (
               <input
                 key={i}
@@ -278,8 +278,8 @@ export default function Login() {
                 onKeyDown={(e) => handleOtpKeyDown(i, e)}
                 onPaste={i === 0 ? handleOtpPaste : undefined}
                 disabled={otpVerifying}
+                className="w-10 h-12 sm:w-12 sm:h-14"
                 style={{
-                  width: 48, height: 56,
                   textAlign: 'center',
                   fontSize: '22px',
                   fontWeight: 700,
@@ -369,7 +369,7 @@ export default function Login() {
         <span className="inline-flex items-center" style={{ color: 'var(--text-muted)', fontSize: '10px', fontWeight: 500, letterSpacing: '0.06em' }}>
           Law Firm Portal
         </span>
-        <h1 className="mt-3" style={{ fontFamily: "'DM Serif Display', serif", fontSize: '26px', color: 'var(--text-primary)' }}>Welcome to YourAI</h1>
+        <h1 className="mt-3 text-2xl sm:text-3xl" style={{ fontFamily: "'DM Serif Display', serif", color: 'var(--text-primary)' }}>Welcome to YourAI</h1>
         <p className="mt-1" style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Sign in to your firm's AI workspace</p>
       </div>
 
@@ -424,12 +424,12 @@ export default function Login() {
               <span style={{ fontSize: '11px', color: '#1D4ED8', fontWeight: 600 }}>EMAIL</span>
               <button onClick={() => setEmail(MOCK_EMAIL)} style={{ fontSize: '11px', color: '#1D4ED8', cursor: 'pointer', background: 'none', border: 'none' }}>Copy to field</button>
             </div>
-            <code style={{ fontSize: '12px', color: 'var(--text-primary)' }}>{MOCK_EMAIL}</code>
+            <code className="break-all block" style={{ fontSize: '12px', color: 'var(--text-primary)' }}>{MOCK_EMAIL}</code>
             <div className="flex items-center justify-between mb-1 mt-2">
               <span style={{ fontSize: '11px', color: '#1D4ED8', fontWeight: 600 }}>PASSWORD</span>
               <button onClick={() => setPassword(MOCK_PASSWORD)} style={{ fontSize: '11px', color: '#1D4ED8', cursor: 'pointer', background: 'none', border: 'none' }}>Copy to field</button>
             </div>
-            <code style={{ fontSize: '12px', color: 'var(--text-primary)' }}>{MOCK_PASSWORD}</code>
+            <code className="break-all block" style={{ fontSize: '12px', color: 'var(--text-primary)' }}>{MOCK_PASSWORD}</code>
           </div>
         )}
       </div>

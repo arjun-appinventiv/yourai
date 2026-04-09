@@ -364,12 +364,7 @@ export default function Onboarding() {
       <h2 style={styles.title}>What areas does your firm practice?</h2>
       <p style={styles.subtitle}>Select all that apply</p>
       <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(3, 1fr)',
-          gap: 10,
-          marginTop: 24,
-        }}
+        className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 mt-6"
       >
         {PRACTICE_AREAS.map((area) => (
           <PracticeChip
@@ -620,10 +615,10 @@ export default function Onboarding() {
   const planAccent = { free: '#64748B', professional: '#1D4ED8', team: '#166534', enterprise: '#92400E' };
 
   const renderStep6 = () => (
-    <div key="step6" style={{ maxWidth: 640 }}>
+    <div key="step6" className="w-full" style={{ maxWidth: 640 }}>
       <h2 style={styles.title}>Choose your plan</h2>
       <p style={styles.subtitle}>Start free and upgrade anytime. All plans include encrypted storage and ABA compliance.</p>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 24 }}>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-6">
         {subscriptionPlans.map((plan) => {
           const isSelected = selectedPlan === plan.id;
           const Icon = planIcons[plan.id] || Sparkles;
@@ -746,8 +741,8 @@ export default function Onboarding() {
           </div>
 
           {/* Expiry + CVC row */}
-          <div style={{ display: 'flex', gap: 12 }}>
-            <div style={{ flex: 1 }}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
               <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Expiry</label>
               <input
                 type="text"
@@ -757,7 +752,7 @@ export default function Onboarding() {
                 style={{ width: '100%', height: 42, border: '1.5px solid var(--border)', borderRadius: 8, padding: '0 14px', fontSize: 13, fontFamily: "'DM Sans', sans-serif", outline: 'none', boxSizing: 'border-box' }}
               />
             </div>
-            <div style={{ flex: 1 }}>
+            <div>
               <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>CVC</label>
               <input
                 type="text"
@@ -866,12 +861,13 @@ const styles = {
     background: '#fff',
     display: 'flex',
     flexDirection: 'column',
+    overflowX: 'hidden',
   },
   header: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: '20px 32px',
+    padding: '16px 20px',
   },
   logo: {
     display: 'flex',
@@ -883,7 +879,7 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: '0 24px',
+    padding: '0 16px',
   },
   card: {
     maxWidth: 560,
@@ -891,7 +887,7 @@ const styles = {
   },
   title: {
     fontFamily: "'DM Serif Display', serif",
-    fontSize: 24,
+    fontSize: 'clamp(22px, 4vw, 30px)',
     fontWeight: 400,
     color: 'var(--text-primary)',
     margin: 0,

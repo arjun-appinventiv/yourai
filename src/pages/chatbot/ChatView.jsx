@@ -5,7 +5,7 @@ import {
   FolderOpen, ChevronDown, ChevronRight, MoreVertical, Plus, Download,
   Search, Bell, ArrowUp, Shield, Sparkles, FileText, Building2, Scale,
   LayoutDashboard, Send, MapPin, FileSearch, Lock, X, AlertTriangle, Info, Zap,
-  BookOpen, UserPlus, Trash2, Edit3, Copy, Phone, Mail, Briefcase, Hash
+  BookOpen, UserPlus, Trash2, Edit3, Copy, Phone, Mail, Briefcase, Hash, Menu
 } from 'lucide-react';
 import { billingData, subscriptionPlans } from '../../data/mockData';
 
@@ -128,7 +128,7 @@ const libraryItems = [
   { icon: FolderOpen, label: 'Document Vault', badge: '128', badgeStyle: 'navy', subtitle: 'Recent: Vendor_Agreement.pdf \u00b7 1h...' },
 ];
 
-function Sidebar({ onOpenPromptTemplates, onOpenClients, promptCount, clientCount }) {
+function Sidebar({ onOpenPromptTemplates, onOpenClients, promptCount, clientCount, isOpen, onClose }) {
   const renderItem = (item, idx) => {
     const Icon = item.icon;
     return (
@@ -160,11 +160,33 @@ function Sidebar({ onOpenPromptTemplates, onOpenClients, promptCount, clientCoun
   ];
 
   return (
-    <div style={{ width: 248, minWidth: 248, background: '#fff', borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
-      <div style={{ padding: '18px 16px 0' }}>
+    <>
+      {/* Mobile backdrop */}
+      {isOpen && (
+        <div
+          onClick={onClose}
+          className="fixed inset-0 bg-black/40 z-30 md:hidden"
+          style={{ backdropFilter: 'blur(2px)' }}
+        />
+      )}
+    <div
+      className={`fixed inset-y-0 left-0 z-40 transform transition-transform md:relative md:translate-x-0 md:flex ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}
+      style={{ width: 248, minWidth: 248, background: '#fff', borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}
+    >
+      <div style={{ padding: '18px 16px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div>
         <span style={{ fontFamily: "'DM Serif Display', serif", fontSize: 18 }}>
           <span style={{ color: 'var(--navy)' }}>Your</span><span style={{ color: '#C9A84C' }}>AI</span>
         </span>
+        </div>
+        <button
+          onClick={onClose}
+          className="md:hidden p-1 rounded-lg"
+          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}
+          aria-label="Close sidebar"
+        >
+          <X size={18} />
+        </button>
       </div>
       <div style={{ flex: 1, overflowY: 'auto', padding: '0 8px' }}>
         <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', padding: '20px 12px 6px' }}>Main</div>
@@ -187,6 +209,7 @@ function Sidebar({ onOpenPromptTemplates, onOpenClients, promptCount, clientCoun
         </div>
       </div>
     </div>
+    </>
   );
 }
 
@@ -204,11 +227,14 @@ function PromptTemplatesPanel({ templates, onUsePrompt, onClose, onCreateNew, on
   return (
     <>
       <div onClick={onClose} style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)', zIndex: 60, backdropFilter: 'blur(4px)' }} />
-      <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 580, maxHeight: '85vh', backgroundColor: 'white', borderRadius: 16, boxShadow: '0 20px 60px rgba(0,0,0,0.2)', zIndex: 61, display: 'flex', flexDirection: 'column' }}>
+      <div
+        className="fixed inset-0 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-[580px] md:max-h-[85vh] md:rounded-2xl"
+        style={{ backgroundColor: 'white', boxShadow: '0 20px 60px rgba(0,0,0,0.2)', zIndex: 61, display: 'flex', flexDirection: 'column' }}
+      >
         {/* Header */}
         <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid var(--border)' }}>
-          <div className="flex items-center justify-between">
-            <div>
+          <div className="flex items-center justify-between gap-2">
+            <div className="min-w-0">
               <h3 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 18, color: 'var(--text-primary)', margin: 0 }}>Prompt Templates</h3>
               <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>{templates.length} saved prompts · Click to use in chat</p>
             </div>
@@ -218,12 +244,12 @@ function PromptTemplatesPanel({ templates, onUsePrompt, onClose, onCreateNew, on
             </div>
           </div>
           {/* Search + filter */}
-          <div className="flex items-center gap-3" style={{ marginTop: 12 }}>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3" style={{ marginTop: 12 }}>
             <div style={{ position: 'relative', flex: 1 }}>
               <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
               <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search templates..." style={{ width: '100%', height: 34, borderRadius: 8, border: '1px solid var(--border)', paddingLeft: 32, fontSize: 13, outline: 'none', boxSizing: 'border-box', fontFamily: "'DM Sans', sans-serif" }} />
             </div>
-            <div className="flex gap-1">
+            <div className="flex gap-1 flex-wrap">
               {categories.map(c => (
                 <button key={c} onClick={() => setFilterCat(c)} style={{ padding: '4px 10px', borderRadius: 6, fontSize: 11, fontWeight: 500, border: '1px solid ' + (filterCat === c ? 'var(--navy)' : 'var(--border)'), background: filterCat === c ? 'var(--navy)' : 'white', color: filterCat === c ? 'white' : 'var(--text-muted)', cursor: 'pointer' }}>{c}</button>
               ))}
@@ -336,11 +362,14 @@ function ClientsPanel({ clients, onClose, onAddClient, onDeleteClient }) {
   return (
     <>
       <div onClick={onClose} style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)', zIndex: 60, backdropFilter: 'blur(4px)' }} />
-      <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 620, maxHeight: '85vh', backgroundColor: 'white', borderRadius: 16, boxShadow: '0 20px 60px rgba(0,0,0,0.2)', zIndex: 61, display: 'flex', flexDirection: 'column' }}>
+      <div
+        className="fixed inset-0 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-[620px] md:max-h-[85vh] md:rounded-2xl"
+        style={{ backgroundColor: 'white', boxShadow: '0 20px 60px rgba(0,0,0,0.2)', zIndex: 61, display: 'flex', flexDirection: 'column' }}
+      >
         {/* Header */}
         <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid var(--border)' }}>
-          <div className="flex items-center justify-between">
-            <div>
+          <div className="flex items-center justify-between gap-2">
+            <div className="min-w-0">
               <h3 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 18, color: 'var(--text-primary)', margin: 0 }}>Clients</h3>
               <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>{clients.length} clients · Manage your client directory</p>
             </div>
@@ -468,7 +497,7 @@ function AddClientModal({ onClose, onSave }) {
 }
 
 /* ─────────────────── Top Nav ─────────────────── */
-function TopNav({ plan, usage }) {
+function TopNav({ plan, usage, onOpenSidebar }) {
   const [showUsagePopover, setShowUsagePopover] = useState(false);
   const docPct = usage.docs.limit > 0 ? (usage.docs.used / usage.docs.limit) * 100 : 0;
   const usageColor = docPct >= 95 ? '#991B1B' : docPct >= 80 ? '#92400E' : 'var(--text-muted)';
@@ -491,13 +520,23 @@ function TopNav({ plan, usage }) {
   };
 
   return (
-    <div style={{ height: 50, minHeight: 50, borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px', background: '#fff' }}>
-      <div style={{ display: 'flex', gap: 24 }}>
-        {['Models', 'Infrastructure', 'Security', 'Artifacts'].map((t) => (
-          <span key={t} style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-muted)', cursor: 'pointer' }}>{t}</span>
-        ))}
+    <div className="px-3 sm:px-4 md:px-6" style={{ height: 50, minHeight: 50, borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff' }}>
+      <div className="flex items-center gap-3 md:gap-6">
+        <button
+          onClick={onOpenSidebar}
+          className="md:hidden p-1 rounded-lg"
+          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}
+          aria-label="Open sidebar"
+        >
+          <Menu size={20} />
+        </button>
+        <div className="hidden md:flex" style={{ gap: 24 }}>
+          {['Models', 'Infrastructure', 'Security', 'Artifacts'].map((t) => (
+            <span key={t} style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-muted)', cursor: 'pointer' }}>{t}</span>
+          ))}
+        </div>
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+      <div className="flex items-center gap-2 sm:gap-3 md:gap-4">
         {/* Usage pill */}
         <div style={{ position: 'relative' }}>
           <button
@@ -510,7 +549,7 @@ function TopNav({ plan, usage }) {
             }}
           >
             {docPct >= 95 && <AlertTriangle size={11} />}
-            {usage.docs.used.toLocaleString()} / {usage.docs.limit.toLocaleString()} docs this month
+            {usage.docs.used.toLocaleString()} / {usage.docs.limit.toLocaleString()}<span className="hidden sm:inline"> docs this month</span><span className="sm:hidden"> docs</span>
           </button>
           {showUsagePopover && (
             <>
@@ -529,8 +568,8 @@ function TopNav({ plan, usage }) {
           )}
         </div>
 
-        <span style={{ fontSize: 13, color: 'var(--text-muted)', cursor: 'pointer' }}>&lt; Main Site</span>
-        <div style={{ position: 'relative' }}>
+        <span className="hidden sm:inline-flex" style={{ fontSize: 13, color: 'var(--text-muted)', cursor: 'pointer' }}>&lt; Main Site</span>
+        <div className="hidden md:block" style={{ position: 'relative' }}>
           <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
           <input readOnly placeholder="Search files, knowledge, or conversatio..." style={{ width: 240, height: 34, borderRadius: 8, border: '1px solid var(--border)', paddingLeft: 30, paddingRight: 40, fontSize: 13, color: 'var(--text-secondary)', background: '#fff', outline: 'none' }} />
           <span style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', fontSize: 11, color: 'var(--text-muted)', background: '#F1F5F9', padding: '2px 6px', borderRadius: 4, fontWeight: 500 }}>{'\u2318'}K</span>
@@ -587,12 +626,12 @@ function MessageBubble({ msg }) {
       ) : (
         <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--navy)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 600, flexShrink: 0 }}>R</div>
       )}
-      <div style={{ flex: 1, minWidth: 0 }}>
+      <div className="max-w-[85%] md:max-w-[70%]" style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
           <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{isBot ? 'YourAI' : 'Ryan'}</span>
           <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>{msg.timestamp}</span>
         </div>
-        <div style={{ fontSize: 14, lineHeight: 1.6, color: 'var(--text-primary)' }}>{bold(msg.content)}</div>
+        <div style={{ fontSize: 14, lineHeight: 1.6, color: 'var(--text-primary)', wordBreak: 'break-word' }}>{bold(msg.content)}</div>
         {msg.card && <RiskCard card={msg.card} />}
       </div>
     </div>
@@ -623,7 +662,7 @@ function TypingIndicator() {
 function ModelSelector({ plan, selectedModel, onSelect, onLockedClick }) {
   const models = AI_MODELS_BY_PLAN[plan] || AI_MODELS_BY_PLAN['Team'];
   return (
-    <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+    <div className="flex gap-1.5 items-center flex-shrink-0">
       {models.map((m) => {
         const isActive = selectedModel === m.id;
         const isLocked = !m.enabled;
@@ -676,7 +715,10 @@ function PlanComparisonModal({ currentPlan, onClose, navigate }) {
   return (
     <>
       <div onClick={onClose} style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)', zIndex: 60, backdropFilter: 'blur(4px)' }} />
-      <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 680, maxHeight: '90vh', overflowY: 'auto', backgroundColor: 'white', borderRadius: 16, boxShadow: '0 20px 60px rgba(0,0,0,0.2)', zIndex: 61 }}>
+      <div
+        className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-[95vw] md:max-w-[680px] max-h-[90vh] overflow-y-auto rounded-2xl"
+        style={{ backgroundColor: 'white', boxShadow: '0 20px 60px rgba(0,0,0,0.2)', zIndex: 61 }}
+      >
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-5" style={{ borderBottom: '1px solid var(--border)' }}>
           <div>
@@ -857,18 +899,18 @@ function EmptyState({ profile, plan, onPromptClick, navigate, onViewPlans }) {
   const prompts = getSuggestedPrompts(profile);
 
   return (
-    <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px 40px' }}>
-      <div style={{ maxWidth: 560, width: '100%', textAlign: 'center' }}>
+    <div className="px-4 sm:px-6 md:px-10 py-6 flex items-center justify-center" style={{ flex: 1 }}>
+      <div style={{ maxWidth: 900, width: '100%', textAlign: 'center' }}>
         <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'linear-gradient(135deg, #C9A84C 0%, #E8D48B 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
           <Sparkles size={20} color="#fff" />
         </div>
-        <h2 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 22, fontWeight: 400, color: 'var(--navy)', margin: '0 0 8px' }}>
+        <h2 className="text-2xl sm:text-3xl md:text-4xl" style={{ fontFamily: "'DM Serif Display', serif", fontWeight: 400, color: 'var(--navy)', margin: '0 0 8px' }}>
           {getGreeting()}, {currentUserName}
         </h2>
         <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 14, color: 'var(--text-muted)', margin: '0 0 28px' }}>
           Your AI assistant is ready. Based on your profile, here's where you can start:
         </p>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, textAlign: 'left' }}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-left">
           {prompts.map((p, i) => {
             const Icon = p.icon;
             return (
@@ -915,6 +957,7 @@ export default function ChatView() {
   const [clients, setClients] = useState(DEFAULT_CLIENTS);
   const [showClientsPanel, setShowClientsPanel] = useState(false);
   const [showAddClient, setShowAddClient] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const scrollRef = useRef(null);
   const inputRef = useRef(null);
   const responseIdx = useRef(0);
@@ -1005,31 +1048,33 @@ export default function ChatView() {
   };
 
   return (
-    <div style={{ display: 'flex', height: '100vh', width: '100%', overflow: 'hidden' }}>
+    <div style={{ display: 'flex', height: '100vh', width: '100%', overflowX: 'hidden' }}>
       <Sidebar
-        onOpenPromptTemplates={() => setShowPromptPanel(true)}
-        onOpenClients={() => setShowClientsPanel(true)}
+        onOpenPromptTemplates={() => { setShowPromptPanel(true); setSidebarOpen(false); }}
+        onOpenClients={() => { setShowClientsPanel(true); setSidebarOpen(false); }}
         promptCount={promptTemplates.length}
         clientCount={clients.length}
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
       />
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-        <TopNav plan={plan} usage={usage} />
+        <TopNav plan={plan} usage={usage} onOpenSidebar={() => setSidebarOpen(true)} />
 
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#FAFBFC', minHeight: 0 }}>
           {/* Document limit banners */}
           {docPct >= 100 && (
-            <div style={{ padding: '10px 40px', display: 'flex', alignItems: 'center', gap: 10, backgroundColor: '#FEE2E2', borderBottom: '1px solid #FECACA' }}>
+            <div className="px-3 sm:px-6 md:px-10 py-2.5 flex items-center gap-2 sm:gap-3 flex-wrap" style={{ backgroundColor: '#FEE2E2', borderBottom: '1px solid #FECACA' }}>
               <AlertTriangle size={15} style={{ color: '#991B1B', flexShrink: 0 }} />
-              <span style={{ flex: 1, fontSize: 13, color: '#991B1B' }}>
+              <span className="text-xs sm:text-sm" style={{ flex: 1, minWidth: 0, color: '#991B1B' }}>
                 You've reached your document limit for this month. Uploads are paused until May 1, 2026 or you upgrade.
               </span>
               <button onClick={() => setShowPlanModal(true)} style={{ padding: '4px 14px', borderRadius: 8, backgroundColor: '#C9A84C', color: 'white', border: 'none', fontSize: 12, fontWeight: 500, cursor: 'pointer', whiteSpace: 'nowrap' }}>Upgrade Plan</button>
             </div>
           )}
           {docPct >= 80 && docPct < 100 && !docLimitBannerDismissed && (
-            <div style={{ padding: '10px 40px', display: 'flex', alignItems: 'center', gap: 10, backgroundColor: '#FFFBEB', borderBottom: '1px solid #FEF3C7' }}>
+            <div className="px-3 sm:px-6 md:px-10 py-2.5 flex items-center gap-2 sm:gap-3 flex-wrap" style={{ backgroundColor: '#FFFBEB', borderBottom: '1px solid #FEF3C7' }}>
               <AlertTriangle size={15} style={{ color: '#92400E', flexShrink: 0 }} />
-              <span style={{ flex: 1, fontSize: 13, color: '#92400E' }}>
+              <span className="text-xs sm:text-sm" style={{ flex: 1, minWidth: 0, color: '#92400E' }}>
                 You've used {Math.round(docPct)}% of your {usage.docs.limit.toLocaleString()} document limit this month. Uploads will stop at {usage.docs.limit.toLocaleString()}.
               </span>
               <button onClick={() => setShowPlanModal(true)} style={{ fontSize: 12, fontWeight: 500, color: '#C9A84C', background: 'none', border: 'none', cursor: 'pointer', whiteSpace: 'nowrap' }}>Upgrade Plan →</button>
@@ -1040,7 +1085,7 @@ export default function ChatView() {
           {showEmptyState ? (
             <EmptyState profile={profile} plan={plan} onPromptClick={handlePromptClick} navigate={navigate} onViewPlans={() => setShowPlanModal(true)} />
           ) : (
-            <div ref={scrollRef} style={{ flex: 1, overflowY: 'auto', padding: '24px 40px' }}>
+            <div ref={scrollRef} className="px-3 sm:px-4 md:px-10 py-6" style={{ flex: 1, overflowY: 'auto' }}>
               {messages.map((msg) => <MessageBubble key={msg.id} msg={msg} />)}
               {isTyping && <TypingIndicator />}
               {!isTyping && (
@@ -1065,11 +1110,11 @@ export default function ChatView() {
           )}
 
           {/* Chat input area */}
-          <div style={{ padding: '12px 40px 12px', background: 'transparent' }}>
+          <div className="px-3 sm:px-4 md:px-10 py-3" style={{ background: 'transparent' }}>
             {/* Model selector */}
-            <div style={{ marginBottom: 8, display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div className="mb-2 flex items-center gap-2 sm:gap-3 overflow-x-auto whitespace-nowrap pb-1">
               <ModelSelector plan={plan} selectedModel={selectedModel} onSelect={setSelectedModel} onLockedClick={handleLockedModelClick} />
-              <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+              <span className="hidden sm:inline" style={{ fontSize: 11, color: 'var(--text-muted)' }}>
                 Using {(AI_MODELS_BY_PLAN[plan] || []).find(m => m.id === selectedModel)?.label || 'GPT-4o'}
               </span>
             </div>

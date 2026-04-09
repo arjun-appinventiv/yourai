@@ -70,8 +70,8 @@ function ArchitectureDiagram() {
 
 export default function ChatAuthLayout({ children }) {
   return (
-    <div className="min-h-screen flex">
-      {/* Left column — 45% navy */}
+    <div className="min-h-screen flex overflow-x-hidden">
+      {/* Left column — 45% navy (hidden on mobile/tablet) */}
       <div className="hidden lg:flex flex-col" style={{ width: '45%', backgroundColor: 'var(--navy)', padding: 0, position: 'relative', overflow: 'hidden' }}>
         {/* Background grid */}
         <div style={{ position: 'absolute', inset: 0, opacity: 0.03 }}>
@@ -186,9 +186,9 @@ export default function ChatAuthLayout({ children }) {
       </div>
 
       {/* Right column — 55% light */}
-      <div className="flex-1 flex items-center justify-center" style={{ backgroundColor: 'var(--ice-warm)', padding: '40px 24px' }}>
-        <div className="w-full" style={{ maxWidth: 420 }}>
-          <div className="bg-white" style={{ border: '1px solid var(--border)', borderRadius: '16px', padding: '40px', boxShadow: '0 4px 24px rgba(0,0,0,0.06)' }}>
+      <div className="flex-1 flex items-center justify-center p-4 sm:p-6 md:p-10 lg:p-12" style={{ backgroundColor: 'var(--ice-warm)' }}>
+        <div className="w-full max-w-md mx-auto">
+          <div className="bg-white p-6 sm:p-8 md:p-10" style={{ border: '1px solid var(--border)', borderRadius: '16px', boxShadow: '0 4px 24px rgba(0,0,0,0.06)' }}>
             {children}
           </div>
         </div>
