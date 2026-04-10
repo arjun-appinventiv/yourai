@@ -3,562 +3,642 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>YourAI — Bot Persona & Message Routing Flow</title>
+  <title>YourAI — How Alex Responds</title>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display&display=swap" rel="stylesheet" />
   <style>
-    :root {
-      --navy: #0A2463;
-      --navy-light: #1A3A7A;
-      --ice: #EFF6FF;
-      --slate: #475569;
-      --border: #E2E8F0;
-      --green: #16A34A;
-      --amber: #D97706;
-      --red: #DC2626;
-    }
+    :root { --navy: #0A2463; --slate: #475569; --border: #E2E8F0; }
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: 'DM Sans', sans-serif; background: #F8FAFC; color: #1E293B; min-height: 100vh; }
+    body { font-family: 'DM Sans', sans-serif; background: #F8FAFC; color: #1E293B; }
 
-    .page { max-width: 1200px; margin: 0 auto; padding: 40px 24px 60px; }
+    .page { max-width: 960px; margin: 0 auto; padding: 48px 24px 80px; }
 
-    .header { text-align: center; margin-bottom: 48px; }
-    .header h1 { font-family: 'DM Serif Display', serif; font-size: 32px; color: var(--navy); margin-bottom: 8px; }
-    .header p { font-size: 15px; color: var(--slate); max-width: 700px; margin: 0 auto; line-height: 1.6; }
-    .header .badges { display: flex; gap: 8px; justify-content: center; margin-top: 16px; }
-    .header .badge { padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; }
-    .badge-draft { background: #FEF3C7; color: #92400E; }
-    .badge-pending { background: #FEE2E2; color: #991B1B; }
-    .badge-version { background: var(--ice); color: var(--navy); }
+    /* Header */
+    .hero { text-align: center; margin-bottom: 64px; }
+    .hero h1 { font-family: 'DM Serif Display', serif; font-size: 36px; color: var(--navy); margin-bottom: 12px; }
+    .hero p { font-size: 16px; color: var(--slate); max-width: 600px; margin: 0 auto 20px; line-height: 1.7; }
+    .hero-badges { display: flex; gap: 8px; justify-content: center; }
+    .hero-badges span { padding: 5px 14px; border-radius: 20px; font-size: 11px; font-weight: 600; }
 
-    .section-title { font-family: 'DM Serif Display', serif; font-size: 22px; color: var(--navy); margin-bottom: 6px; }
-    .section-sub { font-size: 13px; color: var(--slate); margin-bottom: 24px; line-height: 1.5; }
+    /* Section dividers */
+    .section { margin-bottom: 72px; }
+    .section-num { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 50%; background: var(--navy); color: white; font-size: 14px; font-weight: 700; margin-bottom: 12px; }
+    .section h2 { font-family: 'DM Serif Display', serif; font-size: 24px; color: var(--navy); margin-bottom: 8px; }
+    .section > p { font-size: 14px; color: var(--slate); line-height: 1.7; margin-bottom: 32px; max-width: 700px; }
 
-    /* ─── Section 1: End-to-End Flow ─── */
-    .flow-container { background: white; border-radius: 16px; border: 1px solid var(--border); padding: 32px; margin-bottom: 48px; box-shadow: 0 1px 6px rgba(0,0,0,0.05); }
+    /* ─── The 3 Questions ─── */
+    .three-q { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 40px; }
+    .q-card { background: white; border-radius: 16px; padding: 28px 24px; text-align: center; border: 1px solid var(--border); box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+    .q-card .q-num { font-size: 40px; margin-bottom: 12px; display: block; }
+    .q-card h3 { font-size: 16px; font-weight: 700; color: var(--navy); margin-bottom: 6px; }
+    .q-card p { font-size: 13px; color: var(--slate); line-height: 1.6; }
+    .q-card .q-answer { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border); font-size: 12px; font-weight: 600; color: var(--navy); }
 
-    .pipeline { display: flex; align-items: flex-start; gap: 0; justify-content: center; flex-wrap: wrap; margin-bottom: 32px; }
-    .pipe-step { display: flex; flex-direction: column; align-items: center; width: 160px; position: relative; }
-    .pipe-icon { width: 56px; height: 56px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 24px; margin-bottom: 10px; border: 2px solid transparent; }
-    .pipe-label { font-size: 13px; font-weight: 600; color: #1E293B; text-align: center; margin-bottom: 4px; }
-    .pipe-desc { font-size: 11px; color: var(--slate); text-align: center; line-height: 1.4; max-width: 140px; }
-    .pipe-arrow { display: flex; align-items: center; padding-top: 18px; color: var(--border); font-size: 28px; }
-    .pipe-arrow svg { width: 32px; height: 32px; }
+    /* ─── Pipeline ─── */
+    .pipeline { position: relative; padding-left: 44px; }
+    .pipeline::before { content: ''; position: absolute; left: 19px; top: 24px; bottom: 24px; width: 2px; background: var(--border); }
+    .pipe-step { position: relative; padding: 20px 0; }
+    .pipe-dot { position: absolute; left: -44px; top: 22px; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 700; z-index: 1; }
+    .pipe-step .pipe-card { background: white; border-radius: 14px; padding: 20px 24px; border: 1px solid var(--border); box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
+    .pipe-step h4 { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+    .pipe-step .pipe-desc { font-size: 13px; color: var(--slate); line-height: 1.6; }
+    .pipe-step .pipe-example { margin-top: 12px; padding: 12px 16px; border-radius: 10px; font-size: 12px; line-height: 1.7; }
 
-    .pipe-step.s1 .pipe-icon { background: #EDE9FE; border-color: #C4B5FD; color: #5B21B6; }
-    .pipe-step.s2 .pipe-icon { background: #DBEAFE; border-color: #93C5FD; color: #1E40AF; }
-    .pipe-step.s3 .pipe-icon { background: #F0FDF4; border-color: #86EFAC; color: #166534; }
-    .pipe-step.s4 .pipe-icon { background: #FFF7ED; border-color: #FDBA74; color: #9A3412; }
-    .pipe-step.s5 .pipe-icon { background: #F0F9FF; border-color: #93C5FD; color: var(--navy); }
+    .ps1 .pipe-dot { background: #EDE9FE; color: #5B21B6; }
+    .ps2 .pipe-dot { background: #DBEAFE; color: #1E40AF; }
+    .ps3 .pipe-dot { background: #F0FDF4; color: #166534; }
+    .ps4 .pipe-dot { background: #FFF7ED; color: #9A3412; }
+    .ps5 .pipe-dot { background: #F0F9FF; color: var(--navy); }
 
-    /* ─── Branch boxes ─── */
-    .branches { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 24px; }
-    .branch-box { padding: 20px; border-radius: 12px; }
-    .branch-box.warn { background: #FFFBEB; border: 1px solid #FDE68A; }
-    .branch-box.err { background: #FEF2F2; border: 1px solid #FECACA; }
-    .branch-title { font-size: 14px; font-weight: 700; margin-bottom: 4px; display: flex; align-items: center; gap: 6px; }
-    .branch-desc { font-size: 12px; line-height: 1.6; }
+    /* ─── Operations grid ─── */
+    .ops { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .op { background: white; border-radius: 14px; padding: 24px; border: 1px solid var(--border); box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
+    .op.span2 { grid-column: span 2; }
+    .op .op-emoji { font-size: 28px; margin-bottom: 10px; display: block; }
+    .op h4 { font-size: 14px; font-weight: 700; color: #1E293B; margin-bottom: 4px; }
+    .op .op-trigger { font-size: 11px; color: var(--slate); margin-bottom: 10px; line-height: 1.5; }
+    .op .op-tags { display: flex; gap: 5px; flex-wrap: wrap; }
+    .tag { padding: 3px 10px; border-radius: 6px; font-size: 10px; font-weight: 600; }
+    .tag-blue { background: rgba(10,36,99,0.07); color: var(--navy); }
+    .tag-green { background: #DCFCE7; color: #166534; }
+    .tag-amber { background: #FEF3C7; color: #92400E; }
+    .tag-red { background: #FEF2F2; color: #991B1B; }
+    .tag-gray { background: #F1F5F9; color: #64748B; }
 
-    /* ─── Section 2: Operations ─── */
-    .ops-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 16px; margin-bottom: 48px; }
-    .op-card { background: white; border-radius: 12px; border: 1px solid var(--border); padding: 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); transition: transform 0.15s; }
-    .op-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
-    .op-icon { width: 40px; height: 40px; border-radius: 10px; background: var(--navy); display: flex; align-items: center; justify-content: center; color: white; font-size: 18px; margin-bottom: 12px; }
-    .op-card.disabled .op-icon { background: #CBD5E1; }
-    .op-name { font-size: 14px; font-weight: 700; color: #1E293B; margin-bottom: 4px; }
-    .op-desc { font-size: 11px; color: var(--slate); line-height: 1.5; margin-bottom: 10px; }
-    .op-meta { display: flex; gap: 6px; flex-wrap: wrap; }
-    .op-tag { padding: 2px 8px; border-radius: 6px; font-size: 10px; font-weight: 600; }
-    .tag-tone { background: rgba(10,36,99,0.06); color: var(--navy); }
-    .tag-on { background: #DCFCE7; color: #166534; }
-    .tag-off { background: #F1F5F9; color: #94A3B8; }
-    .tag-rule { background: #FFF7ED; color: #9A3412; }
+    /* ─── Persona cards ─── */
+    .personas { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .persona { background: white; border-radius: 14px; border: 1px solid var(--border); overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
+    .persona-top { padding: 20px 24px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 14px; }
+    .persona-top .p-icon { width: 44px; height: 44px; border-radius: 12px; background: var(--navy); display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+    .persona-top h4 { font-size: 14px; font-weight: 700; color: #1E293B; }
+    .persona-top .p-sub { font-size: 11px; color: var(--slate); margin-top: 2px; }
+    .persona-body { padding: 20px 24px; }
+    .persona-body .p-label { font-size: 10px; font-weight: 700; color: var(--slate); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+    .persona-body .p-value { font-size: 12px; color: #1E293B; line-height: 1.6; margin-bottom: 14px; }
+    .persona-body .p-value:last-child { margin-bottom: 0; }
 
-    /* ─── Section 3: Personas ─── */
-    .personas-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 48px; }
-    @media (max-width: 900px) { .personas-grid { grid-template-columns: repeat(2, 1fr); } }
-    .persona-card { background: white; border-radius: 12px; border: 1px solid var(--border); overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
-    .persona-header { padding: 16px 16px 12px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid var(--border); }
-    .persona-avatar { width: 36px; height: 36px; border-radius: 10px; background: var(--navy); display: flex; align-items: center; justify-content: center; color: white; font-size: 16px; flex-shrink: 0; }
-    .persona-name { font-size: 13px; font-weight: 700; color: #1E293B; }
-    .persona-role { font-size: 10px; color: var(--slate); margin-top: 1px; }
-    .persona-body { padding: 14px 16px; }
-    .persona-field { margin-bottom: 10px; }
-    .persona-field-label { font-size: 10px; font-weight: 600; color: var(--slate); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px; }
-    .persona-field-value { font-size: 12px; color: #1E293B; line-height: 1.5; }
-    .persona-tags { display: flex; gap: 4px; flex-wrap: wrap; }
+    /* ─── The big comparison ─── */
+    .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .chat-bubble { background: white; border-radius: 14px; border: 1px solid var(--border); overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
+    .chat-header { padding: 14px 20px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--border); }
+    .chat-header .ch-dot { width: 32px; height: 32px; border-radius: 8px; background: var(--navy); display: flex; align-items: center; justify-content: center; font-size: 14px; }
+    .chat-header h4 { font-size: 13px; font-weight: 700; color: var(--navy); }
+    .chat-header .ch-tone { margin-left: auto; }
+    .chat-body { padding: 20px; font-size: 12.5px; line-height: 1.85; color: #334155; }
+    .chat-body strong { color: #1E293B; }
+    .chat-badge { margin: 0 20px 16px; display: inline-block; padding: 5px 12px; border-radius: 8px; font-size: 11px; font-weight: 600; }
 
-    /* ─── Section 4: Prompt Assembly ─── */
-    .assembly { background: white; border-radius: 16px; border: 1px solid var(--border); padding: 32px; margin-bottom: 48px; box-shadow: 0 1px 6px rgba(0,0,0,0.05); }
-    .assembly-row { display: flex; gap: 12px; align-items: stretch; margin-bottom: 12px; }
-    .assembly-label { width: 160px; flex-shrink: 0; padding: 12px 16px; border-radius: 10px; display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; }
-    .assembly-content { flex: 1; padding: 12px 16px; border-radius: 10px; font-size: 12px; line-height: 1.6; font-family: 'DM Sans', sans-serif; }
-    .al-op { background: #DBEAFE; color: #1E40AF; }
-    .al-persona { background: #F0FDF4; color: #166534; }
-    .al-tone { background: #FFF7ED; color: #9A3412; }
-    .al-rules { background: #EDE9FE; color: #5B21B6; }
-    .ac-op { background: #F0F9FF; border: 1px solid #BFDBFE; color: #1E293B; }
-    .ac-persona { background: #F0FDF9; border: 1px solid #BBF7D0; color: #1E293B; }
-    .ac-tone { background: #FFFBEB; border: 1px solid #FDE68A; color: #1E293B; }
-    .ac-rules { background: #FAF5FF; border: 1px solid #DDD6FE; color: #1E293B; }
-    .assembly-plus { display: flex; align-items: center; justify-content: center; color: var(--slate); font-size: 18px; font-weight: 700; margin: 4px 0; }
+    /* ─── Fallback chain ─── */
+    .chain { max-width: 600px; margin: 0 auto; }
+    .chain-step { display: flex; align-items: center; gap: 16px; padding: 16px 20px; background: white; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 0; }
+    .chain-num { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; flex-shrink: 0; }
+    .chain-text h4 { font-size: 13px; font-weight: 700; color: #1E293B; }
+    .chain-text p { font-size: 11px; color: var(--slate); margin-top: 2px; }
+    .chain-badge { margin-left: auto; padding: 4px 12px; border-radius: 6px; font-size: 10px; font-weight: 600; white-space: nowrap; flex-shrink: 0; }
+    .chain-arrow { text-align: center; padding: 6px 0; color: var(--border); font-size: 18px; }
+    .chain-arrow svg { width: 20px; height: 20px; margin: 0 auto; display: block; }
 
-    /* ─── Section 5: Fallback Chain ─── */
-    .fallback-chain { display: flex; flex-direction: column; gap: 0; align-items: center; margin-bottom: 48px; }
-    .fc-step { width: 100%; max-width: 600px; display: flex; align-items: center; gap: 16px; padding: 16px 20px; background: white; border-radius: 12px; border: 1px solid var(--border); position: relative; }
-    .fc-num { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; flex-shrink: 0; }
-    .fc-step.s1 .fc-num { background: #DBEAFE; color: #1E40AF; }
-    .fc-step.s2 .fc-num { background: #F0FDF4; color: #166534; }
-    .fc-step.s3 .fc-num { background: #FFF7ED; color: #9A3412; }
-    .fc-step.s4 .fc-num { background: #FEF2F2; color: #991B1B; }
-    .fc-text { flex: 1; }
-    .fc-label { font-size: 13px; font-weight: 600; color: #1E293B; }
-    .fc-desc { font-size: 11px; color: var(--slate); margin-top: 2px; }
-    .fc-arrow { display: flex; justify-content: center; padding: 4px 0; color: var(--border); }
-    .fc-arrow svg { width: 20px; height: 20px; }
-    .fc-badge { padding: 3px 10px; border-radius: 6px; font-size: 10px; font-weight: 600; flex-shrink: 0; }
+    /* ─── Prompt assembly ─── */
+    .assembly-stack { max-width: 700px; margin: 0 auto; }
+    .a-row { display: flex; gap: 12px; align-items: stretch; margin-bottom: 8px; }
+    .a-label { width: 170px; flex-shrink: 0; padding: 14px 16px; border-radius: 10px; font-size: 12px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+    .a-content { flex: 1; padding: 14px 16px; border-radius: 10px; font-size: 12.5px; line-height: 1.7; }
+    .a-plus { text-align: center; font-size: 20px; font-weight: 700; color: var(--slate); padding: 4px 0; }
 
     /* ─── Footer ─── */
-    .footer { text-align: center; padding: 24px; border-top: 1px solid var(--border); margin-top: 16px; }
-    .footer p { font-size: 11px; color: var(--slate); }
+    .footer { text-align: center; padding-top: 32px; border-top: 1px solid var(--border); }
+    .footer p { font-size: 11px; color: var(--slate); line-height: 1.8; }
+
+    @media (max-width: 768px) {
+      .three-q, .ops, .personas, .compare { grid-template-columns: 1fr; }
+      .op.span2 { grid-column: span 1; }
+    }
   </style>
 </head>
 <body>
-  <div class="page">
+<div class="page">
 
-    <!-- Header -->
-    <div class="header">
-      <h1>Bot Persona & Message Routing Flow</h1>
-      <p>How YourAI's AI assistant "Alex" processes every message — from intent classification through persona-tailored response delivery.</p>
-      <div class="badges">
-        <span class="badge badge-version">v1.0 &middot; Apr 10, 2026</span>
-        <span class="badge badge-draft">DRAFT &mdash; Pending Ryan Review</span>
-        <span class="badge badge-pending">Intent Classifier Not Confirmed</span>
+  <!-- ══════════════════ HERO ══════════════════ -->
+  <div class="hero">
+    <h1>How Alex Responds to Every Message</h1>
+    <p>Alex is YourAI's AI assistant. This document explains the 3 decisions Alex makes behind the scenes before answering any message.</p>
+    <div class="hero-badges">
+      <span style="background:#EFF6FF; color:var(--navy);">v1.0 &middot; Apr 10, 2026</span>
+      <span style="background:#FEF3C7; color:#92400E;">DRAFT &mdash; Pending Ryan Review</span>
+    </div>
+  </div>
+
+  <!-- ══════════════════ THE 3 QUESTIONS ══════════════════ -->
+  <div class="section">
+    <div class="section-num">1</div>
+    <h2>Alex Answers 3 Questions Before Every Response</h2>
+    <p>Every time a user sends a message, Alex silently runs through these 3 questions in under 2 seconds. The user just sees the final answer.</p>
+
+    <div class="three-q">
+      <div class="q-card">
+        <span class="q-num">&#127919;</span>
+        <h3>WHAT is being asked?</h3>
+        <p>Is this a contract review? Legal research? Drafting request? General chat?</p>
+        <div class="q-answer">&#8594; Picks an Operation</div>
+      </div>
+      <div class="q-card">
+        <span class="q-num">&#128100;</span>
+        <h3>WHO is asking?</h3>
+        <p>Is this a Partner who wants the bottom line? Or a Paralegal who needs terms explained?</p>
+        <div class="q-answer">&#8594; Applies Persona Format</div>
+      </div>
+      <div class="q-card">
+        <span class="q-num">&#128206;</span>
+        <h3>WHERE is the answer?</h3>
+        <p>Is it in the uploaded document? The knowledge base? Or is there no answer?</p>
+        <div class="q-answer">&#8594; Searches Sources in Order</div>
       </div>
     </div>
+  </div>
 
-    <!-- ════════════════════════════════════════════ -->
-    <!-- SECTION 1: End-to-End Pipeline -->
-    <!-- ════════════════════════════════════════════ -->
-    <h2 class="section-title">1. End-to-End Message Pipeline</h2>
-    <p class="section-sub">Every message flows through 5 stages. The user never sees this — it all happens in under 2 seconds.</p>
+  <!-- ══════════════════ STEP BY STEP PIPELINE ══════════════════ -->
+  <div class="section">
+    <div class="section-num">2</div>
+    <h2>Step-by-Step: What Happens When a User Sends a Message</h2>
+    <p>Let's say a Paralegal uploads a contract and asks: <em>"What are the termination clauses?"</em></p>
 
-    <div class="flow-container">
-      <div class="pipeline">
-        <div class="pipe-step s1">
-          <div class="pipe-icon">&#128172;</div>
-          <div class="pipe-label">User Message</div>
-          <div class="pipe-desc">Text, document upload, or follow-up question</div>
-        </div>
-        <div class="pipe-arrow">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-        </div>
-        <div class="pipe-step s2">
-          <div class="pipe-icon">&#127919;</div>
-          <div class="pipe-label">Intent Classifier</div>
-          <div class="pipe-desc">Picks the right operation (confidence &ge; 0.75)</div>
-        </div>
-        <div class="pipe-arrow">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-        </div>
-        <div class="pipe-step s3">
-          <div class="pipe-icon">&#128101;</div>
-          <div class="pipe-label">Persona Layer</div>
-          <div class="pipe-desc">Applies role-specific tone, format & prompt modifier</div>
-        </div>
-        <div class="pipe-arrow">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-        </div>
-        <div class="pipe-step s4">
-          <div class="pipe-icon">&#128451;</div>
-          <div class="pipe-label">Source Resolution</div>
-          <div class="pipe-desc">User doc &rarr; Knowledge Pack &rarr; Global KB &rarr; Fallback</div>
-        </div>
-        <div class="pipe-arrow">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-        </div>
-        <div class="pipe-step s5">
-          <div class="pipe-icon">&#9889;</div>
-          <div class="pipe-label">Streamed Response</div>
-          <div class="pipe-desc">With source badge showing where the answer came from</div>
+    <div class="pipeline">
+      <!-- Step 1 -->
+      <div class="pipe-step ps1">
+        <div class="pipe-dot">1</div>
+        <div class="pipe-card">
+          <h4 style="color:#5B21B6;">User Sends Message</h4>
+          <div class="pipe-desc">The Paralegal uploads <strong>AcmeCorp_ServiceAgreement.pdf</strong> and types: "What are the termination clauses in this contract?"</div>
         </div>
       </div>
-
-      <div class="branches">
-        <div class="branch-box warn">
-          <div class="branch-title" style="color: #92400E;">
-            &#9888;&#65039; Low Confidence Branch
-          </div>
-          <div class="branch-desc" style="color: #92400E;">
-            If the classifier scores below 0.75, Alex doesn't guess. Instead, it asks: <em>"Are you asking about your uploaded contract, or a general legal question?"</em> — then routes based on the user's answer.
-          </div>
-        </div>
-        <div class="branch-box err">
-          <div class="branch-title" style="color: #991B1B;">
-            &#10060; No Answer Found
-          </div>
-          <div class="branch-desc" style="color: #991B1B;">
-            All sources exhausted (user doc, knowledge pack, global KB). Alex displays the <strong>fallback message</strong>: <em>"I couldn't find a clear answer in your documents or the knowledge base. Could you clarify?"</em>
+      <!-- Step 2 -->
+      <div class="pipe-step ps2">
+        <div class="pipe-dot">2</div>
+        <div class="pipe-card">
+          <h4 style="color:#1E40AF;">Intent Classifier Picks Operation</h4>
+          <div class="pipe-desc">The AI reads the message and detects: user uploaded a contract + asking about clauses. It picks <strong>Contract Review</strong> mode (confidence: 0.94).</div>
+          <div class="pipe-example" style="background:#EFF6FF; color:#1E40AF;">
+            <strong>Contract Review prompt loads:</strong> "You are Alex, a contract analysis specialist. Identify risks, flag non-standard clauses, cite clause numbers and pages..."
           </div>
         </div>
       </div>
-    </div>
-
-    <!-- ════════════════════════════════════════════ -->
-    <!-- SECTION 2: Operations -->
-    <!-- ════════════════════════════════════════════ -->
-    <h2 class="section-title">2. Operations (AI Modes)</h2>
-    <p class="section-sub">Each operation is a separate AI personality with its own system prompt, tone, and format rules. The intent classifier picks the right one automatically based on context.</p>
-
-    <div class="ops-grid">
-      <div class="op-card">
-        <div class="op-icon">&#128488;</div>
-        <div class="op-name">General Chat</div>
-        <div class="op-desc">Default mode for everyday Q&A. If no specific intent is detected, this activates.</div>
-        <div class="op-meta">
-          <span class="op-tag tag-on">ON</span>
-          <span class="op-tag tag-tone">Formal</span>
-          <span class="op-tag tag-rule">Citations</span>
-          <span class="op-tag tag-rule">Bullets</span>
+      <!-- Step 3 -->
+      <div class="pipe-step ps3">
+        <div class="pipe-dot">3</div>
+        <div class="pipe-card">
+          <h4 style="color:#166534;">Persona Format Applied</h4>
+          <div class="pipe-desc">The AI checks: this user selected <strong>"Paralegal / Legal Assistant"</strong> during onboarding. It layers on the persona settings.</div>
+          <div class="pipe-example" style="background:#F0FDF4; color:#166534;">
+            <strong>Added to prompt:</strong> "Use clear, accessible language. Explain legal terms when first used."<br />
+            <strong>Tone changed:</strong> Formal &#8594; Conversational<br />
+            <strong>Format rules:</strong> Citations + Bullet Lists (from Paralegal) + Risk Summary (from Contract Review)
+          </div>
         </div>
       </div>
-      <div class="op-card">
-        <div class="op-icon">&#128196;</div>
-        <div class="op-name">Contract Review</div>
-        <div class="op-desc">Activated when a user uploads a contract. Emphasises clause analysis and risk scoring.</div>
-        <div class="op-meta">
-          <span class="op-tag tag-on">ON</span>
-          <span class="op-tag tag-tone">Formal</span>
-          <span class="op-tag tag-rule">Citations</span>
-          <span class="op-tag tag-rule">Risk</span>
+      <!-- Step 4 -->
+      <div class="pipe-step ps4">
+        <div class="pipe-dot">4</div>
+        <div class="pipe-card">
+          <h4 style="color:#9A3412;">Source Resolution</h4>
+          <div class="pipe-desc">The AI searches for the answer. It finds termination clauses on pages 23-24 of the uploaded contract. <strong>Search stops at Step 1</strong> — no need to check KB.</div>
+          <div class="pipe-example" style="background:#FFF7ED; color:#9A3412;">
+            &#10003; User's document &#8594; <strong>FOUND</strong> (pages 23-24)<br />
+            &#8212; Knowledge Pack &#8594; skipped<br />
+            &#8212; Global KB &#8594; skipped<br />
+            &#8212; Fallback &#8594; skipped
+          </div>
         </div>
       </div>
-      <div class="op-card">
-        <div class="op-icon">&#128218;</div>
-        <div class="op-name">Legal Research</div>
-        <div class="op-desc">Activated when the user asks a research question without uploading a document.</div>
-        <div class="op-meta">
-          <span class="op-tag tag-on">ON</span>
-          <span class="op-tag tag-tone">Neutral</span>
-          <span class="op-tag tag-rule">Citations</span>
-          <span class="op-tag tag-rule">Next Step</span>
-        </div>
-      </div>
-      <div class="op-card">
-        <div class="op-icon">&#9997;&#65039;</div>
-        <div class="op-name">Document Drafting</div>
-        <div class="op-desc">Activated when the user asks to draft or generate a legal document, clause, or letter.</div>
-        <div class="op-meta">
-          <span class="op-tag tag-on">ON</span>
-          <span class="op-tag tag-tone">Formal</span>
-          <span class="op-tag tag-rule">Citations</span>
-          <span class="op-tag tag-rule">Next Step</span>
-        </div>
-      </div>
-      <div class="op-card disabled">
-        <div class="op-icon">&#9989;</div>
-        <div class="op-name">Compliance Check</div>
-        <div class="op-desc">For regulatory and policy compliance questions. Currently disabled.</div>
-        <div class="op-meta">
-          <span class="op-tag tag-off">OFF</span>
-          <span class="op-tag tag-tone">Concise</span>
-          <span class="op-tag tag-rule">Risk</span>
-          <span class="op-tag tag-rule">Next Step</span>
+      <!-- Step 5 -->
+      <div class="pipe-step ps5">
+        <div class="pipe-dot">5</div>
+        <div class="pipe-card">
+          <h4 style="color:var(--navy);">Response Streamed to User</h4>
+          <div class="pipe-desc">Alex generates a <strong>conversational</strong>, <strong>bullet-pointed</strong> contract review with <strong>legal terms explained</strong> — and a blue source badge.</div>
+          <div class="pipe-example" style="background:#F0F9FF; color:var(--navy);">
+            &#128172; "I found 3 termination clauses in the contract..."<br />
+            &#128308; Clause 14.2 — 15-day notice (shorter than standard)...<br />
+            <span style="display:inline-block; margin-top:6px; padding:3px 10px; background:#DBEAFE; border-radius:6px; font-weight:600; font-size:11px;">&#128309; Answered from: your document</span>
+          </div>
         </div>
       </div>
     </div>
+  </div>
 
-    <!-- ════════════════════════════════════════════ -->
-    <!-- SECTION 3: Per-Persona Response Format -->
-    <!-- ════════════════════════════════════════════ -->
-    <h2 class="section-title">3. Per-Persona Response Format</h2>
-    <p class="section-sub">Each user selects their role during onboarding (Step 1). The AI tailors its response format for that role — same question, same operation, different output style.</p>
+  <!-- ══════════════════ OPERATIONS ══════════════════ -->
+  <div class="section">
+    <div class="section-num">3</div>
+    <h2>The 5 Operations (AI Modes)</h2>
+    <p>Each operation gives Alex a different personality and set of instructions. The intent classifier picks the right one based on what the user is doing.</p>
 
-    <div class="personas-grid">
+    <div class="ops">
+      <div class="op">
+        <span class="op-emoji">&#128488;</span>
+        <h4>General Chat</h4>
+        <div class="op-trigger">Activates when: No specific legal task detected</div>
+        <div class="op-tags">
+          <span class="tag tag-green">ON</span>
+          <span class="tag tag-blue">Formal</span>
+        </div>
+      </div>
+      <div class="op">
+        <span class="op-emoji">&#128196;</span>
+        <h4>Contract Review</h4>
+        <div class="op-trigger">Activates when: User uploads a contract or asks about clauses</div>
+        <div class="op-tags">
+          <span class="tag tag-green">ON</span>
+          <span class="tag tag-blue">Formal</span>
+          <span class="tag tag-amber">Risk Summary</span>
+        </div>
+      </div>
+      <div class="op">
+        <span class="op-emoji">&#128218;</span>
+        <h4>Legal Research</h4>
+        <div class="op-trigger">Activates when: User asks a legal question, no doc attached</div>
+        <div class="op-tags">
+          <span class="tag tag-green">ON</span>
+          <span class="tag tag-blue">Neutral</span>
+        </div>
+      </div>
+      <div class="op">
+        <span class="op-emoji">&#9997;&#65039;</span>
+        <h4>Document Drafting</h4>
+        <div class="op-trigger">Activates when: User says "draft", "write", or "generate"</div>
+        <div class="op-tags">
+          <span class="tag tag-green">ON</span>
+          <span class="tag tag-blue">Formal</span>
+        </div>
+      </div>
+      <div class="op span2">
+        <span class="op-emoji">&#9989;</span>
+        <h4>Compliance Check</h4>
+        <div class="op-trigger">Activates when: User asks about regulatory compliance. <strong>Disabled by default</strong> — Super Admin can enable.</div>
+        <div class="op-tags">
+          <span class="tag tag-gray">OFF</span>
+          <span class="tag tag-blue">Concise</span>
+          <span class="tag tag-amber">Risk Summary</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Example routing table -->
+    <div style="margin-top: 32px; background: white; border-radius: 14px; border: 1px solid var(--border); padding: 24px; box-shadow: 0 1px 4px rgba(0,0,0,0.04);">
+      <h4 style="font-size: 14px; font-weight: 700; color: var(--navy); margin-bottom: 16px;">&#127919; What the user says &#8594; What operation activates</h4>
+      <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+        <tr style="border-bottom: 1px solid var(--border);">
+          <td style="padding: 10px 12px; color: var(--slate);">"Review the indemnification section of this NDA"</td>
+          <td style="padding: 10px 12px; font-weight: 600; color: var(--navy); white-space: nowrap;">&#128196; Contract Review</td>
+        </tr>
+        <tr style="border-bottom: 1px solid var(--border);">
+          <td style="padding: 10px 12px; color: var(--slate);">"What's the statute of limitations for fraud in California?"</td>
+          <td style="padding: 10px 12px; font-weight: 600; color: var(--navy); white-space: nowrap;">&#128218; Legal Research</td>
+        </tr>
+        <tr style="border-bottom: 1px solid var(--border);">
+          <td style="padding: 10px 12px; color: var(--slate);">"Draft a non-compete clause for Texas"</td>
+          <td style="padding: 10px 12px; font-weight: 600; color: var(--navy); white-space: nowrap;">&#9997;&#65039; Document Drafting</td>
+        </tr>
+        <tr style="border-bottom: 1px solid var(--border);">
+          <td style="padding: 10px 12px; color: var(--slate);">"Is our data retention policy CCPA compliant?"</td>
+          <td style="padding: 10px 12px; font-weight: 600; color: var(--navy); white-space: nowrap;">&#9989; Compliance Check</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px 12px; color: var(--slate);">"Hey Alex, good morning!"</td>
+          <td style="padding: 10px 12px; font-weight: 600; color: var(--navy); white-space: nowrap;">&#128488; General Chat</td>
+        </tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- ══════════════════ 4 PERSONAS ══════════════════ -->
+  <div class="section">
+    <div class="section-num">4</div>
+    <h2>The 4 User Personas</h2>
+    <p>During onboarding, every user picks their role. Alex uses this to change <strong>how</strong> it writes — not what it looks for. Same facts, different format.</p>
+
+    <div class="personas">
+      <div class="persona">
+        <div class="persona-top">
+          <div class="p-icon">&#128188;</div>
+          <div>
+            <h4>Partner / Senior Attorney</h4>
+            <div class="p-sub">Decision-maker &middot; 20+ years &middot; $400-800/hr</div>
+          </div>
+        </div>
+        <div class="persona-body">
+          <div class="p-label">What they need</div>
+          <div class="p-value">The bottom line. Risk scores. Strategic recommendations. No tutorials.</div>
+          <div class="p-label">Tone</div>
+          <div class="p-value"><span class="tag tag-blue">Formal</span></div>
+          <div class="p-label">Format Rules</div>
+          <div class="p-value" style="display: flex; gap: 4px; flex-wrap: wrap;">
+            <span class="tag tag-amber">Citations</span>
+            <span class="tag tag-amber">Risk Summary</span>
+            <span class="tag tag-amber">Next Action</span>
+          </div>
+          <div class="p-label">Added to every prompt</div>
+          <div class="p-value" style="font-style: italic; font-size: 11px; color: var(--slate);">"Prioritise strategic implications and executive-level summaries. Skip foundational explanations."</div>
+        </div>
+      </div>
+
+      <div class="persona">
+        <div class="persona-top">
+          <div class="p-icon">&#9878;&#65039;</div>
+          <div>
+            <h4>Associate / Junior Attorney</h4>
+            <div class="p-sub">Practitioner &middot; 1-5 years &middot; Needs depth</div>
+          </div>
+        </div>
+        <div class="persona-body">
+          <div class="p-label">What they need</div>
+          <div class="p-value">Full analysis. Case citations. Step-by-step reasoning to present to seniors.</div>
+          <div class="p-label">Tone</div>
+          <div class="p-value"><span class="tag tag-blue">Formal</span></div>
+          <div class="p-label">Format Rules</div>
+          <div class="p-value" style="display: flex; gap: 4px; flex-wrap: wrap;">
+            <span class="tag tag-amber">Citations</span>
+            <span class="tag tag-amber">Bullet Lists</span>
+            <span class="tag tag-amber">Next Action</span>
+          </div>
+          <div class="p-label">Added to every prompt</div>
+          <div class="p-value" style="font-style: italic; font-size: 11px; color: var(--slate);">"Provide detailed legal analysis with full case citations and statutory references. Include step-by-step reasoning."</div>
+        </div>
+      </div>
+
+      <div class="persona">
+        <div class="persona-top">
+          <div class="p-icon">&#9989;</div>
+          <div>
+            <h4>Paralegal / Legal Assistant</h4>
+            <div class="p-sub">Support staff &middot; High volume &middot; Needs clarity</div>
+          </div>
+        </div>
+        <div class="persona-body">
+          <div class="p-label">What they need</div>
+          <div class="p-value">Plain English. Checklists. Legal terms explained when first used.</div>
+          <div class="p-label">Tone</div>
+          <div class="p-value"><span class="tag tag-blue">Conversational</span></div>
+          <div class="p-label">Format Rules</div>
+          <div class="p-value" style="display: flex; gap: 4px; flex-wrap: wrap;">
+            <span class="tag tag-amber">Citations</span>
+            <span class="tag tag-amber">Bullet Lists</span>
+          </div>
+          <div class="p-label">Added to every prompt</div>
+          <div class="p-value" style="font-style: italic; font-size: 11px; color: var(--slate);">"Use clear, accessible language. Provide checklists and actionable steps. Explain legal terms when first used."</div>
+        </div>
+      </div>
+
+      <div class="persona">
+        <div class="persona-top">
+          <div class="p-icon">&#128187;</div>
+          <div>
+            <h4>Legal Operations / IT</h4>
+            <div class="p-sub">System admin &middot; Tech-focused &middot; Wants efficiency</div>
+          </div>
+        </div>
+        <div class="persona-body">
+          <div class="p-label">What they need</div>
+          <div class="p-value">Bullet points. Structured data. Immediate next steps. No legal reasoning.</div>
+          <div class="p-label">Tone</div>
+          <div class="p-value"><span class="tag tag-blue">Concise</span></div>
+          <div class="p-label">Format Rules</div>
+          <div class="p-value" style="display: flex; gap: 4px; flex-wrap: wrap;">
+            <span class="tag tag-amber">Bullet Lists</span>
+            <span class="tag tag-amber">Next Action</span>
+          </div>
+          <div class="p-label">Added to every prompt</div>
+          <div class="p-value" style="font-style: italic; font-size: 11px; color: var(--slate);">"Focus on system configuration and operational efficiency. Use technical terminology. Provide structured outputs."</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════ THE BIG COMPARISON ══════════════════ -->
+  <div class="section">
+    <div class="section-num">5</div>
+    <h2>Same Question, 4 Different Answers</h2>
+    <p>All 4 users upload the <strong>same contract</strong> and ask the <strong>same question:</strong> <em>"What are the termination clauses in this contract?"</em><br/>Same operation (Contract Review). Same document. Completely different response.</p>
+
+    <div class="compare">
       <!-- Partner -->
-      <div class="persona-card">
-        <div class="persona-header">
-          <div class="persona-avatar">&#128188;</div>
-          <div>
-            <div class="persona-name">Partner / Senior Attorney</div>
-            <div class="persona-role">Decision-maker &middot; $400-800/hr</div>
-          </div>
+      <div class="chat-bubble">
+        <div class="chat-header">
+          <div class="ch-dot">&#128188;</div>
+          <h4>Partner Gets This</h4>
+          <span class="ch-tone tag tag-blue">Formal</span>
         </div>
-        <div class="persona-body">
-          <div class="persona-field">
-            <div class="persona-field-label">Tone</div>
-            <div class="persona-field-value">Formal</div>
-          </div>
-          <div class="persona-field">
-            <div class="persona-field-label">Format Rules</div>
-            <div class="persona-tags">
-              <span class="op-tag tag-rule">Citations</span>
-              <span class="op-tag tag-rule">Risk Summary</span>
-              <span class="op-tag tag-rule">Next Action</span>
-            </div>
-          </div>
-          <div class="persona-field">
-            <div class="persona-field-label">Prompt Modifier</div>
-            <div class="persona-field-value" style="font-style: italic; font-size: 11px;">Prioritise strategic implications, risk-reward analysis, and executive-level summaries. Skip foundational explanations.</div>
-          </div>
+        <div class="chat-body">
+          <strong>Executive Summary:</strong> 3 termination provisions. Two carry moderate risk.<br /><br />
+          &#128308; <strong>HIGH &mdash; Clause 14.2 (p. 23):</strong> Termination for convenience with only 15-day notice. Standard is 30 days.<br /><br />
+          &#128992; <strong>MEDIUM &mdash; Clause 14.3 (p. 24):</strong> No cure period for material breach.<br /><br />
+          &#128994; <strong>LOW &mdash; Clause 14.1 (p. 23):</strong> Standard expiration. No concern.<br /><br />
+          <strong>Recommended Action:</strong> Negotiate 14.2 to 30 days. Add 15-day cure period to 14.3.
         </div>
+        <span class="chat-badge" style="background:#DBEAFE; color:#1E40AF;">&#128309; Answered from: your document</span>
       </div>
+
       <!-- Associate -->
-      <div class="persona-card">
-        <div class="persona-header">
-          <div class="persona-avatar">&#9878;&#65039;</div>
-          <div>
-            <div class="persona-name">Associate / Junior Attorney</div>
-            <div class="persona-role">Practitioner &middot; 1-5 years</div>
-          </div>
+      <div class="chat-bubble">
+        <div class="chat-header">
+          <div class="ch-dot">&#9878;&#65039;</div>
+          <h4>Associate Gets This</h4>
+          <span class="ch-tone tag tag-blue">Formal</span>
         </div>
-        <div class="persona-body">
-          <div class="persona-field">
-            <div class="persona-field-label">Tone</div>
-            <div class="persona-field-value">Formal</div>
-          </div>
-          <div class="persona-field">
-            <div class="persona-field-label">Format Rules</div>
-            <div class="persona-tags">
-              <span class="op-tag tag-rule">Citations</span>
-              <span class="op-tag tag-rule">Bullet Lists</span>
-              <span class="op-tag tag-rule">Next Action</span>
-            </div>
-          </div>
-          <div class="persona-field">
-            <div class="persona-field-label">Prompt Modifier</div>
-            <div class="persona-field-value" style="font-style: italic; font-size: 11px;">Provide detailed legal analysis with full case citations and statutory references. Include step-by-step reasoning.</div>
-          </div>
+        <div class="chat-body">
+          <strong>1. Clause 14.1 (p. 23)</strong> &mdash; Expiration on stated date. Standard, no issues.<br /><br />
+          <strong>2. Clause 14.2 (p. 23-24)</strong> &mdash; Termination for convenience, 15 days' notice. Per UCC &sect;2-309(3), "reasonable notification" is required. Courts held 15 days insufficient for complex relationships. See <em>Leibel v. Raynor (1991)</em>.<br /><br />
+          <strong>3. Clause 14.3 (p. 24)</strong> &mdash; Material breach, immediate termination, no cure period. ABA Model Contract &sect;8.2 recommends 30-day cure periods.<br /><br />
+          <strong>Next Step:</strong> Draft redline: 30-day notice for 14.2, 15-day cure for 14.3. Cite <em>Leibel v. Raynor</em>.
         </div>
+        <span class="chat-badge" style="background:#DBEAFE; color:#1E40AF;">&#128309; Answered from: your document</span>
       </div>
+
       <!-- Paralegal -->
-      <div class="persona-card">
-        <div class="persona-header">
-          <div class="persona-avatar">&#9989;</div>
-          <div>
-            <div class="persona-name">Paralegal / Legal Assistant</div>
-            <div class="persona-role">Support staff &middot; High volume</div>
-          </div>
+      <div class="chat-bubble">
+        <div class="chat-header">
+          <div class="ch-dot">&#9989;</div>
+          <h4>Paralegal Gets This</h4>
+          <span class="ch-tone tag tag-blue">Conversational</span>
         </div>
-        <div class="persona-body">
-          <div class="persona-field">
-            <div class="persona-field-label">Tone</div>
-            <div class="persona-field-value">Conversational</div>
-          </div>
-          <div class="persona-field">
-            <div class="persona-field-label">Format Rules</div>
-            <div class="persona-tags">
-              <span class="op-tag tag-rule">Citations</span>
-              <span class="op-tag tag-rule">Bullet Lists</span>
-            </div>
-          </div>
-          <div class="persona-field">
-            <div class="persona-field-label">Prompt Modifier</div>
-            <div class="persona-field-value" style="font-style: italic; font-size: 11px;">Use clear, accessible language. Provide checklists and actionable steps. Explain legal terms when first used.</div>
-          </div>
-        </div>
-      </div>
-      <!-- Legal Ops -->
-      <div class="persona-card">
-        <div class="persona-header">
-          <div class="persona-avatar">&#128187;</div>
-          <div>
-            <div class="persona-name">Legal Operations / IT</div>
-            <div class="persona-role">System admin &middot; Tech-focused</div>
-          </div>
-        </div>
-        <div class="persona-body">
-          <div class="persona-field">
-            <div class="persona-field-label">Tone</div>
-            <div class="persona-field-value">Concise</div>
-          </div>
-          <div class="persona-field">
-            <div class="persona-field-label">Format Rules</div>
-            <div class="persona-tags">
-              <span class="op-tag tag-rule">Bullet Lists</span>
-              <span class="op-tag tag-rule">Next Action</span>
-            </div>
-          </div>
-          <div class="persona-field">
-            <div class="persona-field-label">Prompt Modifier</div>
-            <div class="persona-field-value" style="font-style: italic; font-size: 11px;">Focus on system configuration, data management, and operational efficiency. Use technical terminology.</div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ════════════════════════════════════════════ -->
-    <!-- SECTION 4: How the Final Prompt is Assembled -->
-    <!-- ════════════════════════════════════════════ -->
-    <h2 class="section-title">4. How the Final Prompt is Assembled</h2>
-    <p class="section-sub">Example: A <strong>Paralegal</strong> uploads a contract. The intent classifier activates <strong>Contract Review</strong>. Here's how the prompt is built:</p>
-
-    <div class="assembly">
-      <div class="assembly-row">
-        <div class="assembly-label al-op">&#127919; Operation Prompt</div>
-        <div class="assembly-content ac-op">
-          "You are Alex, a contract analysis specialist. You identify risks, flag non-standard clauses, and compare terms against the firm's approved playbook. Always cite the clause number and page. Output a risk summary at the end of every analysis."
-        </div>
-      </div>
-      <div class="assembly-plus">+</div>
-      <div class="assembly-row">
-        <div class="assembly-label al-persona">&#128101; Persona Modifier</div>
-        <div class="assembly-content ac-persona">
-          "Use clear, accessible language. Provide checklists and actionable steps. Explain legal terms when first used."
-          <br /><span style="opacity: 0.6; font-size: 11px;">(Appended because the user selected "Paralegal / Legal Assistant" during onboarding)</span>
-        </div>
-      </div>
-      <div class="assembly-plus">+</div>
-      <div class="assembly-row">
-        <div class="assembly-label al-tone">&#127908; Tone Override</div>
-        <div class="assembly-content ac-tone">
-          <strong>Conversational</strong> (overrides Contract Review's default "Formal" tone)
-          <br /><span style="opacity: 0.6; font-size: 11px;">The paralegal gets friendlier language even when reviewing contracts.</span>
-        </div>
-      </div>
-      <div class="assembly-plus">+</div>
-      <div class="assembly-row">
-        <div class="assembly-label al-rules">&#128203; Merged Format Rules</div>
-        <div class="assembly-content ac-rules">
-          <span class="op-tag tag-rule" style="margin-right: 4px;">Always cite source</span>
-          <span class="op-tag tag-rule" style="margin-right: 4px;">Bullet lists</span>
-          <span class="op-tag tag-rule" style="margin-right: 4px;">Risk summary</span>
-          <br /><span style="opacity: 0.6; font-size: 11px; display: inline-block; margin-top: 6px;">"Cite source" and "Bullet lists" from the Paralegal persona + "Risk summary" from Contract Review operation = merged set.</span>
-        </div>
-      </div>
-      <div class="assembly-plus">=</div>
-      <div class="assembly-row">
-        <div class="assembly-label" style="background: var(--navy); color: white;">&#9889; Final Prompt</div>
-        <div class="assembly-content" style="background: #F8FAFC; border: 2px solid var(--navy); font-weight: 500;">
-          A contract analysis specialist who uses <strong>conversational</strong> tone, <strong>explains legal terms</strong>, provides <strong>checklists</strong>, cites every clause with page number, and ends with a <strong>risk summary</strong>.
-        </div>
-      </div>
-    </div>
-
-    <!-- ════════════════════════════════════════════ -->
-    <!-- SECTION 5: Source Fallback Chain -->
-    <!-- ════════════════════════════════════════════ -->
-    <h2 class="section-title">5. Source Fallback Chain</h2>
-    <p class="section-sub">After the prompt is assembled, the AI needs to find the answer. It searches sources in order — each step only triggers if the previous one found nothing.</p>
-
-    <div class="fallback-chain">
-      <div class="fc-step s1">
-        <div class="fc-num">1</div>
-        <div class="fc-text">
-          <div class="fc-label">User's Attached Document</div>
-          <div class="fc-desc">If the user uploaded a contract or document in this conversation, search it first.</div>
-        </div>
-        <div class="fc-badge" style="background: #DBEAFE; color: #1E40AF;">Answered from: your document</div>
-      </div>
-      <div class="fc-arrow">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
-      </div>
-      <div class="fc-step s2">
-        <div class="fc-num">2</div>
-        <div class="fc-text">
-          <div class="fc-label">Selected Knowledge Pack</div>
-          <div class="fc-desc">If the user selected a state law library or knowledge pack, search those documents.</div>
-        </div>
-        <div class="fc-badge" style="background: #F0FDF4; color: #166534;">Answered from: YourAI knowledge base</div>
-      </div>
-      <div class="fc-arrow">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
-      </div>
-      <div class="fc-step s3">
-        <div class="fc-num">3</div>
-        <div class="fc-text">
-          <div class="fc-label">Global Knowledge Base (Super Admin)</div>
-          <div class="fc-desc">Platform-wide fallback. Federal Rules, UCC, ABA Model Rules uploaded by Super Admin.</div>
-        </div>
-        <div class="fc-badge" style="background: #FFF7ED; color: #9A3412;">Answered from: YourAI knowledge base</div>
-      </div>
-      <div class="fc-arrow">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
-      </div>
-      <div class="fc-step s4">
-        <div class="fc-num">4</div>
-        <div class="fc-text">
-          <div class="fc-label">Fallback Message</div>
-          <div class="fc-desc">"I couldn't find a clear answer in your documents or the knowledge base. Could you clarify?"</div>
-        </div>
-        <div class="fc-badge" style="background: #FEF2F2; color: #991B1B;">No source</div>
-      </div>
-    </div>
-
-    <!-- ════════════════════════════════════════════ -->
-    <!-- SECTION 6: Same Question, Different Persona -->
-    <!-- ════════════════════════════════════════════ -->
-    <h2 class="section-title">6. Same Question, Different Persona</h2>
-    <p class="section-sub">All 4 users ask: <strong>"What are the termination clauses in this contract?"</strong> with the same contract attached. Same operation (Contract Review). Different response format.</p>
-
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 48px;">
-      <div style="background: white; border-radius: 12px; border: 1px solid var(--border); padding: 20px;">
-        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
-          <div style="width: 28px; height: 28px; border-radius: 8px; background: var(--navy); color: white; display: flex; align-items: center; justify-content: center; font-size: 14px;">&#128188;</div>
-          <span style="font-weight: 700; font-size: 13px; color: var(--navy);">Partner Response</span>
-          <span class="op-tag tag-tone">Formal</span>
-        </div>
-        <div style="font-size: 12px; line-height: 1.8; color: #334155; background: #F8FAFC; padding: 12px; border-radius: 8px; border-left: 3px solid var(--navy);">
-          <strong>Executive Summary:</strong> The agreement contains 3 termination provisions. Two carry moderate risk.<br/><br/>
-          <strong>Risk Assessment:</strong><br/>
-          &#128308; <strong>High:</strong> Clause 14.2 — Termination for convenience with only 15-day notice (industry standard: 30 days)<br/>
-          &#128992; <strong>Medium:</strong> Clause 14.3 — No cure period for material breach<br/>
-          &#128994; <strong>Low:</strong> Clause 14.1 — Standard expiration clause<br/><br/>
-          <strong>Recommended Action:</strong> Negotiate 14.2 to 30-day notice and add 15-day cure period to 14.3.
-        </div>
-      </div>
-
-      <div style="background: white; border-radius: 12px; border: 1px solid var(--border); padding: 20px;">
-        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
-          <div style="width: 28px; height: 28px; border-radius: 8px; background: var(--navy); color: white; display: flex; align-items: center; justify-content: center; font-size: 14px;">&#9878;&#65039;</div>
-          <span style="font-weight: 700; font-size: 13px; color: var(--navy);">Associate Response</span>
-          <span class="op-tag tag-tone">Formal</span>
-        </div>
-        <div style="font-size: 12px; line-height: 1.8; color: #334155; background: #F8FAFC; padding: 12px; border-radius: 8px; border-left: 3px solid #1E40AF;">
-          <strong>Termination Clauses Analysis:</strong><br/><br/>
-          <strong>1. Clause 14.1 (p. 23)</strong> — Expiration on the stated end date. Standard provision, no issues.<br/><br/>
-          <strong>2. Clause 14.2 (p. 23-24)</strong> — Either party may terminate for convenience with 15 days' written notice. <em>Per UCC &sect;2-309(3), reasonable notification is required. 15 days may be insufficient for complex commercial relationships. See Leibel v. Raynor (1991).</em><br/><br/>
-          <strong>3. Clause 14.3 (p. 24)</strong> — Termination for material breach, effective immediately upon notice. No cure period provided. <em>Compare with ABA Model Contract &sect;8.2 which recommends 30-day cure periods.</em><br/><br/>
-          <strong>Next Step:</strong> Draft a redline proposing 30-day notice for 14.2 and adding a 15-day cure period to 14.3.
-        </div>
-      </div>
-
-      <div style="background: white; border-radius: 12px; border: 1px solid var(--border); padding: 20px;">
-        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
-          <div style="width: 28px; height: 28px; border-radius: 8px; background: var(--navy); color: white; display: flex; align-items: center; justify-content: center; font-size: 14px;">&#9989;</div>
-          <span style="font-weight: 700; font-size: 13px; color: var(--navy);">Paralegal Response</span>
-          <span class="op-tag tag-tone">Conversational</span>
-        </div>
-        <div style="font-size: 12px; line-height: 1.8; color: #334155; background: #F8FAFC; padding: 12px; border-radius: 8px; border-left: 3px solid #16A34A;">
-          I found 3 termination clauses in the contract. Here's a quick breakdown:<br/><br/>
-          &#10003; <strong>Clause 14.1 (page 23)</strong> — The contract ends on the date listed. Nothing unusual here.<br/>
-          &#9888;&#65039; <strong>Clause 14.2 (pages 23-24)</strong> — Either side can cancel with just 15 days' notice. That's shorter than the usual 30 days. (<em>"Termination for convenience"</em> means they don't need a reason.)<br/>
-          &#9888;&#65039; <strong>Clause 14.3 (page 24)</strong> — If one side breaks the contract, the other can end it immediately with no chance to fix the problem. (<em>"Cure period"</em> means time to correct a breach — this contract doesn't include one.)<br/><br/>
+        <div class="chat-body">
+          I found 3 termination clauses. Here's a quick breakdown:<br /><br />
+          &#10003; <strong>Clause 14.1 (page 23)</strong> &mdash; The contract ends on the date listed. Nothing unusual.<br /><br />
+          &#9888;&#65039; <strong>Clause 14.2 (pages 23-24)</strong> &mdash; Either side can cancel with just 15 days' notice. That's shorter than the usual 30 days. <em>("Termination for convenience" means they don't need a reason.)</em><br /><br />
+          &#9888;&#65039; <strong>Clause 14.3 (page 24)</strong> &mdash; If one side breaks the contract, the other can end it immediately &mdash; no chance to fix it first. <em>("Cure period" means time to correct a mistake. This contract doesn't include one.)</em><br /><br />
           <strong>Source:</strong> Uploaded contract, pages 23-24.
         </div>
+        <span class="chat-badge" style="background:#DBEAFE; color:#1E40AF;">&#128309; Answered from: your document</span>
       </div>
 
-      <div style="background: white; border-radius: 12px; border: 1px solid var(--border); padding: 20px;">
-        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
-          <div style="width: 28px; height: 28px; border-radius: 8px; background: var(--navy); color: white; display: flex; align-items: center; justify-content: center; font-size: 14px;">&#128187;</div>
-          <span style="font-weight: 700; font-size: 13px; color: var(--navy);">Legal Ops Response</span>
-          <span class="op-tag tag-tone">Concise</span>
+      <!-- Legal Ops -->
+      <div class="chat-bubble">
+        <div class="chat-header">
+          <div class="ch-dot">&#128187;</div>
+          <h4>Legal Ops Gets This</h4>
+          <span class="ch-tone tag tag-blue">Concise</span>
         </div>
-        <div style="font-size: 12px; line-height: 1.8; color: #334155; background: #F8FAFC; padding: 12px; border-radius: 8px; border-left: 3px solid #9A3412;">
-          <strong>3 termination clauses found:</strong><br/>
-          &bull; 14.1 — Expiration (standard)<br/>
-          &bull; 14.2 — Convenience termination, 15-day notice<br/>
-          &bull; 14.3 — Material breach, immediate, no cure period<br/><br/>
+        <div class="chat-body">
+          <strong>3 termination clauses found:</strong><br /><br />
+          &bull; 14.1 &mdash; Expiration (standard, no risk)<br />
+          &bull; 14.2 &mdash; Convenience, 15-day notice (flag: below 30-day standard)<br />
+          &bull; 14.3 &mdash; Material breach, immediate, no cure period<br /><br />
           <strong>Next:</strong> Flag 14.2 and 14.3 for attorney review. Tag in matter management system.
         </div>
+        <span class="chat-badge" style="background:#DBEAFE; color:#1E40AF;">&#128309; Answered from: your document</span>
       </div>
     </div>
-
-    <!-- Footer -->
-    <div class="footer">
-      <p>YourAI Bot Persona Flow &middot; Generated Apr 10, 2026 &middot; DRAFT &mdash; Pending Ryan Hoke visual review</p>
-      <p style="margin-top: 4px;">Arjun Sharma &middot; PM, Appinventiv &middot; CL-021 / PC-004</p>
-    </div>
-
   </div>
+
+  <!-- ══════════════════ HOW PROMPT IS BUILT ══════════════════ -->
+  <div class="section">
+    <div class="section-num">6</div>
+    <h2>How the Final Prompt is Built</h2>
+    <p>The persona doesn't replace the operation &mdash; it <strong>layers on top</strong>. Here's how it works when a <strong>Paralegal</strong> triggers <strong>Contract Review</strong>:</p>
+
+    <div class="assembly-stack">
+      <div class="a-row">
+        <div class="a-label" style="background:#DBEAFE; color:#1E40AF;">&#127919; Operation Prompt</div>
+        <div class="a-content" style="background:#F0F9FF; border: 1px solid #BFDBFE; color:#1E293B;">
+          "You are Alex, a contract analysis specialist. Identify risks, flag non-standard clauses, compare against the firm's playbook. Cite clause number and page."
+        </div>
+      </div>
+      <div class="a-plus">+</div>
+      <div class="a-row">
+        <div class="a-label" style="background:#F0FDF4; color:#166534;">&#128100; Persona Modifier</div>
+        <div class="a-content" style="background:#F0FDF9; border: 1px solid #BBF7D0; color:#1E293B;">
+          "Use clear, accessible language. Provide checklists and actionable steps. Explain legal terms when first used."
+          <br /><span style="font-size:11px; color:var(--slate);">&#8593; Because the user selected "Paralegal" during onboarding</span>
+        </div>
+      </div>
+      <div class="a-plus">+</div>
+      <div class="a-row">
+        <div class="a-label" style="background:#FFF7ED; color:#9A3412;">&#127908; Tone Override</div>
+        <div class="a-content" style="background:#FFFBEB; border: 1px solid #FDE68A; color:#1E293B;">
+          <strong>Conversational</strong> &larr; overrides Contract Review's default "Formal"
+          <br /><span style="font-size:11px; color:var(--slate);">The paralegal gets friendlier language even in contract reviews.</span>
+        </div>
+      </div>
+      <div class="a-plus">+</div>
+      <div class="a-row">
+        <div class="a-label" style="background:#EDE9FE; color:#5B21B6;">&#128203; Merged Rules</div>
+        <div class="a-content" style="background:#FAF5FF; border: 1px solid #DDD6FE; color:#1E293B;">
+          <span class="tag tag-amber" style="margin-right:4px;">Citations</span>
+          <span class="tag tag-amber" style="margin-right:4px;">Bullet Lists</span>
+          <span class="tag tag-amber" style="margin-right:4px;">Risk Summary</span>
+          <br /><span style="font-size:11px; color:var(--slate); display:inline-block; margin-top:6px;">Citations &amp; Bullets from Paralegal + Risk Summary from Contract Review = merged set</span>
+        </div>
+      </div>
+      <div class="a-plus">=</div>
+      <div class="a-row">
+        <div class="a-label" style="background:var(--navy); color:white;">&#9889; Final Alex</div>
+        <div class="a-content" style="background:white; border: 2px solid var(--navy); color:#1E293B; font-weight: 600;">
+          A contract specialist who speaks in plain English, explains legal jargon, uses bullet points, cites every clause with page number, and includes risk scores.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════ SOURCE FALLBACK CHAIN ══════════════════ -->
+  <div class="section">
+    <div class="section-num">7</div>
+    <h2>Where Does Alex Find the Answer?</h2>
+    <p>Alex searches 4 sources <strong>in order</strong>. It stops as soon as it finds an answer. Each step only triggers if the previous one found nothing.</p>
+
+    <div class="chain">
+      <div class="chain-step">
+        <div class="chain-num" style="background:#DBEAFE; color:#1E40AF;">1</div>
+        <div class="chain-text">
+          <h4>User's Uploaded Document</h4>
+          <p>The file the user attached to this conversation</p>
+        </div>
+        <div class="chain-badge" style="background:#DBEAFE; color:#1E40AF;">&#128309; your document</div>
+      </div>
+      <div class="chain-arrow">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+        <div style="font-size:10px; color:var(--slate);">not found? try next</div>
+      </div>
+      <div class="chain-step">
+        <div class="chain-num" style="background:#F0FDF4; color:#166534;">2</div>
+        <div class="chain-text">
+          <h4>Knowledge Pack</h4>
+          <p>State law library selected by the user</p>
+        </div>
+        <div class="chain-badge" style="background:#F0FDF4; color:#166534;">&#128994; knowledge base</div>
+      </div>
+      <div class="chain-arrow">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+        <div style="font-size:10px; color:var(--slate);">not found? try next</div>
+      </div>
+      <div class="chain-step">
+        <div class="chain-num" style="background:#FFF7ED; color:#9A3412;">3</div>
+        <div class="chain-text">
+          <h4>Global Knowledge Base</h4>
+          <p>Federal Rules, UCC, ABA docs uploaded by Super Admin</p>
+        </div>
+        <div class="chain-badge" style="background:#F0FDF4; color:#166534;">&#128994; knowledge base</div>
+      </div>
+      <div class="chain-arrow">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+        <div style="font-size:10px; color:var(--slate);">not found?</div>
+      </div>
+      <div class="chain-step" style="border: 1px solid #FECACA;">
+        <div class="chain-num" style="background:#FEF2F2; color:#991B1B;">4</div>
+        <div class="chain-text">
+          <h4>Fallback Message</h4>
+          <p>"I couldn't find a clear answer. Could you clarify or upload a document?"</p>
+        </div>
+        <div class="chain-badge" style="background:#FEF2F2; color:#991B1B;">no source</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════ WHAT IF CONFUSED ══════════════════ -->
+  <div class="section">
+    <div class="section-num">8</div>
+    <h2>What If Alex Isn't Sure?</h2>
+    <p>If the intent classifier confidence is below 0.75, Alex doesn't guess. It asks first.</p>
+
+    <div style="max-width: 600px; margin: 0 auto;">
+      <!-- User message -->
+      <div style="display:flex; justify-content:flex-end; margin-bottom:12px;">
+        <div style="background:var(--navy); color:white; padding:12px 18px; border-radius:14px 14px 4px 14px; font-size:13px; max-width:300px;">
+          Review this
+        </div>
+      </div>
+      <!-- Alex asks -->
+      <div style="display:flex; justify-content:flex-start; margin-bottom:12px;">
+        <div style="background:white; border:1px solid var(--border); padding:14px 18px; border-radius:14px 14px 14px 4px; font-size:13px; max-width:420px; line-height:1.7; box-shadow:0 1px 4px rgba(0,0,0,0.04);">
+          I'd be happy to help you review something. Could you clarify:<br /><br />
+          &#8226; Are you asking me to <strong>review an uploaded document</strong> for risks?<br />
+          &nbsp;&nbsp;(If so, please attach the document.)<br />
+          &#8226; Or do you have a <strong>general legal question</strong> I can research?
+        </div>
+      </div>
+      <!-- User clarifies -->
+      <div style="display:flex; justify-content:flex-end; margin-bottom:12px;">
+        <div style="background:var(--navy); color:white; padding:12px 18px; border-radius:14px 14px 4px 14px; font-size:13px; max-width:360px;">
+          I want to review the lease I'm about to upload
+        </div>
+      </div>
+      <!-- Alex proceeds -->
+      <div style="display:flex; justify-content:flex-start; margin-bottom:12px;">
+        <div style="background:white; border:1px solid var(--border); padding:14px 18px; border-radius:14px 14px 14px 4px; font-size:13px; max-width:420px; line-height:1.7; box-shadow:0 1px 4px rgba(0,0,0,0.04);">
+          Got it! Please upload the lease agreement and I'll review it for risks, non-standard clauses, and key obligations. &#128196;
+        </div>
+      </div>
+      <div style="text-align:center; margin-top:16px;">
+        <span class="tag tag-amber" style="font-size:11px; padding:5px 14px;">Confidence was 0.41 &mdash; below 0.75 threshold &mdash; so Alex asked before proceeding</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════ FOOTER ══════════════════ -->
+  <div class="footer">
+    <p>
+      YourAI &middot; Bot Persona & Intelligent Response System &middot; v1.0 &middot; April 10, 2026<br />
+      DRAFT &mdash; Pending Ryan Hoke visual review &middot; Arjun Sharma, PM, Appinventiv<br />
+      Change Log: CL-021, CL-022 &middot; Pending: PC-004, PC-005
+    </p>
+  </div>
+
+</div>
 </body>
 </html>
