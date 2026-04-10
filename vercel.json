@@ -4,6 +4,7 @@
   "outputDirectory": "dist",
   "installCommand": "npm install",
   "rewrites": [
+    { "source": "/bot-persona-flow.html", "destination": "/bot-persona-flow.html" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
