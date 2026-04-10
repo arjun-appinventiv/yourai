@@ -6,7 +6,7 @@ import {
   Search, Bell, ArrowUp, Shield, Sparkles, FileText, Building2, Scale,
   LayoutDashboard, Send, MapPin, FileSearch, Lock, X, AlertTriangle, Info, Zap,
   BookOpen, UserPlus, Trash2, Edit3, Copy, Phone, Mail, Briefcase, Hash, Menu,
-  Package, Link2, File, Upload, Paperclip, Image, Video, Database
+  Package, Link2, File, Upload, Paperclip, Image, Video
 } from 'lucide-react';
 import { billingData, subscriptionPlans } from '../../data/mockData';
 
@@ -1249,13 +1249,6 @@ function MessageBubble({ msg }) {
             <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--navy)' }}>Using: {msg.vaultDocument}</span>
           </div>
         )}
-        {/* Source badge — CONFIDENCE: 3/10. Intent classifier not confirmed. Visual wireframe for Ryan. */}
-        {isBot && msg.sourceBadge && (
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 8, padding: '4px 10px', borderRadius: 999, background: msg.sourceBadge.includes('your document') ? '#EFF6FF' : '#F0FDF4', border: `1px solid ${msg.sourceBadge.includes('your document') ? '#BFDBFE' : '#BBF7D0'}` }}>
-            <Database size={11} style={{ color: msg.sourceBadge.includes('your document') ? '#1D4ED8' : '#16A34A' }} />
-            <span style={{ fontSize: 10, fontWeight: 500, color: msg.sourceBadge.includes('your document') ? '#1D4ED8' : '#16A34A' }}>{msg.sourceBadge}</span>
-          </div>
-        )}
         {msg.card && <RiskCard card={msg.card} />}
       </div>
     </div>
@@ -1630,14 +1623,7 @@ export default function ChatView() {
     setPendingAttachments([]);
     setIsTyping(true);
     setTimeout(() => {
-      // TODO: confirm confidence threshold with AI team
-      // OQ-pending — do not ship without confirmation
-      // CONFIDENCE: 3/10 — Intent classifier auto-routing not confirmed by Ryan. Visual wireframe only.
-      const hasAttachedDoc = activeKnowledgePack || activeVaultDocument || pendingAttachments.length > 0;
-      const sourceBadge = hasAttachedDoc
-        ? 'Answered from: your document'
-        : 'Answered from: YourAI knowledge base';
-      const botMsg = { id: Date.now() + 1, sender: 'bot', content: MOCK_RESPONSES[responseIdx.current % MOCK_RESPONSES.length], timestamp: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }), knowledgePack: activeKnowledgePack?.name || null, vaultDocument: activeVaultDocument?.name || null, sourceBadge };
+      const botMsg = { id: Date.now() + 1, sender: 'bot', content: MOCK_RESPONSES[responseIdx.current % MOCK_RESPONSES.length], timestamp: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }), knowledgePack: activeKnowledgePack?.name || null, vaultDocument: activeVaultDocument?.name || null };
       responseIdx.current += 1;
       setMessages((prev) => [...prev, botMsg]);
       setIsTyping(false);
