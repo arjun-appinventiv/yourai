@@ -1722,22 +1722,6 @@ export default function ChatView() {
   const [threads, setThreads] = useState(DEFAULT_THREADS);
   const [activeThreadId, setActiveThreadId] = useState('thread-1');
   const [threadSearch, setThreadSearch] = useState('');
-
-  // ─── Session Document Version Handling (DEC-093, DEC-094, DEC-095) ───
-  // See knowledge-pack-strategy.md — Document Version Handling section
-  const [sessionState, setSessionState] = useState({
-    // DEC-093: KB locked at session start
-    // See knowledge-pack-strategy.md — Scenario 1
-    sessionKbSnapshotId: `kb-snapshot-${Date.now()}`, // uuid — snapshot of global KB at session start
-    // DEC-095: User doc locked for session unless user chooses restart
-    sessionDocId: null,                                // uuid, nullable — user's uploaded doc for this session
-    sessionStartTime: new Date().toISOString(),        // timestamp — when session began
-    // TODO: Phase 2 — replace snapshot reference with
-    // full document_versions table for audit trail
-    // Confirmed by Arjun — cutover only for this release
-  });
-  const [showDocVersionBanner, setShowDocVersionBanner] = useState(false);
-  const [pendingNewDoc, setPendingNewDoc] = useState(null); // holds the new doc until user decides
   const scrollRef = useRef(null);
   const inputRef = useRef(null);
   const responseIdx = useRef(0);
@@ -1787,14 +1771,6 @@ export default function ChatView() {
     setActiveVaultDocument(null);
     setPendingAttachments([]);
     setInput('');
-    // DEC-093 + DEC-094: New session gets current KB snapshot
-    setSessionState({
-      sessionKbSnapshotId: `kb-snapshot-${Date.now()}`,
-      sessionDocId: null,
-      sessionStartTime: new Date().toISOString(),
-    });
-    setShowDocVersionBanner(false);
-    setPendingNewDoc(null);
   }, []);
 
   const handleSwitchThread = useCallback((threadId) => {
@@ -1870,13 +1846,11 @@ export default function ChatView() {
       // TODO: confirm confidence threshold with AI team
       // OQ-pending — do not ship without confirmation
       // CONFIDENCE: 3/10 — Intent classifier auto-routing not confirmed by Ryan. Visual wireframe only.
-      // DEC-093: RAG queries scoped to session_kb_snapshot_id, NOT live KB
-      // TODO: Phase 2 — replace snapshot reference with document_versions table
-      const hasAttachedDoc = activeKnowledgePack || activeVaultDocument || sessionState.sessionDocId !== null;
+      const hasAttachedDoc = activeKnowledgePack || activeVaultDocument || pendingAttachments.length > 0;
       const sourceBadge = hasAttachedDoc
         ? 'Answered from: your document'
         : 'Answered from: YourAI knowledge base';
-      const botMsg = { id: Date.now() + 1, sender: 'bot', content: MOCK_RESPONSES[responseIdx.current % MOCK_RESPONSES.length], timestamp: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }), knowledgePack: activeKnowledgePack?.name || null, vaultDocument: activeVaultDocument?.name || null, sourceBadge, sessionKbSnapshotId: sessionState.sessionKbSnapshotId };
+      const botMsg = { id: Date.now() + 1, sender: 'bot', content: MOCK_RESPONSES[responseIdx.current % MOCK_RESPONSES.length], timestamp: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }), knowledgePack: activeKnowledgePack?.name || null, vaultDocument: activeVaultDocument?.name || null, sourceBadge };
       responseIdx.current += 1;
       setMessages((prev) => [...prev, botMsg]);
       setIsTyping(false);
@@ -1892,7 +1866,7 @@ export default function ChatView() {
         };
       }));
     }, 1500);
-  }, [isTyping, showEmptyState, activeKnowledgePack, activeVaultDocument, pendingAttachments, activeThreadId, sessionState]);
+  }, [isTyping, showEmptyState, activeKnowledgePack, activeVaultDocument, pendingAttachments, activeThreadId]);
 
   const handleAttachFiles = (files, kind) => {
     const newAtts = files.map((f, i) => ({
@@ -1901,57 +1875,8 @@ export default function ChatView() {
       size: f.size,
       kind, // 'photo' | 'video' | 'doc'
     }));
-    // DEC-095: Scenario 3 — Option C confirmed
-    // See knowledge-pack-strategy.md
-    if (kind === 'doc' && sessionState.sessionDocId !== null) {
-      // A document already exists in this session — show mid-session banner
-      setPendingNewDoc(newAtts[0]);
-      setShowDocVersionBanner(true);
-      return; // Don't add to pending yet — user must choose
-    }
-    if (kind === 'doc' && sessionState.sessionDocId === null) {
-      // First document upload in this session — lock it
-      setSessionState(prev => ({ ...prev, sessionDocId: `doc-${Date.now()}` }));
-    }
     setPendingAttachments(prev => [...prev, ...newAtts]);
   };
-
-  // DEC-095: Handler for mid-session document version banner
-  const handleDocVersionChoice = useCallback((choice) => {
-    if (choice === 'new') {
-      // Start new conversation with the new document
-      // DEC-095: Clear messages, reset session, new session_doc_id
-      setMessages([]);
-      setShowEmptyState(true);
-      setSessionState({
-        sessionKbSnapshotId: `kb-snapshot-${Date.now()}`, // DEC-093 + DEC-094: New session gets current KB
-        sessionDocId: `doc-${Date.now()}`,
-        sessionStartTime: new Date().toISOString(),
-      });
-      if (pendingNewDoc) {
-        setPendingAttachments([pendingNewDoc]);
-      }
-      setActiveKnowledgePack(null);
-      setActiveVaultDocument(null);
-      setInput('');
-      // Update thread
-      const newThread = {
-        id: `thread-${Date.now()}`,
-        title: pendingNewDoc ? `New: ${pendingNewDoc.name}` : 'New Conversation',
-        preview: 'Started with updated document',
-        updatedAt: 'Just now',
-        messageCount: 0,
-        isActive: true,
-      };
-      setThreads(prev => [newThread, ...prev.map(t => ({ ...t, isActive: false }))]);
-      setActiveThreadId(newThread.id);
-    } else {
-      // Continue with original — dismiss banner, doc saved but not used in this session
-      // DEC-095: session_doc_id unchanged, new doc saved to storage but not active
-    }
-    setShowDocVersionBanner(false);
-    setPendingNewDoc(null);
-  }, [pendingNewDoc]);
 
   const removeAttachment = (id) => {
     setPendingAttachments(prev => prev.filter(a => a.id !== id));
@@ -2097,54 +2022,6 @@ export default function ChatView() {
                   </div>
                 </div>
               )}
-            </div>
-          )}
-
-          {/* DEC-095: Mid-session document version banner — Scenario 3, Option C */}
-          {/* See knowledge-pack-strategy.md — "User's Uploaded Document Updated Mid-Conversation" */}
-          {/* CONFIDENCE: 8/10 — Confirmed by Arjun (PM). Aligns with session isolation principle. */}
-          {/* NOT dismissible by X — user MUST choose one of the two options */}
-          {showDocVersionBanner && (
-            <div className="px-3 sm:px-4 md:px-10" style={{ paddingTop: 8, paddingBottom: 0 }}>
-              <div style={{
-                display: 'flex', alignItems: 'flex-start', gap: 12,
-                padding: '14px 18px', borderRadius: 12,
-                background: '#FFFBEB', border: '1px solid #F59E0B',
-                boxShadow: '0 1px 3px rgba(245, 158, 11, 0.15)',
-              }}>
-                <AlertTriangle size={18} style={{ color: '#D97706', flexShrink: 0, marginTop: 2 }} />
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: '#92400E', marginBottom: 4 }}>
-                    You've uploaded a new version of this document.
-                  </div>
-                  <div style={{ fontSize: 12, color: '#A16207', marginBottom: 12 }}>
-                    Start a new conversation to use it, or continue with the original.
-                    {pendingNewDoc && (
-                      <span style={{ fontWeight: 500 }}> New file: {pendingNewDoc.name}</span>
-                    )}
-                  </div>
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <button
-                      onClick={() => handleDocVersionChoice('new')}
-                      style={{
-                        padding: '7px 16px', borderRadius: 8, fontSize: 12, fontWeight: 600,
-                        background: '#D97706', color: '#fff', border: 'none', cursor: 'pointer',
-                      }}
-                    >
-                      Start new conversation
-                    </button>
-                    <button
-                      onClick={() => handleDocVersionChoice('continue')}
-                      style={{
-                        padding: '7px 16px', borderRadius: 8, fontSize: 12, fontWeight: 600,
-                        background: '#fff', color: '#92400E', border: '1px solid #F59E0B', cursor: 'pointer',
-                      }}
-                    >
-                      Continue with original
-                    </button>
-                  </div>
-                </div>
-              </div>
             </div>
           )}
 
