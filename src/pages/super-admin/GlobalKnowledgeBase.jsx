@@ -327,8 +327,11 @@ export default function GlobalKnowledgeBase() {
     // Persist to localStorage so ChatView can read it
     try {
       localStorage.setItem('yourai_bot_persona', JSON.stringify(updated));
-    } catch (_) { /* quota exceeded — ignore */ }
-    showToast('Bot persona saved — changes will apply from the next session', 'success');
+    } catch (_) {
+      showToast('Failed to save — localStorage quota exceeded. Remove some documents and try again.', 'error');
+      return;
+    }
+    showToast('Bot persona saved — changes apply immediately to new chats', 'success');
   };
 
   const handleDiscardPersona = () => {

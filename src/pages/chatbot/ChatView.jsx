@@ -48,13 +48,6 @@ const INITIAL_MESSAGES = [
   },
 ];
 
-const QUICK_ACTIONS = [
-  { emoji: '\ud83d\udccb', label: 'Analyze contract' },
-  { emoji: '\ud83c\udfe2', label: 'Summarize workspace' },
-  { emoji: '\ud83d\udcc4', label: 'Compare documents' },
-  { emoji: '\ud83d\udd0d', label: 'Run web search' },
-];
-const QUICK_ACTIONS_2 = [{ emoji: '\u2728', label: 'Generate artifact' }];
 
 /* ─── Default Prompt Templates ─── */
 const DEFAULT_PROMPT_TEMPLATES = [
@@ -2065,7 +2058,8 @@ export default function ChatView() {
         }
       } catch { /* backend unreachable — fall through to client-side LLM */ }
 
-      // Fallback: call Gemini directly from client (Vercel static deploy)
+      // Fallback: call Groq directly from client (Vercel static deploy)
+      // 4-tier priority: Uploaded Doc → Knowledge Pack → Global KB → Fallback
       if (!usedBackend) {
         if (!getApiKey()) {
           setIsTyping(false);
@@ -2074,13 +2068,42 @@ export default function ChatView() {
           setMessages((prev) => [...prev, errMsg]);
           return;
         }
+
+        // Build context layers for prioritised answer flow
+        const contextLayers = {};
+
+        // Tier 1: User's uploaded document (from pending attachments with extracted content)
+        const docWithContent = userMsg.attachments?.find(a => a.content) || pendingAttachments.find(a => a.content);
+        if (docWithContent) {
+          contextLayers.uploadedDoc = { name: docWithContent.name, content: docWithContent.content };
+        } else if (activeVaultDocument) {
+          // Vault document selected as context — use its metadata as reference
+          contextLayers.uploadedDoc = { name: activeVaultDocument.name, content: activeVaultDocument.description || '' };
+        }
+
+        // Tier 2: Knowledge Pack (selected by user)
+        if (activeKnowledgePack) {
+          contextLayers.knowledgePack = {
+            name: activeKnowledgePack.name,
+            description: activeKnowledgePack.description,
+            content: activeKnowledgePack.docs?.map(d => `[${d.name}]`).join(', '),
+          };
+        }
+
+        // Tier 3 (Global KB) and Tier 4 (Fallback) are handled inside callLLM via persona
         const result = await callLLM(trimmed, history, (streaming) => {
           setStreamingContent(streaming);
-        });
+        }, contextLayers);
         fullContent = result.fullContent;
-        sourceBadge = result.sourceType === 'GLOBAL_KB'
-          ? 'Answered from: YourAI knowledge base'
-          : 'Answered from: AI';
+
+        // Map source type to user-friendly badge
+        const sourceBadgeMap = {
+          UPLOADED_DOC: 'Answered from: your document',
+          KNOWLEDGE_PACK: `Answered from: ${activeKnowledgePack?.name || 'knowledge pack'}`,
+          GLOBAL_KB: 'Answered from: YourAI knowledge base',
+          NONE: 'Answered from: AI',
+        };
+        sourceBadge = sourceBadgeMap[result.sourceType] || 'Answered from: AI';
       }
 
       const botMsg = {
@@ -2122,6 +2145,7 @@ export default function ChatView() {
       name: f.name,
       size: f.size,
       kind, // 'photo' | 'video' | 'doc'
+      content: null, // will be populated by FileReader for docs
     }));
     // DEC-095: Scenario 3 — Option C confirmed
     // See knowledge-pack-strategy.md
@@ -2136,6 +2160,21 @@ export default function ChatView() {
       setSessionState(prev => ({ ...prev, sessionDocId: `doc-${Date.now()}` }));
     }
     setPendingAttachments(prev => [...prev, ...newAtts]);
+    // Extract text content from doc files for client-side LLM context
+    if (kind === 'doc') {
+      files.forEach((file, i) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const text = e.target?.result;
+          if (typeof text === 'string') {
+            setPendingAttachments(prev => prev.map(a =>
+              a.id === newAtts[i].id ? { ...a, content: text.slice(0, 50000) } : a
+            ));
+          }
+        };
+        reader.readAsText(file);
+      });
+    }
   };
 
   // DEC-095: Handler for mid-session document version banner
@@ -2305,24 +2344,6 @@ export default function ChatView() {
                 <MessageBubble msg={{ id: 'streaming', sender: 'bot', content: streamingContent, timestamp: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) }} />
               )}
               {isTyping && !streamingContent && <TypingIndicator />}
-              {!isTyping && (
-                <div style={{ marginTop: 8, marginBottom: 8 }}>
-                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                    {QUICK_ACTIONS.map((a) => (
-                      <button key={a.label} onClick={() => sendMessage(a.label)} style={{ display: 'flex', alignItems: 'center', gap: 6, border: '1px solid var(--border)', borderRadius: 8, background: '#fff', padding: '8px 16px', fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}>
-                        <span>{a.emoji}</span> {a.label}
-                      </button>
-                    ))}
-                  </div>
-                  <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-                    {QUICK_ACTIONS_2.map((a) => (
-                      <button key={a.label} onClick={() => sendMessage(a.label)} style={{ display: 'flex', alignItems: 'center', gap: 6, border: '1px solid var(--border)', borderRadius: 8, background: '#fff', padding: '8px 16px', fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}>
-                        <span>{a.emoji}</span> {a.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
           )}
 

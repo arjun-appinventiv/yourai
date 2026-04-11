@@ -96,10 +96,11 @@ router.post('/', requireAuth, async (req: Request, res: Response) => {
       res.write(chunk);
     }
   } catch (err) {
-    const fallback = persona?.fallbackMessage || 'I apologize, but I encountered an error processing your request. Please try again.';
     if (!fullResponse) {
-      res.write(fallback);
-      fullResponse = fallback;
+      // No content streamed yet — return error status so the client
+      // can fall back to its own LLM call (Groq client-side).
+      res.status(502).end();
+      return;
     }
   }
 

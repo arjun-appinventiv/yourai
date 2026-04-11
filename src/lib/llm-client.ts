@@ -2,9 +2,9 @@
 // Key is encrypted 5x with XOR + base64. Never stored in DB.
 // To remove: delete the ENCRYPTED_KEY constant below.
 
-// ─── 5x Encrypted Gemini Key ───
+// ─── 5x Encrypted Groq Key ───
 // Encryption: XOR with salt → base64, repeated 5 times
-const ENCRYPTED_KEY = 'EStBAQwYbGtjWVJ6F1E2F3JoIgAqciJJcHJFQW4nEQcVUxspNx8EA3tzYWpXVQQKIkR1LCMYOA0QenRoYVwYJio9A384LCwbBiFKXVV0bEAmUyZEfgoAOTNyLnRidWdUbwonIxUHPi4tGSI5ZmYFf1BHMQMrHkMoLDcCah4cQl0=';
+const ENCRYPTED_KEY = 'EQgjMAsYWmtkWloZKTQlEn8KBF48ci5jYlt/B04bCSoScjEpMUAyHGBzCGNufyIKIR1ibCsyAiYbH2BFUEwYKigvEFkfLDwLEjBGeVF0bEIlUyIefgocWj8mKhpicXt6bwpUJy5YDCwXQDYkeEgFf1N+PhA7HkMtJzAKcCpBA15QX2w1IhVBUhheQQQOIBlTVXp0RTE2VTFkMD5FOi0IdHl0Al1IMS9UEQdgPiEedXxmcGkAUnw+ETwxDGQ=';
 const SALT = 'YourAI-2026-salt';
 
 function xorWithSalt(input: string, salt: string): string {
@@ -121,11 +121,19 @@ function buildSystemPrompt(persona: BotPersona | null): string {
   return parts.join('\n');
 }
 
-// ─── Direct Gemini call (client-side fallback) ───
+// ─── Context layers for 4-tier priority answer flow ───
+// Priority: 1. Uploaded Doc → 2. Knowledge Pack → 3. Global KB → 4. Fallback
+export interface ContextLayers {
+  uploadedDoc?: { name: string; content: string } | null;
+  knowledgePack?: { name: string; description: string; content?: string } | null;
+}
+
+// ─── Direct Groq call (client-side fallback) ───
 export async function callLLM(
   userMessage: string,
   history: Array<{ role: 'user' | 'assistant'; content: string }>,
   onChunk: (text: string) => void,
+  context?: ContextLayers,
 ): Promise<{ fullContent: string; sourceType: string }> {
   const apiKey = getApiKey();
   if (!apiKey) {
@@ -135,11 +143,47 @@ export async function callLLM(
   const persona = getPersona();
   let systemPrompt = buildSystemPrompt(persona);
 
-  // Inject CourtListener context if enabled
+  // ─── 4-Tier Priority Context Injection ───
+  // Build context sections and instruct LLM on priority order
+  const contextSections: string[] = [];
+  const availableSources: string[] = [];
+
+  // Tier 1: User's uploaded document
+  if (context?.uploadedDoc?.content) {
+    contextSections.push(
+      `\n--- USER'S UPLOADED DOCUMENT (HIGHEST PRIORITY) ---`,
+      `[Document: ${context.uploadedDoc.name}]`,
+      context.uploadedDoc.content.slice(0, 30000),
+      `--- END UPLOADED DOCUMENT ---`
+    );
+    availableSources.push('UPLOADED_DOC');
+  }
+
+  // Tier 2: Knowledge Pack
+  if (context?.knowledgePack) {
+    const packContent = context.knowledgePack.content
+      ? `\n${context.knowledgePack.content.slice(0, 20000)}`
+      : `\nDescription: ${context.knowledgePack.description}`;
+    contextSections.push(
+      `\n--- KNOWLEDGE PACK: ${context.knowledgePack.name} ---`,
+      packContent,
+      `--- END KNOWLEDGE PACK ---`
+    );
+    availableSources.push('KNOWLEDGE_PACK');
+  }
+
+  // Tier 3: Global KB (already in systemPrompt via buildSystemPrompt)
+  const hasGlobalKb = persona?.globalDocs.some(d => d.content);
+  if (hasGlobalKb) {
+    availableSources.push('GLOBAL_KB');
+  }
+
+  // Inject CourtListener context if enabled (extends Global KB)
   try {
     const clData = localStorage.getItem('yourai_courtlistener_kb');
     if (clData) {
-      systemPrompt += '\n\n' + clData;
+      contextSections.push('\n' + clData);
+      if (!availableSources.includes('GLOBAL_KB')) availableSources.push('GLOBAL_KB');
     }
   } catch { /* ignore */ }
 
@@ -150,38 +194,65 @@ export async function callLLM(
       const { searchCourtListenerKB } = await import('./courtlistener');
       const searchContext = await searchCourtListenerKB(userMessage.slice(0, 100));
       if (searchContext) {
-        systemPrompt += '\n\n' + searchContext;
+        contextSections.push('\n' + searchContext);
       }
     } catch { /* CourtListener unavailable — continue without */ }
   }
 
-  // Build Gemini request format
-  const contents = [
-    ...history.slice(-20).map(msg => ({
-      role: msg.role === 'assistant' ? 'model' : 'user',
-      parts: [{ text: msg.content }],
-    })),
-    { role: 'user', parts: [{ text: userMessage }] },
+  // Add context sections to system prompt
+  if (contextSections.length > 0) {
+    systemPrompt += '\n' + contextSections.join('\n');
+  }
+
+  // Add source attribution instructions when context is available
+  if (availableSources.length > 0) {
+    const sourceDescriptions: Record<string, string> = {
+      UPLOADED_DOC: "user's uploaded document (sections marked USER'S UPLOADED DOCUMENT)",
+      KNOWLEDGE_PACK: 'knowledge pack (sections marked KNOWLEDGE PACK)',
+      GLOBAL_KB: 'global knowledge base (sections marked Knowledge Base Documents)',
+    };
+    const sourceOptions = availableSources
+      .map(s => `  [SOURCE: ${s}] — if you answered from the ${sourceDescriptions[s] || s}`)
+      .join('\n');
+
+    systemPrompt += `\n\n--- SOURCE ATTRIBUTION ---
+You have access to context sources listed by priority (highest first):
+${availableSources.map((s, i) => `${i + 1}. ${sourceDescriptions[s] || s}`).join('\n')}
+
+RULES:
+- Answer from the HIGHEST-PRIORITY source that contains relevant information.
+- Each step only triggers if the previous one found nothing relevant.
+- At the very end of your response, on its own line, output exactly one of these tags:
+${sourceOptions}
+  [SOURCE: NONE] — if none of the provided documents were relevant
+- The source tag MUST be the last line. Do NOT use source tags not listed above.`;
+  }
+
+  // Build OpenAI-compatible request (Groq uses the same format)
+  const messages = [
+    { role: 'system' as const, content: systemPrompt },
+    ...history.slice(-20),
+    { role: 'user' as const, content: userMessage },
   ];
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent?alt=sse&key=${apiKey}`;
-
-  const response = await fetch(url, {
+  const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`,
+    },
     body: JSON.stringify({
-      system_instruction: { parts: [{ text: systemPrompt }] },
-      contents,
-      generationConfig: {
-        temperature: 0.7,
-        maxOutputTokens: 4096,
-      },
+      model: 'llama-3.3-70b-versatile',
+      messages,
+      stream: true,
+      temperature: 0.7,
+      max_tokens: 4096,
     }),
   });
 
   if (!response.ok) {
     const err = await response.json().catch(() => ({}));
-    throw new Error(err.error?.message || `Gemini API error: ${response.status}`);
+    throw new Error(err.error?.message || `Groq API error: ${response.status}`);
   }
 
   const reader = response.body!.getReader();
@@ -197,28 +268,38 @@ export async function callLLM(
 
     for (const line of lines) {
       const data = line.slice(6).trim();
+      if (data === '[DONE]') continue;
       if (!data) continue;
       try {
         const parsed = JSON.parse(data);
-        const parts = parsed.candidates?.[0]?.content?.parts;
-        if (parts) {
-          for (const part of parts) {
-            if (part.text) {
-              fullContent += part.text;
-              onChunk(fullContent);
-            }
-          }
+        const delta = parsed.choices?.[0]?.delta?.content;
+        if (delta) {
+          fullContent += delta;
+          onChunk(fullContent);
         }
       } catch { /* skip malformed chunks */ }
     }
   }
 
-  // If persona has global docs, mark as knowledge base source
-  const hasKbContext = persona?.globalDocs.some(d => d.content);
-  return {
-    fullContent,
-    sourceType: hasKbContext ? 'GLOBAL_KB' : 'NONE',
-  };
+  // Parse source tag from response and strip it from visible content
+  let sourceType = 'NONE';
+  const sourceMatch = fullContent.match(/\[SOURCE:\s*(UPLOADED_DOC|KNOWLEDGE_PACK|GLOBAL_KB|NONE)\]\s*$/);
+  if (sourceMatch) {
+    sourceType = sourceMatch[1];
+    fullContent = fullContent.replace(/\n?\[SOURCE:\s*\w+\]\s*$/, '').trimEnd();
+    // Update the streamed content to strip the tag
+    onChunk(fullContent);
+  } else if (hasGlobalKb) {
+    sourceType = 'GLOBAL_KB';
+  }
+
+  // If no source found relevant and persona has fallback, use it
+  if (sourceType === 'NONE' && persona?.fallbackMessage && availableSources.length > 0) {
+    fullContent = persona.fallbackMessage;
+    onChunk(fullContent);
+  }
+
+  return { fullContent, sourceType };
 }
 
 // Backward compat alias
