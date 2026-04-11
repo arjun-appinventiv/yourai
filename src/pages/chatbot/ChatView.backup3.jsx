@@ -6,7 +6,7 @@ import {
   Search, Bell, ArrowUp, Shield, Sparkles, FileText, Building2, Scale,
   LayoutDashboard, Send, MapPin, FileSearch, Lock, X, AlertTriangle, Info, Zap,
   BookOpen, UserPlus, Trash2, Edit3, Copy, Phone, Mail, Briefcase, Hash, Menu,
-  Package, Link2, File, Upload, Paperclip, Image, Video, Database, GitBranch, Settings, LogOut
+  Package, Link2, File, Upload, Paperclip, Image, Video, Database
 } from 'lucide-react';
 import { billingData, subscriptionPlans } from '../../data/mockData';
 
@@ -259,107 +259,47 @@ const riskColors = {
 };
 
 /* ─────────────────── Sidebar ─────────────────── */
-/* CONFIDENCE: 5/10 — Sidebar redesign based on Arjun wireframe (Apr 2026).
-   Layout structure confirmed by Arjun. Not signed off by Ryan.
-   All existing nav items preserved — reorganised only. */
+const sidebarItems = [
+  { icon: LayoutDashboard, label: 'Dashboard', active: true, dotColor: '#22C55E', subtitle: '3 workflows running \u00b7 2 artifacts pending' },
+  { icon: Share2, label: 'Knowledge Graph', badge: 'New', badgeStyle: 'green', subtitle: '12 entities \u00b7 47 relationships' },
+  { icon: Grid3X3, label: 'Workspaces', badge: '3', badgeStyle: 'navy', subtitle: '3 active \u00b7 1 shared with you' },
+];
 
 function Sidebar({ onOpenPromptTemplates, onOpenClients, onOpenKnowledgePacks, onOpenDocumentVault, promptCount, clientCount, packCount, vaultCount, isOpen, onClose, threads, activeThreadId, onSwitchThread, onNewThread, onDeleteThread, threadSearch, onThreadSearchChange }) {
-  // Collapse state — persisted to localStorage
-  const [workspaceOpen, setWorkspaceOpen] = useState(() => {
-    try { const v = localStorage.getItem('yourai_sidebar_workspace_open'); return v === null ? true : v === 'true'; } catch { return true; }
-  });
-  const [knowledgeOpen, setKnowledgeOpen] = useState(() => {
-    try { const v = localStorage.getItem('yourai_sidebar_knowledge_open'); return v === null ? true : v === 'true'; } catch { return true; }
-  });
-  const [showChatSearch, setShowChatSearch] = useState(false);
-  const [showProfileMenu, setShowProfileMenu] = useState(false);
-  const [hoveredItem, setHoveredItem] = useState(null);
-  const [hoveredThread, setHoveredThread] = useState(null);
-
-  const toggleWorkspace = () => {
-    setWorkspaceOpen(prev => { const next = !prev; try { localStorage.setItem('yourai_sidebar_workspace_open', String(next)); } catch {} return next; });
-  };
-  const toggleKnowledge = () => {
-    setKnowledgeOpen(prev => { const next = !prev; try { localStorage.setItem('yourai_sidebar_knowledge_open', String(next)); } catch {} return next; });
-  };
-
-  // ─── Workspace items ───
-  const workspaceItems = [
-    { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard', active: true, rightText: '3 running' },
-    { id: 'workspaces', icon: Briefcase, label: 'Workspaces', rightText: '3' },
-    { id: 'clients', icon: Users, label: 'Clients', rightText: String(clientCount), onClick: onOpenClients },
-    { id: 'knowledge-graph', icon: GitBranch, label: 'Knowledge Graph', badge: 'New' },
-  ];
-
-  // ─── Knowledge items ───
-  const knowledgeItems = [
-    { id: 'document-vault', icon: FolderOpen, label: 'Document vault', rightText: String(vaultCount), onClick: onOpenDocumentVault },
-    { id: 'knowledge-packs', icon: Package, label: 'Knowledge packs', rightText: String(packCount), onClick: onOpenKnowledgePacks },
-    { id: 'prompt-templates', icon: FileText, label: 'Prompt templates', rightText: String(promptCount), onClick: onOpenPromptTemplates },
-  ];
-
-  // ─── Shared nav item renderer ───
-  const renderNavItem = (item) => {
+  const renderItem = (item, idx) => {
     const Icon = item.icon;
-    const isActive = item.active;
-    const isHovered = hoveredItem === item.id;
     return (
-      <div
-        key={item.id}
-        onClick={item.onClick || undefined}
-        onMouseEnter={() => setHoveredItem(item.id)}
-        onMouseLeave={() => setHoveredItem(null)}
-        style={{
-          display: 'flex', alignItems: 'center', gap: 8,
-          height: 32, padding: '7px 8px', borderRadius: 6,
-          cursor: item.onClick ? 'pointer' : 'default',
-          userSelect: 'none',
-          background: isActive ? '#fff' : isHovered ? '#fff' : 'transparent',
-          border: isActive ? '0.5px solid var(--border)' : '0.5px solid transparent',
-          transition: 'background 150ms ease, border-color 150ms ease',
-        }}
-      >
-        <Icon size={14} style={{ color: isActive ? 'var(--text-primary)' : 'var(--text-muted)', flexShrink: 0 }} />
-        <span style={{ flex: 1, fontSize: 13, fontWeight: isActive ? 500 : 400, color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-          {item.label}
-        </span>
-        {item.badge && (
-          <span style={{ fontSize: 10, fontWeight: 600, padding: '1px 7px', borderRadius: 999, background: '#DCFCE7', color: '#166534', flexShrink: 0 }}>
-            {item.badge}
-          </span>
-        )}
-        {item.rightText && !item.badge && (
-          <span style={{ fontSize: 11, color: 'var(--text-muted)', flexShrink: 0 }}>
-            {item.rightText}
-          </span>
-        )}
+      <div key={idx}>
+        <div onClick={item.onClick || undefined} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '8px 12px', borderRadius: 8, cursor: item.onClick ? 'pointer' : 'default', background: item.active ? '#EDF3FA' : 'transparent', position: 'relative', userSelect: 'none' }}
+          onMouseEnter={(e) => { if (item.onClick) e.currentTarget.style.background = item.active ? '#EDF3FA' : '#F8FAFC'; }}
+          onMouseLeave={(e) => { if (item.onClick) e.currentTarget.style.background = item.active ? '#EDF3FA' : 'transparent'; }}
+        >
+          {item.dotColor && <span style={{ position: 'absolute', left: 4, top: 14, width: 6, height: 6, borderRadius: '50%', background: item.dotColor }} />}
+          <Icon size={16} style={{ marginTop: 2, color: 'var(--text-secondary)', flexShrink: 0 }} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>{item.label}</span>
+              {item.badge && (
+                <span style={{ fontSize: 10, fontWeight: 600, padding: '1px 7px', borderRadius: 999, ...(item.badgeStyle === 'navy' ? { background: 'var(--navy)', color: '#fff' } : { background: '#DCFCE7', color: '#166534' }) }}>{item.badge}</span>
+              )}
+            </div>
+            {item.subtitle && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.subtitle}</div>}
+          </div>
+        </div>
       </div>
     );
   };
 
-  // ─── Section header renderer ───
-  const renderSectionHeader = (label, isOpen, onToggle) => (
-    <div
-      onClick={onToggle}
-      style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '0 8px', marginBottom: 4, cursor: 'pointer', userSelect: 'none',
-      }}
-    >
-      <span style={{ fontSize: 10, fontWeight: 500, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-        {label}
-      </span>
-      <ChevronDown size={12} style={{
-        color: 'var(--text-muted)',
-        transform: isOpen ? 'rotate(0deg)' : 'rotate(-90deg)',
-        transition: 'transform 200ms ease',
-      }} />
-    </div>
-  );
+  const allMainItems = [
+    ...sidebarItems,
+    { icon: Package, label: 'Knowledge Packs', badge: String(packCount), badgeStyle: 'navy', subtitle: 'Docs & links bundled for chat', onClick: onOpenKnowledgePacks },
+    { icon: BookOpen, label: 'Prompt Templates', badge: String(promptCount), badgeStyle: 'navy', subtitle: 'Saved prompts for quick access', onClick: onOpenPromptTemplates },
+    { icon: Users, label: 'Clients', badge: String(clientCount), badgeStyle: 'navy', subtitle: 'Manage your client directory', onClick: onOpenClients },
+  ];
 
-  // ─── Recent chats — show only 3 most recent ───
-  const recentThreads = (threads || []).slice(0, 3);
-  const totalThreads = (threads || []).length;
+  const libraryMainItems = [
+    { icon: FolderOpen, label: 'Document Vault', badge: String(vaultCount), badgeStyle: 'navy', subtitle: 'Single docs to attach to chats', onClick: onOpenDocumentVault },
+  ];
 
   return (
     <>
@@ -375,224 +315,107 @@ function Sidebar({ onOpenPromptTemplates, onOpenClients, onOpenKnowledgePacks, o
       className={`fixed inset-y-0 left-0 z-40 transform transition-transform md:relative md:translate-x-0 md:flex ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}
       style={{ width: 248, minWidth: 248, background: '#fff', borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}
     >
-      {/* ═══ ZONE 1 — Header ═══ */}
-      <div style={{ padding: '14px 12px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div style={{ padding: '18px 16px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div>
         <span style={{ fontFamily: "'DM Serif Display', serif", fontSize: 18 }}>
           <span style={{ color: 'var(--navy)' }}>Your</span><span style={{ color: '#C9A84C' }}>AI</span>
         </span>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          {/* Green online dot + avatar — desktop */}
-          <div className="hidden md:flex" style={{ alignItems: 'center', gap: 6 }}>
-            <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#22C55E', flexShrink: 0 }} />
-            <div style={{ width: 26, height: 26, borderRadius: '50%', background: '#EFF6FF', color: '#1D4ED8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 600 }}>RM</div>
-          </div>
-          {/* Close button — mobile only */}
-          <button
-            onClick={onClose}
-            className="md:hidden p-1 rounded-lg"
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}
-            aria-label="Close sidebar"
-          >
-            <X size={18} />
-          </button>
         </div>
-      </div>
-
-      {/* ═══ ZONE 2 — New Chat Button ═══ */}
-      <div style={{ padding: '12px 12px 0' }}>
         <button
-          onClick={onNewThread}
-          style={{
-            width: '100%', height: 34, borderRadius: 8,
-            display: 'flex', alignItems: 'center', gap: 6,
-            padding: '0 12px', background: '#fff',
-            border: '0.5px solid var(--border)',
-            fontSize: 13, fontWeight: 500, color: 'var(--text-secondary)',
-            cursor: 'pointer', transition: 'background 150ms ease',
-          }}
-          onMouseEnter={(e) => { e.currentTarget.style.background = '#F8FAFC'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; }}
+          onClick={onClose}
+          className="md:hidden p-1 rounded-lg"
+          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}
+          aria-label="Close sidebar"
         >
-          <Plus size={14} />
-          <span>New chat</span>
+          <X size={18} />
         </button>
       </div>
+      <div style={{ flex: 1, overflowY: 'auto', padding: '0 8px' }}>
+        <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', padding: '20px 12px 6px' }}>Main</div>
+        {allMainItems.map(renderItem)}
+        <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', padding: '18px 12px 6px' }}>Library</div>
+        {libraryMainItems.map(renderItem)}
 
-      {/* ═══ Scrollable area: sections ═══ */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '12px 12px 0', display: 'flex', flexDirection: 'column', gap: 12 }}>
-
-        {/* ═══ ZONE 3 — WORKSPACE Section ═══ */}
-        <div>
-          {renderSectionHeader('Workspace', workspaceOpen, toggleWorkspace)}
-          <div style={{
-            overflow: 'hidden',
-            maxHeight: workspaceOpen ? '400px' : '0px',
-            transition: 'max-height 200ms ease',
-          }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              {workspaceItems.map(renderNavItem)}
-            </div>
-          </div>
-        </div>
-
-        {/* ═══ ZONE 4 — KNOWLEDGE Section ═══ */}
-        <div>
-          {renderSectionHeader('Knowledge', knowledgeOpen, toggleKnowledge)}
-          <div style={{
-            overflow: 'hidden',
-            maxHeight: knowledgeOpen ? '400px' : '0px',
-            transition: 'max-height 200ms ease',
-          }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              {knowledgeItems.map(renderNavItem)}
-            </div>
-          </div>
-        </div>
-
-        {/* ═══ ZONE 5 — RECENT CHATS Section ═══ */}
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 8px', marginBottom: 4 }}>
-            <span style={{ fontSize: 10, fontWeight: 500, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              Recent Chats
-            </span>
-            <button
-              onClick={() => setShowChatSearch(v => !v)}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, display: 'flex', alignItems: 'center', color: 'var(--text-muted)' }}
-              title="Search chats"
-            >
-              <Search size={12} />
-            </button>
-          </div>
-
-          {/* Chat search — toggled by search icon */}
-          {showChatSearch && (
-            <div style={{ padding: '0 4px 6px', position: 'relative' }}>
-              <Search size={11} style={{ position: 'absolute', left: 14, top: 8, color: 'var(--text-muted)' }} />
-              <input
-                value={threadSearch}
-                onChange={(e) => onThreadSearchChange(e.target.value)}
-                placeholder="Search chats..."
-                autoFocus
-                style={{ width: '100%', height: 28, borderRadius: 6, border: '1px solid var(--border)', paddingLeft: 26, fontSize: 11, outline: 'none', boxSizing: 'border-box', fontFamily: "'DM Sans', sans-serif", color: 'var(--text-primary)' }}
-              />
-            </div>
-          )}
-
-          {/* Recent thread list — 3 max */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            {recentThreads.map(t => {
-              const isActive = t.id === activeThreadId;
-              const isHov = hoveredThread === t.id;
-              return (
-                <div
-                  key={t.id}
-                  onClick={() => onSwitchThread(t.id)}
-                  onMouseEnter={() => setHoveredThread(t.id)}
-                  onMouseLeave={() => setHoveredThread(null)}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 8,
-                    padding: '6px 8px', borderRadius: 6,
-                    cursor: 'pointer', userSelect: 'none',
-                    minHeight: 44,
-                    background: isActive ? '#fff' : isHov ? '#fff' : 'transparent',
-                    border: isActive ? '0.5px solid var(--border)' : '0.5px solid transparent',
-                    transition: 'background 150ms ease, border-color 150ms ease',
-                  }}
-                >
-                  <MessageSquare size={13} style={{ color: isActive ? 'var(--navy)' : 'var(--text-muted)', flexShrink: 0, marginTop: 1 }} />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 12, fontWeight: isActive ? 500 : 400, color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {t.title}
-                    </div>
-                    <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>
-                      {t.updatedAt} &middot; {t.messageCount} msgs
-                    </div>
-                  </div>
-                  {/* Delete — appears on hover */}
-                  {isHov && totalThreads > 1 && (
-                    <button
-                      onClick={(e) => { e.stopPropagation(); onDeleteThread(t.id); }}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, color: 'var(--text-muted)', flexShrink: 0 }}
-                      title="Delete conversation"
-                    >
-                      <Trash2 size={12} />
-                    </button>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-
-          {/* View all link */}
-          {totalThreads > 3 && (
-            <div
-              onClick={() => setShowChatSearch(true)}
-              style={{ fontSize: 11, color: 'var(--text-muted)', padding: '6px 8px', cursor: 'pointer', userSelect: 'none' }}
-              onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--navy)'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; }}
-            >
-              View all chats &rarr;
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* ═══ ZONE 6 — User Profile Footer ═══ */}
-      <div style={{ borderTop: '0.5px solid var(--border)', position: 'relative' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px' }}>
-          <div style={{ width: 26, height: 26, borderRadius: '50%', background: '#EFF6FF', color: '#1D4ED8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 600, flexShrink: 0 }}>RM</div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-primary)', lineHeight: 1.3 }}>Ryan Melade</div>
-            <div style={{ fontSize: 10, color: 'var(--text-muted)', lineHeight: 1.3 }}>Admin &middot; Team Plan</div>
-          </div>
+        {/* ─── Chat History / Threads ─── */}
+        <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', padding: '18px 12px 6px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span>Conversations</span>
           <button
-            onClick={() => setShowProfileMenu(v => !v)}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, color: 'var(--text-muted)', display: 'flex', alignItems: 'center' }}
+            onClick={onNewThread}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, color: 'var(--navy)', display: 'flex', alignItems: 'center' }}
+            title="New conversation"
           >
-            <MoreVertical size={14} />
+            <Plus size={14} />
           </button>
         </div>
-
-        {/* Three-dot popover menu */}
-        {showProfileMenu && (
-          <>
-            <div onClick={() => setShowProfileMenu(false)} style={{ position: 'fixed', inset: 0, zIndex: 50 }} />
-            <div style={{
-              position: 'absolute', bottom: '100%', left: 12, right: 12, marginBottom: 4,
-              background: '#fff', border: '1px solid var(--border)', borderRadius: 8,
-              boxShadow: '0 4px 16px rgba(0,0,0,0.1)', zIndex: 51, overflow: 'hidden',
-            }}>
-              {[
-                { icon: Download, label: 'Export', onClick: () => { setShowProfileMenu(false); } },
-                { icon: Settings, label: 'Settings', onClick: () => { setShowProfileMenu(false); } },
-                { icon: LogOut, label: 'Sign out', onClick: () => { setShowProfileMenu(false); }, danger: true },
-              ].map((menuItem, i) => {
-                const MIcon = menuItem.icon;
-                return (
-                  <div
-                    key={i}
-                    onClick={menuItem.onClick}
-                    style={{
-                      display: 'flex', alignItems: 'center', gap: 8,
-                      padding: '8px 12px', cursor: 'pointer', fontSize: 12,
-                      color: menuItem.danger ? '#DC2626' : 'var(--text-secondary)',
-                    }}
-                    onMouseEnter={(e) => { e.currentTarget.style.background = '#F8FAFC'; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
-                  >
-                    <MIcon size={13} />
-                    <span>{menuItem.label}</span>
-                  </div>
-                );
-              })}
+        {/* Thread search */}
+        <div style={{ padding: '0 8px 6px', position: 'relative' }}>
+          <Search size={12} style={{ position: 'absolute', left: 18, top: 9, color: 'var(--text-muted)' }} />
+          <input
+            value={threadSearch}
+            onChange={(e) => onThreadSearchChange(e.target.value)}
+            placeholder="Search chats..."
+            style={{ width: '100%', height: 30, borderRadius: 6, border: '1px solid var(--border)', paddingLeft: 28, fontSize: 11, outline: 'none', boxSizing: 'border-box', fontFamily: "'DM Sans', sans-serif", color: 'var(--text-primary)' }}
+          />
+        </div>
+        {/* Thread list */}
+        <div style={{ padding: '0 4px' }}>
+          {(threads || []).map(t => (
+            <div
+              key={t.id}
+              onClick={() => onSwitchThread(t.id)}
+              style={{
+                display: 'flex', alignItems: 'flex-start', gap: 8, padding: '8px 10px', borderRadius: 8,
+                cursor: 'pointer', position: 'relative', userSelect: 'none',
+                background: t.id === activeThreadId ? '#EDF3FA' : 'transparent',
+                borderLeft: t.id === activeThreadId ? '3px solid var(--navy)' : '3px solid transparent',
+                transition: 'all 0.1s',
+              }}
+              onMouseEnter={(e) => { if (t.id !== activeThreadId) e.currentTarget.style.background = '#F8FAFC'; }}
+              onMouseLeave={(e) => { if (t.id !== activeThreadId) e.currentTarget.style.background = 'transparent'; }}
+            >
+              <MessageSquare size={14} style={{ marginTop: 2, color: t.id === activeThreadId ? 'var(--navy)' : 'var(--text-muted)', flexShrink: 0 }} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 12, fontWeight: t.id === activeThreadId ? 600 : 500, color: t.id === activeThreadId ? 'var(--navy)' : 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {t.title}
+                </div>
+                <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span>{t.updatedAt}</span>
+                  <span style={{ opacity: 0.5 }}>&middot;</span>
+                  <span>{t.messageCount} msgs</span>
+                </div>
+              </div>
+              {t.id === activeThreadId && (threads || []).length > 1 && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); onDeleteThread(t.id); }}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, color: 'var(--text-muted)', flexShrink: 0, marginTop: 2 }}
+                  title="Delete conversation"
+                >
+                  <Trash2 size={12} />
+                </button>
+              )}
             </div>
-          </>
-        )}
+          ))}
+        </div>
+      </div>
+      <div style={{ borderTop: '1px solid var(--border)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px' }}>
+          <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--navy)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 600, flexShrink: 0 }}>RM</div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)' }}>Ryan Melade</div>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Admin &middot; Team Plan</div>
+          </div>
+          <MoreVertical size={16} color="var(--text-muted)" style={{ cursor: 'pointer' }} />
+        </div>
+        <div style={{ display: 'flex' }}>
+          <button onClick={onNewThread} style={{ flex: 1, padding: '10px 0', border: '1px solid var(--border)', background: '#fff', fontSize: 12, fontWeight: 500, cursor: 'pointer', borderBottomLeftRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, color: 'var(--text-secondary)' }}><Plus size={14} /> New Chat</button>
+          <button style={{ flex: 1, padding: '10px 0', border: '1px solid var(--border)', borderLeft: 'none', background: '#fff', fontSize: 12, fontWeight: 500, cursor: 'pointer', borderBottomRightRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, color: 'var(--text-secondary)' }}><Download size={14} /> Export</button>
+        </div>
       </div>
     </div>
     </>
   );
 }
+
 /* ─────────────────── Prompt Templates Panel ─────────────────── */
 function PromptTemplatesPanel({ templates, onUsePrompt, onClose, onCreateNew, onDelete }) {
   const [search, setSearch] = useState('');
