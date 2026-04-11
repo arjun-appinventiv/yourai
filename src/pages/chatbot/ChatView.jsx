@@ -6,7 +6,7 @@ import {
   Search, Bell, ArrowUp, Shield, Sparkles, FileText, Building2, Scale,
   LayoutDashboard, Send, MapPin, FileSearch, Lock, X, AlertTriangle, Info, Zap,
   BookOpen, UserPlus, Trash2, Edit3, Copy, Phone, Mail, Briefcase, Hash, Menu,
-  Package, Link2, File, Upload, Paperclip, Image, Video, Database, GitBranch, Settings, LogOut
+  Package, Link2, File, Upload, Paperclip, Database, GitBranch, Settings, LogOut
 } from 'lucide-react';
 import { billingData, subscriptionPlans } from '../../data/mockData';
 import { callLLM, getApiKey } from '../../lib/llm-client';
@@ -1196,8 +1196,6 @@ function EditDocumentModal({ document: docItem, onClose, onSave }) {
 
 /* ─────────────────── Knowledge Pack Picker (+ icon popover) ─────────────────── */
 function KnowledgePackPicker({ packs, activePack, onSelect, onClear, onManage, onClose, onAttachFiles, documents, activeDocument, onSelectDocument, onClearDocument, onManageDocuments }) {
-  const photoInputRef = useRef(null);
-  const videoInputRef = useRef(null);
   const docInputRef = useRef(null);
 
   const handleFiles = (e, kind) => {
@@ -1220,8 +1218,6 @@ function KnowledgePackPicker({ packs, activePack, onSelect, onClear, onManage, o
 
   return (
     <>
-      <input ref={photoInputRef} type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={(e) => handleFiles(e, 'photo')} />
-      <input ref={videoInputRef} type="file" accept="video/*" multiple style={{ display: 'none' }} onChange={(e) => handleFiles(e, 'video')} />
       <input ref={docInputRef} type="file" accept=".pdf,.doc,.docx,.txt,.rtf,.odt,.xls,.xlsx,.csv,.ppt,.pptx" multiple style={{ display: 'none' }} onChange={(e) => handleFiles(e, 'doc')} />
 
       <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 40 }} />
@@ -1231,9 +1227,7 @@ function KnowledgePackPicker({ packs, activePack, onSelect, onClear, onManage, o
         <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--border)' }}>
           <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>Quick Attach</div>
           <div style={{ display: 'flex', gap: 8 }}>
-            <QuickAttachBtn icon={Image} label="Photos" onClick={() => photoInputRef.current?.click()} />
-            <QuickAttachBtn icon={Video} label="Videos" onClick={() => videoInputRef.current?.click()} />
-            <QuickAttachBtn icon={File} label="Docs" onClick={() => docInputRef.current?.click()} />
+            <QuickAttachBtn icon={File} label="Documents" onClick={() => docInputRef.current?.click()} />
           </div>
         </div>
 
@@ -1481,7 +1475,7 @@ function MessageBubble({ msg }) {
         {msg.attachments && msg.attachments.length > 0 && (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
             {msg.attachments.map(a => {
-              const Icon = a.kind === 'photo' ? Image : a.kind === 'video' ? Video : File;
+              const Icon = File;
               return (
                 <div key={a.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 10px', borderRadius: 8, background: 'white', border: '1px solid var(--border)', maxWidth: 220 }}>
                   <Icon size={12} style={{ color: 'var(--navy)', flexShrink: 0 }} />
@@ -2421,7 +2415,7 @@ export default function ChatView() {
             {pendingAttachments.length > 0 && (
               <div style={{ marginBottom: 8, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                 {pendingAttachments.map(a => {
-                  const Icon = a.kind === 'photo' ? Image : a.kind === 'video' ? Video : File;
+                  const Icon = File;
                   return (
                     <div key={a.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 10px', borderRadius: 999, background: 'white', border: '1px solid var(--border)', maxWidth: 220 }}>
                       <Icon size={12} style={{ color: 'var(--navy)', flexShrink: 0 }} />

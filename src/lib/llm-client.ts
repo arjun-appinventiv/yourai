@@ -222,6 +222,7 @@ ${availableSources.map((s, i) => `${i + 1}. ${sourceDescriptions[s] || s}`).join
 RULES:
 - Answer from the HIGHEST-PRIORITY source that contains relevant information.
 - Each step only triggers if the previous one found nothing relevant.
+- If the user uploaded a document and refers to it (e.g. "go through this doc", "summarise this", "what is this about"), ALWAYS use UPLOADED_DOC as the source — the user is clearly engaging with their document.
 - At the very end of your response, on its own line, output exactly one of these tags:
 ${sourceOptions}
   [SOURCE: NONE] — if none of the provided documents were relevant
@@ -294,7 +295,9 @@ ${sourceOptions}
   }
 
   // If no source found relevant and persona has fallback, use it
-  if (sourceType === 'NONE' && persona?.fallbackMessage && availableSources.length > 0) {
+  // But NOT when the user uploaded a document — they expect the AI to engage with it
+  const hasUploadedDoc = availableSources.includes('UPLOADED_DOC');
+  if (sourceType === 'NONE' && persona?.fallbackMessage && availableSources.length > 0 && !hasUploadedDoc) {
     fullContent = persona.fallbackMessage;
     onChunk(fullContent);
   }
