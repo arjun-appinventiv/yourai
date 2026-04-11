@@ -164,6 +164,14 @@ export default function GlobalKnowledgeBase() {
   const [editingOp, setEditingOp] = useState(null);
   const [showAddOp, setShowAddOp] = useState(false);
   const personaFileInputRef = useRef(null);
+  const [clConnected, setClConnected] = useState(() => !!localStorage.getItem('yourai_courtlistener_kb'));
+  const [clLoading, setClLoading] = useState(false);
+  const [clStats, setClStats] = useState(() => {
+    try {
+      const s = localStorage.getItem('yourai_cl_stats');
+      return s ? JSON.parse(s) : null;
+    } catch { return null; }
+  });
 
   const TONE_OPTIONS = [
     { id: 'formal', label: 'Formal' },
@@ -357,6 +365,31 @@ export default function GlobalKnowledgeBase() {
       newDocs.push(doc);
     }
     updatePersona('globalDocs', [...persona.globalDocs, ...newDocs]);
+  };
+
+  const handleConnectCourtListener = async () => {
+    setClLoading(true);
+    try {
+      const { fetchCourtListenerKB } = await import('../../lib/courtlistener');
+      const { courts, opinions, contextText } = await fetchCourtListenerKB();
+      localStorage.setItem('yourai_courtlistener_kb', contextText);
+      const stats = { courts: courts.length, opinions: opinions.length, lastSync: new Date().toLocaleString() };
+      localStorage.setItem('yourai_cl_stats', JSON.stringify(stats));
+      setClStats(stats);
+      setClConnected(true);
+      showToast(`CourtListener connected — ${courts.length} courts, ${opinions.length} opinions loaded`, 'success');
+    } catch (err) {
+      showToast('Failed to connect to CourtListener: ' + (err.message || 'Network error'), 'error');
+    }
+    setClLoading(false);
+  };
+
+  const handleDisconnectCourtListener = () => {
+    localStorage.removeItem('yourai_courtlistener_kb');
+    localStorage.removeItem('yourai_cl_stats');
+    setClConnected(false);
+    setClStats(null);
+    showToast('CourtListener disconnected', 'info');
   };
 
   const handleRemovePersonaDoc = (id) => {
@@ -2211,6 +2244,89 @@ export default function GlobalKnowledgeBase() {
                       </button>
                     </div>
                   ))}
+                </div>
+
+                {/* CourtListener Integration */}
+                <div className="mt-4 p-4 rounded-lg" style={{ backgroundColor: 'var(--ice-warm)', border: '1px solid var(--border)' }}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <Scale size={15} style={{ color: 'var(--navy)' }} />
+                    <span className="text-xs font-semibold" style={{ color: 'var(--text-primary)' }}>CourtListener — Live Legal Data</span>
+                    <InfoButton title="CourtListener Integration">
+                      <InfoSection title="What is this?">
+                        <InfoText>CourtListener (Free Law Project) provides free access to federal court data, opinions, and case law. When connected, the AI can reference real legal precedents in its responses.</InfoText>
+                      </InfoSection>
+                      <InfoSection title="What gets loaded?">
+                        <InfoList items={[
+                          "Active federal courts and their jurisdictions",
+                          "Recent federal opinions with citations and excerpts",
+                          "Live search for relevant case law when users ask legal questions",
+                        ]} />
+                      </InfoSection>
+                    </InfoButton>
+                  </div>
+
+                  {!clConnected ? (
+                    <button
+                      onClick={handleConnectCourtListener}
+                      disabled={clLoading}
+                      className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium w-full justify-center"
+                      style={{ backgroundColor: 'var(--navy)', color: 'white', border: 'none', cursor: clLoading ? 'wait' : 'pointer', opacity: clLoading ? 0.7 : 1 }}
+                    >
+                      {clLoading ? (
+                        <>
+                          <Loader size={13} className="animate-spin" />
+                          Connecting to CourtListener...
+                        </>
+                      ) : (
+                        <>
+                          <Database size={13} />
+                          Connect CourtListener
+                        </>
+                      )}
+                    </button>
+                  ) : (
+                    <div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <CheckCircle size={13} style={{ color: '#16a34a' }} />
+                        <span className="text-xs font-medium" style={{ color: '#16a34a' }}>Connected</span>
+                      </div>
+                      {clStats && (
+                        <div className="grid grid-cols-3 gap-2 mb-3">
+                          <div className="text-center p-2 rounded" style={{ backgroundColor: 'white', border: '1px solid var(--border)' }}>
+                            <div className="text-sm font-bold" style={{ color: 'var(--navy)' }}>{clStats.courts}</div>
+                            <div className="text-xs" style={{ color: 'var(--text-muted)' }}>Courts</div>
+                          </div>
+                          <div className="text-center p-2 rounded" style={{ backgroundColor: 'white', border: '1px solid var(--border)' }}>
+                            <div className="text-sm font-bold" style={{ color: 'var(--navy)' }}>{clStats.opinions}</div>
+                            <div className="text-xs" style={{ color: 'var(--text-muted)' }}>Opinions</div>
+                          </div>
+                          <div className="text-center p-2 rounded" style={{ backgroundColor: 'white', border: '1px solid var(--border)' }}>
+                            <div className="text-xs" style={{ color: 'var(--text-muted)' }}>Last sync</div>
+                            <div className="text-xs font-medium" style={{ color: 'var(--text-primary)' }}>{clStats.lastSync}</div>
+                          </div>
+                        </div>
+                      )}
+                      <div className="flex gap-2">
+                        <button
+                          onClick={handleConnectCourtListener}
+                          disabled={clLoading}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium"
+                          style={{ backgroundColor: 'white', color: 'var(--navy)', border: '1px solid var(--border)', cursor: clLoading ? 'wait' : 'pointer' }}
+                        >
+                          {clLoading ? <Loader size={12} className="animate-spin" /> : <RotateCcw size={12} />}
+                          Refresh
+                        </button>
+                        <button
+                          onClick={handleDisconnectCourtListener}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium"
+                          style={{ backgroundColor: 'white', color: '#dc2626', border: '1px solid #fecaca', cursor: 'pointer' }}
+                        >
+                          <Trash2 size={12} />
+                          Disconnect
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 

@@ -133,7 +133,27 @@ export async function callOpenAI(
   }
 
   const persona = getPersona();
-  const systemPrompt = buildSystemPrompt(persona);
+  let systemPrompt = buildSystemPrompt(persona);
+
+  // Inject CourtListener context if enabled
+  try {
+    const clData = localStorage.getItem('yourai_courtlistener_kb');
+    if (clData) {
+      systemPrompt += '\n\n' + clData;
+    }
+  } catch { /* ignore */ }
+
+  // For legal queries, search CourtListener for relevant case law
+  const legalKeywords = /\b(court|case|statute|law|legal|judge|ruling|opinion|precedent|plaintiff|defendant|contract|liability|jurisdiction|appeal|motion|verdict|tort|damages|negligence|compliance|regulation)\b/i;
+  if (legalKeywords.test(userMessage)) {
+    try {
+      const { searchCourtListenerKB } = await import('./courtlistener');
+      const searchContext = await searchCourtListenerKB(userMessage.slice(0, 100));
+      if (searchContext) {
+        systemPrompt += '\n\n' + searchContext;
+      }
+    } catch { /* CourtListener unavailable — continue without */ }
+  }
 
   const messages = [
     { role: 'system' as const, content: systemPrompt },
