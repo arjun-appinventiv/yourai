@@ -315,36 +315,46 @@ export default function BotTester() {
     }
 
     const start = Date.now();
-    try {
-      const result = await callLLM(
-        test.input,
-        [],
-        () => {}, // no streaming needed for tests
-        test.context,
-      );
+    const maxRetries = 3;
 
-      const checkResults = test.checks.map(check => ({
-        ...check,
-        passed: runCheck(check, result),
-      }));
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        const result = await callLLM(
+          test.input,
+          [],
+          () => {}, // no streaming needed for tests
+          test.context,
+        );
 
-      const allPassed = checkResults.every(c => c.passed);
-      return {
-        status: allPassed ? 'pass' : 'fail',
-        checks: checkResults,
-        fullContent: result.fullContent,
-        sourceType: result.sourceType,
-        duration: Date.now() - start,
-      };
-    } catch (err) {
-      return {
-        status: 'error',
-        error: err.message,
-        checks: [],
-        fullContent: '',
-        sourceType: 'NONE',
-        duration: Date.now() - start,
-      };
+        const checkResults = test.checks.map(check => ({
+          ...check,
+          passed: runCheck(check, result),
+        }));
+
+        const allPassed = checkResults.every(c => c.passed);
+        return {
+          status: allPassed ? 'pass' : 'fail',
+          checks: checkResults,
+          fullContent: result.fullContent,
+          sourceType: result.sourceType,
+          duration: Date.now() - start,
+        };
+      } catch (err) {
+        const isRateLimit = err.message?.includes('Rate limit') || err.message?.includes('rate_limit');
+        if (isRateLimit && attempt < maxRetries - 1) {
+          // Wait and retry on rate limit
+          await new Promise(r => setTimeout(r, 4000 * (attempt + 1)));
+          continue;
+        }
+        return {
+          status: 'error',
+          error: err.message,
+          checks: [],
+          fullContent: '',
+          sourceType: 'NONE',
+          duration: Date.now() - start,
+        };
+      }
     }
   }, []);
 
@@ -360,8 +370,8 @@ export default function BotTester() {
         setResults(prev => ({ ...prev, [test.id]: { status: 'running' } }));
         const result = await runSingleTest(test);
         setResults(prev => ({ ...prev, [test.id]: result }));
-        // Small delay between tests to avoid rate limiting
-        await new Promise(r => setTimeout(r, 500));
+        // Delay between tests to avoid Groq rate limiting (12k TPM on free tier)
+        await new Promise(r => setTimeout(r, 3000));
       }
       if (abortRef.current) break;
     }
@@ -534,7 +544,7 @@ export default function BotTester() {
         <Zap size={14} style={{ color: '#1D4ED8', marginTop: 2, flexShrink: 0 }} />
         <div style={{ fontSize: 12, color: '#1E40AF', lineHeight: 1.6 }}>
           <strong>How it works:</strong> Each test sends a real message to the Groq LLM with the configured bot persona and validates the response against expected checks. Tests with document context simulate file uploads.
-          Tests run sequentially with a 0.5s delay to avoid rate limiting.
+          Tests run sequentially with a 3s delay to stay within Groq's rate limits. Rate-limited tests auto-retry up to 3 times.
         </div>
       </div>
     </div>
