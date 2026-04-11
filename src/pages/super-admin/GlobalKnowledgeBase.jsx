@@ -145,8 +145,20 @@ export default function GlobalKnowledgeBase() {
     updatedBy: 'Arjun Sharma',
   };
 
-  const [persona, setPersona] = useState(DEFAULT_PERSONA);
-  const [savedPersona, setSavedPersona] = useState(DEFAULT_PERSONA);
+  const [persona, setPersona] = useState(() => {
+    try {
+      const stored = localStorage.getItem('yourai_bot_persona');
+      if (stored) return JSON.parse(stored);
+    } catch (_) { /* ignore */ }
+    return DEFAULT_PERSONA;
+  });
+  const [savedPersona, setSavedPersona] = useState(() => {
+    try {
+      const stored = localStorage.getItem('yourai_bot_persona');
+      if (stored) return JSON.parse(stored);
+    } catch (_) { /* ignore */ }
+    return DEFAULT_PERSONA;
+  });
   const [personaDirty, setPersonaDirty] = useState(false);
   const [personaSaved, setPersonaSaved] = useState(true);
   const [editingOp, setEditingOp] = useState(null);
@@ -304,6 +316,10 @@ export default function GlobalKnowledgeBase() {
     setSavedPersonaFormats(JSON.parse(JSON.stringify(personaFormats)));
     setPersonaDirty(false);
     setPersonaSaved(true);
+    // Persist to localStorage so ChatView can read it
+    try {
+      localStorage.setItem('yourai_bot_persona', JSON.stringify(updated));
+    } catch (_) { /* quota exceeded — ignore */ }
     showToast('Bot persona saved — changes will apply from the next session', 'success');
   };
 
@@ -316,14 +332,30 @@ export default function GlobalKnowledgeBase() {
     showToast('Changes discarded', 'info');
   };
 
-  const handlePersonaFileUpload = (files) => {
-    const newDocs = Array.from(files).map((f, i) => ({
-      id: Date.now() + i,
-      name: f.name,
-      type: f.name.split('.').pop().toUpperCase(),
-      size: `${(f.size / (1024 * 1024)).toFixed(1)} MB`,
-      url: '#',
-    }));
+  const handlePersonaFileUpload = async (files) => {
+    const newDocs = [];
+    for (const f of Array.from(files)) {
+      const doc = {
+        id: Date.now() + newDocs.length,
+        name: f.name,
+        type: f.name.split('.').pop().toUpperCase(),
+        size: `${(f.size / (1024 * 1024)).toFixed(1)} MB`,
+        url: '#',
+        content: '',
+      };
+      // Extract text content for knowledge base context
+      try {
+        if (f.type === 'text/plain' || f.name.endsWith('.txt') || f.name.endsWith('.md') || f.name.endsWith('.csv')) {
+          doc.content = await f.text();
+        } else {
+          // For PDF/DOCX, store raw text extraction attempt
+          doc.content = await f.text().catch(() => '');
+        }
+        // Truncate to 50k chars to avoid localStorage quota
+        if (doc.content.length > 50000) doc.content = doc.content.slice(0, 50000);
+      } catch (_) { /* ignore extraction errors */ }
+      newDocs.push(doc);
+    }
     updatePersona('globalDocs', [...persona.globalDocs, ...newDocs]);
   };
 

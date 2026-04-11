@@ -9,6 +9,7 @@ import {
   Package, Link2, File, Upload, Paperclip, Image, Video, Database, GitBranch, Settings, LogOut
 } from 'lucide-react';
 import { billingData, subscriptionPlans } from '../../data/mockData';
+import { callOpenAI, getApiKey } from '../../lib/llm-client';
 
 // Removed: MOCK_RESPONSES array — replaced with real streaming fetch to /api/chat
 // See: tech-stack.md — Backend API section
@@ -2046,49 +2047,68 @@ export default function ChatView() {
     setIsTyping(true);
     setStreamingContent('');
 
+    // Build history for LLM context
+    const history = messages.slice(-20).map(m => ({
+      role: m.sender === 'user' ? 'user' : 'assistant',
+      content: m.content,
+    }));
+
     try {
-      // config — reads from .env.local
+      // Try backend first
       const base = import.meta.env.VITE_API_URL || '';
-      const response = await fetch(`${base}/api/chat`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          conversationId: activeThreadId,
-          message: trimmed,
-          sessionId: sessionState.sessionKbSnapshotId,
-          sessionDocId: sessionState.sessionDocId,
-        }),
-      });
-
-      if (!response.ok) {
-        setIsTyping(false);
-        setStreamingContent('');
-        const errMsg = { id: Date.now() + 1, sender: 'bot', content: 'Sorry, I encountered an error. Please try again.', timestamp: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }), sourceBadge: null };
-        setMessages((prev) => [...prev, errMsg]);
-        return;
-      }
-
-      // Stream the response token by token
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
+      let usedBackend = false;
       let fullContent = '';
+      let sourceBadge = 'Answered from: YourAI knowledge base';
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        const chunk = decoder.decode(value);
-        fullContent += chunk;
-        setStreamingContent(fullContent);
+      try {
+        const response = await fetch(`${base}/api/chat`, {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            conversationId: activeThreadId,
+            message: trimmed,
+            sessionId: sessionState.sessionKbSnapshotId,
+            sessionDocId: sessionState.sessionDocId,
+          }),
+        });
+
+        const contentType = response.headers.get('content-type') || '';
+        if (response.ok && (contentType.includes('text/plain') || contentType.includes('application/json'))) {
+          usedBackend = true;
+          const reader = response.body.getReader();
+          const decoder = new TextDecoder();
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            const chunk = decoder.decode(value);
+            fullContent += chunk;
+            setStreamingContent(fullContent);
+          }
+          const sourceTypeHeader = response.headers.get('X-Source-Type');
+          sourceBadge = sourceTypeHeader === 'UPLOADED_DOC'
+            ? 'Answered from: your document'
+            : 'Answered from: YourAI knowledge base';
+        }
+      } catch { /* backend unreachable — fall through to client-side LLM */ }
+
+      // Fallback: call OpenAI directly from client (Vercel static deploy)
+      if (!usedBackend) {
+        if (!getApiKey()) {
+          setIsTyping(false);
+          setStreamingContent('');
+          const errMsg = { id: Date.now() + 1, sender: 'bot', content: 'No LLM backend available. Please configure the API key or start the backend server.', timestamp: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }), sourceBadge: null };
+          setMessages((prev) => [...prev, errMsg]);
+          return;
+        }
+        const result = await callOpenAI(trimmed, history, (streaming) => {
+          setStreamingContent(streaming);
+        });
+        fullContent = result.fullContent;
+        sourceBadge = result.sourceType === 'GLOBAL_KB'
+          ? 'Answered from: YourAI knowledge base'
+          : 'Answered from: AI';
       }
-
-      // DEC-093: RAG queries scoped to session_kb_snapshot_id, NOT live KB
-      // TODO: Phase 2 — replace snapshot reference with document_versions table
-      // Source type from backend response header
-      const sourceTypeHeader = response.headers.get('X-Source-Type');
-      const sourceBadge = sourceTypeHeader === 'UPLOADED_DOC'
-        ? 'Answered from: your document'
-        : 'Answered from: YourAI knowledge base';
 
       const botMsg = {
         id: Date.now() + 1,
@@ -2115,13 +2135,13 @@ export default function ChatView() {
           messageCount: (t.messageCount || 0) + 2,
         };
       }));
-    } catch {
+    } catch (err) {
       setIsTyping(false);
       setStreamingContent('');
-      const errMsg = { id: Date.now() + 1, sender: 'bot', content: 'Connection error. Please check your network and try again.', timestamp: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }), sourceBadge: null };
+      const errMsg = { id: Date.now() + 1, sender: 'bot', content: err?.message || 'Connection error. Please check your network and try again.', timestamp: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }), sourceBadge: null };
       setMessages((prev) => [...prev, errMsg]);
     }
-  }, [isTyping, showEmptyState, activeKnowledgePack, activeVaultDocument, pendingAttachments, activeThreadId, sessionState]);
+  }, [isTyping, showEmptyState, messages, activeKnowledgePack, activeVaultDocument, pendingAttachments, activeThreadId, sessionState]);
 
   const handleAttachFiles = (files, kind) => {
     const newAtts = files.map((f, i) => ({
