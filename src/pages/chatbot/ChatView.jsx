@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { billingData, subscriptionPlans } from '../../data/mockData';
 import { callLLM, getApiKey } from '../../lib/llm-client';
+import { extractFileText } from '../../lib/file-parser';
 
 // Removed: MOCK_RESPONSES array — replaced with real streaming fetch to /api/chat
 // See: tech-stack.md — Backend API section
@@ -191,16 +192,58 @@ const AI_MODELS_BY_PLAN = {
 };
 
 /* ─── tiny helpers ─── */
-const bold = (str) => {
-  const parts = str.split(/(\*\*[^*]+\*\*)/g);
-  return parts.map((p, i) =>
-    p.startsWith('**') && p.endsWith('**') ? (
-      <strong key={i}>{p.slice(2, -2)}</strong>
-    ) : (
-      <span key={i}>{p}</span>
-    ),
-  );
+/** Lightweight markdown renderer: bold, bullets, numbered lists, newlines */
+const renderMarkdown = (str) => {
+  if (!str) return null;
+  const lines = str.split('\n');
+  const elements = [];
+  let listItems = [];
+  let listType = null; // 'ul' or 'ol'
+
+  const flushList = () => {
+    if (listItems.length > 0) {
+      const Tag = listType === 'ol' ? 'ol' : 'ul';
+      elements.push(<Tag key={`list-${elements.length}`} style={{ margin: '6px 0', paddingLeft: 22 }}>{listItems}</Tag>);
+      listItems = [];
+      listType = null;
+    }
+  };
+
+  const inlineBold = (text, keyPrefix) => {
+    const parts = text.split(/(\*\*[^*]+\*\*)/g);
+    return parts.map((p, i) =>
+      p.startsWith('**') && p.endsWith('**')
+        ? <strong key={`${keyPrefix}-${i}`}>{p.slice(2, -2)}</strong>
+        : <span key={`${keyPrefix}-${i}`}>{p}</span>
+    );
+  };
+
+  lines.forEach((line, i) => {
+    const bulletMatch = line.match(/^\s*[\*\-•]\s+(.*)/);
+    const numberedMatch = line.match(/^\s*(\d+)[\.\)]\s+(.*)/);
+
+    if (bulletMatch) {
+      if (listType !== 'ul') flushList();
+      listType = 'ul';
+      listItems.push(<li key={`li-${i}`} style={{ marginBottom: 3 }}>{inlineBold(bulletMatch[1], `b-${i}`)}</li>);
+    } else if (numberedMatch) {
+      if (listType !== 'ol') flushList();
+      listType = 'ol';
+      listItems.push(<li key={`li-${i}`} style={{ marginBottom: 3 }}>{inlineBold(numberedMatch[2], `n-${i}`)}</li>);
+    } else {
+      flushList();
+      if (line.trim() === '') {
+        elements.push(<div key={`br-${i}`} style={{ height: 8 }} />);
+      } else {
+        elements.push(<p key={`p-${i}`} style={{ margin: '3px 0' }}>{inlineBold(line, `p-${i}`)}</p>);
+      }
+    }
+  });
+  flushList();
+  return elements;
 };
+// Backward compat alias
+const bold = renderMarkdown;
 
 const riskColors = {
   HIGH: { bg: '#FEE2E2', text: '#991B1B' },
@@ -2003,6 +2046,7 @@ export default function ChatView() {
     const userMsg = { id: Date.now(), sender: 'user', content: trimmed, timestamp: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }), attachments: pendingAttachments };
     setMessages((prev) => [...prev, userMsg]);
     setInput('');
+    if (inputRef.current) inputRef.current.style.height = 'auto';
     setPendingAttachments([]);
     setIsTyping(true);
     setStreamingContent('');
@@ -2154,19 +2198,19 @@ export default function ChatView() {
       setSessionState(prev => ({ ...prev, sessionDocId: `doc-${Date.now()}` }));
     }
     setPendingAttachments(prev => [...prev, ...newAtts]);
-    // Extract text content from doc files for client-side LLM context
+    // Extract text content from doc files using RAG file parser
     if (kind === 'doc') {
       files.forEach((file, i) => {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          const text = e.target?.result;
-          if (typeof text === 'string') {
-            setPendingAttachments(prev => prev.map(a =>
-              a.id === newAtts[i].id ? { ...a, content: text.slice(0, 50000) } : a
-            ));
-          }
-        };
-        reader.readAsText(file);
+        extractFileText(file).then(({ text }) => {
+          setPendingAttachments(prev => prev.map(a =>
+            a.id === newAtts[i].id ? { ...a, content: text } : a
+          ));
+        }).catch((err) => {
+          console.error('File extraction failed:', err);
+          setPendingAttachments(prev => prev.map(a =>
+            a.id === newAtts[i].id ? { ...a, content: `[File: ${file.name}] Could not extract text.` } : a
+          ));
+        });
       });
     }
   };
@@ -2447,7 +2491,7 @@ export default function ChatView() {
                   />
                 )}
               </div>
-              <input ref={inputRef} value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={handleKeyDown} placeholder={inputPlaceholder} style={{ flex: 1, border: 'none', outline: 'none', fontSize: 14, color: 'var(--text-primary)', background: 'transparent' }} />
+              <textarea ref={inputRef} value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={handleKeyDown} placeholder={inputPlaceholder} rows={1} style={{ flex: 1, border: 'none', outline: 'none', fontSize: 14, color: 'var(--text-primary)', background: 'transparent', resize: 'none', maxHeight: 120, overflowY: 'auto', lineHeight: '1.5', fontFamily: 'inherit' }} onInput={(e) => { e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px'; }} />
               <div onClick={() => sendMessage(input)} style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--navy)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}><ArrowUp size={16} color="#fff" /></div>
             </div>
             <div style={{ textAlign: 'center', fontSize: 12, color: 'var(--text-muted)', marginTop: 8 }}>
