@@ -2,9 +2,9 @@
 // Key is encrypted 5x with XOR + base64. Never stored in DB.
 // To remove: delete the ENCRYPTED_KEY constant below.
 
-// ─── 5x Encrypted Key ───
+// ─── 5x Encrypted Gemini Key ───
 // Encryption: XOR with salt → base64, repeated 5 times
-const ENCRYPTED_KEY = 'HDxBIQgYRnthWlp+FydZEHIgLSM/GSZ0fGN/XGEJESASWD0VNCUEA2hjaWBSfhwSICF2bCIyBiseH2BYVF5KOCo/NlkRLh4rCSBeflF0bEcpNyoHfiAAMDNyGHt+V3t6aAkjCSZyDC4gJTY5ZHZpZlN+PhAhMG0cJz0gKCpDWgZQXEkmNi4+UREYJCUOJ3hTal94dTE3Lgd1LiJCOhkmQntyBnFmMVRaEgcfOy9CCC1mcGkEblUEOCM1ZQksRwUGKEp4dlB1XSc3OT4EET4dFxE+QUpkXF5mEFIqPXkPPjs3GQBLc1kDdUkhIwciYwNcIyp5KmhbaQFubz4TJRxxHidGJCoYHGgAVnIdBiMLA3wfLB4lBz4ZVWdcQnsyKRQffh02BDMZfU9zSGMOaDIjHBcHE1wtJTJ6a2NpWG5HJlgpJ0RsIj1HIxEfaF5UT0IgMQtFHxwWGjwDGB1dYXRZbxIkVR92ICJaPhkcS35yBlFpCVQnI1kLCjFCDDBndmkHU2kmFC43fS8lGDQ2LWxrcmZRXhkuBCJQHF4CGQswQgVRX3dkKyYqW3EfNhk8JjpZflhVAmkhI1QXdRs6FhwQfWZaQwR0bzYSKCBlEixHMAUfewsAZnRkPTc4EEMQKQE/Dy5BC1YBWmUWUVkHcw8+GzsZOhR6WFEGYxkjAiN1DxUgQCpiZ3FpXFJKFC0iDnph';
+const ENCRYPTED_KEY = 'EStBAQwYbGtjWVJ6F1E2F3JoIgAqciJJcHJFQW4nEQcVUxspNx8EA3tzYWpXVQQKIkR1LCMYOA0QenRoYVwYJio9A384LCwbBiFKXVV0bEAmUyZEfgoAOTNyLnRidWdUbwonIxUHPi4tGSI5ZmYFf1BHMQMrHkMoLDcCah4cQl0=';
 const SALT = 'YourAI-2026-salt';
 
 function xorWithSalt(input: string, salt: string): string {
@@ -121,8 +121,8 @@ function buildSystemPrompt(persona: BotPersona | null): string {
   return parts.join('\n');
 }
 
-// ─── Direct OpenAI call (client-side fallback) ───
-export async function callOpenAI(
+// ─── Direct Gemini call (client-side fallback) ───
+export async function callLLM(
   userMessage: string,
   history: Array<{ role: 'user' | 'assistant'; content: string }>,
   onChunk: (text: string) => void,
@@ -155,28 +155,33 @@ export async function callOpenAI(
     } catch { /* CourtListener unavailable — continue without */ }
   }
 
-  const messages = [
-    { role: 'system' as const, content: systemPrompt },
-    ...history.slice(-20),
-    { role: 'user' as const, content: userMessage },
+  // Build Gemini request format
+  const contents = [
+    ...history.slice(-20).map(msg => ({
+      role: msg.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: msg.content }],
+    })),
+    { role: 'user', parts: [{ text: userMessage }] },
   ];
 
-  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent?alt=sse&key=${apiKey}`;
+
+  const response = await fetch(url, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`,
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      model: 'gpt-4o',
-      messages,
-      stream: true,
+      system_instruction: { parts: [{ text: systemPrompt }] },
+      contents,
+      generationConfig: {
+        temperature: 0.7,
+        maxOutputTokens: 4096,
+      },
     }),
   });
 
   if (!response.ok) {
     const err = await response.json().catch(() => ({}));
-    throw new Error(err.error?.message || `OpenAI API error: ${response.status}`);
+    throw new Error(err.error?.message || `Gemini API error: ${response.status}`);
   }
 
   const reader = response.body!.getReader();
@@ -191,14 +196,18 @@ export async function callOpenAI(
     const lines = text.split('\n').filter(l => l.startsWith('data: '));
 
     for (const line of lines) {
-      const data = line.slice(6);
-      if (data === '[DONE]') continue;
+      const data = line.slice(6).trim();
+      if (!data) continue;
       try {
         const parsed = JSON.parse(data);
-        const delta = parsed.choices?.[0]?.delta?.content;
-        if (delta) {
-          fullContent += delta;
-          onChunk(fullContent);
+        const parts = parsed.candidates?.[0]?.content?.parts;
+        if (parts) {
+          for (const part of parts) {
+            if (part.text) {
+              fullContent += part.text;
+              onChunk(fullContent);
+            }
+          }
         }
       } catch { /* skip malformed chunks */ }
     }
@@ -211,3 +220,6 @@ export async function callOpenAI(
     sourceType: hasKbContext ? 'GLOBAL_KB' : 'NONE',
   };
 }
+
+// Backward compat alias
+export const callOpenAI = callLLM;

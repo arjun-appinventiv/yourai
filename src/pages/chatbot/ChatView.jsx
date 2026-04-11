@@ -9,7 +9,7 @@ import {
   Package, Link2, File, Upload, Paperclip, Image, Video, Database, GitBranch, Settings, LogOut
 } from 'lucide-react';
 import { billingData, subscriptionPlans } from '../../data/mockData';
-import { callOpenAI, getApiKey } from '../../lib/llm-client';
+import { callLLM, getApiKey } from '../../lib/llm-client';
 
 // Removed: MOCK_RESPONSES array — replaced with real streaming fetch to /api/chat
 // See: tech-stack.md — Backend API section
@@ -122,51 +122,11 @@ const DEFAULT_KNOWLEDGE_PACKS = [
 const DEFAULT_THREADS = [
   {
     id: 'thread-1',
-    title: 'Meridian Capital NDA — Risk Analysis',
-    preview: 'Run a full risk analysis on the Meridian Capital NDA...',
-    updatedAt: 'Today, 9:14 AM',
-    messageCount: 3,
+    title: 'New Conversation',
+    preview: '',
+    updatedAt: 'Just now',
+    messageCount: 0,
     isActive: true,
-  },
-  {
-    id: 'thread-2',
-    title: 'CA Non-Compete Research',
-    preview: 'Can an employer enforce a non-compete in California?',
-    updatedAt: 'Yesterday, 4:32 PM',
-    messageCount: 8,
-    isActive: false,
-  },
-  {
-    id: 'thread-3',
-    title: 'Employment Agreement Draft',
-    preview: 'Draft a non-compete clause for an employment agreement...',
-    updatedAt: 'Apr 9, 2026',
-    messageCount: 12,
-    isActive: false,
-  },
-  {
-    id: 'thread-4',
-    title: 'AcmeCorp MSA Review',
-    preview: 'Review the indemnification section of the Acme Corp MSA...',
-    updatedAt: 'Apr 8, 2026',
-    messageCount: 6,
-    isActive: false,
-  },
-  {
-    id: 'thread-5',
-    title: 'Due Diligence — NovaTech Acquisition',
-    preview: 'Run due diligence on the NovaTech transaction documents...',
-    updatedAt: 'Apr 7, 2026',
-    messageCount: 15,
-    isActive: false,
-  },
-  {
-    id: 'thread-6',
-    title: 'CCPA Compliance Check',
-    preview: 'Is our data retention policy compliant with CCPA?',
-    updatedAt: 'Apr 5, 2026',
-    messageCount: 4,
-    isActive: false,
   },
 ];
 
@@ -1868,7 +1828,7 @@ function EmptyState({ profile, plan, onPromptClick, navigate, onViewPlans }) {
 /* ═══════════════════ ChatView ═══════════════════ */
 export default function ChatView() {
   const navigate = useNavigate();
-  const [messages, setMessages] = useState(INITIAL_MESSAGES);
+  const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [showEmptyState, setShowEmptyState] = useState(true);
@@ -1896,6 +1856,8 @@ export default function ChatView() {
   const [threads, setThreads] = useState(DEFAULT_THREADS);
   const [activeThreadId, setActiveThreadId] = useState('thread-1');
   const [threadSearch, setThreadSearch] = useState('');
+  // Per-thread message store — persists messages when switching between threads
+  const threadMessagesRef = useRef({});
 
   // ─── Session Document Version Handling (DEC-093, DEC-094, DEC-095) ───
   // See knowledge-pack-strategy.md — Document Version Handling section
@@ -1946,6 +1908,9 @@ export default function ChatView() {
 
   // ─── Chat Thread handlers ───
   const handleNewThread = useCallback(() => {
+    // Save current thread messages before switching
+    threadMessagesRef.current[activeThreadId] = messages;
+
     const newThread = {
       id: `thread-${Date.now()}`,
       title: 'New Conversation',
@@ -1954,6 +1919,7 @@ export default function ChatView() {
       messageCount: 0,
       isActive: true,
     };
+    threadMessagesRef.current[newThread.id] = [];
     setThreads(prev => prev.map(t => ({ ...t, isActive: false })));
     setThreads(prev => [newThread, ...prev]);
     setActiveThreadId(newThread.id);
@@ -1971,11 +1937,13 @@ export default function ChatView() {
     });
     setShowDocVersionBanner(false);
     setPendingNewDoc(null);
-  }, []);
+  }, [activeThreadId, messages]);
 
   const handleSwitchThread = useCallback((threadId) => {
     if (threadId === activeThreadId) return;
-    // Save current thread title from first user message
+    // Save current thread messages before switching
+    threadMessagesRef.current[activeThreadId] = messages;
+    // Update thread metadata
     setThreads(prev => prev.map(t => {
       if (t.id === activeThreadId) {
         const firstUserMsg = messages.find(m => m.sender === 'user');
@@ -1991,9 +1959,10 @@ export default function ChatView() {
       return t;
     }));
     setActiveThreadId(threadId);
-    // Load messages for the selected thread
-    if (threadId === 'thread-1') {
-      setMessages(INITIAL_MESSAGES);
+    // Load messages from per-thread store (fall back to hardcoded for legacy threads)
+    const stored = threadMessagesRef.current[threadId];
+    if (stored && stored.length > 0) {
+      setMessages(stored);
       setShowEmptyState(false);
     } else if (THREAD_MESSAGES[threadId]) {
       setMessages(THREAD_MESSAGES[threadId]);
@@ -2010,14 +1979,16 @@ export default function ChatView() {
 
   const handleDeleteThread = useCallback((threadId) => {
     if (threads.length <= 1) return;
+    delete threadMessagesRef.current[threadId];
     const remaining = threads.filter(t => t.id !== threadId);
     setThreads(remaining);
     if (threadId === activeThreadId) {
       const next = remaining[0];
       setActiveThreadId(next.id);
       setThreads(prev => prev.map(t => t.id === next.id ? { ...t, isActive: true } : t));
-      if (next.id === 'thread-1') {
-        setMessages(INITIAL_MESSAGES);
+      const stored = threadMessagesRef.current[next.id];
+      if (stored && stored.length > 0) {
+        setMessages(stored);
         setShowEmptyState(false);
       } else if (THREAD_MESSAGES[next.id]) {
         setMessages(THREAD_MESSAGES[next.id]);
@@ -2033,8 +2004,10 @@ export default function ChatView() {
     !threadSearch || t.title.toLowerCase().includes(threadSearch.toLowerCase()) || t.preview.toLowerCase().includes(threadSearch.toLowerCase())
   );
 
-  // Removed: setTimeout mock delay + MOCK_RESPONSES — replaced with real streaming fetch to /api/chat
-  // See: tech-stack.md — Backend API section
+  // Keep per-thread message store in sync as messages change
+  useEffect(() => {
+    threadMessagesRef.current[activeThreadId] = messages;
+  }, [messages, activeThreadId]);
 
   const sendMessage = useCallback(async (text) => {
     const trimmed = (text || '').trim();
@@ -2092,7 +2065,7 @@ export default function ChatView() {
         }
       } catch { /* backend unreachable — fall through to client-side LLM */ }
 
-      // Fallback: call OpenAI directly from client (Vercel static deploy)
+      // Fallback: call Gemini directly from client (Vercel static deploy)
       if (!usedBackend) {
         if (!getApiKey()) {
           setIsTyping(false);
@@ -2101,7 +2074,7 @@ export default function ChatView() {
           setMessages((prev) => [...prev, errMsg]);
           return;
         }
-        const result = await callOpenAI(trimmed, history, (streaming) => {
+        const result = await callLLM(trimmed, history, (streaming) => {
           setStreamingContent(streaming);
         });
         fullContent = result.fullContent;
