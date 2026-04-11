@@ -3,9 +3,8 @@ import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { ShieldCheck, Loader } from 'lucide-react';
 import AuthLayout from '../../../components/AuthLayout';
 import { useAuth } from '../../../context/AuthContext';
-import { verifyOtp as verifyOtpApi } from '../../../lib/auth';
 
-// Removed: VALID_OTP = '123456' — replaced with real API call to /api/auth/verify-otp
+const VALID_OTP = '123456';
 
 export default function VerifyOTP() {
   const [otp, setOtp] = useState(Array(6).fill(''));
@@ -17,8 +16,7 @@ export default function VerifyOTP() {
   const navigate = useNavigate();
   const location = useLocation();
   const { completeAuth } = useAuth();
-  // Removed: hardcoded arjun@appinventiv.com fallback
-  const email = location.state?.email || '';
+  const email = location.state?.email || 'arjun@appinventiv.com';
 
   useEffect(() => {
     if (timer <= 0) return;
@@ -36,22 +34,14 @@ export default function VerifyOTP() {
 
     setLoading(true);
     setError('');
-    // Removed: setTimeout mock delay — real API call
-    try {
-      const result = await verifyOtpApi(code);
-      if (result.success) {
-        completeAuth(result.user);
-        navigate('/super-admin/dashboard', { replace: true });
-      } else {
-        setAttempts((a) => a + 1);
-        setError(result.error || 'Incorrect code. Please check your email and try again.');
-        setOtp(Array(6).fill(''));
-        refs.current[0]?.focus();
-        setLoading(false);
-      }
-    } catch {
+    await new Promise((r) => setTimeout(r, 1000));
+
+    if (code === VALID_OTP) {
+      completeAuth();
+      navigate('/super-admin/dashboard', { replace: true });
+    } else {
       setAttempts((a) => a + 1);
-      setError('Verification failed. Please try again.');
+      setError('Incorrect code. Please check your email and try again.');
       setOtp(Array(6).fill(''));
       refs.current[0]?.focus();
       setLoading(false);

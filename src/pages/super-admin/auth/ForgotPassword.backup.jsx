@@ -2,9 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Mail, CheckCircle, ArrowLeft, ShieldCheck, Loader } from 'lucide-react';
 import AuthLayout from '../../../components/AuthLayout';
-import { verifyOtp as verifyOtpApi } from '../../../lib/auth';
 
-// Removed: VALID_OTP = '123456' — replaced with real API call to /api/auth/verify-otp
+const VALID_OTP = '123456';
 
 export default function ForgotPassword() {
   const [step, setStep] = useState('email'); // email | otp | done
@@ -31,19 +30,12 @@ export default function ForgotPassword() {
   const verifyOtp = async (code) => {
     if (attempts >= 3) { setOtpError('Too many attempts. Please request a new code.'); setOtp(Array(6).fill('')); refs.current[0]?.focus(); return; }
     setOtpLoading(true); setOtpError('');
-    // Removed: setTimeout mock delay — real API call
-    try {
-      const result = await verifyOtpApi(code);
-      if (result.success) {
-        navigate('/super-admin/reset-password', { state: { email } });
-      } else {
-        setAttempts((a) => a + 1);
-        setOtpError(result.error || 'Incorrect code. Please check your email and try again.');
-        setOtp(Array(6).fill('')); refs.current[0]?.focus(); setOtpLoading(false);
-      }
-    } catch {
+    await new Promise((r) => setTimeout(r, 1000));
+    if (code === VALID_OTP) {
+      navigate('/super-admin/reset-password', { state: { email } });
+    } else {
       setAttempts((a) => a + 1);
-      setOtpError('Verification failed. Please try again.');
+      setOtpError('Incorrect code. Please check your email and try again.');
       setOtp(Array(6).fill('')); refs.current[0]?.focus(); setOtpLoading(false);
     }
   };
@@ -92,7 +84,7 @@ export default function ForgotPassword() {
               <label className="block mb-1.5" style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-secondary)' }}>Email address</label>
               <div className="relative">
                 <Mail size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Enter your email" required style={inputStyle} />
+                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="arjun@appinventiv.com" required style={inputStyle} />
               </div>
             </div>
             <button type="submit" className="w-full flex items-center justify-center text-white" style={{ backgroundColor: 'var(--navy)', height: 42, borderRadius: '10px', fontSize: '14px', fontWeight: 500, border: 'none', cursor: 'pointer' }}>

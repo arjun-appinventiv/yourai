@@ -10,8 +10,12 @@ import {
 } from 'lucide-react';
 import { billingData, subscriptionPlans } from '../../data/mockData';
 
-// Removed: MOCK_RESPONSES array — replaced with real streaming fetch to /api/chat
-// See: tech-stack.md — Backend API section
+/* ─── mock data ─── */
+const MOCK_RESPONSES = [
+  "I'll analyze that for you. Give me a moment to process the document...",
+  "Based on my review of the relevant case law, here are the key findings...",
+  "I've completed the analysis. Here's a summary of the results...",
+];
 
 const INITIAL_MESSAGES = [
   {
@@ -1913,7 +1917,7 @@ export default function ChatView() {
   const [pendingNewDoc, setPendingNewDoc] = useState(null); // holds the new doc until user decides
   const scrollRef = useRef(null);
   const inputRef = useRef(null);
-  // Removed: responseIdx — no longer needed with real LLM responses
+  const responseIdx = useRef(0);
 
   const plan = billingData.plan;
   const usage = billingData.usage;
@@ -1930,7 +1934,7 @@ export default function ChatView() {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
   }, []);
 
-  useEffect(() => { scrollToBottom(); }, [messages, isTyping, streamingContent, scrollToBottom]);
+  useEffect(() => { scrollToBottom(); }, [messages, isTyping, scrollToBottom]);
 
   const inputPlaceholder = profile && profile.primaryState
     ? `Ask anything about ${profile.primaryState} law or your documents...`
@@ -2030,11 +2034,7 @@ export default function ChatView() {
     !threadSearch || t.title.toLowerCase().includes(threadSearch.toLowerCase()) || t.preview.toLowerCase().includes(threadSearch.toLowerCase())
   );
 
-  // Removed: setTimeout mock delay + MOCK_RESPONSES — replaced with real streaming fetch to /api/chat
-  // See: tech-stack.md — Backend API section
-  const [streamingContent, setStreamingContent] = useState('');
-
-  const sendMessage = useCallback(async (text) => {
+  const sendMessage = useCallback((text) => {
     const trimmed = (text || '').trim();
     if ((!trimmed && pendingAttachments.length === 0) || isTyping) return;
     if (showEmptyState) setShowEmptyState(false);
@@ -2043,66 +2043,20 @@ export default function ChatView() {
     setInput('');
     setPendingAttachments([]);
     setIsTyping(true);
-    setStreamingContent('');
-
-    try {
-      // config — reads from .env.local
-      const base = import.meta.env.VITE_API_URL || '';
-      const response = await fetch(`${base}/api/chat`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          conversationId: activeThreadId,
-          message: trimmed,
-          sessionId: sessionState.sessionKbSnapshotId,
-          sessionDocId: sessionState.sessionDocId,
-        }),
-      });
-
-      if (!response.ok) {
-        setIsTyping(false);
-        setStreamingContent('');
-        const errMsg = { id: Date.now() + 1, sender: 'bot', content: 'Sorry, I encountered an error. Please try again.', timestamp: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }), sourceBadge: null };
-        setMessages((prev) => [...prev, errMsg]);
-        return;
-      }
-
-      // Stream the response token by token
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let fullContent = '';
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        const chunk = decoder.decode(value);
-        fullContent += chunk;
-        setStreamingContent(fullContent);
-      }
-
+    setTimeout(() => {
+      // TODO: confirm confidence threshold with AI team
+      // OQ-pending — do not ship without confirmation
+      // CONFIDENCE: 3/10 — Intent classifier auto-routing not confirmed by Ryan. Visual wireframe only.
       // DEC-093: RAG queries scoped to session_kb_snapshot_id, NOT live KB
       // TODO: Phase 2 — replace snapshot reference with document_versions table
-      // Source type from backend response header
-      const sourceTypeHeader = response.headers.get('X-Source-Type');
-      const sourceBadge = sourceTypeHeader === 'UPLOADED_DOC'
+      const hasAttachedDoc = activeKnowledgePack || activeVaultDocument || sessionState.sessionDocId !== null;
+      const sourceBadge = hasAttachedDoc
         ? 'Answered from: your document'
         : 'Answered from: YourAI knowledge base';
-
-      const botMsg = {
-        id: Date.now() + 1,
-        sender: 'bot',
-        content: fullContent,
-        timestamp: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
-        knowledgePack: activeKnowledgePack?.name || null,
-        vaultDocument: activeVaultDocument?.name || null,
-        sourceBadge,
-        sessionKbSnapshotId: sessionState.sessionKbSnapshotId,
-      };
+      const botMsg = { id: Date.now() + 1, sender: 'bot', content: MOCK_RESPONSES[responseIdx.current % MOCK_RESPONSES.length], timestamp: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }), knowledgePack: activeKnowledgePack?.name || null, vaultDocument: activeVaultDocument?.name || null, sourceBadge, sessionKbSnapshotId: sessionState.sessionKbSnapshotId };
+      responseIdx.current += 1;
       setMessages((prev) => [...prev, botMsg]);
       setIsTyping(false);
-      setStreamingContent('');
-
       // Update thread metadata
       setThreads(prev => prev.map(t => {
         if (t.id !== activeThreadId) return t;
@@ -2114,12 +2068,7 @@ export default function ChatView() {
           messageCount: (t.messageCount || 0) + 2,
         };
       }));
-    } catch {
-      setIsTyping(false);
-      setStreamingContent('');
-      const errMsg = { id: Date.now() + 1, sender: 'bot', content: 'Connection error. Please check your network and try again.', timestamp: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }), sourceBadge: null };
-      setMessages((prev) => [...prev, errMsg]);
-    }
+    }, 1500);
   }, [isTyping, showEmptyState, activeKnowledgePack, activeVaultDocument, pendingAttachments, activeThreadId, sessionState]);
 
   const handleAttachFiles = (files, kind) => {
@@ -2306,11 +2255,7 @@ export default function ChatView() {
           ) : (
             <div ref={scrollRef} className="px-3 sm:px-4 md:px-10 py-6" style={{ flex: 1, overflowY: 'auto' }}>
               {messages.map((msg) => <MessageBubble key={msg.id} msg={msg} />)}
-              {/* Streaming response — shows tokens as they arrive */}
-              {isTyping && streamingContent && (
-                <MessageBubble msg={{ id: 'streaming', sender: 'bot', content: streamingContent, timestamp: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) }} />
-              )}
-              {isTyping && !streamingContent && <TypingIndicator />}
+              {isTyping && <TypingIndicator />}
               {!isTyping && (
                 <div style={{ marginTop: 8, marginBottom: 8 }}>
                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
