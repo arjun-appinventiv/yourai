@@ -73,6 +73,16 @@ export async function login(
   if (demo && demo.password === password) {
     return { success: true, requiresOtp: false, user: demo.user };
   }
+
+  // Check localStorage-registered users (from client-side sign-up)
+  try {
+    const registered = JSON.parse(localStorage.getItem('yourai_registered_users') || '{}');
+    const reg = registered[email];
+    if (reg && reg.password === password) {
+      return { success: true, requiresOtp: false, user: reg.user };
+    }
+  } catch { /* ignore */ }
+
   return { success: false, error: 'Invalid email or password. Please check your credentials and try again.' };
 }
 
@@ -174,6 +184,7 @@ export async function logout(): Promise<void> {
 
 /**
  * Register a new user account.
+ * Falls back to client-side localStorage when backend is unreachable (Vercel static deploy).
  */
 export async function signUp(data: {
   name: string;
@@ -181,17 +192,110 @@ export async function signUp(data: {
   password: string;
   orgName?: string;
 }): Promise<LoginResponse> {
-  const res = await fetch(`${BASE}/api/auth/signup`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
-    body: JSON.stringify(data),
-  });
+  try {
+    const res = await fetch(`${BASE}/api/auth/signup`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(data),
+    });
 
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: 'Sign up failed' }));
-    return { success: false, error: err.error || 'Sign up failed' };
+    const contentType = res.headers.get('content-type') || '';
+    if (contentType.includes('application/json')) {
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: 'Sign up failed' }));
+        return { success: false, error: err.error || 'Sign up failed' };
+      }
+      const result = await res.json();
+      // Also persist to localStorage so management modules can see them
+      if (result.success && result.user) {
+        persistRegisteredUser(data, result.user);
+      }
+      return result;
+    }
+    // Non-JSON response — fall through to client-side registration
+  } catch {
+    // Network error — backend unreachable
   }
 
-  return res.json();
+  // Fallback: client-side registration via localStorage
+  // Check for duplicate email
+  const registered = JSON.parse(localStorage.getItem('yourai_registered_users') || '{}');
+  if (registered[data.email] || DEMO_USERS[data.email]) {
+    return { success: false, error: 'An account with this email already exists.' };
+  }
+
+  const orgId = `org-${Date.now()}`;
+  const userId = `user-${Date.now()}`;
+  const initials = data.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+
+  const user: User = {
+    id: userId,
+    email: data.email,
+    name: data.name,
+    role: 'ADMIN',
+    orgId,
+    orgName: data.orgName || `${data.name}'s Firm`,
+    avatar: initials,
+    plan: 'FREE',
+  };
+
+  persistRegisteredUser(data, user);
+
+  return { success: true, requiresOtp: false, user };
+}
+
+/**
+ * Persist a registered user to localStorage so they can log in again
+ * and appear in the management modules.
+ */
+function persistRegisteredUser(data: { name: string; email: string; password: string; orgName?: string }, user: User) {
+  try {
+    // Save to registered users (for login fallback)
+    const registered = JSON.parse(localStorage.getItem('yourai_registered_users') || '{}');
+    registered[data.email] = { password: data.password, user };
+    localStorage.setItem('yourai_registered_users', JSON.stringify(registered));
+
+    // Save to management-visible user list
+    const mgmtUsers = JSON.parse(localStorage.getItem('yourai_mgmt_users') || '[]');
+    if (!mgmtUsers.some((u: any) => u.email === data.email)) {
+      mgmtUsers.push({
+        id: Date.now(),
+        name: data.name,
+        email: data.email,
+        org: data.orgName || `${data.name}'s Firm`,
+        plan: user.plan === 'FREE' ? 'Free' : user.plan === 'PROFESSIONAL' ? 'Professional' : user.plan === 'ENTERPRISE' ? 'Enterprise' : 'Team',
+        role: 'Admin',
+        status: 'Active',
+        lastActive: 'Just now',
+        created: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+        logins: 1,
+        docsUploaded: 0,
+        reportsGenerated: 0,
+        onboardingCompleted: false,
+      });
+      localStorage.setItem('yourai_mgmt_users', JSON.stringify(mgmtUsers));
+    }
+
+    // Save to management-visible tenant list
+    const mgmtTenants = JSON.parse(localStorage.getItem('yourai_mgmt_tenants') || '[]');
+    if (!mgmtTenants.some((t: any) => t.name === (data.orgName || `${data.name}'s Firm`))) {
+      mgmtTenants.push({
+        id: Date.now(),
+        name: data.orgName || `${data.name}'s Firm`,
+        plan: 'Free',
+        users: 1,
+        workspaces: 0,
+        documents: 0,
+        status: 'Active',
+        created: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+        mrr: 0,
+        planPrice: 0,
+        billedSince: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+        nextRenewal: '',
+        paymentStatus: 'N/A',
+      });
+      localStorage.setItem('yourai_mgmt_tenants', JSON.stringify(mgmtTenants));
+    }
+  } catch { /* localStorage full — ignore */ }
 }

@@ -32,16 +32,32 @@ const statusColors = {
   Invited: { backgroundColor: '#FEF3C7', color: '#92400E' },
 };
 
-const allOrgs = ['All', 'Hartwell & Associates', 'Morrison Legal Group', 'Chen Partners LLC', 'Rivera & Kim LLP', 'Patel Law Office'];
+// Merge mock data with localStorage-registered users
+function loadUsers() {
+  try {
+    const stored = JSON.parse(localStorage.getItem('yourai_mgmt_users') || '[]');
+    // Merge: mock data first, then localStorage users (skip duplicates by email)
+    const existingEmails = new Set(initialUsers.map(u => u.email));
+    const newUsers = stored.filter(u => !existingEmails.has(u.email));
+    return [...initialUsers, ...newUsers];
+  } catch { return initialUsers; }
+}
+
+function getAllOrgs(users) {
+  const orgs = [...new Set(users.map(u => u.org))];
+  return ['All', ...orgs.sort()];
+}
 
 export default function UserManagement() {
-  const [users, setUsers] = useState(initialUsers);
+  const [users, setUsers] = useState(loadUsers);
   const [search, setSearch] = useState('');
   const [orgFilter, setOrgFilter] = useState('All');
   const [roleFilter, setRoleFilter] = useState('All');
   const [statusFilter, setStatusFilter] = useState('All');
   const [selectedUser, setSelectedUser] = useState(null);
   const showToast = useToast();
+
+  const allOrgs = useMemo(() => getAllOrgs(users), [users]);
 
   const filtered = useMemo(() => {
     return users.filter((u) => {
@@ -59,12 +75,21 @@ export default function UserManagement() {
   const invitedUsers = users.filter((u) => u.status === 'Invited').length;
 
   const toggleBlock = (id) => {
-    setUsers((prev) => prev.map((u) => {
-      if (u.id !== id) return u;
-      const next = u.status === 'Blocked' ? 'Active' : 'Blocked';
-      return { ...u, status: next };
-    }));
     const user = users.find((u) => u.id === id);
+    setUsers((prev) => {
+      const updated = prev.map((u) => {
+        if (u.id !== id) return u;
+        const next = u.status === 'Blocked' ? 'Active' : 'Blocked';
+        return { ...u, status: next };
+      });
+      // Persist non-mock user changes to localStorage
+      try {
+        const mockEmails = new Set(initialUsers.map(u => u.email));
+        const storedUsers = updated.filter(u => !mockEmails.has(u.email));
+        localStorage.setItem('yourai_mgmt_users', JSON.stringify(storedUsers));
+      } catch { /* ignore */ }
+      return updated;
+    });
     showToast(`${user.name} ${user.status === 'Blocked' ? 'unblocked' : 'blocked'}`);
   };
 

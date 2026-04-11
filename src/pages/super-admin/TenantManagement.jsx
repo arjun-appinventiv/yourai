@@ -73,8 +73,18 @@ const roleColors = {
   Invited: { bg: '#FEF3C7', color: '#92400E' },
 };
 
+// Merge mock tenants with localStorage-registered tenants
+function loadTenants() {
+  try {
+    const stored = JSON.parse(localStorage.getItem('yourai_mgmt_tenants') || '[]');
+    const existingNames = new Set(initialTenants.map(t => t.name));
+    const newTenants = stored.filter(t => !existingNames.has(t.name));
+    return [...initialTenants, ...newTenants];
+  } catch { return initialTenants; }
+}
+
 export default function TenantManagement() {
-  const [tenantList, setTenantList] = useState(initialTenants);
+  const [tenantList, setTenantList] = useState(loadTenants);
   const [search, setSearch] = useState('');
   const [planFilter, setPlanFilter] = useState('All');
   const [statusFilter, setStatusFilter] = useState('All');
@@ -211,12 +221,46 @@ export default function TenantManagement() {
 
   const handleCreateTenant = () => {
     const fullName = `${newAdmin.firstName} ${newAdmin.lastName}`.trim();
+    const createdDate = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
     const newTenant = {
       id: Date.now(), name: newOrg.name, plan: newOrg.plan, users: 1, workspaces: 0, documents: 0,
-      status: 'Active', created: 'Just now', mrr: newOrg.plan === 'Free' ? 0 : newOrg.plan === 'Professional' ? 149 : newOrg.plan === 'Team' ? 299 : 599,
+      status: 'Active', created: createdDate, mrr: newOrg.plan === 'Free' ? 0 : newOrg.plan === 'Professional' ? 149 : newOrg.plan === 'Team' ? 299 : 599,
+      planPrice: newOrg.plan === 'Free' ? 0 : newOrg.plan === 'Professional' ? 149 : newOrg.plan === 'Team' ? 299 : 599,
+      billedSince: createdDate, nextRenewal: '', paymentStatus: newOrg.plan === 'Free' ? 'N/A' : 'Pending',
     };
     setTenantList((prev) => [newTenant, ...prev]);
     setInviteSent(true);
+
+    // Persist new tenant and admin user to localStorage
+    try {
+      const storedTenants = JSON.parse(localStorage.getItem('yourai_mgmt_tenants') || '[]');
+      storedTenants.push(newTenant);
+      localStorage.setItem('yourai_mgmt_tenants', JSON.stringify(storedTenants));
+
+      // Also create the admin user in management users
+      if (newAdmin.email) {
+        const storedUsers = JSON.parse(localStorage.getItem('yourai_mgmt_users') || '[]');
+        if (!storedUsers.some(u => u.email === newAdmin.email)) {
+          storedUsers.push({
+            id: Date.now() + 1,
+            name: fullName,
+            email: newAdmin.email,
+            org: newOrg.name,
+            plan: newOrg.plan,
+            role: 'Admin',
+            status: 'Invited',
+            lastActive: 'Never',
+            created: createdDate,
+            logins: 0,
+            docsUploaded: 0,
+            reportsGenerated: 0,
+            onboardingCompleted: false,
+          });
+          localStorage.setItem('yourai_mgmt_users', JSON.stringify(storedUsers));
+        }
+      }
+    } catch { /* localStorage full */ }
+
     showToast(`Invitation sent to ${newAdmin.email}. ${newOrg.name} has been onboarded.`);
   };
 
