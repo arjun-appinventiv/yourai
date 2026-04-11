@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Building2, Users, CreditCard, BarChart3, Shield, BookOpen, FileText, Plug, Database, Workflow, Bell, Settings, LogOut, FileBarChart, BookMarked } from 'lucide-react';
+import { LayoutDashboard, Building2, Users, CreditCard, BarChart3, Shield, BookOpen, FileText, Plug, Database, Workflow, Bell, Settings, LogOut, FileBarChart, BookMarked, FlaskConical } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const navSections = [
@@ -37,6 +37,7 @@ const navSections = [
       { label: 'User Stories', icon: BookMarked, path: '/super-admin/user-stories' },
       // { label: 'Reports', icon: FileBarChart, path: '/super-admin/reports' }, // Hidden — kept for future
       { label: 'Settings', icon: Settings, path: '/super-admin/settings' },
+      { label: 'Bot Tester', icon: FlaskConical, path: '/super-admin/bot-tester' },
     ],
   },
 ];
