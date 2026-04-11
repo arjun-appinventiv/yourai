@@ -84,7 +84,7 @@ export default function GlobalKnowledgeBase() {
   // ─── Bot Persona tab state ───
   // CONFIDENCE: 7/10 — Ryan confirmed concept verbally, not written. Rollback-ready.
   // ⚠ OUT OF SCOPE of 18 source docs. Built as wireframe for Ryan visual review.
-  const DEFAULT_OPERATIONS = [
+  const DEFAULT_INTENTS = [
     {
       id: 1,
       label: 'General Chat',
@@ -130,10 +130,28 @@ export default function GlobalKnowledgeBase() {
       formatRules: ['cite_source', 'risk_summary', 'next_action'],
       enabled: false,
     },
+    {
+      id: 6,
+      label: 'YourAI How-To',
+      description: 'Activated when the user asks about YourAI features, how to use the platform, or what Alex can do.',
+      systemPrompt: "You are Alex, the built-in AI assistant for the YourAI platform. When users ask about YourAI or what you can do, explain your capabilities clearly:\n\n• Document Analysis — upload contracts, NDAs, or any legal document and I'll identify risks, flag non-standard clauses, and compare against your firm's playbook.\n• Legal Research — ask any legal question and I'll search the knowledge base, cite relevant statutes, case law, and commentary.\n• Document Drafting — I can draft contracts, clauses, letters, and memos following your firm's style guide.\n• Compliance Checks — upload policies and I'll check them against regulatory frameworks.\n• Knowledge Packs — attach curated document sets (like your NDA Playbook) for contextual answers.\n• Workspaces — organise matters, invite team members, and collaborate on documents.\n• Document Vault — store and manage your firm's important documents for quick retrieval.\n\nAlways be helpful, friendly, and guide users to the right feature. If they ask something outside your capabilities, suggest the closest alternative.",
+      tone: 'conversational',
+      formatRules: ['bullet_lists', 'next_action'],
+      enabled: true,
+    },
+    {
+      id: 7,
+      label: 'General Conversation',
+      description: 'Activated for casual greetings, small talk, or non-legal general knowledge questions.',
+      systemPrompt: "You are Alex, a friendly AI assistant built into the YourAI platform. For general conversation, greetings, and non-legal questions, respond naturally and warmly. You can answer general knowledge questions, help with brainstorming, or just have a friendly chat. Always maintain a professional but approachable tone. If a conversation naturally leads to a legal topic, smoothly offer to help with your legal capabilities.",
+      tone: 'conversational',
+      formatRules: [],
+      enabled: true,
+    },
   ];
 
   const DEFAULT_PERSONA = {
-    operations: DEFAULT_OPERATIONS,
+    operations: DEFAULT_INTENTS,
     fallbackMessage: "I couldn't find a clear answer in your documents or the knowledge base. Could you clarify what you're looking for, or upload a relevant document?",
     globalDocs: [
       { id: 1, name: 'Federal_Rules_Civil_Procedure.pdf', type: 'PDF', size: '4.2 MB', url: '#' },
@@ -217,7 +235,7 @@ export default function GlobalKnowledgeBase() {
     },
     {
       id: 'legal_ops_it',
-      label: 'Legal Operations / IT',
+      label: 'Legal Intents / IT',
       icon: Monitor,
       description: 'Tech-focused users who need system-level answers, data references, and configuration guidance.',
       defaults: { tone: 'concise', formatRules: ['bullet_lists', 'next_action'], promptModifier: 'Focus on system configuration, data management, and operational efficiency. Use technical terminology where appropriate. Provide structured outputs.' },
@@ -263,7 +281,7 @@ export default function GlobalKnowledgeBase() {
     setPersonaDirty(true);
   };
 
-  const updateOperation = (opId, key, value) => {
+  const updateIntent = (opId, key, value) => {
     setPersona(prev => ({
       ...prev,
       operations: prev.operations.map(op => op.id === opId ? { ...op, [key]: value } : op),
@@ -286,10 +304,10 @@ export default function GlobalKnowledgeBase() {
   };
 
   const toggleOpEnabled = (opId) => {
-    updateOperation(opId, 'enabled', !persona.operations.find(o => o.id === opId)?.enabled);
+    updateIntent(opId, 'enabled', !persona.operations.find(o => o.id === opId)?.enabled);
   };
 
-  const deleteOperation = (opId) => {
+  const deleteIntent = (opId) => {
     setPersona(prev => ({
       ...prev,
       operations: prev.operations.filter(op => op.id !== opId),
@@ -298,10 +316,10 @@ export default function GlobalKnowledgeBase() {
     if (editingOp?.id === opId) setEditingOp(null);
   };
 
-  const addOperation = (data) => {
+  const addIntent = (data) => {
     const newOp = {
       id: Date.now(),
-      label: data.label || 'New Operation',
+      label: data.label || 'New Intent',
       description: data.description || '',
       systemPrompt: data.systemPrompt || '',
       tone: data.tone || 'formal',
@@ -1700,7 +1718,7 @@ export default function GlobalKnowledgeBase() {
             <div>
               <p className="text-sm font-medium mb-1" style={{ color: '#1E40AF' }}>What is Bot Persona?</p>
               <p className="text-xs" style={{ color: '#1E40AF', lineHeight: 1.7 }}>
-                Bot Persona controls how the AI assistant "Alex" behaves across the entire platform. You can configure <strong>multiple operation modes</strong> — each with its own system prompt, tone, and format rules — so the bot responds differently for contract reviews vs. legal research vs. general chat. You also set the <strong>fallback message</strong> shown when no answer is found, and manage <strong>global knowledge documents</strong> that serve as the platform-wide backup.
+                Bot Persona controls how the AI assistant "Alex" behaves across the entire platform. You can configure <strong>multiple intent modes</strong> — each with its own system prompt, tone, and format rules — so the bot responds differently for contract reviews vs. legal research vs. general chat. You also set the <strong>fallback message</strong> shown when no answer is found, and manage <strong>global knowledge documents</strong> that serve as the platform-wide backup.
               </p>
             </div>
           </div>
@@ -1715,13 +1733,13 @@ export default function GlobalKnowledgeBase() {
                 <InfoSection title="What does this control?">
                   <InfoText>This screen configures Alex, the AI assistant that all tenants interact with. Every setting here is global — no tenant can override it. Only Super Admins can change these values.</InfoText>
                 </InfoSection>
-                <InfoSection title="Operations = Multiple System Prompts">
-                  <InfoText>Instead of one static system prompt, you configure multiple "operations" — each tailored to a specific task. The AI's intent classifier selects the right operation based on what the user is doing (e.g., uploading a contract triggers "Contract Review" mode).</InfoText>
+                <InfoSection title="Intents = Multiple System Prompts">
+                  <InfoText>Instead of one static system prompt, you configure multiple "intents" — each tailored to a specific task. The AI's intent classifier selects the right intent based on what the user is doing (e.g., uploading a contract triggers "Contract Review" mode).</InfoText>
                   <InfoExample label="Example">User uploads a contract → AI automatically uses the "Contract Review" system prompt, which emphasises clause analysis and risk scoring — not the generic chat prompt.</InfoExample>
                 </InfoSection>
                 <InfoSection title="What is the fallback chain?">
                   <InfoList items={[
-                    "1. User sends a message → intent classifier picks the operation",
+                    "1. User sends a message → intent classifier picks the intent",
                     "2. AI searches the user's attached document or knowledge pack first",
                     "3. If no answer found → searches Global Knowledge Documents (uploaded here)",
                     "4. If still no answer → shows the Fallback Message you set below",
@@ -1774,25 +1792,25 @@ export default function GlobalKnowledgeBase() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Left column — Operations list + editor */}
+            {/* Left column — Intents list + editor */}
             <div className="lg:col-span-2 space-y-6">
 
-              {/* Operations — Multi-prompt cards */}
+              {/* Intents — Multi-prompt cards */}
               <div className="p-5 rounded-xl" style={{ backgroundColor: 'white', border: '1px solid var(--border)' }}>
                 <div className="flex items-center justify-between mb-1">
                   <div className="flex items-center gap-2">
-                    <label className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Operations</label>
-                    <InfoButton title="Operations — Multiple AI Modes">
-                      <InfoSection title="What are Operations?">
-                        <InfoText>Each operation is a separate AI personality. When a user sends a message, the intent classifier determines which operation to activate. Each operation has its own system prompt, tone, and formatting rules.</InfoText>
+                    <label className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Intents</label>
+                    <InfoButton title="Intents — Multiple AI Modes">
+                      <InfoSection title="What are Intents?">
+                        <InfoText>Each intent is a separate AI personality. When a user sends a message, the intent classifier determines which intent to activate. Each intent has its own system prompt, tone, and formatting rules.</InfoText>
                       </InfoSection>
                       <InfoSection title="How does it work?">
                         <InfoList items={[
-                          "Each operation has an enable/disable toggle",
-                          "Only enabled operations are available to the AI",
+                          "Each intent has an enable/disable toggle",
+                          "Only enabled intents are available to the AI",
                           "The intent classifier picks the best match based on context",
-                          "If no specific operation matches, 'General Chat' is used as the default",
-                          "You can add custom operations for specialised workflows",
+                          "If no specific intent matches, 'General Chat' is used as the default",
+                          "You can add custom intents for specialised workflows",
                         ]} />
                       </InfoSection>
                       <InfoSection title="Examples">
@@ -1808,13 +1826,13 @@ export default function GlobalKnowledgeBase() {
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium"
                       style={{ backgroundColor: 'var(--navy)', color: 'white', border: 'none', cursor: 'pointer' }}
                     >
-                      <Plus size={12} /> Add Operation
+                      <Plus size={12} /> Add Intent
                     </button>
                   </div>
                 </div>
-                <p className="text-xs mb-4" style={{ color: 'var(--text-muted)' }}>Each operation defines a separate AI mode with its own system prompt, tone, and formatting. The intent classifier picks the right one automatically.</p>
+                <p className="text-xs mb-4" style={{ color: 'var(--text-muted)' }}>Each intent defines a separate AI mode with its own system prompt, tone, and formatting. The intent classifier picks the right one automatically.</p>
 
-                {/* Operation cards */}
+                {/* Intent cards */}
                 <div className="space-y-3">
                   {persona.operations.map(op => {
                     const isEditing = editingOp?.id === op.id;
@@ -1850,9 +1868,9 @@ export default function GlobalKnowledgeBase() {
                               {op.enabled ? 'Disable' : 'Enable'}
                             </button>
                             <button
-                              onClick={(e) => { e.stopPropagation(); deleteOperation(op.id); }}
+                              onClick={(e) => { e.stopPropagation(); deleteIntent(op.id); }}
                               style={{ padding: 4, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}
-                              title="Delete operation"
+                              title="Delete intent"
                             >
                               <Trash2 size={14} />
                             </button>
@@ -1863,18 +1881,18 @@ export default function GlobalKnowledgeBase() {
                         {/* Expanded editor */}
                         {isEditing && (
                           <div className="px-4 pb-4 pt-2 space-y-4" style={{ backgroundColor: 'white' }}>
-                            {/* Operation name + description */}
+                            {/* Intent name + description */}
                             <div className="grid grid-cols-2 gap-3">
                               <div>
                                 <div className="flex items-center gap-1.5 mb-1.5">
-                                  <label className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>Operation Name</label>
-                                  <InfoButton title="Operation Name">
+                                  <label className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>Intent Name</label>
+                                  <InfoButton title="Intent Name">
                                     <InfoText>A short label for this AI mode. This is shown internally to Super Admins only — users never see this name. Keep it descriptive so you can identify it at a glance.</InfoText>
                                   </InfoButton>
                                 </div>
                                 <input
                                   value={op.label}
-                                  onChange={(e) => updateOperation(op.id, 'label', e.target.value)}
+                                  onChange={(e) => updateIntent(op.id, 'label', e.target.value)}
                                   style={{ width: '100%', height: 36, border: '1px solid var(--border)', borderRadius: 8, padding: '0 10px', fontSize: 13, outline: 'none', boxSizing: 'border-box', fontFamily: "'DM Sans', sans-serif" }}
                                   onFocus={(e) => (e.target.style.borderColor = 'var(--navy)')}
                                   onBlur={(e) => (e.target.style.borderColor = 'var(--border)')}
@@ -1884,14 +1902,14 @@ export default function GlobalKnowledgeBase() {
                                 <div className="flex items-center gap-1.5 mb-1.5">
                                   <label className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>When this activates</label>
                                   <InfoButton title="Activation Trigger">
-                                    <InfoText>Describe when this operation should be used. The intent classifier reads this description to decide whether to activate this mode. Be specific — vague descriptions lead to misclassification.</InfoText>
+                                    <InfoText>Describe when this intent should be used. The intent classifier reads this description to decide whether to activate this mode. Be specific — vague descriptions lead to misclassification.</InfoText>
                                     <InfoExample label="Good">Activated when a user uploads a contract for analysis.</InfoExample>
                                     <InfoExample label="Bad">Used for documents.</InfoExample>
                                   </InfoButton>
                                 </div>
                                 <input
                                   value={op.description}
-                                  onChange={(e) => updateOperation(op.id, 'description', e.target.value)}
+                                  onChange={(e) => updateIntent(op.id, 'description', e.target.value)}
                                   style={{ width: '100%', height: 36, border: '1px solid var(--border)', borderRadius: 8, padding: '0 10px', fontSize: 13, outline: 'none', boxSizing: 'border-box', fontFamily: "'DM Sans', sans-serif" }}
                                   onFocus={(e) => (e.target.style.borderColor = 'var(--navy)')}
                                   onBlur={(e) => (e.target.style.borderColor = 'var(--border)')}
@@ -1921,7 +1939,7 @@ export default function GlobalKnowledgeBase() {
                               </div>
                               <textarea
                                 value={op.systemPrompt}
-                                onChange={(e) => updateOperation(op.id, 'systemPrompt', e.target.value)}
+                                onChange={(e) => updateIntent(op.id, 'systemPrompt', e.target.value)}
                                 rows={4}
                                 style={{ width: '100%', minHeight: 80, border: '1px solid var(--border)', borderRadius: 8, padding: '10px 12px', fontSize: 13, fontFamily: "'DM Sans', sans-serif", color: 'var(--text-primary)', outline: 'none', resize: 'vertical', lineHeight: 1.6, boxSizing: 'border-box' }}
                                 onFocus={(e) => (e.target.style.borderColor = 'var(--navy)')}
@@ -1934,7 +1952,7 @@ export default function GlobalKnowledgeBase() {
                               <div className="flex items-center gap-1.5 mb-1.5">
                                 <label className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>Tone</label>
                                 <InfoButton title="Tone Setting">
-                                  <InfoText>Controls the writing style for this operation. Each mode can have a different tone. For example, "Formal" for contract reviews, "Concise" for compliance checks, "Conversational" for general chat.</InfoText>
+                                  <InfoText>Controls the writing style for this intent. Each mode can have a different tone. For example, "Formal" for contract reviews, "Concise" for compliance checks, "Conversational" for general chat.</InfoText>
                                   <InfoList items={[
                                     "Formal — Professional language, full sentences, structured paragraphs",
                                     "Conversational — Friendly, approachable, uses simpler language",
@@ -1945,7 +1963,7 @@ export default function GlobalKnowledgeBase() {
                               </div>
                               <div className="flex flex-wrap gap-2">
                                 {TONE_OPTIONS.map(t => (
-                                  <button key={t.id} onClick={() => updateOperation(op.id, 'tone', t.id)} className="px-3 py-1.5 rounded-full text-xs font-medium" style={{ border: op.tone === t.id ? '2px solid var(--navy)' : '1px solid var(--border)', backgroundColor: op.tone === t.id ? 'var(--ice-warm)' : 'white', color: op.tone === t.id ? 'var(--navy)' : 'var(--text-secondary)', cursor: 'pointer' }}>
+                                  <button key={t.id} onClick={() => updateIntent(op.id, 'tone', t.id)} className="px-3 py-1.5 rounded-full text-xs font-medium" style={{ border: op.tone === t.id ? '2px solid var(--navy)' : '1px solid var(--border)', backgroundColor: op.tone === t.id ? 'var(--ice-warm)' : 'white', color: op.tone === t.id ? 'var(--navy)' : 'var(--text-secondary)', cursor: 'pointer' }}>
                                     {t.label}
                                   </button>
                                 ))}
@@ -1957,7 +1975,7 @@ export default function GlobalKnowledgeBase() {
                               <div className="flex items-center gap-1.5 mb-1.5">
                                 <label className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>Response Format Rules</label>
                                 <InfoButton title="Format Rules">
-                                  <InfoText>These rules are appended to the system prompt and instruct the AI on how to structure every response in this mode. Different operations can have different rules — e.g., Contract Review always includes a risk summary, but General Chat does not.</InfoText>
+                                  <InfoText>These rules are appended to the system prompt and instruct the AI on how to structure every response in this mode. Different intents can have different rules — e.g., Contract Review always includes a risk summary, but General Chat does not.</InfoText>
                                   <InfoList items={[
                                     "Cite source — AI always mentions which document and page the answer came from",
                                     "Bullet points — Lists of 3+ items rendered as bullets for readability",
@@ -2030,19 +2048,19 @@ export default function GlobalKnowledgeBase() {
                           "When a user completes onboarding, they select their role (Step 1)",
                           "That role is stored in their profile and sent with every message",
                           "The AI appends the persona-specific modifiers to the system prompt",
-                          "Tone and format rules for the persona override the operation defaults",
-                          "If a persona is disabled, the AI uses the operation defaults instead",
+                          "Tone and format rules for the persona override the intent defaults",
+                          "If a persona is disabled, the AI uses the intent defaults instead",
                         ]} />
                       </InfoSection>
                       <InfoSection title="Priority order">
-                        <InfoText>Operation system prompt → Persona prompt modifier → Persona tone → Persona format rules. The persona settings layer ON TOP of the operation — they don't replace it.</InfoText>
+                        <InfoText>Intent system prompt → Persona prompt modifier → Persona tone → Persona format rules. The persona settings layer ON TOP of the intent — they don't replace it.</InfoText>
                       </InfoSection>
                       <InfoExample label="Example">User selects "Paralegal / Legal Assistant" during onboarding → AI uses conversational tone, includes checklists, and explains legal terms — even in Contract Review mode.</InfoExample>
                     </InfoButton>
                   </div>
                   <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{Object.values(personaFormats).filter(p => p.enabled).length} of {USER_PERSONAS.length} active</span>
                 </div>
-                <p className="text-xs mb-4" style={{ color: 'var(--text-muted)' }}>Configure how Alex adapts its response style for each user role. These settings layer on top of the operation-level prompt — they don't replace it.</p>
+                <p className="text-xs mb-4" style={{ color: 'var(--text-muted)' }}>Configure how Alex adapts its response style for each user role. These settings layer on top of the intent-level prompt — they don't replace it.</p>
 
                 <div className="space-y-3">
                   {USER_PERSONAS.map(up => {
@@ -2099,8 +2117,8 @@ export default function GlobalKnowledgeBase() {
                               <div className="flex items-center gap-1.5 mb-1.5">
                                 <label className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>Prompt Modifier</label>
                                 <InfoButton title="Prompt Modifier">
-                                  <InfoText>This text is appended to the operation's system prompt when the user has this persona. It customises the AI's behaviour for their specific role without changing the core operation. For example, a Paralegal modifier might say "explain legal terms when first used" — that gets added to Contract Review, Legal Research, etc.</InfoText>
-                                  <InfoExample label="How it's applied">Final prompt = Operation system prompt + "\n\nPersona: " + this modifier</InfoExample>
+                                  <InfoText>This text is appended to the intent's system prompt when the user has this persona. It customises the AI's behaviour for their specific role without changing the core intent. For example, a Paralegal modifier might say "explain legal terms when first used" — that gets added to Contract Review, Legal Research, etc.</InfoText>
+                                  <InfoExample label="How it's applied">Final prompt = Intent system prompt + "\n\nPersona: " + this modifier</InfoExample>
                                 </InfoButton>
                               </div>
                               <textarea
@@ -2118,7 +2136,7 @@ export default function GlobalKnowledgeBase() {
                               <div className="flex items-center gap-1.5 mb-1.5">
                                 <label className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>Tone Override</label>
                                 <InfoButton title="Tone Override">
-                                  <InfoText>Overrides the tone from the operation. A Partner gets "Formal" responses even if the operation default is "Conversational". If disabled, the operation's tone is used.</InfoText>
+                                  <InfoText>Overrides the tone from the intent. A Partner gets "Formal" responses even if the intent default is "Conversational". If disabled, the intent's tone is used.</InfoText>
                                 </InfoButton>
                               </div>
                               <div className="flex flex-wrap gap-2">
@@ -2135,7 +2153,7 @@ export default function GlobalKnowledgeBase() {
                               <div className="flex items-center gap-1.5 mb-1.5">
                                 <label className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>Format Rules</label>
                                 <InfoButton title="Persona Format Rules">
-                                  <InfoText>These format rules are specific to this persona. They merge with (and can override) the operation-level rules. For example, you might want Partners to always see risk summaries, even in operations that don't normally include them.</InfoText>
+                                  <InfoText>These format rules are specific to this persona. They merge with (and can override) the intent-level rules. For example, you might want Partners to always see risk summaries, even in intents that don't normally include them.</InfoText>
                                 </InfoButton>
                               </div>
                               <div className="flex flex-wrap gap-2">
@@ -2157,7 +2175,7 @@ export default function GlobalKnowledgeBase() {
                               <div className="space-y-1.5">
                                 <div className="flex items-start gap-2">
                                   <span className="text-xs font-medium" style={{ color: 'var(--navy)', minWidth: 50 }}>Tone:</span>
-                                  <span className="text-xs" style={{ color: 'var(--text-primary)' }}>{TONE_OPTIONS.find(t => t.id === fmt.tone)?.label} (overrides operation default)</span>
+                                  <span className="text-xs" style={{ color: 'var(--text-primary)' }}>{TONE_OPTIONS.find(t => t.id === fmt.tone)?.label} (overrides intent default)</span>
                                 </div>
                                 <div className="flex items-start gap-2">
                                   <span className="text-xs font-medium" style={{ color: 'var(--navy)', minWidth: 50 }}>Rules:</span>
@@ -2343,12 +2361,12 @@ export default function GlobalKnowledgeBase() {
                   <label className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Message Routing Flow</label>
                   <InfoButton title="Message Routing — How the AI Picks the Right Mode">
                     <InfoSection title="What is message routing?">
-                      <InfoText>When a user sends a message, the AI doesn't just use one static prompt. It runs an intent classifier that analyses the message and determines which operation to activate. This happens automatically — the user doesn't need to choose a mode.</InfoText>
+                      <InfoText>When a user sends a message, the AI doesn't just use one static prompt. It runs an intent classifier that analyses the message and determines which intent to activate. This happens automatically — the user doesn't need to choose a mode.</InfoText>
                     </InfoSection>
                     <InfoSection title="The 4-step flow">
                       <InfoList items={[
                         `Step 1: Intent classifier analyses the message (confidence threshold: ${INTENT_CONFIDENCE_THRESHOLD})`,
-                        "Step 2: If confident → picks the matching operation + applies persona format",
+                        "Step 2: If confident → picks the matching intent + applies persona format",
                         "Step 3: If not confident → asks the user to clarify before proceeding",
                         "Step 4: If no answer found → shows the Fallback Message",
                       ]} />
@@ -2368,8 +2386,8 @@ export default function GlobalKnowledgeBase() {
 
                   {[
                     { step: 1, label: 'User Sends Message', desc: 'Text, document upload, or follow-up question', icon: MessageSquare, bg: '#EDE9FE', color: '#5B21B6', borderColor: '#C4B5FD' },
-                    { step: 2, label: 'Intent Classifier', desc: `Analyses message → picks operation (confidence ≥ ${INTENT_CONFIDENCE_THRESHOLD})`, icon: Target, bg: '#DBEAFE', color: '#1E40AF', borderColor: '#93C5FD' },
-                    { step: 3, label: 'Persona Format Applied', desc: 'User role overrides tone + format rules on top of operation prompt', icon: Users, bg: '#F0FDF4', color: '#166534', borderColor: '#86EFAC' },
+                    { step: 2, label: 'Intent Classifier', desc: `Analyses message → picks intent (confidence ≥ ${INTENT_CONFIDENCE_THRESHOLD})`, icon: Target, bg: '#DBEAFE', color: '#1E40AF', borderColor: '#93C5FD' },
+                    { step: 3, label: 'Persona Format Applied', desc: 'User role overrides tone + format rules on top of intent prompt', icon: Users, bg: '#F0FDF4', color: '#166534', borderColor: '#86EFAC' },
                     { step: 4, label: 'Source Resolution', desc: 'Search user doc → knowledge pack → global KB → fallback', icon: Database, bg: '#FFF7ED', color: '#9A3412', borderColor: '#FDBA74' },
                     { step: 5, label: 'Response Streamed', desc: 'With source badge: "your document" or "YourAI knowledge base"', icon: Zap, bg: '#F0F9FF', color: 'var(--navy)', borderColor: '#93C5FD' },
                   ].map((s, i) => {
@@ -2411,11 +2429,11 @@ export default function GlobalKnowledgeBase() {
                   </div>
                 </div>
 
-                {/* Active operations summary */}
+                {/* Active intents summary */}
                 <div className="mt-4 p-3 rounded-lg" style={{ backgroundColor: '#F8FAFC', border: '1px solid var(--border)' }}>
                   <div className="flex items-center gap-2 mb-2">
                     <Bot size={13} style={{ color: 'var(--navy)' }} />
-                    <span className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>Active Operations ({persona.operations.filter(o => o.enabled).length})</span>
+                    <span className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>Active Intents ({persona.operations.filter(o => o.enabled).length})</span>
                   </div>
                   <div className="flex flex-wrap gap-1.5">
                     {persona.operations.filter(o => o.enabled).map(op => (
@@ -2456,16 +2474,16 @@ export default function GlobalKnowledgeBase() {
             </p>
           </div>
 
-          {/* Add Operation Modal */}
+          {/* Add Intent Modal */}
           {showAddOp && (
-            <Modal title="Add New Operation" onClose={() => setShowAddOp(false)}>
+            <Modal title="Add New Intent" onClose={() => setShowAddOp(false)}>
               <div className="space-y-4" style={{ padding: '16px 0' }}>
                 <div className="flex items-start gap-3 p-3 rounded-lg" style={{ backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE' }}>
                   <Info size={14} style={{ color: '#1D4ED8', flexShrink: 0, marginTop: 2 }} />
-                  <p className="text-xs" style={{ color: '#1E40AF', lineHeight: 1.6 }}>An operation is a separate AI mode with its own system prompt, tone, and formatting rules. The intent classifier will automatically activate this mode when a user's message matches the description you provide.</p>
+                  <p className="text-xs" style={{ color: '#1E40AF', lineHeight: 1.6 }}>An intent is a separate AI mode with its own system prompt, tone, and formatting rules. The intent classifier will automatically activate this mode when a user's message matches the description you provide.</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-primary)' }}>Operation Name *</label>
+                  <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-primary)' }}>Intent Name *</label>
                   <input
                     id="newOpLabel"
                     placeholder="e.g., Due Diligence Review"
@@ -2503,13 +2521,13 @@ export default function GlobalKnowledgeBase() {
                       const desc = document.getElementById('newOpDesc')?.value?.trim();
                       const prompt = document.getElementById('newOpPrompt')?.value?.trim();
                       if (!label) return;
-                      addOperation({ label, description: desc || '', systemPrompt: prompt || '' });
+                      addIntent({ label, description: desc || '', systemPrompt: prompt || '' });
                       setShowAddOp(false);
                     }}
                     className="px-4 py-2 rounded-lg text-sm font-medium text-white"
                     style={{ backgroundColor: 'var(--navy)' }}
                   >
-                    Add Operation
+                    Add Intent
                   </button>
                 </div>
               </div>
