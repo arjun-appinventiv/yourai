@@ -49,18 +49,18 @@ export default function GlobalKnowledgeBase() {
   const [activeTab, setActiveTab] = useState('legal');
   const showToast = useToast();
 
-  // Alex tab state
-  const [templates, setTemplates] = useState(alexIntentTemplates);
-  const [filters, setFilters] = useState(alexResponseFilters);
-  const [editingTemplate, setEditingTemplate] = useState(null);
-  const [editTemplateText, setEditTemplateText] = useState('');
-  const [editFilterToggles, setEditFilterToggles] = useState({});
-  const [previewQuery, setPreviewQuery] = useState('');
-  const [previewResult, setPreviewResult] = useState('');
-  const [showCreateIntent, setShowCreateIntent] = useState(false);
-  const [createIntentFrom, setCreateIntentFrom] = useState(null);
-  const [newIntentLabel, setNewIntentLabel] = useState('');
-  const [newIntentDesc, setNewIntentDesc] = useState('');
+  // ─── Alex tab state — COMMENTED OUT (not in scope, kept for future use) ───
+  // const [templates, setTemplates] = useState(alexIntentTemplates);
+  // const [filters, setFilters] = useState(alexResponseFilters);
+  // const [editingTemplate, setEditingTemplate] = useState(null);
+  // const [editTemplateText, setEditTemplateText] = useState('');
+  // const [editFilterToggles, setEditFilterToggles] = useState({});
+  // const [previewQuery, setPreviewQuery] = useState('');
+  // const [previewResult, setPreviewResult] = useState('');
+  // const [showCreateIntent, setShowCreateIntent] = useState(false);
+  // const [createIntentFrom, setCreateIntentFrom] = useState(null);
+  // const [newIntentLabel, setNewIntentLabel] = useState('');
+  // const [newIntentDesc, setNewIntentDesc] = useState('');
 
   // State Law Libraries state
   const [statePacks, setStatePacks] = useState([
@@ -379,6 +379,8 @@ export default function GlobalKnowledgeBase() {
     showToast('Link added — indexing will begin shortly');
   };
 
+  // ─── Alex tab handlers — COMMENTED OUT (not in scope, kept for future use) ───
+  /*
   const openEditTemplate = (t) => {
     setEditingTemplate(t);
     setEditTemplateText(t.template);
@@ -436,6 +438,7 @@ export default function GlobalKnowledgeBase() {
     setNewIntentDesc('');
     showToast('New intent template created');
   };
+  */
 
   const handleRemovePackFromState = (stateId, packName) => {
     setStatePacks((prev) =>
@@ -542,9 +545,10 @@ export default function GlobalKnowledgeBase() {
     return f ? f.label : id;
   };
 
-  const getIconComponent = (iconName) => {
-    return iconMap[iconName] || Sparkles;
-  };
+  // ─── getIconComponent — COMMENTED OUT (only used by Alex tab, kept for future use) ───
+  // const getIconComponent = (iconName) => {
+  //   return iconMap[iconName] || Sparkles;
+  // };
 
   return (
     <div className="space-y-6">
@@ -560,7 +564,8 @@ export default function GlobalKnowledgeBase() {
       {/* Tabs */}
       <div style={{ borderBottom: '1px solid var(--border)' }} className="flex gap-0">
         <button onClick={() => setActiveTab('legal')} style={tabStyle('legal')}>Legal Content</button>
-        <button onClick={() => setActiveTab('alex')} style={tabStyle('alex')}>Alex Response Templates</button>
+        {/* Alex Response Templates tab — COMMENTED OUT (not in scope, kept for future use) */}
+        {/* <button onClick={() => setActiveTab('alex')} style={tabStyle('alex')}>Alex Response Templates</button> */}
         <button onClick={() => setActiveTab('persona')} style={tabStyle('persona')}>
           <span className="flex items-center gap-1.5">
             <Bot size={14} /> Bot Persona
@@ -1121,8 +1126,8 @@ export default function GlobalKnowledgeBase() {
         </>
       )}
 
-      {/* ============================== TAB 2: Alex Response Templates ============================== */}
-      {activeTab === 'alex' && (
+      {/* ============================== TAB 2: Alex Response Templates — DISABLED (not in scope, kept for future use) ============================== */}
+      {false && activeTab === 'alex' && (
         <>
           {/* Sub-section A: Intent Routing Flow Diagram */}
           <div>
@@ -1614,6 +1619,7 @@ export default function GlobalKnowledgeBase() {
           </Modal>
         </>
       )}
+      {/* ============================== END OF DISABLED TAB 2 ============================== */}
 
       {/* ============================== TAB 3: Bot Persona ============================== */}
       {/* CONFIDENCE: 7/10 — Ryan confirmed concept, not written. Built as wireframe for visual review. */}

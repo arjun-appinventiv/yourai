@@ -121,6 +121,73 @@ const DEFAULT_KNOWLEDGE_PACKS = [
   },
 ];
 
+/* ─── Chat Threads (conversation history) ─── */
+const DEFAULT_THREADS = [
+  {
+    id: 'thread-1',
+    title: 'Meridian Capital NDA — Risk Analysis',
+    preview: 'Run a full risk analysis on the Meridian Capital NDA...',
+    updatedAt: 'Today, 9:14 AM',
+    messageCount: 3,
+    isActive: true,
+  },
+  {
+    id: 'thread-2',
+    title: 'CA Non-Compete Research',
+    preview: 'Can an employer enforce a non-compete in California?',
+    updatedAt: 'Yesterday, 4:32 PM',
+    messageCount: 8,
+    isActive: false,
+  },
+  {
+    id: 'thread-3',
+    title: 'Employment Agreement Draft',
+    preview: 'Draft a non-compete clause for an employment agreement...',
+    updatedAt: 'Apr 9, 2026',
+    messageCount: 12,
+    isActive: false,
+  },
+  {
+    id: 'thread-4',
+    title: 'AcmeCorp MSA Review',
+    preview: 'Review the indemnification section of the Acme Corp MSA...',
+    updatedAt: 'Apr 8, 2026',
+    messageCount: 6,
+    isActive: false,
+  },
+  {
+    id: 'thread-5',
+    title: 'Due Diligence — NovaTech Acquisition',
+    preview: 'Run due diligence on the NovaTech transaction documents...',
+    updatedAt: 'Apr 7, 2026',
+    messageCount: 15,
+    isActive: false,
+  },
+  {
+    id: 'thread-6',
+    title: 'CCPA Compliance Check',
+    preview: 'Is our data retention policy compliant with CCPA?',
+    updatedAt: 'Apr 5, 2026',
+    messageCount: 4,
+    isActive: false,
+  },
+];
+
+const THREAD_MESSAGES = {
+  'thread-2': [
+    { id: 101, sender: 'user', content: 'Can an employer enforce a non-compete in California?', timestamp: 'Yesterday, 4:32 PM' },
+    { id: 102, sender: 'bot', content: 'Short answer: **No** — California generally does not allow non-compete agreements. Under California Business and Professions Code Section 16600, any contract that prevents someone from working in their profession is void.', timestamp: 'Yesterday, 4:32 PM', sourceBadge: 'Answered from: YourAI knowledge base' },
+  ],
+  'thread-3': [
+    { id: 201, sender: 'user', content: 'Draft a non-compete clause for an employment agreement in Texas', timestamp: 'Apr 9, 2026 · 2:15 PM' },
+    { id: 202, sender: 'bot', content: 'Here\'s a draft non-compete clause tailored for Texas employment law. Note that Texas requires non-competes to be "ancillary to or part of an otherwise enforceable agreement" per TX Bus. & Com. Code §15.50.', timestamp: 'Apr 9, 2026 · 2:15 PM', sourceBadge: 'Answered from: YourAI knowledge base' },
+  ],
+  'thread-4': [
+    { id: 301, sender: 'user', content: 'Review the indemnification section of the Acme Corp MSA', timestamp: 'Apr 8, 2026 · 10:00 AM' },
+    { id: 302, sender: 'bot', content: 'I\'ve reviewed the indemnification provisions in the **Acme Corp Master Services Agreement (v4)**. I found 2 indemnification clauses on pages 18-19 with one flagged concern.', timestamp: 'Apr 8, 2026 · 10:00 AM', sourceBadge: 'Answered from: your document' },
+  ],
+};
+
 const DEFAULT_DOCUMENT_VAULT = [
   {
     id: 1,
@@ -198,7 +265,7 @@ const sidebarItems = [
   { icon: Grid3X3, label: 'Workspaces', badge: '3', badgeStyle: 'navy', subtitle: '3 active \u00b7 1 shared with you' },
 ];
 
-function Sidebar({ onOpenPromptTemplates, onOpenClients, onOpenKnowledgePacks, onOpenDocumentVault, promptCount, clientCount, packCount, vaultCount, isOpen, onClose }) {
+function Sidebar({ onOpenPromptTemplates, onOpenClients, onOpenKnowledgePacks, onOpenDocumentVault, promptCount, clientCount, packCount, vaultCount, isOpen, onClose, threads, activeThreadId, onSwitchThread, onNewThread, onDeleteThread, threadSearch, onThreadSearchChange }) {
   const renderItem = (item, idx) => {
     const Icon = item.icon;
     return (
@@ -268,6 +335,67 @@ function Sidebar({ onOpenPromptTemplates, onOpenClients, onOpenKnowledgePacks, o
         {allMainItems.map(renderItem)}
         <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', padding: '18px 12px 6px' }}>Library</div>
         {libraryMainItems.map(renderItem)}
+
+        {/* ─── Chat History / Threads ─── */}
+        <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', padding: '18px 12px 6px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span>Conversations</span>
+          <button
+            onClick={onNewThread}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, color: 'var(--navy)', display: 'flex', alignItems: 'center' }}
+            title="New conversation"
+          >
+            <Plus size={14} />
+          </button>
+        </div>
+        {/* Thread search */}
+        <div style={{ padding: '0 8px 6px', position: 'relative' }}>
+          <Search size={12} style={{ position: 'absolute', left: 18, top: 9, color: 'var(--text-muted)' }} />
+          <input
+            value={threadSearch}
+            onChange={(e) => onThreadSearchChange(e.target.value)}
+            placeholder="Search chats..."
+            style={{ width: '100%', height: 30, borderRadius: 6, border: '1px solid var(--border)', paddingLeft: 28, fontSize: 11, outline: 'none', boxSizing: 'border-box', fontFamily: "'DM Sans', sans-serif", color: 'var(--text-primary)' }}
+          />
+        </div>
+        {/* Thread list */}
+        <div style={{ padding: '0 4px' }}>
+          {(threads || []).map(t => (
+            <div
+              key={t.id}
+              onClick={() => onSwitchThread(t.id)}
+              style={{
+                display: 'flex', alignItems: 'flex-start', gap: 8, padding: '8px 10px', borderRadius: 8,
+                cursor: 'pointer', position: 'relative', userSelect: 'none',
+                background: t.id === activeThreadId ? '#EDF3FA' : 'transparent',
+                borderLeft: t.id === activeThreadId ? '3px solid var(--navy)' : '3px solid transparent',
+                transition: 'all 0.1s',
+              }}
+              onMouseEnter={(e) => { if (t.id !== activeThreadId) e.currentTarget.style.background = '#F8FAFC'; }}
+              onMouseLeave={(e) => { if (t.id !== activeThreadId) e.currentTarget.style.background = 'transparent'; }}
+            >
+              <MessageSquare size={14} style={{ marginTop: 2, color: t.id === activeThreadId ? 'var(--navy)' : 'var(--text-muted)', flexShrink: 0 }} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 12, fontWeight: t.id === activeThreadId ? 600 : 500, color: t.id === activeThreadId ? 'var(--navy)' : 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {t.title}
+                </div>
+                <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span>{t.updatedAt}</span>
+                  <span style={{ opacity: 0.5 }}>&middot;</span>
+                  <span>{t.messageCount} msgs</span>
+                </div>
+              </div>
+              {t.id === activeThreadId && (threads || []).length > 1 && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); onDeleteThread(t.id); }}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, color: 'var(--text-muted)', flexShrink: 0, marginTop: 2 }}
+                  title="Delete conversation"
+                >
+                  <Trash2 size={12} />
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
       </div>
       <div style={{ borderTop: '1px solid var(--border)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px' }}>
@@ -279,7 +407,7 @@ function Sidebar({ onOpenPromptTemplates, onOpenClients, onOpenKnowledgePacks, o
           <MoreVertical size={16} color="var(--text-muted)" style={{ cursor: 'pointer' }} />
         </div>
         <div style={{ display: 'flex' }}>
-          <button style={{ flex: 1, padding: '10px 0', border: '1px solid var(--border)', background: '#fff', fontSize: 12, fontWeight: 500, cursor: 'pointer', borderBottomLeftRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, color: 'var(--text-secondary)' }}><Plus size={14} /> New</button>
+          <button onClick={onNewThread} style={{ flex: 1, padding: '10px 0', border: '1px solid var(--border)', background: '#fff', fontSize: 12, fontWeight: 500, cursor: 'pointer', borderBottomLeftRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, color: 'var(--text-secondary)' }}><Plus size={14} /> New Chat</button>
           <button style={{ flex: 1, padding: '10px 0', border: '1px solid var(--border)', borderLeft: 'none', background: '#fff', fontSize: 12, fontWeight: 500, cursor: 'pointer', borderBottomRightRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, color: 'var(--text-secondary)' }}><Download size={14} /> Export</button>
         </div>
       </div>
@@ -1590,6 +1718,10 @@ export default function ChatView() {
   const [showClientsPanel, setShowClientsPanel] = useState(false);
   const [showAddClient, setShowAddClient] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  // ─── Chat Threads state ───
+  const [threads, setThreads] = useState(DEFAULT_THREADS);
+  const [activeThreadId, setActiveThreadId] = useState('thread-1');
+  const [threadSearch, setThreadSearch] = useState('');
   const scrollRef = useRef(null);
   const inputRef = useRef(null);
   const responseIdx = useRef(0);
@@ -1620,6 +1752,87 @@ export default function ChatView() {
     if (inputRef.current) inputRef.current.focus();
   }, []);
 
+  // ─── Chat Thread handlers ───
+  const handleNewThread = useCallback(() => {
+    const newThread = {
+      id: `thread-${Date.now()}`,
+      title: 'New Conversation',
+      preview: '',
+      updatedAt: 'Just now',
+      messageCount: 0,
+      isActive: true,
+    };
+    setThreads(prev => prev.map(t => ({ ...t, isActive: false })));
+    setThreads(prev => [newThread, ...prev]);
+    setActiveThreadId(newThread.id);
+    setMessages([]);
+    setShowEmptyState(true);
+    setActiveKnowledgePack(null);
+    setActiveVaultDocument(null);
+    setPendingAttachments([]);
+    setInput('');
+  }, []);
+
+  const handleSwitchThread = useCallback((threadId) => {
+    if (threadId === activeThreadId) return;
+    // Save current thread title from first user message
+    setThreads(prev => prev.map(t => {
+      if (t.id === activeThreadId) {
+        const firstUserMsg = messages.find(m => m.sender === 'user');
+        return {
+          ...t,
+          isActive: false,
+          title: firstUserMsg ? (firstUserMsg.content.length > 50 ? firstUserMsg.content.substring(0, 50) + '...' : firstUserMsg.content) : t.title,
+          preview: firstUserMsg ? firstUserMsg.content : t.preview,
+          messageCount: messages.length,
+        };
+      }
+      if (t.id === threadId) return { ...t, isActive: true };
+      return t;
+    }));
+    setActiveThreadId(threadId);
+    // Load messages for the selected thread
+    if (threadId === 'thread-1') {
+      setMessages(INITIAL_MESSAGES);
+      setShowEmptyState(false);
+    } else if (THREAD_MESSAGES[threadId]) {
+      setMessages(THREAD_MESSAGES[threadId]);
+      setShowEmptyState(false);
+    } else {
+      setMessages([]);
+      setShowEmptyState(true);
+    }
+    setActiveKnowledgePack(null);
+    setActiveVaultDocument(null);
+    setPendingAttachments([]);
+    setInput('');
+  }, [activeThreadId, messages]);
+
+  const handleDeleteThread = useCallback((threadId) => {
+    if (threads.length <= 1) return;
+    const remaining = threads.filter(t => t.id !== threadId);
+    setThreads(remaining);
+    if (threadId === activeThreadId) {
+      const next = remaining[0];
+      setActiveThreadId(next.id);
+      setThreads(prev => prev.map(t => t.id === next.id ? { ...t, isActive: true } : t));
+      if (next.id === 'thread-1') {
+        setMessages(INITIAL_MESSAGES);
+        setShowEmptyState(false);
+      } else if (THREAD_MESSAGES[next.id]) {
+        setMessages(THREAD_MESSAGES[next.id]);
+        setShowEmptyState(false);
+      } else {
+        setMessages([]);
+        setShowEmptyState(true);
+      }
+    }
+  }, [threads, activeThreadId]);
+
+  const filteredThreads = threads.filter(t =>
+    !threadSearch || t.title.toLowerCase().includes(threadSearch.toLowerCase()) || t.preview.toLowerCase().includes(threadSearch.toLowerCase())
+  );
+
   const sendMessage = useCallback((text) => {
     const trimmed = (text || '').trim();
     if ((!trimmed && pendingAttachments.length === 0) || isTyping) return;
@@ -1641,8 +1854,19 @@ export default function ChatView() {
       responseIdx.current += 1;
       setMessages((prev) => [...prev, botMsg]);
       setIsTyping(false);
+      // Update thread metadata
+      setThreads(prev => prev.map(t => {
+        if (t.id !== activeThreadId) return t;
+        return {
+          ...t,
+          title: t.title === 'New Conversation' ? (trimmed.length > 50 ? trimmed.substring(0, 50) + '...' : trimmed) : t.title,
+          preview: trimmed,
+          updatedAt: 'Just now',
+          messageCount: (t.messageCount || 0) + 2,
+        };
+      }));
     }, 1500);
-  }, [isTyping, showEmptyState, activeKnowledgePack, activeVaultDocument, pendingAttachments]);
+  }, [isTyping, showEmptyState, activeKnowledgePack, activeVaultDocument, pendingAttachments, activeThreadId]);
 
   const handleAttachFiles = (files, kind) => {
     const newAtts = files.map((f, i) => ({
@@ -1741,6 +1965,13 @@ export default function ChatView() {
         vaultCount={documentVault.length}
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
+        threads={filteredThreads}
+        activeThreadId={activeThreadId}
+        onSwitchThread={(id) => { handleSwitchThread(id); setSidebarOpen(false); }}
+        onNewThread={() => { handleNewThread(); setSidebarOpen(false); }}
+        onDeleteThread={handleDeleteThread}
+        threadSearch={threadSearch}
+        onThreadSearchChange={setThreadSearch}
       />
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
         <TopNav plan={plan} usage={usage} onOpenSidebar={() => setSidebarOpen(true)} />
