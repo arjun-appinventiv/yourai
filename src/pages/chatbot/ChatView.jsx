@@ -1926,6 +1926,8 @@ export default function ChatView() {
     } catch (_) { /* ignore */ }
   }, []);
 
+  const [streamingContent, setStreamingContent] = useState('');
+
   const scrollToBottom = useCallback(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
   }, []);
@@ -2032,7 +2034,6 @@ export default function ChatView() {
 
   // Removed: setTimeout mock delay + MOCK_RESPONSES — replaced with real streaming fetch to /api/chat
   // See: tech-stack.md — Backend API section
-  const [streamingContent, setStreamingContent] = useState('');
 
   const sendMessage = useCallback(async (text) => {
     const trimmed = (text || '').trim();
