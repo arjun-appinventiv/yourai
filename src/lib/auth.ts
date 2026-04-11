@@ -7,6 +7,18 @@
 
 const BASE = import.meta.env.VITE_API_URL || '';
 
+// Demo credentials — used as client-side fallback when backend is unreachable (e.g. Vercel static deploy)
+const DEMO_USERS: Record<string, { password: string; user: User }> = {
+  'arjun@appinventiv.com': {
+    password: 'Admin@123',
+    user: { id: 'user-arjun', email: 'arjun@appinventiv.com', name: 'Arjun P', role: 'ADMIN', orgId: 'org-appinventiv', orgName: 'Appinventiv', avatar: 'AP', plan: 'ENTERPRISE' },
+  },
+  'ryan@hartwell.com': {
+    password: 'Law@2026',
+    user: { id: 'user-ryan', email: 'ryan@hartwell.com', name: 'Ryan Melade', role: 'ADMIN', orgId: 'org-hartwell', orgName: 'Hartwell & Associates', avatar: 'RM', plan: 'PROFESSIONAL' },
+  },
+};
+
 export interface User {
   id: string;
   email: string;
@@ -33,19 +45,35 @@ export async function login(
   email: string,
   password: string
 ): Promise<LoginResponse> {
-  const res = await fetch(`${BASE}/api/auth/login`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
-    body: JSON.stringify({ email, password }),
-  });
+  try {
+    const res = await fetch(`${BASE}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ email, password }),
+    });
 
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: 'Invalid credentials' }));
-    return { success: false, error: err.error || 'Invalid credentials' };
+    // If backend returned a valid JSON response, use it
+    const contentType = res.headers.get('content-type') || '';
+    if (contentType.includes('application/json')) {
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: 'Invalid credentials' }));
+        return { success: false, error: err.error || 'Invalid credentials' };
+      }
+      return res.json();
+    }
+
+    // Non-JSON response (e.g. Vercel 404 HTML page) — fall through to demo
+  } catch {
+    // Network error — backend unreachable, fall through to demo
   }
 
-  return res.json();
+  // Fallback: check demo credentials client-side
+  const demo = DEMO_USERS[email];
+  if (demo && demo.password === password) {
+    return { success: true, requiresOtp: false, user: demo.user };
+  }
+  return { success: false, error: 'Invalid email or password. Please check your credentials and try again.' };
 }
 
 /**
@@ -126,6 +154,8 @@ export async function getMe(): Promise<User | null> {
       credentials: 'include',
     });
     if (!res.ok) return null;
+    const contentType = res.headers.get('content-type') || '';
+    if (!contentType.includes('application/json')) return null;
     return res.json();
   } catch {
     return null;
