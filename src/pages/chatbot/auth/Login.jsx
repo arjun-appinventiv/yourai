@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Mail, Lock, Eye, EyeOff, Loader, ShieldCheck, ArrowLeft, RefreshCw } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, Loader, ShieldCheck, ArrowLeft, RefreshCw, Info } from 'lucide-react';
 import ChatAuthLayout from '../../../components/ChatAuthLayout';
 import { login as apiLogin, verifyOtp as apiVerifyOtp, resendOtp as apiResendOtp } from '../../../lib/auth';
 
@@ -22,6 +22,7 @@ export default function Login() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [loadingText, setLoadingText] = useState('');
+  const [showCreds, setShowCreds] = useState(false);
 
   // OTP state
   const [step, setStep] = useState('credentials'); // 'credentials' | 'otp'
@@ -252,6 +253,28 @@ export default function Login() {
           </p>
         </div>
 
+        {/* Demo OTP panel */}
+        <div className="mt-4 relative">
+          <button
+            type="button"
+            onClick={() => setShowCreds(!showCreds)}
+            className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg transition-colors"
+            style={{ backgroundColor: showCreds ? '#EFF6FF' : 'var(--ice-warm)', color: showCreds ? '#1D4ED8' : 'var(--text-muted)', fontSize: '12px', border: '1px solid transparent' }}
+          >
+            <Info size={14} />
+            {showCreds ? 'Hide demo OTP' : 'Show demo OTP'}
+          </button>
+          {showCreds && (
+            <div className="mt-2 p-3 rounded-lg" style={{ backgroundColor: '#EFF6FF', border: '1px solid #DBEAFE' }}>
+              <div className="flex items-center justify-between mb-1">
+                <span style={{ fontSize: '11px', color: '#1D4ED8', fontWeight: 600 }}>VERIFICATION CODE</span>
+                <button type="button" onClick={() => { setOtp('482916'.split('')); verifyOtp('482916'); }} style={{ fontSize: '11px', color: '#1D4ED8', cursor: 'pointer', background: 'none', border: 'none' }}>Auto-fill &amp; verify</button>
+              </div>
+              <code style={{ fontSize: '14px', color: 'var(--text-primary)', fontWeight: 600, letterSpacing: '0.15em' }}>482916</code>
+            </div>
+          )}
+        </div>
+
         {/* OTP Input Boxes */}
         <form onSubmit={handleOtpSubmit} className="mt-6">
           <div className="flex justify-center gap-1.5 sm:gap-2">
@@ -429,6 +452,33 @@ export default function Login() {
           {loading ? <><Loader size={16} className="animate-spin" /> {loadingText}</> : 'Sign In'}
         </button>
       </form>
+
+      {/* Demo credentials panel */}
+      <div className="mt-4 relative">
+        <button
+          type="button"
+          onClick={() => setShowCreds(!showCreds)}
+          className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg transition-colors"
+          style={{ backgroundColor: showCreds ? '#EFF6FF' : 'var(--ice-warm)', color: showCreds ? '#1D4ED8' : 'var(--text-muted)', fontSize: '12px', border: '1px solid transparent' }}
+        >
+          <Info size={14} />
+          {showCreds ? 'Hide credentials' : 'Show demo credentials'}
+        </button>
+        {showCreds && (
+          <div className="mt-2 p-3 rounded-lg" style={{ backgroundColor: '#EFF6FF', border: '1px solid #DBEAFE' }}>
+            <div className="flex items-center justify-between mb-1">
+              <span style={{ fontSize: '11px', color: '#1D4ED8', fontWeight: 600 }}>EMAIL</span>
+              <button type="button" onClick={() => setEmail('ryan@hartwell.com')} style={{ fontSize: '11px', color: '#1D4ED8', cursor: 'pointer', background: 'none', border: 'none' }}>Copy to field</button>
+            </div>
+            <code className="break-all block" style={{ fontSize: '12px', color: 'var(--text-primary)' }}>ryan@hartwell.com</code>
+            <div className="flex items-center justify-between mb-1 mt-2">
+              <span style={{ fontSize: '11px', color: '#1D4ED8', fontWeight: 600 }}>PASSWORD</span>
+              <button type="button" onClick={() => setPassword('Law@2026')} style={{ fontSize: '11px', color: '#1D4ED8', cursor: 'pointer', background: 'none', border: 'none' }}>Copy to field</button>
+            </div>
+            <code className="break-all block" style={{ fontSize: '12px', color: 'var(--text-primary)' }}>Law@2026</code>
+          </div>
+        )}
+      </div>
 
       <p className="text-center mt-4" style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
         Don't have an account?{' '}

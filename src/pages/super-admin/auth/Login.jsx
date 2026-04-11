@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Mail, Lock, Eye, EyeOff, Loader } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, Loader, Info } from 'lucide-react';
 import AuthLayout from '../../../components/AuthLayout';
 import { useAuth } from '../../../context/AuthContext';
 
@@ -17,6 +17,7 @@ export default function Login() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [loadingText, setLoadingText] = useState('');
+  const [showCreds, setShowCreds] = useState(false);
   const navigate = useNavigate();
   const { login } = useAuth();
 
@@ -101,6 +102,37 @@ export default function Login() {
           {loading ? <><Loader size={16} className="animate-spin" /> {loadingText}</> : 'Sign In'}
         </button>
       </form>
+
+      {/* Demo credentials panel */}
+      <div className="mt-4 relative">
+        <button
+          type="button"
+          onClick={() => setShowCreds(!showCreds)}
+          className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg transition-colors"
+          style={{ backgroundColor: showCreds ? '#EFF6FF' : 'var(--ice-warm)', color: showCreds ? '#1D4ED8' : 'var(--text-muted)', fontSize: '12px', border: '1px solid transparent' }}
+        >
+          <Info size={14} />
+          {showCreds ? 'Hide credentials' : 'Show demo credentials'}
+        </button>
+        {showCreds && (
+          <div className="mt-2 p-3 rounded-lg" style={{ backgroundColor: '#EFF6FF', border: '1px solid #DBEAFE' }}>
+            <div className="flex items-center justify-between mb-1">
+              <span style={{ fontSize: '11px', color: '#1D4ED8', fontWeight: 600 }}>EMAIL</span>
+              <button type="button" onClick={() => setEmail('arjun@appinventiv.com')} style={{ fontSize: '11px', color: '#1D4ED8', cursor: 'pointer', background: 'none', border: 'none' }}>Copy to field</button>
+            </div>
+            <code style={{ fontSize: '12px', color: 'var(--text-primary)' }}>arjun@appinventiv.com</code>
+            <div className="flex items-center justify-between mb-1 mt-2">
+              <span style={{ fontSize: '11px', color: '#1D4ED8', fontWeight: 600 }}>PASSWORD</span>
+              <button type="button" onClick={() => setPassword('Admin@123')} style={{ fontSize: '11px', color: '#1D4ED8', cursor: 'pointer', background: 'none', border: 'none' }}>Copy to field</button>
+            </div>
+            <code style={{ fontSize: '12px', color: 'var(--text-primary)' }}>Admin@123</code>
+            <div className="mt-2">
+              <span style={{ fontSize: '11px', color: '#1D4ED8', fontWeight: 600 }}>FORGOT PASSWORD OTP</span>
+              <code className="ml-2" style={{ fontSize: '12px', color: 'var(--text-primary)' }}>123456</code>
+            </div>
+          </div>
+        )}
+      </div>
 
       <p className="text-center mt-4" style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
         Access is restricted to authorised operators only.

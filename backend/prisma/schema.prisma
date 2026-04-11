@@ -1,0 +1,105 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Models ───
+// SQLite: enums stored as String, Json stored as String (parse in app code)
+
+model User {
+  id           String    @id @default(uuid())
+  email        String    @unique
+  name         String
+  passwordHash String?
+  role         String    @default("TEAM")    // ADMIN | MANAGER | TEAM | CLIENT
+  orgId        String
+  org          Org       @relation(fields: [orgId], references: [id])
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  sessions     Session[]
+  messages     Message[]
+}
+
+model Org {
+  id            String         @id @default(uuid())
+  name          String
+  plan          String         @default("FREE")    // FREE | PROFESSIONAL | TEAM | ENTERPRISE
+  status        String         @default("ACTIVE")  // ACTIVE | SUSPENDED
+  createdAt     DateTime       @default(now())
+  users         User[]
+  documents     Document[]
+  conversations Conversation[]
+}
+
+model Session {
+  id            String         @id @default(uuid())
+  userId        String
+  user          User           @relation(fields: [userId], references: [id])
+  kbSnapshotId  String?
+  docId         String?
+  startedAt     DateTime       @default(now())
+  conversations Conversation[]
+}
+
+model Conversation {
+  id        String    @id @default(uuid())
+  orgId     String
+  org       Org       @relation(fields: [orgId], references: [id])
+  sessionId String
+  session   Session   @relation(fields: [sessionId], references: [id])
+  title     String?
+  createdAt DateTime  @default(now())
+  messages  Message[]
+}
+
+model Message {
+  id             String       @id @default(uuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  role           String       // USER | ASSISTANT
+  content        String
+  sourceType     String?      // UPLOADED_DOC | GLOBAL_KB
+  sourceDocId    String?
+  createdAt      DateTime     @default(now())
+  userId         String?
+  user           User?        @relation(fields: [userId], references: [id])
+}
+
+model Document {
+  id        String    @id @default(uuid())
+  orgId     String
+  org       Org       @relation(fields: [orgId], references: [id])
+  name      String
+  size      Int
+  type      String
+  url       String
+  status    String    @default("PROCESSING")  // PROCESSING | READY
+  isGlobal  Boolean   @default(false)
+  createdAt DateTime  @default(now())
+  chunks    Chunk[]
+}
+
+model Chunk {
+  id         String   @id @default(uuid())
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id])
+  content    String
+  pageNumber Int?
+  createdAt  DateTime @default(now())
+  // TODO: embedding vector(1536) — add via raw SQL migration for pgvector
+}
+
+model BotPersona {
+  id              String   @id @default(uuid())
+  systemPrompt    String
+  tone            String   @default("FORMAL")  // FORMAL | CONVERSATIONAL | NEUTRAL | CONCISE
+  formatRules     String   // JSON string — parse in app code
+  fallbackMessage String
+  version         Int      @default(1)
+  updatedAt       DateTime @updatedAt
+  updatedBy       String
+}
