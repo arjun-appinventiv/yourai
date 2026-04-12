@@ -61,7 +61,28 @@ export async function extractFileText(
   try {
     if (ext === 'pdf') {
       const text = await extractPdfText(file);
-      return { text: text.slice(0, maxChars), pageCount: text.split('[Page ').length - 1 };
+      const pageCount = text.split('[Page ').length - 1;
+
+      // Check if extracted text is mostly readable ASCII/Unicode
+      // Garbled PDFs (scanned images, weird encodings) produce lots of replacement chars
+      if (!text.trim()) {
+        return {
+          text: `[File: ${file.name}] This PDF appears to be image-based or empty — I couldn't extract readable text. If possible, try a text-based PDF or paste the relevant content directly.`,
+          pageCount,
+        };
+      }
+
+      const readableChars = text.replace(/[^\x20-\x7E\n\r\t\u00A0-\u024F\u0400-\u04FF\u2000-\u206F\u2190-\u21FF\u2500-\u257F]/g, '');
+      const readableRatio = readableChars.length / (text.length || 1);
+
+      if (readableRatio < 0.6) {
+        return {
+          text: `[File: ${file.name}] This PDF (${pageCount} page${pageCount !== 1 ? 's' : ''}, ${formatFileSize(file.size)}) couldn't be read properly — it may be scanned, image-based, or use non-standard encoding. Try uploading a text-based PDF, or paste the key sections directly.`,
+          pageCount,
+        };
+      }
+
+      return { text: text.slice(0, maxChars), pageCount };
     }
 
     // Plain text formats — read directly

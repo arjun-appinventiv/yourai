@@ -2130,7 +2130,16 @@ export default function ChatView() {
         // Tier 1: User's uploaded document (from pending attachments with extracted content)
         const docWithContent = userMsg.attachments?.find(a => a.content) || pendingAttachments.find(a => a.content);
         if (docWithContent) {
-          contextLayers.uploadedDoc = { name: docWithContent.name, content: docWithContent.content };
+          // Check if extracted content is readable (not garbled binary)
+          const rawContent = docWithContent.content || '';
+          const printableChars = rawContent.replace(/[^\x20-\x7E\n\r\t\u00A0-\u024F]/g, '');
+          const isReadable = rawContent.length < 50 || (printableChars.length / rawContent.length) > 0.6;
+          if (isReadable) {
+            contextLayers.uploadedDoc = { name: docWithContent.name, content: rawContent };
+          } else {
+            // Content is garbled — tell the LLM the document couldn't be read
+            contextLayers.uploadedDoc = { name: docWithContent.name, content: `[File: ${docWithContent.name}] The text content could not be extracted from this document. It may be a scanned PDF, image-based, or use non-standard encoding.` };
+          }
         } else if (activeVaultDocument) {
           // Vault document selected as context — use its metadata as reference
           contextLayers.uploadedDoc = { name: activeVaultDocument.name, content: activeVaultDocument.description || '' };
