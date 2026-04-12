@@ -317,7 +317,7 @@ export async function callLLM(
       .map(s => `  [SOURCE: ${s}] — if you answered from the ${sourceDescriptions[s] || s}`)
       .join('\n');
 
-    systemPrompt += `\n\n--- SOURCE ATTRIBUTION ---
+    systemPrompt += `\n\n--- SOURCE ATTRIBUTION (INTERNAL — NEVER SHOW TO USER) ---
 You have access to context sources listed by priority (highest first):
 ${availableSources.map((s, i) => `${i + 1}. ${sourceDescriptions[s] || s}`).join('\n')}
 
@@ -328,7 +328,8 @@ RULES:
 - At the very end of your response, on its own line, output exactly one of these tags:
 ${sourceOptions}
   [SOURCE: NONE] — if none of the provided documents were relevant
-- The source tag MUST be the last line. Do NOT use source tags not listed above.`;
+- The source tag MUST be the last line. Do NOT use source tags not listed above.
+- CRITICAL: The source tag is for internal processing ONLY. NEVER write "(Source: ...)" or any source explanation in the visible response text. Just output the [SOURCE: X] tag as the very last line, nothing else about sources.`;
   }
 
   // Build OpenAI-compatible request (Groq uses the same format)
@@ -407,11 +408,15 @@ ${sourceOptions}
   if (sourceMatch) {
     sourceType = sourceMatch[1];
     fullContent = fullContent.replace(/\n?\[SOURCE:\s*\w+\]\s*$/, '').trimEnd();
-    // Update the streamed content to strip the tag
-    onChunk(fullContent);
   } else if (hasGlobalKb) {
     sourceType = 'GLOBAL_KB';
   }
+
+  // Strip any "(Source: ...)" or "(Note: ...source...)" text the LLM might embed in the response
+  fullContent = fullContent.replace(/\s*\(Source:.*?\)\s*$/gi, '').trimEnd();
+  fullContent = fullContent.replace(/\s*\(No specific source.*?\)\s*$/gi, '').trimEnd();
+  // Update the streamed content with cleaned version
+  onChunk(fullContent);
 
   // If no source found relevant and persona has fallback, use it
   // But NOT when the user uploaded a document — they expect the AI to engage with it

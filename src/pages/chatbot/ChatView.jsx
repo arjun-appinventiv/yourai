@@ -2079,7 +2079,7 @@ export default function ChatView() {
       const base = import.meta.env.VITE_API_URL || '';
       let usedBackend = false;
       let fullContent = '';
-      let sourceBadge = 'Answered from: YourAI knowledge base';
+      let sourceBadge = null;
 
       try {
         const response = await fetch(`${base}/api/chat`, {
@@ -2107,9 +2107,14 @@ export default function ChatView() {
             setStreamingContent(fullContent);
           }
           const sourceTypeHeader = response.headers.get('X-Source-Type');
-          sourceBadge = sourceTypeHeader === 'UPLOADED_DOC'
-            ? 'Answered from: your document'
-            : 'Answered from: YourAI knowledge base';
+          if (sourceTypeHeader === 'UPLOADED_DOC') {
+            sourceBadge = 'Answered from: your document';
+          } else if (sourceTypeHeader === 'KNOWLEDGE_PACK') {
+            sourceBadge = `Answered from: ${activeKnowledgePack?.name || 'knowledge pack'}`;
+          } else if (sourceTypeHeader === 'GLOBAL_KB') {
+            sourceBadge = 'Answered from: YourAI knowledge base';
+          }
+          // else: leave sourceBadge as null (no badge for general AI responses)
         }
       } catch { /* backend unreachable — fall through to client-side LLM */ }
 
@@ -2133,7 +2138,12 @@ export default function ChatView() {
           // Check if extracted content is readable (not garbled binary)
           const rawContent = docWithContent.content || '';
           const printableChars = rawContent.replace(/[^\x20-\x7E\n\r\t\u00A0-\u024F]/g, '');
-          const isReadable = rawContent.length < 50 || (printableChars.length / rawContent.length) > 0.6;
+          const printableRatio = rawContent.length > 0 ? (printableChars.length / rawContent.length) : 1;
+          // Detect garble patterns: diamonds, squares, replacement chars clustered together
+          const garbleMatches = rawContent.match(/[\u25A0-\u25FF\u2600-\u26FF\uFFFD\u2580-\u259F]{2,}/g);
+          const garbleCount = garbleMatches ? garbleMatches.reduce((s, m) => s + m.length, 0) : 0;
+          const hasGarble = garbleCount > rawContent.length * 0.1;
+          const isReadable = rawContent.length < 50 || (printableRatio > 0.7 && !hasGarble);
           if (isReadable) {
             contextLayers.uploadedDoc = { name: docWithContent.name, content: rawContent };
           } else {

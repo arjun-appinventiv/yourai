@@ -72,10 +72,16 @@ export async function extractFileText(
         };
       }
 
-      const readableChars = text.replace(/[^\x20-\x7E\n\r\t\u00A0-\u024F\u0400-\u04FF\u2000-\u206F\u2190-\u21FF\u2500-\u257F]/g, '');
+      // Strip replacement chars, diamonds, box-drawing, and other garble indicators
+      const readableChars = text.replace(/[^\x20-\x7E\n\r\t\u00A0-\u024F\u0400-\u04FF]/g, '');
       const readableRatio = readableChars.length / (text.length || 1);
 
-      if (readableRatio < 0.6) {
+      // Also detect repetitive garble patterns (e.g. ◆◆G◆◆_◆ repeated)
+      const garblePatterns = text.match(/[◆◇●○■□▪▫♦♢\uFFFD\u25A0-\u25FF\u2600-\u26FF]{2,}/g);
+      const garbleCharCount = garblePatterns ? garblePatterns.reduce((sum, m) => sum + m.length, 0) : 0;
+      const hasExcessiveGarble = garbleCharCount > text.length * 0.1;
+
+      if (readableRatio < 0.7 || hasExcessiveGarble) {
         return {
           text: `[File: ${file.name}] This PDF (${pageCount} page${pageCount !== 1 ? 's' : ''}, ${formatFileSize(file.size)}) couldn't be read properly — it may be scanned, image-based, or use non-standard encoding. Try uploading a text-based PDF, or paste the key sections directly.`,
           pageCount,
