@@ -68,24 +68,30 @@ export default function Login() {
     setLoading(true);
     setLoadingText('Verifying credentials...');
 
-    // Removed: setTimeout mock delay — real API call
-    const result = await apiLogin(email, password);
+    try {
+      // Removed: setTimeout mock delay — real API call
+      const result = await apiLogin(email, password);
 
-    if (result.success) {
-      if (result.requiresOtp) {
+      if (result.success) {
+        if (result.requiresOtp) {
+          setLoading(false);
+          setLoadingText('');
+          setStep('otp');
+          setResendTimer(RESEND_COOLDOWN);
+        } else {
+          // No 2FA required — go straight to chat
+          setLoadingText('Authenticated! Redirecting...');
+          navigate('/chat', { replace: true });
+        }
+      } else {
         setLoading(false);
         setLoadingText('');
-        setStep('otp');
-        setResendTimer(RESEND_COOLDOWN);
-      } else {
-        // No 2FA required — go straight to chat
-        setLoadingText('Authenticated! Redirecting...');
-        navigate('/chat', { replace: true });
+        setError(result.error || 'Invalid email or password. Please check your credentials and try again.');
       }
-    } else {
+    } catch {
       setLoading(false);
       setLoadingText('');
-      setError(result.error || 'Invalid email or password. Please check your credentials and try again.');
+      setError('A network error occurred. Please check your connection and try again.');
     }
   };
 
@@ -141,16 +147,24 @@ export default function Login() {
     setError('');
     setLoadingText('Verifying code...');
 
-    // Removed: setTimeout mock delay — real API call
-    const result = await apiVerifyOtp(code);
+    try {
+      // Removed: setTimeout mock delay — real API call
+      const result = await apiVerifyOtp(code);
 
-    if (result.success) {
-      setLoadingText('Authenticated! Redirecting...');
-      navigate('/chat', { replace: true });
-    } else {
+      if (result.success) {
+        setLoadingText('Authenticated! Redirecting...');
+        navigate('/chat', { replace: true });
+      } else {
+        setOtpVerifying(false);
+        setLoadingText('');
+        setError(result.error || 'Invalid verification code. Please try again.');
+        setOtp(Array(OTP_LENGTH).fill(''));
+        setTimeout(() => otpRefs.current[0]?.focus(), 100);
+      }
+    } catch {
       setOtpVerifying(false);
       setLoadingText('');
-      setError(result.error || 'Invalid verification code. Please try again.');
+      setError('Verification failed. Please check your connection and try again.');
       setOtp(Array(OTP_LENGTH).fill(''));
       setTimeout(() => otpRefs.current[0]?.focus(), 100);
     }
@@ -448,7 +462,7 @@ export default function Login() {
           </div>
         )}
 
-        <button type="submit" disabled={loading} className="w-full flex items-center justify-center gap-2 text-white transition-colors" style={{ backgroundColor: loading ? 'var(--navy-mid)' : 'var(--navy)', height: 42, borderRadius: '10px', fontSize: '14px', fontWeight: 500, border: 'none', cursor: loading ? 'not-allowed' : 'pointer' }}>
+        <button type="submit" disabled={loading || !email.trim() || !password.trim()} className="w-full flex items-center justify-center gap-2 text-white transition-colors" style={{ backgroundColor: (loading || !email.trim() || !password.trim()) ? '#94A3B8' : 'var(--navy)', height: 42, borderRadius: '10px', fontSize: '14px', fontWeight: 500, border: 'none', cursor: (loading || !email.trim() || !password.trim()) ? 'not-allowed' : 'pointer', opacity: (!email.trim() || !password.trim()) && !loading ? 0.7 : 1 }}>
           {loading ? <><Loader size={16} className="animate-spin" /> {loadingText}</> : 'Sign In'}
         </button>
       </form>

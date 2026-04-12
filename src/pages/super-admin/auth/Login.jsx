@@ -1,14 +1,8 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Navigate, Link } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, Loader, Info } from 'lucide-react';
 import AuthLayout from '../../../components/AuthLayout';
 import { useAuth } from '../../../context/AuthContext';
-
-// Removed: MOCK_CREDENTIALS — replaced with real API call to /api/auth/login
-// Removed: mock setTimeout delay — login is now a real network call
-// Removed: hardcoded arjun@appinventiv.com — no mock credentials
-// Removed: "Show demo credentials" panel — not needed with real auth
-// See: tech-stack.md — Backend API section
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -16,33 +10,45 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [loadingText, setLoadingText] = useState('');
   const [showCreds, setShowCreds] = useState(false);
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, isAuthenticated, loading: authLoading } = useAuth();
+
+  // Already logged in → redirect to dashboard
+  if (!authLoading && isAuthenticated) {
+    return <Navigate to="/super-admin/dashboard" replace />;
+  }
+
+  // Disable Sign In when fields are empty or loading
+  const isFormValid = email.trim() !== '' && password.trim() !== '';
+  const isDisabled = !isFormValid || loading;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (isDisabled) return; // guard against double-submit
+
     setError('');
     setLoading(true);
-    setLoadingText('Signing in...');
 
-    // Removed: setTimeout mock delay — real API call
-    const result = await login(email, password);
+    try {
+      const result = await login(email, password);
 
-    if (!result.success) {
+      if (!result.success) {
+        setLoading(false);
+        setError('Invalid email or password. Please try again.');
+        return;
+      }
+
+      if (result.requiresOtp) {
+        navigate('/super-admin/verify-otp', { replace: true });
+        return;
+      }
+
+      navigate('/super-admin/dashboard', { replace: true });
+    } catch {
       setLoading(false);
-      setLoadingText('');
-      setError(result.error || 'Invalid email or password. Please try again.');
-      return;
+      setError('A network error occurred. Please check your connection and try again.');
     }
-
-    if (result.requiresOtp) {
-      navigate('/super-admin/verify-otp', { replace: true });
-      return;
-    }
-
-    navigate('/super-admin/dashboard', { replace: true });
   };
 
   const inputWrap = 'relative';
@@ -74,7 +80,7 @@ export default function Login() {
           <label className="block mb-1.5" style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-secondary)' }}>Email address</label>
           <div className={inputWrap}>
             <Mail size={16} style={iconStyle} />
-            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Enter your email" required style={inputStyle} />
+            <input type="email" value={email} onChange={(e) => { setEmail(e.target.value); if (error) setError(''); }} placeholder="Enter your email" style={inputStyle} />
           </div>
         </div>
 
@@ -82,8 +88,8 @@ export default function Login() {
           <label className="block mb-1.5" style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-secondary)' }}>Password</label>
           <div className={inputWrap}>
             <Lock size={16} style={iconStyle} />
-            <input type={showPassword ? 'text' : 'password'} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Enter your password" required style={{ ...inputStyle, paddingRight: 40 }} />
-            <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }}>
+            <input type={showPassword ? 'text' : 'password'} value={password} onChange={(e) => { setPassword(e.target.value); if (error) setError(''); }} placeholder="Enter your password" style={{ ...inputStyle, paddingRight: 40 }} />
+            <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer' }}>
               {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
             </button>
           </div>
@@ -94,12 +100,26 @@ export default function Login() {
 
         {error && (
           <div className="flex items-start gap-2" style={{ backgroundColor: '#FEF2F2', borderLeft: '3px solid #EF4444', borderRadius: '0 8px 8px 0', padding: '10px 14px' }}>
-            <p style={{ fontSize: '13px', color: '#9B2C2C' }}>{error}</p>
+            <p style={{ fontSize: '13px', color: '#9B2C2C', margin: 0 }}>{error}</p>
           </div>
         )}
 
-        <button type="submit" disabled={loading} className="w-full flex items-center justify-center gap-2 text-white transition-colors" style={{ backgroundColor: loading ? 'var(--navy-mid)' : 'var(--navy)', height: 42, borderRadius: '10px', fontSize: '14px', fontWeight: 500, border: 'none', cursor: loading ? 'not-allowed' : 'pointer' }}>
-          {loading ? <><Loader size={16} className="animate-spin" /> {loadingText}</> : 'Sign In'}
+        <button
+          type="submit"
+          disabled={isDisabled}
+          className="w-full flex items-center justify-center gap-2 text-white transition-colors"
+          style={{
+            backgroundColor: isDisabled ? '#94A3B8' : 'var(--navy)',
+            height: 42,
+            borderRadius: '10px',
+            fontSize: '14px',
+            fontWeight: 500,
+            border: 'none',
+            cursor: isDisabled ? 'not-allowed' : 'pointer',
+            opacity: isDisabled && !loading ? 0.7 : 1,
+          }}
+        >
+          {loading ? <><Loader size={16} className="animate-spin" /> Signing in...</> : 'Sign In'}
         </button>
       </form>
 

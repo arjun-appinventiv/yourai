@@ -1,17 +1,25 @@
 import React, { useState, useMemo } from 'react';
-import { Link } from 'react-router-dom';
-import { KeyRound, Lock, Eye, EyeOff, CheckCircle, Circle } from 'lucide-react';
+import { Link, Navigate, useLocation } from 'react-router-dom';
+import { KeyRound, Lock, Eye, EyeOff, CheckCircle, Circle, Loader } from 'lucide-react';
 import AuthLayout from '../../../components/AuthLayout';
 
 const strengthColors = ['#EF4444', '#F97316', '#C9A84C', '#22C55E'];
 const strengthLabels = ['Weak', 'Fair', 'Good', 'Strong'];
 
 export default function ResetPassword() {
+  const location = useLocation();
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [showPw, setShowPw] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [done, setDone] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  // Guard: redirect to forgot-password if accessed directly without OTP verification
+  if (!location.state?.otpVerified && !location.state?.email) {
+    return <Navigate to="/super-admin/forgot-password" replace />;
+  }
 
   const checks = useMemo(() => ({
     length: password.length >= 8,
@@ -22,11 +30,21 @@ export default function ResetPassword() {
 
   const strength = Object.values(checks).filter(Boolean).length;
   const mismatch = confirm.length > 0 && password !== confirm;
-  const canSubmit = strength >= 3 && password === confirm && confirm.length > 0;
+  const canSubmit = strength >= 3 && password === confirm && confirm.length > 0 && !loading;
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (canSubmit) setDone(true);
+    if (!canSubmit) return;
+    setLoading(true);
+    setError('');
+    try {
+      // Simulate API call
+      await new Promise((r) => setTimeout(r, 1000));
+      setDone(true);
+    } catch {
+      setError('Failed to update password. Please try again.');
+      setLoading(false);
+    }
   };
 
   const inputStyle = {
@@ -71,7 +89,7 @@ export default function ResetPassword() {
           <div className="relative">
             <Lock size={16} style={iconPos} />
             <input type={showPw ? 'text' : 'password'} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Enter new password" style={inputStyle} />
-            <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }}>
+            <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer' }}>
               {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
             </button>
           </div>
@@ -110,15 +128,34 @@ export default function ResetPassword() {
           <div className="relative">
             <Lock size={16} style={iconPos} />
             <input type={showConfirm ? 'text' : 'password'} value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder="Re-enter password" style={{ ...inputStyle, borderColor: mismatch ? '#EF4444' : 'var(--border)' }} />
-            <button type="button" onClick={() => setShowConfirm(!showConfirm)} className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }}>
+            <button type="button" onClick={() => setShowConfirm(!showConfirm)} className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer' }}>
               {showConfirm ? <EyeOff size={16} /> : <Eye size={16} />}
             </button>
           </div>
           {mismatch && <p className="mt-1" style={{ fontSize: '12px', color: '#EF4444' }}>Passwords do not match</p>}
         </div>
 
-        <button type="submit" disabled={!canSubmit} className="w-full flex items-center justify-center text-white" style={{ backgroundColor: canSubmit ? 'var(--navy)' : '#94A3B8', height: 42, borderRadius: '10px', fontSize: '14px', fontWeight: 500, border: 'none', cursor: canSubmit ? 'pointer' : 'not-allowed' }}>
-          Update Password
+        {error && (
+          <div style={{ backgroundColor: '#FEF2F2', borderLeft: '3px solid #EF4444', borderRadius: '0 8px 8px 0', padding: '10px 14px' }}>
+            <p style={{ fontSize: '13px', color: '#9B2C2C', margin: 0 }}>{error}</p>
+          </div>
+        )}
+
+        <button
+          type="submit"
+          disabled={!canSubmit}
+          className="w-full flex items-center justify-center gap-2 text-white"
+          style={{
+            backgroundColor: canSubmit ? 'var(--navy)' : '#94A3B8',
+            height: 42,
+            borderRadius: '10px',
+            fontSize: '14px',
+            fontWeight: 500,
+            border: 'none',
+            cursor: canSubmit ? 'pointer' : 'not-allowed',
+          }}
+        >
+          {loading ? <><Loader size={16} className="animate-spin" /> Updating...</> : 'Update Password'}
         </button>
       </form>
     </AuthLayout>

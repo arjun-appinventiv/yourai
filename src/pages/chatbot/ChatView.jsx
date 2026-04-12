@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import ReactMarkdown from 'react-markdown';
 import {
   CheckCircle, MessageSquare, Clock, Share2, Grid3X3, Calendar, Users,
   FolderOpen, ChevronDown, ChevronRight, MoreVertical, Plus, Download,
@@ -1528,7 +1529,23 @@ function MessageBubble({ msg }) {
             })}
           </div>
         )}
-        <div style={{ fontSize: 14, lineHeight: 1.6, color: 'var(--text-primary)', wordBreak: 'break-word' }}>{bold(msg.content)}</div>
+        <div style={{ fontSize: 14, lineHeight: 1.6, color: 'var(--text-primary)', wordBreak: 'break-word' }}>
+          {isBot ? (
+            <ReactMarkdown
+              components={{
+                h2: ({children}) => <h2 style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', margin: '14px 0 6px 0', paddingBottom: 4, borderBottom: '0.5px solid var(--border)' }}>{children}</h2>,
+                h3: ({children}) => <h3 style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', margin: '10px 0 4px 0' }}>{children}</h3>,
+                p: ({children}) => <p style={{ fontSize: 14, color: 'var(--text-primary)', lineHeight: 1.7, margin: '0 0 8px 0' }}>{children}</p>,
+                ul: ({children}) => <ul style={{ paddingLeft: 18, margin: '4px 0 8px 0' }}>{children}</ul>,
+                ol: ({children}) => <ol style={{ paddingLeft: 18, margin: '4px 0 8px 0' }}>{children}</ol>,
+                li: ({children}) => <li style={{ fontSize: 14, color: 'var(--text-primary)', lineHeight: 1.6, marginBottom: 3 }}>{children}</li>,
+                strong: ({children}) => <strong style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{children}</strong>,
+                blockquote: ({children}) => <blockquote style={{ borderLeft: '2px solid var(--border)', paddingLeft: 12, margin: '8px 0', color: 'var(--text-muted)', fontStyle: 'italic' }}>{children}</blockquote>,
+                code: ({children}) => <code style={{ fontSize: 12, fontFamily: 'monospace', background: 'var(--ice-warm)', padding: '1px 4px', borderRadius: 3, color: 'var(--text-primary)' }}>{children}</code>,
+              }}
+            >{msg.content}</ReactMarkdown>
+          ) : msg.content}
+        </div>
         {msg.knowledgePack && (
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 8, marginRight: 6, padding: '4px 10px', borderRadius: 999, background: 'rgba(10, 36, 99, 0.06)', border: '1px solid rgba(10, 36, 99, 0.18)' }}>
             <Package size={12} style={{ color: 'var(--navy)' }} />
@@ -2139,9 +2156,9 @@ export default function ChatView() {
           UPLOADED_DOC: 'Answered from: your document',
           KNOWLEDGE_PACK: `Answered from: ${activeKnowledgePack?.name || 'knowledge pack'}`,
           GLOBAL_KB: 'Answered from: YourAI knowledge base',
-          NONE: 'Answered from: AI',
+          NONE: null,
         };
-        sourceBadge = sourceBadgeMap[result.sourceType] || 'Answered from: AI';
+        sourceBadge = sourceBadgeMap[result.sourceType] ?? null;
       }
 
       const botMsg = {
@@ -2172,7 +2189,12 @@ export default function ChatView() {
     } catch (err) {
       setIsTyping(false);
       setStreamingContent('');
-      const errMsg = { id: Date.now() + 1, sender: 'bot', content: err?.message || 'Connection error. Please check your network and try again.', timestamp: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }), sourceBadge: null };
+      // Sanitize: never expose model names, org IDs, API keys, provider names, or internal errors
+      const rawErr = (err?.message || '').toLowerCase();
+      const LEAK_PATTERNS = ['groq', 'openai', 'anthropic', 'llama', 'gpt', 'claude', 'gemini', 'org_', 'sk-', 'ant-', 'aiza', 'token', 'model', 'api key', 'billing', 'console.', 'http'];
+      const isLeaky = LEAK_PATTERNS.some(p => rawErr.includes(p));
+      const safeMessage = isLeaky ? 'Something went wrong. Please try again.' : (err?.message || 'Connection error. Please check your network and try again.');
+      const errMsg = { id: Date.now() + 1, sender: 'bot', content: safeMessage, timestamp: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }), sourceBadge: null };
       setMessages((prev) => [...prev, errMsg]);
     }
   }, [isTyping, showEmptyState, messages, activeKnowledgePack, activeVaultDocument, pendingAttachments, activeThreadId, sessionState]);
@@ -2492,7 +2514,9 @@ export default function ChatView() {
                 )}
               </div>
               <textarea ref={inputRef} value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={handleKeyDown} placeholder={inputPlaceholder} rows={1} style={{ flex: 1, border: 'none', outline: 'none', fontSize: 14, color: 'var(--text-primary)', background: 'transparent', resize: 'none', maxHeight: 120, overflowY: 'auto', lineHeight: '1.5', fontFamily: 'inherit' }} onInput={(e) => { e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px'; }} />
-              <div onClick={() => sendMessage(input)} style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--navy)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}><ArrowUp size={16} color="#fff" /></div>
+              {(() => { const canSend = (input.trim() || pendingAttachments.length > 0) && !isTyping; return (
+              <div onClick={() => canSend && sendMessage(input)} style={{ width: 32, height: 32, borderRadius: '50%', background: canSend ? 'var(--navy)' : '#94A3B8', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: canSend ? 'pointer' : 'not-allowed', flexShrink: 0, opacity: canSend ? 1 : 0.6, transition: 'background 150ms, opacity 150ms' }}><ArrowUp size={16} color="#fff" /></div>
+              ); })()}
             </div>
             <div style={{ textAlign: 'center', fontSize: 12, color: 'var(--text-muted)', marginTop: 8 }}>
               YourAI may produce inaccurate information. Always verify critical outputs. <strong>Private &amp; encrypted.</strong>

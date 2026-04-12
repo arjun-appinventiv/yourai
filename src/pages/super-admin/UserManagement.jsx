@@ -142,9 +142,10 @@ export default function UserManagement() {
         <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} style={inputStyle}>
           <option>All</option><option>Active</option><option>Blocked</option><option>Invited</option>
         </select>
-        <button onClick={handleExportCSV} className="px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 whitespace-nowrap" style={{ border: '1px solid var(--border)', color: 'var(--slate)', backgroundColor: 'white' }}>
+        <button onClick={handleExportCSV} disabled={filtered.length === 0} className="px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 whitespace-nowrap" style={{ border: '1px solid var(--border)', color: filtered.length === 0 ? '#94A3B8' : 'var(--slate)', backgroundColor: 'white', cursor: filtered.length === 0 ? 'not-allowed' : 'pointer', opacity: filtered.length === 0 ? 0.6 : 1 }}>
           <Download size={16} /> Export CSV
         </button>
+        <span className="text-sm whitespace-nowrap" style={{ color: 'var(--text-muted)' }}>Showing {filtered.length} users</span>
       </div>
 
       {/* Table */}
@@ -185,6 +186,17 @@ export default function UserManagement() {
             </td>
           </tr>
         ))}
+        {filtered.length === 0 && (
+          <tr>
+            <td colSpan={7} className="px-4 py-12 text-center">
+              <div style={{ color: 'var(--text-muted)', fontSize: '14px' }}>
+                <Search size={24} style={{ margin: '0 auto 8px', opacity: 0.4 }} />
+                <p style={{ fontWeight: 500 }}>No users found</p>
+                <p style={{ fontSize: '12px', marginTop: 4 }}>Try adjusting your search or filters.</p>
+              </div>
+            </td>
+          </tr>
+        )}
       </Table>
 
       {/* User Detail Modal */}

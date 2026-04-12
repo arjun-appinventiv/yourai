@@ -272,20 +272,26 @@ export default function SignUp() {
         )}
 
         {/* Submit button */}
+        {(() => {
+          const allMet = passwordChecks.every((c) => c.met);
+          const canSubmit = fullName.trim() && email.trim() && firmName.trim() && password && confirmPassword && password === confirmPassword && allMet && agreed && !loading;
+          return (
         <button
           type="submit"
-          disabled={loading}
+          disabled={!canSubmit}
           className="w-full flex items-center justify-center gap-2 text-white transition-colors"
           style={{
-            backgroundColor: loading ? 'var(--navy-mid, #1a2744)' : 'var(--navy)',
+            backgroundColor: !canSubmit ? '#94A3B8' : 'var(--navy)',
             height: 42,
             borderRadius: '10px',
             fontSize: '14px',
             fontWeight: 500,
             border: 'none',
-            cursor: loading ? 'not-allowed' : 'pointer',
+            cursor: !canSubmit ? 'not-allowed' : 'pointer',
+            opacity: !canSubmit && !loading ? 0.7 : 1,
           }}
         >
+
           {loading ? (
             <>
               <Loader size={16} className="animate-spin" /> Creating account...
@@ -294,6 +300,8 @@ export default function SignUp() {
             'Create Account'
           )}
         </button>
+          );
+        })()}
       </form>
 
       {/* Sign in link */}

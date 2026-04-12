@@ -14,6 +14,8 @@ export default function VerifyOTP() {
   const [attempts, setAttempts] = useState(0);
   const [timer, setTimer] = useState(60);
   const refs = useRef([]);
+  const maxAttempts = 3;
+  const isLocked = attempts >= maxAttempts;
   const navigate = useNavigate();
   const location = useLocation();
   const { completeAuth } = useAuth();
@@ -27,44 +29,56 @@ export default function VerifyOTP() {
   }, [timer]);
 
   const verify = useCallback(async (code) => {
-    if (attempts >= 3) {
+    if (isLocked) {
       setError('Too many attempts. Please request a new code.');
       setOtp(Array(6).fill(''));
-      refs.current[0]?.focus();
       return;
     }
 
     setLoading(true);
     setError('');
-    // Removed: setTimeout mock delay — real API call
     try {
       const result = await verifyOtpApi(code);
       if (result.success) {
         completeAuth(result.user);
         navigate('/super-admin/dashboard', { replace: true });
       } else {
-        setAttempts((a) => a + 1);
-        setError(result.error || 'Incorrect code. Please check your email and try again.');
+        const newAttempts = attempts + 1;
+        setAttempts(newAttempts);
+        if (newAttempts >= maxAttempts) {
+          setError('Too many attempts. Please request a new code.');
+        } else {
+          setError(result.error || 'Incorrect code. Please check your email and try again.');
+        }
         setOtp(Array(6).fill(''));
         refs.current[0]?.focus();
         setLoading(false);
       }
     } catch {
-      setAttempts((a) => a + 1);
-      setError('Verification failed. Please try again.');
+      const newAttempts = attempts + 1;
+      setAttempts(newAttempts);
+      if (newAttempts >= maxAttempts) {
+        setError('Too many attempts. Please request a new code.');
+      } else {
+        setError('Verification failed. Please try again.');
+      }
       setOtp(Array(6).fill(''));
       refs.current[0]?.focus();
       setLoading(false);
     }
-  }, [attempts, completeAuth, navigate]);
+  }, [attempts, isLocked, completeAuth, navigate]);
 
   const handleChange = (index, value) => {
-    if (!/^\d*$/.test(value)) return;
+    if (isLocked) return;
+    // Strip non-numeric characters (supports paste with mixed content)
+    const cleaned = value.replace(/\D/g, '');
+    if (!cleaned && value) return; // non-numeric only, reject silently
+
     const next = [...otp];
-    if (value.length > 1) {
-      // Paste support
-      const digits = value.slice(0, 6).split('');
-      digits.forEach((d, i) => { if (i < 6) next[i] = d; });
+    if (cleaned.length > 1) {
+      // Paste support — fill from left
+      const digits = cleaned.slice(0, 6).split('');
+      for (let i = 0; i < 6; i++) next[i] = digits[i] || '';
       setOtp(next);
       const lastFilled = Math.min(digits.length, 6) - 1;
       refs.current[lastFilled]?.focus();
@@ -73,9 +87,9 @@ export default function VerifyOTP() {
       }
       return;
     }
-    next[index] = value;
+    next[index] = cleaned;
     setOtp(next);
-    if (value && index < 5) refs.current[index + 1]?.focus();
+    if (cleaned && index < 5) refs.current[index + 1]?.focus();
     if (next.every((d) => d !== '')) {
       setTimeout(() => verify(next.join('')), 300);
     }
@@ -119,6 +133,7 @@ export default function VerifyOTP() {
             inputMode="numeric"
             maxLength={6}
             value={digit}
+            disabled={isLocked || loading}
             onChange={(e) => handleChange(i, e.target.value)}
             onKeyDown={(e) => handleKeyDown(i, e)}
             onFocus={(e) => e.target.select()}
@@ -133,8 +148,11 @@ export default function VerifyOTP() {
               color: 'var(--text-primary)',
               outline: 'none',
               transition: 'border-color 150ms',
+              opacity: isLocked ? 0.5 : 1,
+              cursor: isLocked ? 'not-allowed' : 'text',
+              backgroundColor: isLocked ? '#F8FAFC' : 'white',
             }}
-            onFocusCapture={(e) => { e.target.style.borderColor = error ? '#EF4444' : 'var(--navy)'; e.target.style.boxShadow = '0 0 0 3px rgba(11,29,58,0.10)'; }}
+            onFocusCapture={(e) => { if (!isLocked) { e.target.style.borderColor = error ? '#EF4444' : 'var(--navy)'; e.target.style.boxShadow = '0 0 0 3px rgba(11,29,58,0.10)'; } }}
             onBlurCapture={(e) => { e.target.style.borderColor = digit ? 'var(--navy-light)' : 'var(--border)'; e.target.style.boxShadow = 'none'; }}
           />
         ))}
@@ -159,10 +177,10 @@ export default function VerifyOTP() {
       {/* Verify button */}
       <button
         onClick={() => verify(otp.join(''))}
-        disabled={!allFilled || loading}
+        disabled={!allFilled || loading || isLocked}
         className="w-full flex items-center justify-center gap-2 text-white mt-5 transition-colors"
         style={{
-          backgroundColor: !allFilled || loading ? '#94A3B8' : 'var(--navy)',
+          backgroundColor: !allFilled || loading || isLocked ? '#94A3B8' : 'var(--navy)',
           height: 42,
           borderRadius: '10px',
           fontSize: '14px',

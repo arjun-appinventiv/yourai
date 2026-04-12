@@ -345,7 +345,7 @@ export default function TenantManagement() {
         <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} style={inputStyle}>
           <option>All</option><option>Active</option><option>Suspended</option>
         </select>
-        <button onClick={handleExportCSV} className="px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 whitespace-nowrap" style={{ border: '1px solid var(--border)', color: 'var(--slate)', backgroundColor: 'white' }}>
+        <button onClick={handleExportCSV} disabled={filtered.length === 0} className="px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 whitespace-nowrap" style={{ border: '1px solid var(--border)', color: filtered.length === 0 ? '#94A3B8' : 'var(--slate)', backgroundColor: 'white', cursor: filtered.length === 0 ? 'not-allowed' : 'pointer', opacity: filtered.length === 0 ? 0.6 : 1 }}>
           <Download size={16} /> Export CSV
         </button>
         <span className="text-sm whitespace-nowrap" style={{ color: 'var(--text-muted)' }}>Showing {filtered.length} organisations</span>
@@ -373,6 +373,17 @@ export default function TenantManagement() {
             </td>
           </tr>
         ))}
+        {filtered.length === 0 && (
+          <tr>
+            <td colSpan={8} className="px-4 py-12 text-center">
+              <div style={{ color: 'var(--text-muted)', fontSize: '14px' }}>
+                <Search size={24} style={{ margin: '0 auto 8px', opacity: 0.4 }} />
+                <p style={{ fontWeight: 500 }}>No organisations found</p>
+                <p style={{ fontSize: '12px', marginTop: 4 }}>Try adjusting your search or filters.</p>
+              </div>
+            </td>
+          </tr>
+        )}
       </Table>
 
       {/* Edit Tenant Modal */}
@@ -428,8 +439,8 @@ export default function TenantManagement() {
 
       {/* Org Detail Slide-over */}
       {selectedOrg && (
-        <div className="fixed inset-0 z-50 flex justify-end" style={{ backgroundColor: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)' }} onClick={() => setSelectedOrg(null)}>
-          <div className="w-full bg-white h-full overflow-y-auto" style={{ maxWidth: 480, boxShadow: '-4px 0 20px rgba(0,0,0,0.1)' }} onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 flex justify-end" style={{ backgroundColor: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)' }}>
+          <div className="w-full bg-white h-full overflow-y-auto" style={{ maxWidth: 480, boxShadow: '-4px 0 20px rgba(0,0,0,0.1)' }}>
             {/* Header */}
             <div className="sticky top-0 bg-white z-10 px-6 py-4 flex items-center justify-between" style={{ borderBottom: '1px solid var(--border)' }}>
               <div className="flex items-center gap-3">
@@ -587,6 +598,14 @@ export default function TenantManagement() {
                         </tr>
                       </thead>
                       <tbody>
+                        {filteredOrgUsers.length === 0 && (
+                          <tr>
+                            <td colSpan={4} className="px-3 py-8 text-center">
+                              <Users size={20} style={{ margin: '0 auto 6px', color: 'var(--text-muted)', opacity: 0.4 }} />
+                              <p style={{ fontSize: '13px', color: 'var(--text-muted)', fontWeight: 500 }}>{orgUserSearch ? 'No users match your search' : 'No users yet'}</p>
+                            </td>
+                          </tr>
+                        )}
                         {filteredOrgUsers.map((u, i) => (
                           <tr key={i} className="transition-colors" style={{ borderBottom: '1px solid var(--border)' }}>
                             <td className="px-3 py-2.5">
@@ -629,6 +648,14 @@ export default function TenantManagement() {
                       </tr>
                     </thead>
                     <tbody>
+                      {workspaces.length === 0 && (
+                        <tr>
+                          <td colSpan={5} className="px-3 py-8 text-center">
+                            <Building2 size={20} style={{ margin: '0 auto 6px', color: 'var(--text-muted)', opacity: 0.4 }} />
+                            <p style={{ fontSize: '13px', color: 'var(--text-muted)', fontWeight: 500 }}>No workspaces yet</p>
+                          </td>
+                        </tr>
+                      )}
                       {workspaces.map((w, i) => (
                         <tr key={i} style={{ borderBottom: '1px solid var(--border)' }}>
                           <td className="px-3 py-2.5 text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{w.name}</td>
@@ -772,7 +799,12 @@ export default function TenantManagement() {
                   <div>
                     <label className="block mb-1.5" style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-secondary)' }}>Email Address *</label>
                     <input type="email" value={newAdmin.email} onChange={(e) => setNewAdmin({ ...newAdmin, email: e.target.value })} placeholder="ryan@hartwell.com" style={{ ...inputStyle, width: '100%' }} />
-                    <p className="mt-1" style={{ fontSize: '11px', color: 'var(--text-muted)' }}>The invitation email will be sent to this address.</p>
+                    {newAdmin.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newAdmin.email) && (
+                      <p className="mt-1" style={{ fontSize: '11px', color: '#EF4444' }}>Please enter a valid email address.</p>
+                    )}
+                    {(!newAdmin.email || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newAdmin.email)) && (
+                      <p className="mt-1" style={{ fontSize: '11px', color: 'var(--text-muted)' }}>The invitation email will be sent to this address.</p>
+                    )}
                   </div>
 
                   <div>
@@ -868,20 +900,29 @@ export default function TenantManagement() {
                 </div>
                 <div className="flex gap-3">
                   <button onClick={closeAddTenant} className="px-4 py-2 rounded-lg text-sm font-medium" style={{ border: '1px solid var(--border)', color: 'var(--text-secondary)' }}>Cancel</button>
-                  {addStep < 3 ? (
-                    <button
-                      onClick={() => setAddStep(addStep + 1)}
-                      disabled={(addStep === 1 && !newOrg.name.trim()) || (addStep === 2 && (!newAdmin.firstName.trim() || !newAdmin.email.trim()))}
-                      className="px-5 py-2 rounded-lg text-sm font-medium text-white flex items-center gap-1.5"
-                      style={{ backgroundColor: (addStep === 1 && !newOrg.name.trim()) || (addStep === 2 && (!newAdmin.firstName.trim() || !newAdmin.email.trim())) ? '#94A3B8' : 'var(--navy)', cursor: (addStep === 1 && !newOrg.name.trim()) || (addStep === 2 && (!newAdmin.firstName.trim() || !newAdmin.email.trim())) ? 'not-allowed' : 'pointer' }}
-                    >
-                      Continue <ChevronRight size={14} />
-                    </button>
-                  ) : (
-                    <button onClick={handleCreateTenant} className="px-5 py-2 rounded-lg text-sm font-medium text-white flex items-center gap-1.5" style={{ backgroundColor: 'var(--navy)' }}>
-                      <Send size={14} /> Send Invitation
-                    </button>
-                  )}
+                  {(() => {
+                    if (addStep < 3) {
+                      const step1Invalid = addStep === 1 && !newOrg.name.trim();
+                      const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newAdmin.email);
+                      const step2Invalid = addStep === 2 && (!newAdmin.firstName.trim() || !newAdmin.lastName.trim() || !emailValid);
+                      const isStepDisabled = step1Invalid || step2Invalid;
+                      return (
+                        <button
+                          onClick={() => setAddStep(addStep + 1)}
+                          disabled={isStepDisabled}
+                          className="px-5 py-2 rounded-lg text-sm font-medium text-white flex items-center gap-1.5"
+                          style={{ backgroundColor: isStepDisabled ? '#94A3B8' : 'var(--navy)', cursor: isStepDisabled ? 'not-allowed' : 'pointer' }}
+                        >
+                          Continue <ChevronRight size={14} />
+                        </button>
+                      );
+                    }
+                    return (
+                      <button onClick={handleCreateTenant} className="px-5 py-2 rounded-lg text-sm font-medium text-white flex items-center gap-1.5" style={{ backgroundColor: 'var(--navy)' }}>
+                        <Send size={14} /> Send Invitation
+                      </button>
+                    );
+                  })()}
                 </div>
               </div>
             )}
@@ -909,7 +950,7 @@ export default function TenantManagement() {
                   Seats: {overrideOrg.users} users · ${overrideOrg.mrr.toLocaleString()}/month total
                 </div>
                 <div className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
-                  Active since: {overrideOrg.billedSince || overrideOrg.created} · Next renewal: {billingMeta[overrideOrg.id]?.nextRenewal || '—'}
+                  Active since: {overrideOrg.billedSince || overrideOrg.created} · Next renewal: {overrideOrg.nextRenewal || '—'}
                 </div>
               </div>
               {/* Plan Cards */}

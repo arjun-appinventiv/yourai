@@ -22,6 +22,7 @@ import {
   Sparkles,
   CheckCircle,
   Star,
+  Loader,
 } from 'lucide-react';
 import { subscriptionPlans } from '../../../data/mockData';
 
@@ -274,7 +275,7 @@ export default function Onboarding() {
       case 4: return !!primaryState;
       case 5: return !!firstAction;
       case 6: return !!selectedPlan;
-      case 7: return selectedPlan === 'free' || paymentComplete || (cardNumber.length >= 15 && cardExpiry.length >= 4 && cardCvc.length >= 3 && billingName.trim().length > 0);
+      case 7: return !paymentProcessing && (selectedPlan === 'free' || paymentComplete || (cardNumber.replace(/\s/g, '').length >= 15 && cardExpiry.length >= 4 && cardCvc.length >= 3 && billingName.trim().length > 0));
       default: return false;
     }
   };
@@ -304,27 +305,31 @@ export default function Onboarding() {
   };
 
   const finishOnboarding = () => {
-    const selectedRole = ROLES.find((r) => r.id === role);
-    const selectedFirmSize = FIRM_SIZES.find((s) => s.id === firmSize);
-    const selectedAction = FIRST_ACTIONS.find((a) => a.id === firstAction);
-    const planData = subscriptionPlans.find((p) => p.id === selectedPlan);
-    localStorage.setItem(
-      'yourai_user_profile',
-      JSON.stringify({
-        role: selectedRole ? selectedRole.title : role,
-        practiceAreas,
-        firmSize: selectedFirmSize ? selectedFirmSize.title : firmSize,
-        primaryState: primaryState,
-        additionalStates: additionalStates,
-        federalPractice: federalPractice,
-        primaryGoal: selectedAction ? selectedAction.title : firstAction,
-        plan: planData ? planData.name : 'Free',
-        planId: selectedPlan,
-        onboardingCompleted: true,
-        onboardingCompletedAt: new Date().toISOString(),
-      })
-    );
-    navigate('/chat');
+    try {
+      const selectedRole = ROLES.find((r) => r.id === role);
+      const selectedFirmSize = FIRM_SIZES.find((s) => s.id === firmSize);
+      const selectedAction = FIRST_ACTIONS.find((a) => a.id === firstAction);
+      const planData = subscriptionPlans.find((p) => p.id === selectedPlan);
+      localStorage.setItem(
+        'yourai_user_profile',
+        JSON.stringify({
+          role: selectedRole ? selectedRole.title : role,
+          practiceAreas,
+          firmSize: selectedFirmSize ? selectedFirmSize.title : firmSize,
+          primaryState: primaryState,
+          additionalStates: additionalStates,
+          federalPractice: federalPractice,
+          primaryGoal: selectedAction ? selectedAction.title : firstAction,
+          plan: planData ? planData.name : 'Free',
+          planId: selectedPlan,
+          onboardingCompleted: true,
+          onboardingCompletedAt: new Date().toISOString(),
+        })
+      );
+      navigate('/chat');
+    } catch {
+      navigate('/chat');
+    }
   };
 
   const goBack = () => {
@@ -825,7 +830,7 @@ export default function Onboarding() {
                 cursor: canContinue() ? 'pointer' : 'not-allowed',
               }}
             >
-              {paymentProcessing ? 'Processing...' : step === 7 ? (paymentComplete ? 'Get Started' : 'Start Free Trial') : step === 6 ? (selectedPlan === 'free' ? 'Get Started — Free' : 'Continue to Payment') : 'Continue'}
+              {paymentProcessing ? <><Loader size={16} className="animate-spin" style={{ marginRight: 6 }} /> Processing...</> : step === 7 ? (paymentComplete ? 'Get Started' : 'Start Free Trial') : step === 6 ? (selectedPlan === 'free' ? 'Get Started — Free' : 'Continue to Payment') : 'Continue'}
             </button>
           </div>
         </div>

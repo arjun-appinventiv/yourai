@@ -1185,6 +1185,17 @@ export default function GlobalKnowledgeBase() {
                   </td>
                 </tr>
               ))}
+              {filtered.length === 0 && (
+                <tr>
+                  <td colSpan={6} className="px-4 py-10 text-center">
+                    <div style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
+                      <FileText size={22} style={{ margin: '0 auto 6px', opacity: 0.4 }} />
+                      <p style={{ fontWeight: 500 }}>No documents found</p>
+                      <p style={{ fontSize: '12px', marginTop: 4 }}>Try adjusting your search or upload a new document.</p>
+                    </div>
+                  </td>
+                </tr>
+              )}
             </Table>
           </div>
 
@@ -1251,6 +1262,17 @@ export default function GlobalKnowledgeBase() {
                   </td>
                 </tr>
               ))}
+              {filteredLinks.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="px-4 py-10 text-center">
+                    <div style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
+                      <Link2 size={22} style={{ margin: '0 auto 6px', opacity: 0.4 }} />
+                      <p style={{ fontWeight: 500 }}>No links found</p>
+                      <p style={{ fontSize: '12px', marginTop: 4 }}>Add a link source for AI to reference.</p>
+                    </div>
+                  </td>
+                </tr>
+              )}
             </Table>
           </div>
 
@@ -1268,7 +1290,7 @@ export default function GlobalKnowledgeBase() {
               <p className="text-xs" style={{ color: 'var(--text-muted)' }}>The URL will be crawled and indexed. Content will be available for AI queries across all organisations.</p>
               <div className="flex justify-end gap-3 pt-2">
                 <button onClick={() => setShowAddLink(false)} className="px-4 py-2 rounded-lg text-sm font-medium" style={{ border: '1px solid var(--border)', color: 'var(--slate)', backgroundColor: 'white' }}>Cancel</button>
-                <button onClick={handleAddLink} className="px-4 py-2 rounded-lg text-sm font-medium text-white" style={{ backgroundColor: 'var(--navy)' }}>Add Link</button>
+                <button onClick={handleAddLink} disabled={!newLinkName.trim() || !newLinkUrl.trim()} className="px-4 py-2 rounded-lg text-sm font-medium text-white" style={{ backgroundColor: (!newLinkName.trim() || !newLinkUrl.trim()) ? '#94A3B8' : 'var(--navy)', cursor: (!newLinkName.trim() || !newLinkUrl.trim()) ? 'not-allowed' : 'pointer' }}>Add Link</button>
               </div>
             </div>
           </Modal>
@@ -1762,7 +1784,7 @@ export default function GlobalKnowledgeBase() {
               </div>
               <div className="flex justify-end gap-3 pt-2">
                 <button onClick={() => { setShowCreateIntent(false); setCreateIntentFrom(null); }} className="px-4 py-2 rounded-lg text-sm font-medium" style={{ border: '1px solid var(--border)', color: 'var(--slate)', backgroundColor: 'white' }}>Cancel</button>
-                <button onClick={handleCreateIntent} className="px-4 py-2 rounded-lg text-sm font-medium text-white" style={{ backgroundColor: 'var(--navy)' }}>Create Intent</button>
+                <button onClick={handleCreateIntent} disabled={!newIntentLabel.trim()} className="px-4 py-2 rounded-lg text-sm font-medium text-white" style={{ backgroundColor: !newIntentLabel.trim() ? '#94A3B8' : 'var(--navy)', cursor: !newIntentLabel.trim() ? 'not-allowed' : 'pointer' }}>Create Intent</button>
               </div>
             </div>
           </Modal>
