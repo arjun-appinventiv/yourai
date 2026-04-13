@@ -1,10 +1,10 @@
-// LLM client — encrypted OpenAI key, client-side fallback when backend is unreachable
+// LLM client — encrypted key, client-side fallback when backend is unreachable
 // Key is encrypted 5x with XOR + base64. Never stored in DB.
 // To remove: delete the ENCRYPTED_KEY constant below.
 
-// ─── 5x Encrypted OpenAI Key ───
+// ─── 5x Encrypted Groq Key ───
 // Encryption: XOR with salt → base64, repeated 5 times
-const ENCRYPTED_KEY = 'HDxBIQgYRnthWlp+FydZEHIgLSM/GSZ0fGN/XGEKKA8RYjEpNDUEA2hjaWFsbz43JSBhHD8YGisQeFZDUF4VOyo9RWw4LEA6BBh4a2dcdHQqJBQ3dQocMjwqGBp5SUVEbxpULy1zKQQXN3klZ3BDR29XMigqDm0TLD0KcRAecAZQQUIULwU9dxFeQSAMCkJeal9wGxVQIgdlID5FOhYmaXlaA3pjG1QoNwdgOxEndRBhRWV/YEUUOSU2QxMsHjgzKEp0W2ZOTkAuBgwNCQcSERE+RndpXGxXJQ8mO30KDBA+Jgh9fUlzR0ggMwEiYxw1Fx82MHpmBF9gbBQSPCVbDyQwAnEYHGgAVnIdBiMLA3wfLB4lBz4ZVWdcQnsyKRQafjMMGDByfVV9YlEGaiARVRJsFykgNSItaGNhWG5HJg8qHVcBLSIaGAtrQkNkZ3w8Ki8tfBcWETUCI3RDeANGeiUPCEx8GiIiIwkASHBbdwdoMQY2I1kTCRA6dTBjdmlKU0c+UCAOWy8jHh52EB4Kc1NfbEArFD5YFDtFKg8aGUVRAHdsMlIIIWUhOhI/Bz5efmN7AmExEg8tcx87ICU2JWZIAXRhfwQ2JjFHGCMbIBkQekIEel5kPScuIgMaBjwLCCFGe1VcZHUWU1UEdy4EBzsZGGF8YmsAZxkNBxdsDx4gQTkFaXFpXFJKFC0iDnph';
+const ENCRYPTED_KEY = 'EQgjMAsYWmtkWloZKTQlEn8KBF48ci5jYlt/B04bCSoScjEpMUAyHGBzCGNufyIKIR1ibCsyAiYbH2BFUEwYKigvEFkfLDwLEjBGeVF0bEIlUyIefgocWj8mKhpicXt6bwpUJy5YDCwXQDYkeEgFf1N+PhA7HkMtJzAKcCpBA15QX2w1IhVBUhheQQQOIBlTVXp0RTE2VTFkMD5FOi0IdHl0Al1IMS9UEQdgPiEedXxmcGkAUnw+ETwxDGQ=';
 const SALT = 'YourAI-2026-salt';
 
 function xorWithSalt(input: string, salt: string): string {
@@ -157,7 +157,7 @@ export interface ContextLayers {
   knowledgePack?: { name: string; description: string; content?: string } | null;
 }
 
-// ─── Direct OpenAI call (client-side fallback) ───
+// ─── Direct Groq call (client-side fallback) ───
 export async function callLLM(
   userMessage: string,
   history: Array<{ role: 'user' | 'assistant'; content: string }>,
@@ -259,21 +259,21 @@ ${sourceOptions}
 - CRITICAL: The source tag is for internal processing ONLY. NEVER write "(Source: ...)" or any source explanation in the visible response text. Just output the [SOURCE: X] tag as the very last line, nothing else about sources.`;
   }
 
-  // Build OpenAI request
+  // Build OpenAI-compatible request (Groq uses the same format)
   const messages = [
     { role: 'system' as const, content: systemPrompt },
     ...history.slice(-10),
     { role: 'user' as const, content: userMessage },
   ];
 
-  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+  const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
-      model: 'gpt-4o',
+      model: 'llama-3.3-70b-versatile',
       messages,
       stream: true,
       temperature: 0.7,
