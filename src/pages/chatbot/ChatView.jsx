@@ -1857,10 +1857,25 @@ export default function ChatView() {
       const raw = localStorage.getItem('yourai_bot_persona');
       if (raw) {
         const p = JSON.parse(raw);
-        return (p.operations || []).filter(op => op.enabled);
+        const ops = (p.operations || []).filter(op => op.enabled);
+        if (ops.length > 0) return ops;
       }
     } catch (_) { /* ignore */ }
-    return [];
+    // Fallback: default intent labels when persona not yet saved to localStorage
+    return [
+      { id: 1, label: 'General Chat' },
+      { id: 2, label: 'Contract Review' },
+      { id: 3, label: 'Legal Research' },
+      { id: 4, label: 'Document Drafting' },
+      { id: 6, label: 'YourAI How-To' },
+      { id: 7, label: 'General Conversation' },
+      { id: 8, label: 'Document Summarisation' },
+      { id: 9, label: 'Case Law Analysis' },
+      { id: 10, label: 'Clause Comparison' },
+      { id: 11, label: 'Email & Letter Drafting' },
+      { id: 13, label: 'Legal Q&A' },
+      { id: 14, label: 'Risk Assessment' },
+    ];
   }, []);
   const [showDocVersionBanner, setShowDocVersionBanner] = useState(false);
   const [pendingNewDoc, setPendingNewDoc] = useState(null); // holds the new doc until user decides
