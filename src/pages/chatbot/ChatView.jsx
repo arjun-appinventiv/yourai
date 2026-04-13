@@ -1914,6 +1914,7 @@ export default function ChatView() {
     // full document_versions table for audit trail
     // Confirmed by Arjun — cutover only for this release
   });
+  const [sessionDocContext, setSessionDocContext] = useState(null); // { name, content } — persisted doc for follow-up questions
   const [showDocVersionBanner, setShowDocVersionBanner] = useState(false);
   const [pendingNewDoc, setPendingNewDoc] = useState(null); // holds the new doc until user decides
   const scrollRef = useRef(null);
@@ -1971,6 +1972,7 @@ export default function ChatView() {
     setActiveVaultDocument(null);
     setPendingAttachments([]);
     setInput('');
+    setSessionDocContext(null);
     // DEC-093 + DEC-094: New session gets current KB snapshot
     setSessionState({
       sessionKbSnapshotId: `kb-snapshot-${Date.now()}`,
@@ -2016,6 +2018,7 @@ export default function ChatView() {
     setActiveKnowledgePack(null);
     setActiveVaultDocument(null);
     setPendingAttachments([]);
+    setSessionDocContext(null);
     setInput('');
   }, [activeThreadId, messages]);
 
@@ -2128,23 +2131,29 @@ export default function ChatView() {
         const contextLayers = {};
 
         // Tier 1: User's uploaded document (from pending attachments with extracted content)
-        const docWithContent = userMsg.attachments?.find(a => a.content) || pendingAttachments.find(a => a.content);
+        // Check current message attachments first, then fall back to persisted session doc
+        const docWithContent = userMsg.attachments?.find(a => a.content);
         if (docWithContent) {
-          // Check if extracted content is readable (not garbled binary)
+          // New document attached to this message — extract and persist for follow-ups
           const rawContent = docWithContent.content || '';
           const printableChars = rawContent.replace(/[^\x20-\x7E\n\r\t\u00A0-\u024F]/g, '');
           const printableRatio = rawContent.length > 0 ? (printableChars.length / rawContent.length) : 1;
-          // Detect garble patterns: diamonds, squares, replacement chars clustered together
           const garbleMatches = rawContent.match(/[\u25A0-\u25FF\u2600-\u26FF\uFFFD\u2580-\u259F]{2,}/g);
           const garbleCount = garbleMatches ? garbleMatches.reduce((s, m) => s + m.length, 0) : 0;
           const hasGarble = garbleCount > rawContent.length * 0.1;
           const isReadable = rawContent.length < 50 || (printableRatio > 0.7 && !hasGarble);
           if (isReadable) {
             contextLayers.uploadedDoc = { name: docWithContent.name, content: rawContent };
+            // Persist doc context for follow-up questions in this session
+            setSessionDocContext({ name: docWithContent.name, content: rawContent });
           } else {
-            // Content is garbled — tell the LLM the document couldn't be read
-            contextLayers.uploadedDoc = { name: docWithContent.name, content: `[File: ${docWithContent.name}] The text content could not be extracted from this document. It may be a scanned PDF, image-based, or use non-standard encoding.` };
+            const fallbackContent = `[File: ${docWithContent.name}] The text content could not be extracted from this document. It may be a scanned PDF, image-based, or use non-standard encoding.`;
+            contextLayers.uploadedDoc = { name: docWithContent.name, content: fallbackContent };
+            setSessionDocContext({ name: docWithContent.name, content: fallbackContent });
           }
+        } else if (sessionDocContext) {
+          // No new attachment — reuse persisted document from earlier in this session
+          contextLayers.uploadedDoc = sessionDocContext;
         } else if (activeVaultDocument) {
           // Vault document selected as context — use its metadata as reference
           contextLayers.uploadedDoc = { name: activeVaultDocument.name, content: activeVaultDocument.description || '' };
@@ -2263,6 +2272,7 @@ export default function ChatView() {
       // DEC-095: Clear messages, reset session, new session_doc_id
       setMessages([]);
       setShowEmptyState(true);
+      setSessionDocContext(null);
       setSessionState({
         sessionKbSnapshotId: `kb-snapshot-${Date.now()}`, // DEC-093 + DEC-094: New session gets current KB
         sessionDocId: `doc-${Date.now()}`,
