@@ -310,63 +310,22 @@ export default function Onboarding() {
       const selectedFirmSize = FIRM_SIZES.find((s) => s.id === firmSize);
       const selectedAction = FIRST_ACTIONS.find((a) => a.id === firstAction);
       const planData = subscriptionPlans.find((p) => p.id === selectedPlan);
-      const planName = planData ? planData.name : 'Free';
-      const planPrice = planData ? (planData.price || 0) : 0;
-      const roleName = selectedRole ? selectedRole.title : role;
-      const firmSizeName = selectedFirmSize ? selectedFirmSize.title : firmSize;
-
       localStorage.setItem(
         'yourai_user_profile',
         JSON.stringify({
-          role: roleName,
+          role: selectedRole ? selectedRole.title : role,
           practiceAreas,
-          firmSize: firmSizeName,
+          firmSize: selectedFirmSize ? selectedFirmSize.title : firmSize,
           primaryState: primaryState,
           additionalStates: additionalStates,
           federalPractice: federalPractice,
           primaryGoal: selectedAction ? selectedAction.title : firstAction,
-          plan: planName,
+          plan: planData ? planData.name : 'Free',
           planId: selectedPlan,
           onboardingCompleted: true,
           onboardingCompletedAt: new Date().toISOString(),
         })
       );
-
-      // Sync onboarding data back to management entries so SA admin screens reflect it
-      try {
-        // Update tenant with selected plan and pricing
-        const mgmtTenants = JSON.parse(localStorage.getItem('yourai_mgmt_tenants') || '[]');
-        if (mgmtTenants.length > 0) {
-          const latest = mgmtTenants[mgmtTenants.length - 1];
-          latest.plan = planName;
-          latest.planPrice = planPrice;
-          latest.mrr = planPrice;
-          latest.paymentStatus = planPrice > 0 ? 'Paid' : 'N/A';
-          latest.nextRenewal = planPrice > 0
-            ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-            : '';
-          latest.firmSize = firmSizeName;
-          latest.primaryState = primaryState;
-          latest.additionalStates = additionalStates;
-          latest.federalPractice = federalPractice;
-          latest.practiceAreas = practiceAreas;
-          localStorage.setItem('yourai_mgmt_tenants', JSON.stringify(mgmtTenants));
-        }
-
-        // Update user with onboarding profile (field names match UserManagement mock data)
-        const mgmtUsers = JSON.parse(localStorage.getItem('yourai_mgmt_users') || '[]');
-        if (mgmtUsers.length > 0) {
-          const latest = mgmtUsers[mgmtUsers.length - 1];
-          latest.onboardingCompleted = true;
-          latest.plan = planName;
-          latest.onboardingRole = roleName;
-          latest.onboardingState = primaryState;
-          latest.onboardingAreas = practiceAreas;
-          latest.onboardingFirmSize = firmSizeName;
-          localStorage.setItem('yourai_mgmt_users', JSON.stringify(mgmtUsers));
-        }
-      } catch { /* localStorage sync failed — non-critical */ }
-
       navigate('/chat');
     } catch {
       navigate('/chat');

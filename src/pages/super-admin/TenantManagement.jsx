@@ -283,10 +283,42 @@ export default function TenantManagement() {
     outline: 'none',
   };
 
-  const contact = selectedOrg ? (orgContacts[selectedOrg.id] || { admin: 'Unknown', email: '—', stripeId: null }) : null;
-  const users = selectedOrg ? (orgUsers[selectedOrg.id] || [{ name: contact?.admin || 'Admin', email: contact?.email || '—', role: 'Admin', status: 'Active', lastActive: 'Today' }]) : [];
+  // For dynamic tenants (created via signup), pull user/profile data from localStorage
+  const dynamicContact = useMemo(() => {
+    if (!selectedOrg || orgContacts[selectedOrg.id]) return null;
+    try {
+      const mgmtUsers = JSON.parse(localStorage.getItem('yourai_mgmt_users') || '[]');
+      const orgUser = mgmtUsers.find(u => u.org === selectedOrg.name);
+      if (orgUser) return { admin: orgUser.name, email: orgUser.email, stripeId: null };
+    } catch {}
+    return null;
+  }, [selectedOrg]);
+
+  const contact = selectedOrg ? (orgContacts[selectedOrg.id] || dynamicContact || { admin: 'Unknown', email: '—', stripeId: null }) : null;
+
+  const dynamicUsers = useMemo(() => {
+    if (!selectedOrg || orgUsers[selectedOrg.id]) return null;
+    try {
+      const mgmtUsers = JSON.parse(localStorage.getItem('yourai_mgmt_users') || '[]');
+      return mgmtUsers
+        .filter(u => u.org === selectedOrg.name)
+        .map(u => ({ name: u.name, email: u.email, role: u.role || 'Admin', status: u.status || 'Active', lastActive: u.lastActive || 'Today', onboardingRole: u.onboardingRole || null }));
+    } catch {}
+    return null;
+  }, [selectedOrg]);
+
+  const users = selectedOrg ? (orgUsers[selectedOrg.id] || (dynamicUsers && dynamicUsers.length > 0 ? dynamicUsers : [{ name: contact?.admin || 'Admin', email: contact?.email || '—', role: 'Admin', status: 'Active', lastActive: 'Today' }])) : [];
   const workspaces = selectedOrg ? (orgWorkspaces[selectedOrg.id] || [{ name: 'Default Workspace', members: selectedOrg.users, documents: selectedOrg.documents, created: selectedOrg.created, status: 'Active' }]) : [];
-  const firmProfile = selectedOrg ? (firmProfiles[selectedOrg.id] || null) : null;
+
+  const dynamicFirmProfile = useMemo(() => {
+    if (!selectedOrg || firmProfiles[selectedOrg.id]) return null;
+    if (selectedOrg.primaryState) {
+      return { primaryState: selectedOrg.primaryState, additionalStates: selectedOrg.additionalStates || [], federalPractice: selectedOrg.federalPractice || false, practiceAreas: selectedOrg.practiceAreas || [], firmSize: selectedOrg.firmSize || 'Small Firm' };
+    }
+    return null;
+  }, [selectedOrg]);
+
+  const firmProfile = selectedOrg ? (firmProfiles[selectedOrg.id] || dynamicFirmProfile) : null;
   const limits = selectedOrg ? planLimits[selectedOrg.plan] : null;
 
   const filteredOrgUsers = users.filter((u) =>
