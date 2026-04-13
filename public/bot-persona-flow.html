@@ -227,7 +227,7 @@
   <!-- ══════════════════ OPERATIONS ══════════════════ -->
   <div class="section">
     <div class="section-num">3</div>
-    <h2>The 5 Operations (AI Modes)</h2>
+    <h2>The 12 Operations (AI Modes)</h2>
     <p>Each operation gives Alex a different personality and set of instructions. The intent classifier picks the right one based on what the user is doing.</p>
 
     <div class="ops">
@@ -253,7 +253,7 @@
       <div class="op">
         <span class="op-emoji">&#128218;</span>
         <h4>Legal Research</h4>
-        <div class="op-trigger">Activates when: User asks a legal question, no doc attached</div>
+        <div class="op-trigger">Activates when: User asks a research question, no doc attached</div>
         <div class="op-tags">
           <span class="tag tag-green">ON</span>
           <span class="tag tag-blue">Neutral</span>
@@ -268,13 +268,78 @@
           <span class="tag tag-blue">Formal</span>
         </div>
       </div>
-      <div class="op span2">
+      <div class="op">
         <span class="op-emoji">&#9989;</span>
         <h4>Compliance Check</h4>
-        <div class="op-trigger">Activates when: User asks about regulatory compliance. <strong>Disabled by default</strong> — Super Admin can enable.</div>
+        <div class="op-trigger">Activates when: User asks about regulatory compliance. <strong>Disabled by default.</strong></div>
         <div class="op-tags">
           <span class="tag tag-gray">OFF</span>
           <span class="tag tag-blue">Concise</span>
+          <span class="tag tag-amber">Risk Summary</span>
+        </div>
+      </div>
+      <div class="op">
+        <span class="op-emoji">&#128161;</span>
+        <h4>YourAI How-To</h4>
+        <div class="op-trigger">Activates when: User asks about YourAI features or what Alex can do</div>
+        <div class="op-tags">
+          <span class="tag tag-green">ON</span>
+          <span class="tag tag-blue">Conversational</span>
+        </div>
+      </div>
+      <div class="op">
+        <span class="op-emoji">&#128075;</span>
+        <h4>General Conversation</h4>
+        <div class="op-trigger">Activates when: Casual greetings, small talk, or non-legal questions</div>
+        <div class="op-tags">
+          <span class="tag tag-green">ON</span>
+          <span class="tag tag-blue">Conversational</span>
+        </div>
+      </div>
+      <div class="op">
+        <span class="op-emoji">&#128203;</span>
+        <h4>Document Summarisation</h4>
+        <div class="op-trigger">Activates when: User asks to summarise, condense, or get key takeaways</div>
+        <div class="op-tags">
+          <span class="tag tag-green">ON</span>
+          <span class="tag tag-blue">Concise</span>
+        </div>
+      </div>
+      <div class="op">
+        <span class="op-emoji">&#9878;&#65039;</span>
+        <h4>Case Law Analysis</h4>
+        <div class="op-trigger">Activates when: User asks about specific cases, precedents, or rulings</div>
+        <div class="op-tags">
+          <span class="tag tag-green">ON</span>
+          <span class="tag tag-blue">Formal</span>
+        </div>
+      </div>
+      <div class="op">
+        <span class="op-emoji">&#128260;</span>
+        <h4>Clause Comparison</h4>
+        <div class="op-trigger">Activates when: User asks to compare clauses or terms between documents</div>
+        <div class="op-tags">
+          <span class="tag tag-green">ON</span>
+          <span class="tag tag-blue">Formal</span>
+          <span class="tag tag-amber">Risk Summary</span>
+        </div>
+      </div>
+      <div class="op">
+        <span class="op-emoji">&#9993;&#65039;</span>
+        <h4>Email &amp; Letter Drafting</h4>
+        <div class="op-trigger">Activates when: User asks to draft an email, letter, or correspondence</div>
+        <div class="op-tags">
+          <span class="tag tag-green">ON</span>
+          <span class="tag tag-blue">Formal</span>
+        </div>
+      </div>
+      <div class="op">
+        <span class="op-emoji">&#128270;</span>
+        <h4>Due Diligence</h4>
+        <div class="op-trigger">Activates when: User asks for M&amp;A or transaction document review. <strong>Disabled by default.</strong></div>
+        <div class="op-tags">
+          <span class="tag tag-gray">OFF</span>
+          <span class="tag tag-blue">Formal</span>
           <span class="tag tag-amber">Risk Summary</span>
         </div>
       </div>
@@ -300,9 +365,33 @@
           <td style="padding: 10px 12px; color: var(--slate);">"Is our data retention policy CCPA compliant?"</td>
           <td style="padding: 10px 12px; font-weight: 600; color: var(--navy); white-space: nowrap;">&#9989; Compliance Check</td>
         </tr>
-        <tr>
+        <tr style="border-bottom: 1px solid var(--border);">
+          <td style="padding: 10px 12px; color: var(--slate);">"What can you do?" / "How do I use knowledge packs?"</td>
+          <td style="padding: 10px 12px; font-weight: 600; color: var(--navy); white-space: nowrap;">&#128161; YourAI How-To</td>
+        </tr>
+        <tr style="border-bottom: 1px solid var(--border);">
           <td style="padding: 10px 12px; color: var(--slate);">"Hey Alex, good morning!"</td>
-          <td style="padding: 10px 12px; font-weight: 600; color: var(--navy); white-space: nowrap;">&#128488; General Chat</td>
+          <td style="padding: 10px 12px; font-weight: 600; color: var(--navy); white-space: nowrap;">&#128075; General Conversation</td>
+        </tr>
+        <tr style="border-bottom: 1px solid var(--border);">
+          <td style="padding: 10px 12px; color: var(--slate);">"Summarise this agreement for me"</td>
+          <td style="padding: 10px 12px; font-weight: 600; color: var(--navy); white-space: nowrap;">&#128203; Document Summarisation</td>
+        </tr>
+        <tr style="border-bottom: 1px solid var(--border);">
+          <td style="padding: 10px 12px; color: var(--slate);">"What did the court rule in Chevron v. NRDC?"</td>
+          <td style="padding: 10px 12px; font-weight: 600; color: var(--navy); white-space: nowrap;">&#9878;&#65039; Case Law Analysis</td>
+        </tr>
+        <tr style="border-bottom: 1px solid var(--border);">
+          <td style="padding: 10px 12px; color: var(--slate);">"Compare the non-compete clauses between these two contracts"</td>
+          <td style="padding: 10px 12px; font-weight: 600; color: var(--navy); white-space: nowrap;">&#128260; Clause Comparison</td>
+        </tr>
+        <tr style="border-bottom: 1px solid var(--border);">
+          <td style="padding: 10px 12px; color: var(--slate);">"Draft an email to opposing counsel about the settlement"</td>
+          <td style="padding: 10px 12px; font-weight: 600; color: var(--navy); white-space: nowrap;">&#9993;&#65039; Email &amp; Letter Drafting</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px 12px; color: var(--slate);">"Run due diligence on this acquisition target"</td>
+          <td style="padding: 10px 12px; font-weight: 600; color: var(--navy); white-space: nowrap;">&#128270; Due Diligence</td>
         </tr>
       </table>
     </div>
