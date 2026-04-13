@@ -1897,13 +1897,7 @@ export default function GlobalKnowledgeBase() {
                             >
                               {op.enabled ? 'Disable' : 'Enable'}
                             </button>
-                            <button
-                              onClick={(e) => { e.stopPropagation(); deleteIntent(op.id); }}
-                              style={{ padding: 4, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}
-                              title="Delete intent"
-                            >
-                              <Trash2 size={14} />
-                            </button>
+                            {/* SA cannot delete intents — managed by engineering */}
                             <ChevronDown size={14} style={{ color: 'var(--text-muted)', transform: isEditing ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }} />
                           </div>
                         </div>
@@ -2128,13 +2122,7 @@ export default function GlobalKnowledgeBase() {
                             >
                               {fmt.enabled ? 'Disable' : 'Enable'}
                             </button>
-                            <button
-                              onClick={(e) => { e.stopPropagation(); resetPersonaFormat(up.id); }}
-                              style={{ padding: 4, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}
-                              title="Reset to defaults"
-                            >
-                              <RotateCcw size={13} />
-                            </button>
+                            {/* Reset icon removed per SA restrictions */}
                             <ChevronDown size={14} style={{ color: 'var(--text-muted)', transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }} />
                           </div>
                         </div>
