@@ -20,10 +20,12 @@ export const INTENT_DEFAULTS: Record<string, IntentConfig> = {
   },
   contract_review: {
     keywords: [
-      'review this contract', 'review the contract', 'check this contract',
+      'contract review', 'review this contract', 'review the contract',
+      'review a contract', 'review my contract', 'check this contract',
       'analyse this contract', 'analyze this contract', 'look at this contract',
       'review this agreement', 'check this agreement', 'analyse this nda',
       'review this nda', 'review this msa', 'review this lease',
+      'help with contract', 'help me review', 'review contract',
     ],
     opening_behaviour: 'ask_for_document',
     custom_instruction: '',
@@ -44,7 +46,8 @@ export const INTENT_DEFAULTS: Record<string, IntentConfig> = {
     keywords: [
       'draft a contract', 'draft an agreement', 'draft a clause', 'draft an nda',
       'write a contract', 'write an agreement', 'create a contract',
-      'help me draft', 'can you draft', 'i need a contract', 'template for a contract',
+      'help me draft', 'help with drafting', 'can you draft', 'i need a contract',
+      'template for a contract', 'document drafting', 'draft document',
     ],
     opening_behaviour: 'ask_clarifying_question',
     custom_instruction: '',
@@ -71,7 +74,9 @@ export const INTENT_DEFAULTS: Record<string, IntentConfig> = {
   document_summarisation: {
     keywords: [
       'summarise this', 'summarize this', 'give me a summary', 'summary of this',
+      'summarise', 'summarize', 'summarisation', 'summarization',
       'tldr', 'tl;dr', 'key points from', 'main points of', 'brief me on', 'overview of this',
+      'help with summary', 'document summary',
     ],
     opening_behaviour: 'ask_for_document',
     custom_instruction: '',
@@ -93,7 +98,8 @@ export const INTENT_DEFAULTS: Record<string, IntentConfig> = {
     keywords: [
       'compare these', 'compare the two', 'compare both', 'difference between',
       'which is better', 'side by side', 'contrast these', 'how do these differ',
-      'compare clause', 'compare contracts',
+      'compare clause', 'compare contracts', 'clause comparison',
+      'help with comparison', 'compare documents',
     ],
     opening_behaviour: 'ask_for_document',
     custom_instruction: '',
@@ -105,6 +111,7 @@ export const INTENT_DEFAULTS: Record<string, IntentConfig> = {
       'write an email', 'draft an email', 'write a letter', 'draft a letter',
       'compose an email', 'demand letter', 'cease and desist',
       'reply to this email', 'response to their email',
+      'help with email', 'help with letter', 'email drafting',
     ],
     opening_behaviour: 'ask_clarifying_question',
     custom_instruction: '',
@@ -125,8 +132,9 @@ export const INTENT_DEFAULTS: Record<string, IntentConfig> = {
   risk_assessment: {
     keywords: [
       'what are the risks', 'identify the risks', 'risk assessment',
-      'assess the risk', 'any red flags', 'risky clauses',
+      'assess the risk', 'any red flags', 'risky clauses', 'risk analysis',
       'should i sign this', 'is this safe to sign', 'anything concerning', 'flag the risks',
+      'help with risk', 'evaluate risk',
     ],
     opening_behaviour: 'ask_for_document',
     custom_instruction: '',
