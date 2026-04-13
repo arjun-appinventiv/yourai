@@ -3,7 +3,7 @@ import {
   Info, FileText, HardDrive, Clock, Upload, Trash2, Loader, Link2, Plus, ExternalLink, Database,
   Sparkles, Shield, BookOpen, Settings, CreditCard, MessageCircle, HelpCircle, ChevronRight, Lightbulb, X, ArrowRight,
   CheckSquare, ChevronDown, Library, File, Bot, Save, RotateCcw, AlertTriangle, CheckCircle, GripVertical,
-  Users, Briefcase, Scale, UserCheck, Monitor, Zap, GitBranch, Target, MessageSquare, Eye
+  Users, Briefcase, Scale, UserCheck, Monitor, Zap, GitBranch, Target, MessageSquare, Eye, Lock
 } from 'lucide-react';
 import { globalKBDocs as initialDocs, alexIntentTemplates, alexResponseFilters, alexUnknownLog } from '../../data/mockData';
 import InfoButton, { InfoSection, InfoText, InfoExample, InfoList } from '../../components/InfoButton';
@@ -245,6 +245,7 @@ export default function GlobalKnowledgeBase() {
   const [editingOp, setEditingOp] = useState(null);
   const [showAddOp, setShowAddOp] = useState(false);
   const personaFileInputRef = useRef(null);
+  const [kbLinkInput, setKbLinkInput] = useState('');
   const [clConnected, setClConnected] = useState(() => !!localStorage.getItem('yourai_courtlistener_kb'));
   const [clLoading, setClLoading] = useState(false);
   const [clStats, setClStats] = useState(() => {
@@ -449,6 +450,24 @@ export default function GlobalKnowledgeBase() {
       newDocs.push(doc);
     }
     updatePersona('globalDocs', [...persona.globalDocs, ...newDocs]);
+  };
+
+  const handleAddKbLink = () => {
+    const url = kbLinkInput?.trim();
+    if (!url) return;
+    // Basic URL validation
+    try { new URL(url); } catch { showToast('Please enter a valid URL', 'error'); return; }
+    const doc = {
+      id: Date.now(),
+      name: url.replace(/^https?:\/\//, '').replace(/\/$/, '').substring(0, 60),
+      type: 'LINK',
+      size: 'Web link',
+      url: url,
+      content: '',
+    };
+    updatePersona('globalDocs', [...persona.globalDocs, doc]);
+    setKbLinkInput('');
+    showToast('Link added to knowledge base', 'success');
   };
 
   const handleConnectCourtListener = async () => {
@@ -1798,32 +1817,9 @@ export default function GlobalKnowledgeBase() {
             </div>
             <div className="flex items-center gap-3">
               <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>v{savedPersona.version} · Last saved {savedPersona.updatedAt} by {savedPersona.updatedBy}</span>
-              <button
-                onClick={handleDiscardPersona}
-                disabled={!personaDirty}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium"
-                style={{
-                  border: '1px solid var(--border)',
-                  backgroundColor: 'white',
-                  color: personaDirty ? 'var(--slate)' : 'var(--text-muted)',
-                  cursor: personaDirty ? 'pointer' : 'not-allowed',
-                  opacity: personaDirty ? 1 : 0.5,
-                }}
-              >
-                <RotateCcw size={14} /> Discard
-              </button>
-              <button
-                onClick={handleSavePersona}
-                disabled={!personaDirty}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium text-white"
-                style={{
-                  backgroundColor: personaDirty ? 'var(--navy)' : '#94A3B8',
-                  cursor: personaDirty ? 'pointer' : 'not-allowed',
-                  border: 'none',
-                }}
-              >
-                <Save size={14} /> Save Persona
-              </button>
+              <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium" style={{ backgroundColor: '#F1F5F9', color: 'var(--text-muted)', border: '1px solid var(--border)' }}>
+                <Lock size={12} /> Read-only — managed by engineering
+              </span>
             </div>
           </div>
 
@@ -1862,166 +1858,29 @@ export default function GlobalKnowledgeBase() {
                 </div>
                 <p className="text-xs mb-4" style={{ color: 'var(--text-muted)' }}>Each intent defines a separate AI mode with its own system prompt, tone, and formatting. The intent classifier picks the right one automatically.</p>
 
-                {/* Intent cards */}
+                {/* Intent cards — read-only display */}
                 <div className="space-y-3">
-                  {persona.operations.map(op => {
-                    const isEditing = editingOp?.id === op.id;
-                    return (
-                      <div key={op.id} className="rounded-xl overflow-hidden" style={{ border: `1px solid ${isEditing ? 'var(--navy)' : 'var(--border)'}`, opacity: op.enabled ? 1 : 0.55, transition: 'all 0.15s' }}>
-                        {/* Card header */}
-                        <div
-                          className="flex items-center gap-3 px-4 py-3 cursor-pointer"
-                          style={{ backgroundColor: isEditing ? 'var(--ice-warm)' : '#FAFBFC' }}
-                          onClick={() => setEditingOp(isEditing ? null : op)}
-                        >
-                          <div className="flex items-center justify-center rounded-lg" style={{ width: 32, height: 32, backgroundColor: op.enabled ? 'var(--navy)' : 'var(--border)', flexShrink: 0 }}>
-                            <Bot size={16} style={{ color: op.enabled ? 'white' : 'var(--text-muted)' }} />
-                          </div>
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{op.label}</span>
-                              <span className="px-1.5 py-0.5 rounded text-xs" style={{ backgroundColor: op.enabled ? '#DCFCE7' : '#F1F5F9', color: op.enabled ? '#166534' : 'var(--text-muted)', fontSize: 10, fontWeight: 600 }}>
-                                {op.enabled ? 'ON' : 'OFF'}
-                              </span>
-                              <span className="px-1.5 py-0.5 rounded text-xs" style={{ backgroundColor: 'rgba(10,36,99,0.06)', color: 'var(--navy)', fontSize: 10 }}>
-                                {TONE_OPTIONS.find(t => t.id === op.tone)?.label || op.tone}
-                              </span>
-                            </div>
-                            <p className="text-xs truncate" style={{ color: 'var(--text-muted)', marginTop: 2 }}>{op.description}</p>
-                          </div>
-                          <div className="flex items-center gap-2" style={{ flexShrink: 0 }}>
-                            <button
-                              onClick={(e) => { e.stopPropagation(); toggleOpEnabled(op.id); }}
-                              className="px-2 py-1 rounded text-xs font-medium"
-                              style={{ border: '1px solid var(--border)', background: 'white', cursor: 'pointer', color: 'var(--text-muted)' }}
-                            >
-                              {op.enabled ? 'Disable' : 'Enable'}
-                            </button>
-                            {/* SA cannot delete intents — managed by engineering */}
-                            <ChevronDown size={14} style={{ color: 'var(--text-muted)', transform: isEditing ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }} />
-                          </div>
+                  {persona.operations.map(op => (
+                    <div key={op.id} className="rounded-xl overflow-hidden" style={{ border: '1px solid var(--border)', opacity: op.enabled ? 1 : 0.55 }}>
+                      <div className="flex items-center gap-3 px-4 py-3" style={{ backgroundColor: '#FAFBFC' }}>
+                        <div className="flex items-center justify-center rounded-lg" style={{ width: 32, height: 32, backgroundColor: op.enabled ? 'var(--navy)' : 'var(--border)', flexShrink: 0 }}>
+                          <Bot size={16} style={{ color: op.enabled ? 'white' : 'var(--text-muted)' }} />
                         </div>
-
-                        {/* Expanded editor */}
-                        {isEditing && (
-                          <div className="px-4 pb-4 pt-2 space-y-4" style={{ backgroundColor: 'white' }}>
-                            {/* Intent name + description */}
-                            <div className="grid grid-cols-2 gap-3">
-                              <div>
-                                <div className="flex items-center gap-1.5 mb-1.5">
-                                  <label className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>Intent Name</label>
-                                  <InfoButton title="Intent Name">
-                                    <InfoText>A short label for this AI mode. This is shown internally to Super Admins only — users never see this name. Keep it descriptive so you can identify it at a glance.</InfoText>
-                                  </InfoButton>
-                                </div>
-                                <input
-                                  value={op.label}
-                                  onChange={(e) => updateIntent(op.id, 'label', e.target.value)}
-                                  style={{ width: '100%', height: 36, border: '1px solid var(--border)', borderRadius: 8, padding: '0 10px', fontSize: 13, outline: 'none', boxSizing: 'border-box', fontFamily: "'DM Sans', sans-serif" }}
-                                  onFocus={(e) => (e.target.style.borderColor = 'var(--navy)')}
-                                  onBlur={(e) => (e.target.style.borderColor = 'var(--border)')}
-                                />
-                              </div>
-                              <div>
-                                <div className="flex items-center gap-1.5 mb-1.5">
-                                  <label className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>When this activates</label>
-                                  <InfoButton title="Activation Trigger">
-                                    <InfoText>Describe when this intent should be used. The intent classifier reads this description to decide whether to activate this mode. Be specific — vague descriptions lead to misclassification.</InfoText>
-                                    <InfoExample label="Good">Activated when a user uploads a contract for analysis.</InfoExample>
-                                    <InfoExample label="Bad">Used for documents.</InfoExample>
-                                  </InfoButton>
-                                </div>
-                                <input
-                                  value={op.description}
-                                  onChange={(e) => updateIntent(op.id, 'description', e.target.value)}
-                                  style={{ width: '100%', height: 36, border: '1px solid var(--border)', borderRadius: 8, padding: '0 10px', fontSize: 13, outline: 'none', boxSizing: 'border-box', fontFamily: "'DM Sans', sans-serif" }}
-                                  onFocus={(e) => (e.target.style.borderColor = 'var(--navy)')}
-                                  onBlur={(e) => (e.target.style.borderColor = 'var(--border)')}
-                                />
-                              </div>
-                            </div>
-
-                            {/* System prompt */}
-                            <div>
-                              <div className="flex items-center gap-1.5 mb-1.5">
-                                <label className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>System Prompt</label>
-                                <InfoButton title="System Prompt">
-                                  <InfoSection title="What is a System Prompt?">
-                                    <InfoText>The system prompt is the hidden instruction sent to the AI at the very start of every conversation in this mode. It defines the AI's identity, capabilities, and rules. The user never sees this text, but it shapes every response the AI generates.</InfoText>
-                                  </InfoSection>
-                                  <InfoSection title="Tips for writing a good prompt">
-                                    <InfoList items={[
-                                      "Start with 'You are Alex, a [role]...' to establish identity",
-                                      "Include specific instructions about what to always do (cite sources, include risk levels)",
-                                      "Include what to avoid (don't give legal advice, don't speculate)",
-                                      "Keep it under 500 words — longer prompts slow response time",
-                                      "Test changes in a staging conversation before saving to production",
-                                    ]} />
-                                  </InfoSection>
-                                  <InfoExample label="Example prompt">You are Alex, a contract analysis specialist. You identify risks, flag non-standard clauses, and compare terms against the firm's approved playbook. Always cite the clause number and page.</InfoExample>
-                                </InfoButton>
-                              </div>
-                              <textarea
-                                value={op.systemPrompt}
-                                onChange={(e) => updateIntent(op.id, 'systemPrompt', e.target.value)}
-                                rows={4}
-                                style={{ width: '100%', minHeight: 80, border: '1px solid var(--border)', borderRadius: 8, padding: '10px 12px', fontSize: 13, fontFamily: "'DM Sans', sans-serif", color: 'var(--text-primary)', outline: 'none', resize: 'vertical', lineHeight: 1.6, boxSizing: 'border-box' }}
-                                onFocus={(e) => (e.target.style.borderColor = 'var(--navy)')}
-                                onBlur={(e) => (e.target.style.borderColor = 'var(--border)')}
-                              />
-                            </div>
-
-                            {/* Tone */}
-                            <div>
-                              <div className="flex items-center gap-1.5 mb-1.5">
-                                <label className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>Tone</label>
-                                <InfoButton title="Tone Setting">
-                                  <InfoText>Controls the writing style for this intent. Each mode can have a different tone. For example, "Formal" for contract reviews, "Concise" for compliance checks, "Conversational" for general chat.</InfoText>
-                                  <InfoList items={[
-                                    "Formal — Professional language, full sentences, structured paragraphs",
-                                    "Conversational — Friendly, approachable, uses simpler language",
-                                    "Neutral — Balanced, neither overly formal nor casual",
-                                    "Concise — Shortest possible answers, bullet points preferred",
-                                  ]} />
-                                </InfoButton>
-                              </div>
-                              <div className="flex flex-wrap gap-2">
-                                {TONE_OPTIONS.map(t => (
-                                  <button key={t.id} onClick={() => updateIntent(op.id, 'tone', t.id)} className="px-3 py-1.5 rounded-full text-xs font-medium" style={{ border: op.tone === t.id ? '2px solid var(--navy)' : '1px solid var(--border)', backgroundColor: op.tone === t.id ? 'var(--ice-warm)' : 'white', color: op.tone === t.id ? 'var(--navy)' : 'var(--text-secondary)', cursor: 'pointer' }}>
-                                    {t.label}
-                                  </button>
-                                ))}
-                              </div>
-                            </div>
-
-                            {/* Format rules */}
-                            <div>
-                              <div className="flex items-center gap-1.5 mb-1.5">
-                                <label className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>Response Format Rules</label>
-                                <InfoButton title="Format Rules">
-                                  <InfoText>These rules are appended to the system prompt and instruct the AI on how to structure every response in this mode. Different intents can have different rules — e.g., Contract Review always includes a risk summary, but General Chat does not.</InfoText>
-                                  <InfoList items={[
-                                    "Cite source — AI always mentions which document and page the answer came from",
-                                    "Bullet points — Lists of 3+ items rendered as bullets for readability",
-                                    "Risk summary — Every response ends with a High/Medium/Low risk assessment",
-                                    "Next action — Every response ends with a suggested next step for the user",
-                                  ]} />
-                                </InfoButton>
-                              </div>
-                              <div className="flex flex-wrap gap-2">
-                                {FORMAT_RULES.map(rule => (
-                                  <label key={rule.id} className="flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer text-xs" style={{ border: `1px solid ${op.formatRules.includes(rule.id) ? 'var(--navy)' : 'var(--border)'}`, backgroundColor: op.formatRules.includes(rule.id) ? 'var(--ice-warm)' : 'white' }}>
-                                    <input type="checkbox" checked={op.formatRules.includes(rule.id)} onChange={() => toggleOpFormatRule(op.id, rule.id)} style={{ accentColor: 'var(--navy)' }} />
-                                    <span style={{ color: 'var(--text-primary)' }}>{rule.label}</span>
-                                  </label>
-                                ))}
-                              </div>
-                            </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{op.label}</span>
+                            <span className="px-1.5 py-0.5 rounded text-xs" style={{ backgroundColor: op.enabled ? '#DCFCE7' : '#F1F5F9', color: op.enabled ? '#166534' : 'var(--text-muted)', fontSize: 10, fontWeight: 600 }}>
+                              {op.enabled ? 'ON' : 'OFF'}
+                            </span>
+                            <span className="px-1.5 py-0.5 rounded text-xs" style={{ backgroundColor: 'rgba(10,36,99,0.06)', color: 'var(--navy)', fontSize: 10 }}>
+                              {TONE_OPTIONS.find(t => t.id === op.tone)?.label || op.tone}
+                            </span>
                           </div>
-                        )}
+                          <p className="text-xs truncate" style={{ color: 'var(--text-muted)', marginTop: 2 }}>{op.description}</p>
+                        </div>
                       </div>
-                    );
-                  })}
+                    </div>
+                  ))}
                 </div>
               </div>
 
@@ -2044,18 +1903,14 @@ export default function GlobalKnowledgeBase() {
                   </InfoButton>
                 </div>
                 <p className="text-xs mb-3" style={{ color: 'var(--text-muted)' }}>Shown when the bot cannot find an answer in the user's document or the global knowledge base. This is the last step of the fallback chain.</p>
-                <input
-                  type="text"
-                  value={persona.fallbackMessage}
-                  onChange={(e) => updatePersona('fallbackMessage', e.target.value)}
+                <div
+                  className="px-3 py-2.5 rounded-lg text-xs"
                   style={{
-                    width: '100%', height: 40, border: '1px solid var(--border)', borderRadius: 8,
-                    padding: '0 12px', fontSize: 13, fontFamily: "'DM Sans', sans-serif",
-                    color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box',
+                    width: '100%', border: '1px solid var(--border)', backgroundColor: '#F8FAFC',
+                    fontSize: 13, fontFamily: "'DM Sans', sans-serif",
+                    color: 'var(--text-secondary)', boxSizing: 'border-box', lineHeight: 1.5,
                   }}
-                  onFocus={(e) => (e.target.style.borderColor = 'var(--navy)')}
-                  onBlur={(e) => (e.target.style.borderColor = 'var(--border)')}
-                />
+                >{persona.fallbackMessage}</div>
               </div>
               {/* Per-Persona Response Format Configuration */}
               <div className="p-5 rounded-xl" style={{ backgroundColor: 'white', border: '1px solid var(--border)' }}>
@@ -2089,16 +1944,10 @@ export default function GlobalKnowledgeBase() {
                 <div className="space-y-3">
                   {USER_PERSONAS.map(up => {
                     const fmt = personaFormats[up.id];
-                    const isExpanded = expandedPersona === up.id;
                     const Icon = up.icon;
                     return (
-                      <div key={up.id} className="rounded-xl overflow-hidden" style={{ border: `1px solid ${isExpanded ? 'var(--navy)' : 'var(--border)'}`, opacity: fmt.enabled ? 1 : 0.55, transition: 'all 0.15s' }}>
-                        {/* Header */}
-                        <div
-                          className="flex items-center gap-3 px-4 py-3 cursor-pointer"
-                          style={{ backgroundColor: isExpanded ? 'var(--ice-warm)' : '#FAFBFC' }}
-                          onClick={() => setExpandedPersona(isExpanded ? null : up.id)}
-                        >
+                      <div key={up.id} className="rounded-xl overflow-hidden" style={{ border: '1px solid var(--border)', opacity: fmt.enabled ? 1 : 0.55 }}>
+                        <div className="flex items-center gap-3 px-4 py-3" style={{ backgroundColor: '#FAFBFC' }}>
                           <div className="flex items-center justify-center rounded-lg" style={{ width: 32, height: 32, backgroundColor: fmt.enabled ? 'var(--navy)' : 'var(--border)', flexShrink: 0 }}>
                             <Icon size={16} style={{ color: fmt.enabled ? 'white' : 'var(--text-muted)' }} />
                           </div>
@@ -2114,99 +1963,10 @@ export default function GlobalKnowledgeBase() {
                             </div>
                             <p className="text-xs truncate" style={{ color: 'var(--text-muted)', marginTop: 2 }}>{up.description}</p>
                           </div>
-                          <div className="flex items-center gap-2" style={{ flexShrink: 0 }}>
-                            <button
-                              onClick={(e) => { e.stopPropagation(); updatePersonaFormat(up.id, 'enabled', !fmt.enabled); }}
-                              className="px-2 py-1 rounded text-xs font-medium"
-                              style={{ border: '1px solid var(--border)', background: 'white', cursor: 'pointer', color: 'var(--text-muted)' }}
-                            >
-                              {fmt.enabled ? 'Disable' : 'Enable'}
-                            </button>
-                            {/* Reset icon removed per SA restrictions */}
-                            <ChevronDown size={14} style={{ color: 'var(--text-muted)', transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }} />
-                          </div>
+                          <span className="flex items-center gap-1 px-2 py-1 rounded text-xs" style={{ backgroundColor: '#F1F5F9', color: 'var(--text-muted)', border: '1px solid var(--border)' }}>
+                            <Lock size={10} /> Read-only
+                          </span>
                         </div>
-
-                        {/* Expanded editor */}
-                        {isExpanded && (
-                          <div className="px-4 pb-4 pt-2 space-y-4" style={{ backgroundColor: 'white' }}>
-                            {/* Prompt modifier */}
-                            <div>
-                              <div className="flex items-center gap-1.5 mb-1.5">
-                                <label className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>Prompt Modifier</label>
-                                <InfoButton title="Prompt Modifier">
-                                  <InfoText>This text is appended to the intent's system prompt when the user has this persona. It customises the AI's behaviour for their specific role without changing the core intent. For example, a Paralegal modifier might say "explain legal terms when first used" — that gets added to Contract Review, Legal Research, etc.</InfoText>
-                                  <InfoExample label="How it's applied">Final prompt = Intent system prompt + "\n\nPersona: " + this modifier</InfoExample>
-                                </InfoButton>
-                              </div>
-                              <textarea
-                                value={fmt.promptModifier}
-                                onChange={(e) => updatePersonaFormat(up.id, 'promptModifier', e.target.value)}
-                                rows={3}
-                                style={{ width: '100%', minHeight: 60, border: '1px solid var(--border)', borderRadius: 8, padding: '10px 12px', fontSize: 13, fontFamily: "'DM Sans', sans-serif", color: 'var(--text-primary)', outline: 'none', resize: 'vertical', lineHeight: 1.6, boxSizing: 'border-box' }}
-                                onFocus={(e) => (e.target.style.borderColor = 'var(--navy)')}
-                                onBlur={(e) => (e.target.style.borderColor = 'var(--border)')}
-                              />
-                            </div>
-
-                            {/* Tone override */}
-                            <div>
-                              <div className="flex items-center gap-1.5 mb-1.5">
-                                <label className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>Tone Override</label>
-                                <InfoButton title="Tone Override">
-                                  <InfoText>Overrides the tone from the intent. A Partner gets "Formal" responses even if the intent default is "Conversational". If disabled, the intent's tone is used.</InfoText>
-                                </InfoButton>
-                              </div>
-                              <div className="flex flex-wrap gap-2">
-                                {TONE_OPTIONS.map(t => (
-                                  <button key={t.id} onClick={() => updatePersonaFormat(up.id, 'tone', t.id)} className="px-3 py-1.5 rounded-full text-xs font-medium" style={{ border: fmt.tone === t.id ? '2px solid var(--navy)' : '1px solid var(--border)', backgroundColor: fmt.tone === t.id ? 'var(--ice-warm)' : 'white', color: fmt.tone === t.id ? 'var(--navy)' : 'var(--text-secondary)', cursor: 'pointer' }}>
-                                    {t.label}
-                                  </button>
-                                ))}
-                              </div>
-                            </div>
-
-                            {/* Format rules override */}
-                            <div>
-                              <div className="flex items-center gap-1.5 mb-1.5">
-                                <label className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>Format Rules</label>
-                                <InfoButton title="Persona Format Rules">
-                                  <InfoText>These format rules are specific to this persona. They merge with (and can override) the intent-level rules. For example, you might want Partners to always see risk summaries, even in intents that don't normally include them.</InfoText>
-                                </InfoButton>
-                              </div>
-                              <div className="flex flex-wrap gap-2">
-                                {FORMAT_RULES.map(rule => (
-                                  <label key={rule.id} className="flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer text-xs" style={{ border: `1px solid ${fmt.formatRules.includes(rule.id) ? 'var(--navy)' : 'var(--border)'}`, backgroundColor: fmt.formatRules.includes(rule.id) ? 'var(--ice-warm)' : 'white' }}>
-                                    <input type="checkbox" checked={fmt.formatRules.includes(rule.id)} onChange={() => togglePersonaFormatRule(up.id, rule.id)} style={{ accentColor: 'var(--navy)' }} />
-                                    <span style={{ color: 'var(--text-primary)' }}>{rule.label}</span>
-                                  </label>
-                                ))}
-                              </div>
-                            </div>
-
-                            {/* Preview of effective prompt */}
-                            <div className="p-3 rounded-lg" style={{ backgroundColor: '#F8FAFC', border: '1px solid var(--border)' }}>
-                              <div className="flex items-center gap-1.5 mb-2">
-                                <Eye size={12} style={{ color: 'var(--text-muted)' }} />
-                                <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>Preview: How this persona affects responses</span>
-                              </div>
-                              <div className="space-y-1.5">
-                                <div className="flex items-start gap-2">
-                                  <span className="text-xs font-medium" style={{ color: 'var(--navy)', minWidth: 50 }}>Tone:</span>
-                                  <span className="text-xs" style={{ color: 'var(--text-primary)' }}>{TONE_OPTIONS.find(t => t.id === fmt.tone)?.label} (overrides intent default)</span>
-                                </div>
-                                <div className="flex items-start gap-2">
-                                  <span className="text-xs font-medium" style={{ color: 'var(--navy)', minWidth: 50 }}>Rules:</span>
-                                  <span className="text-xs" style={{ color: 'var(--text-primary)' }}>{fmt.formatRules.map(r => FORMAT_RULES.find(fr => fr.id === r)?.label.split(' ')[1] || r).join(', ') || 'None'}</span>
-                                </div>
-                                <div className="flex items-start gap-2">
-                                  <span className="text-xs font-medium" style={{ color: 'var(--navy)', minWidth: 50 }}>Added:</span>
-                                  <span className="text-xs italic" style={{ color: 'var(--text-muted)' }}>"{fmt.promptModifier.substring(0, 80)}{fmt.promptModifier.length > 80 ? '...' : ''}"</span>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        )}
                       </div>
                     );
                   })}
@@ -2254,8 +2014,9 @@ export default function GlobalKnowledgeBase() {
                   style={{ border: '2px dashed var(--border)', backgroundColor: 'white', transition: 'all 0.15s' }}
                 >
                   <Upload size={20} style={{ color: 'var(--text-muted)' }} />
-                  <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Drag & drop PDF / DOCX (max 100MB)</span>
+                  <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Drag & drop PDF / DOCX files (max 100MB)</span>
                   <span className="text-xs font-medium" style={{ color: 'var(--navy)' }}>or browse files</span>
+                  <span className="text-xs" style={{ color: 'var(--text-muted)' }}>You can also paste a link below</span>
                 </div>
                 <input
                   ref={personaFileInputRef}
@@ -2266,11 +2027,35 @@ export default function GlobalKnowledgeBase() {
                   onChange={(e) => { handlePersonaFileUpload(e.target.files); e.target.value = ''; }}
                 />
 
+                {/* Add link input */}
+                <div className="flex gap-2 mb-4">
+                  <div className="flex items-center gap-2 flex-1 px-3 rounded-lg" style={{ border: '1px solid var(--border)', backgroundColor: 'white', height: 38 }}>
+                    <Link2 size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+                    <input
+                      type="url"
+                      placeholder="Paste a link to add (e.g. https://example.com/document)"
+                      value={kbLinkInput || ''}
+                      onChange={(e) => setKbLinkInput(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter' && kbLinkInput?.trim()) { handleAddKbLink(); } }}
+                      style={{ flex: 1, border: 'none', outline: 'none', fontSize: 12, fontFamily: "'DM Sans', sans-serif", color: 'var(--text-primary)', backgroundColor: 'transparent' }}
+                    />
+                  </div>
+                  <button
+                    onClick={handleAddKbLink}
+                    disabled={!kbLinkInput?.trim()}
+                    className="flex items-center gap-1.5 px-3 rounded-lg text-xs font-medium"
+                    style={{ backgroundColor: kbLinkInput?.trim() ? 'var(--navy)' : '#F1F5F9', color: kbLinkInput?.trim() ? 'white' : 'var(--text-muted)', border: 'none', cursor: kbLinkInput?.trim() ? 'pointer' : 'default', height: 38, whiteSpace: 'nowrap' }}
+                  >
+                    <Plus size={13} />
+                    Add Link
+                  </button>
+                </div>
+
                 {/* Doc list */}
                 <div className="space-y-2">
                   {persona.globalDocs.map(doc => (
                     <div key={doc.id} className="flex items-center gap-2.5 p-2.5 rounded-lg" style={{ backgroundColor: 'var(--ice-warm)', border: '1px solid var(--border)' }}>
-                      <File size={14} style={{ color: 'var(--navy)', flexShrink: 0 }} />
+                      {doc.type === 'LINK' ? <Link2 size={14} style={{ color: 'var(--navy)', flexShrink: 0 }} /> : <File size={14} style={{ color: 'var(--navy)', flexShrink: 0 }} />}
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div className="text-xs font-medium truncate" style={{ color: 'var(--text-primary)' }}>{doc.name}</div>
                         <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
