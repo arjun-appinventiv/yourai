@@ -38,6 +38,12 @@ input:focus, select:focus, textarea:focus {
   outline: none;
   box-shadow: 0 0 0 3px rgba(11,29,58,0.08);
 }
+/* Opt-out for inline textareas embedded inside styled containers (e.g. chat input) */
+textarea.no-focus-ring:focus {
+  border-color: transparent !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
 
 @keyframes toast-in {
   from { opacity: 0; transform: translateY(20px); }
