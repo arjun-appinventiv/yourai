@@ -872,7 +872,7 @@ function AddClientModal({ onClose, onSave }) {
 }
 
 /* ─────────────────── Knowledge Packs Panel ─────────────────── */
-function KnowledgePacksPanel({ packs, onClose, onCreateNew, onEdit, onDelete }) {
+function KnowledgePacksPanel({ packs, onClose, onCreateNew, onEdit, onDelete, onSelect, activePack }) {
   const [search, setSearch] = useState('');
   const filtered = packs.filter(p => {
     if (!search) return true;
@@ -935,7 +935,12 @@ function KnowledgePacksPanel({ packs, onClose, onCreateNew, onEdit, onDelete }) 
                     </div>
                   </div>
                   <div className="flex items-center gap-1" style={{ flexShrink: 0 }}>
-                    <button onClick={() => onEdit(p)} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 6, backgroundColor: 'var(--navy)', color: 'white', border: 'none', fontSize: 11, fontWeight: 500, cursor: 'pointer' }}><Edit3 size={12} /> Edit</button>
+                    {onSelect && (
+                      <button onClick={() => onSelect(p)} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 12px', borderRadius: 6, backgroundColor: activePack?.id === p.id ? '#16A34A' : 'var(--navy)', color: 'white', border: 'none', fontSize: 11, fontWeight: 500, cursor: 'pointer' }}>
+                        {activePack?.id === p.id ? <><CheckCircle size={12} /> Active</> : 'Use'}
+                      </button>
+                    )}
+                    <button onClick={() => onEdit(p)} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 6, backgroundColor: onSelect ? 'transparent' : 'var(--navy)', color: onSelect ? 'var(--navy)' : 'white', border: onSelect ? '1px solid var(--border)' : 'none', fontSize: 11, fontWeight: 500, cursor: 'pointer' }}><Edit3 size={12} /> Edit</button>
                     <button onClick={() => onDelete(p.id)} style={{ padding: 5, borderRadius: 6, background: 'none', border: '1px solid var(--border)', cursor: 'pointer', display: 'flex' }} title="Delete pack"><Trash2 size={13} style={{ color: '#991B1B' }} /></button>
                   </div>
                 </div>
@@ -1078,7 +1083,7 @@ function EditKnowledgePackModal({ pack, onClose, onSave }) {
 }
 
 /* ─────────────────── Document Vault Panel ─────────────────── */
-function DocumentVaultPanel({ documents, onClose, onCreateNew, onEdit, onDelete }) {
+function DocumentVaultPanel({ documents, onClose, onCreateNew, onEdit, onDelete, onSelect, activeDocument }) {
   const [search, setSearch] = useState('');
   const filtered = documents.filter(d => {
     if (!search) return true;
@@ -1139,7 +1144,12 @@ function DocumentVaultPanel({ documents, onClose, onCreateNew, onEdit, onDelete 
                     </div>
                   </div>
                   <div className="flex items-center gap-1" style={{ flexShrink: 0 }}>
-                    <button onClick={() => onEdit(d)} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 6, backgroundColor: 'var(--navy)', color: 'white', border: 'none', fontSize: 11, fontWeight: 500, cursor: 'pointer' }}><Edit3 size={12} /> Edit</button>
+                    {onSelect && (
+                      <button onClick={() => onSelect(d)} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 12px', borderRadius: 6, backgroundColor: activeDocument?.id === d.id ? '#16A34A' : 'var(--navy)', color: 'white', border: 'none', fontSize: 11, fontWeight: 500, cursor: 'pointer' }}>
+                        {activeDocument?.id === d.id ? <><CheckCircle size={12} /> Active</> : 'Use'}
+                      </button>
+                    )}
+                    <button onClick={() => onEdit(d)} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 6, backgroundColor: onSelect ? 'transparent' : 'var(--navy)', color: onSelect ? 'var(--navy)' : 'white', border: onSelect ? '1px solid var(--border)' : 'none', fontSize: 11, fontWeight: 500, cursor: 'pointer' }}><Edit3 size={12} /> Edit</button>
                     <button onClick={() => onDelete(d.id)} style={{ padding: 5, borderRadius: 6, background: 'none', border: '1px solid var(--border)', cursor: 'pointer', display: 'flex' }} title="Delete document"><Trash2 size={13} style={{ color: '#991B1B' }} /></button>
                   </div>
                 </div>
@@ -1239,8 +1249,8 @@ function EditDocumentModal({ document: docItem, onClose, onSave }) {
   );
 }
 
-/* ─────────────────── Knowledge Pack Picker (+ icon popover) ─────────────────── */
-function KnowledgePackPicker({ packs, activePack, onSelect, onClear, onManage, onClose, onAttachFiles, documents, activeDocument, onSelectDocument, onClearDocument, onManageDocuments }) {
+/* ─────────────────── Attach Menu (+ icon popover) ─────────────────── */
+function AttachMenu({ activePack, activeDocument, onClose, onAttachFiles, onOpenKnowledgePacks, onOpenDocumentVault, onClearPack, onClearDocument }) {
   const docInputRef = useRef(null);
 
   const handleFiles = (e, kind) => {
@@ -1249,16 +1259,25 @@ function KnowledgePackPicker({ packs, activePack, onSelect, onClear, onManage, o
     e.target.value = '';
   };
 
-  const QuickAttachBtn = ({ icon: Icon, label, onClick }) => (
-    <button
+  const MenuItem = ({ icon: Icon, label, subtitle, onClick, active, onRemove }) => (
+    <div
       onClick={onClick}
-      style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '12px 6px', borderRadius: 10, border: '1px solid var(--border)', background: 'white', cursor: 'pointer', minWidth: 0 }}
-      onMouseEnter={e => { e.currentTarget.style.backgroundColor = '#F8FAFC'; e.currentTarget.style.borderColor = 'var(--navy)'; }}
-      onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'white'; e.currentTarget.style.borderColor = 'var(--border)'; }}
+      style={{ padding: '12px 16px', cursor: 'pointer', borderBottom: '1px solid var(--border)', backgroundColor: active ? '#EDF3FA' : 'white', display: 'flex', alignItems: 'center', gap: 12 }}
+      onMouseEnter={e => { if (!active) e.currentTarget.style.backgroundColor = '#F8FAFC'; }}
+      onMouseLeave={e => { if (!active) e.currentTarget.style.backgroundColor = active ? '#EDF3FA' : 'white'; }}
     >
-      <Icon size={18} style={{ color: 'var(--navy)' }} />
-      <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--text-primary)' }}>{label}</span>
-    </button>
+      <div style={{ width: 36, height: 36, borderRadius: 10, background: active ? 'rgba(10,36,99,0.08)' : 'var(--ice-warm)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+        <Icon size={16} style={{ color: 'var(--navy)' }} />
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{label}</div>
+        <div style={{ fontSize: 11, color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{subtitle}</div>
+      </div>
+      {active && onRemove && (
+        <button onClick={(e) => { e.stopPropagation(); onRemove(); }} style={{ padding: '3px 10px', borderRadius: 6, border: '1px solid var(--border)', background: 'white', fontSize: 11, color: 'var(--text-muted)', cursor: 'pointer', flexShrink: 0 }}>Remove</button>
+      )}
+      {!active && <ChevronRight size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />}
+    </div>
   );
 
   return (
@@ -1266,117 +1285,32 @@ function KnowledgePackPicker({ packs, activePack, onSelect, onClear, onManage, o
       <input ref={docInputRef} type="file" accept=".pdf,.doc,.docx,.txt,.rtf,.odt,.xls,.xlsx,.csv,.ppt,.pptx" multiple style={{ display: 'none' }} onChange={(e) => handleFiles(e, 'doc')} />
 
       <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 40 }} />
-      <div style={{ position: 'absolute', bottom: 'calc(100% + 8px)', left: 0, width: 340, maxWidth: 'calc(100vw - 24px)', maxHeight: 'calc(100vh - 120px)', backgroundColor: 'white', borderRadius: 12, border: '1px solid var(--border)', boxShadow: '0 12px 32px rgba(0,0,0,0.14)', zIndex: 41, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-        <div style={{ overflowY: 'auto', flex: 1 }}>
-        {/* Quick attach: photos / videos / docs */}
-        <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--border)' }}>
-          <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>Quick Attach</div>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <QuickAttachBtn icon={File} label="Documents" onClick={() => docInputRef.current?.click()} />
-          </div>
-        </div>
+      <div style={{ position: 'absolute', bottom: 'calc(100% + 8px)', left: 0, width: 300, maxWidth: 'calc(100vw - 24px)', backgroundColor: 'white', borderRadius: 12, border: '1px solid var(--border)', boxShadow: '0 12px 32px rgba(0,0,0,0.14)', zIndex: 41, overflow: 'hidden' }}>
 
-        <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--border)' }}>
-          <div className="flex items-center gap-2">
-            <Package size={14} style={{ color: 'var(--navy)' }} />
-            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>Attach Knowledge Pack</span>
-          </div>
-          <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 3 }}>YourAI will use the selected pack as context for this conversation.</p>
-        </div>
+        <MenuItem
+          icon={Upload}
+          label="Upload Documents"
+          subtitle="Upload files from your device"
+          onClick={() => docInputRef.current?.click()}
+        />
 
-        {activePack && (
-          <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--border)', backgroundColor: 'var(--ice-warm)' }}>
-            <div className="flex items-center justify-between gap-2">
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Currently attached</div>
-                <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{activePack.name}</div>
-              </div>
-              <button onClick={onClear} style={{ padding: '3px 10px', borderRadius: 6, border: '1px solid var(--border)', background: 'white', fontSize: 11, color: 'var(--text-muted)', cursor: 'pointer', flexShrink: 0 }}>Remove</button>
-            </div>
-          </div>
-        )}
+        <MenuItem
+          icon={Package}
+          label={activePack ? `Pack: ${activePack.name}` : 'Knowledge Pack'}
+          subtitle={activePack ? 'Attached as context' : 'Select a pack as conversation context'}
+          onClick={onOpenKnowledgePacks}
+          active={!!activePack}
+          onRemove={onClearPack}
+        />
 
-        <div style={{ maxHeight: 260, overflowY: 'auto' }}>
-          {packs.length === 0 ? (
-            <div style={{ padding: 20, textAlign: 'center', color: 'var(--text-muted)', fontSize: 12 }}>No knowledge packs yet</div>
-          ) : (
-            packs.map(p => {
-              const isActive = activePack?.id === p.id;
-              return (
-                <div
-                  key={p.id}
-                  onClick={() => onSelect(p)}
-                  style={{ padding: '10px 14px', cursor: 'pointer', borderBottom: '1px solid var(--border)', backgroundColor: isActive ? '#EDF3FA' : 'white', display: 'flex', alignItems: 'flex-start', gap: 10 }}
-                  onMouseEnter={e => { if (!isActive) e.currentTarget.style.backgroundColor = '#F8FAFC'; }}
-                  onMouseLeave={e => { if (!isActive) e.currentTarget.style.backgroundColor = 'white'; }}
-                >
-                  <Package size={14} style={{ color: isActive ? 'var(--navy)' : 'var(--text-muted)', marginTop: 2, flexShrink: 0 }} />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</div>
-                    <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{p.docs.length} docs · {p.links.length} links</div>
-                  </div>
-                  {isActive && <CheckCircle size={14} style={{ color: '#16A34A', flexShrink: 0, marginTop: 2 }} />}
-                </div>
-              );
-            })
-          )}
-        </div>
-
-        <button onClick={onManage} style={{ width: '100%', padding: '10px 14px', background: 'white', border: 'none', borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)', fontSize: 12, fontWeight: 500, color: 'var(--navy)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-          <Edit3 size={12} /> Manage Knowledge Packs
-        </button>
-
-        {/* Document Vault section */}
-        <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--border)' }}>
-          <div className="flex items-center gap-2">
-            <FolderOpen size={14} style={{ color: 'var(--navy)' }} />
-            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>Attach from Document Vault</span>
-          </div>
-          <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 3 }}>Attach a single saved document as context for this conversation.</p>
-        </div>
-
-        {activeDocument && (
-          <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--border)', backgroundColor: 'var(--ice-warm)' }}>
-            <div className="flex items-center justify-between gap-2">
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Currently attached</div>
-                <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{activeDocument.name}</div>
-              </div>
-              <button onClick={onClearDocument} style={{ padding: '3px 10px', borderRadius: 6, border: '1px solid var(--border)', background: 'white', fontSize: 11, color: 'var(--text-muted)', cursor: 'pointer', flexShrink: 0 }}>Remove</button>
-            </div>
-          </div>
-        )}
-
-        <div>
-          {(!documents || documents.length === 0) ? (
-            <div style={{ padding: 20, textAlign: 'center', color: 'var(--text-muted)', fontSize: 12 }}>No documents in vault yet</div>
-          ) : (
-            documents.map(d => {
-              const isActive = activeDocument?.id === d.id;
-              return (
-                <div
-                  key={d.id}
-                  onClick={() => onSelectDocument && onSelectDocument(d)}
-                  style={{ padding: '10px 14px', cursor: 'pointer', borderBottom: '1px solid var(--border)', backgroundColor: isActive ? '#EDF3FA' : 'white', display: 'flex', alignItems: 'flex-start', gap: 10 }}
-                  onMouseEnter={e => { if (!isActive) e.currentTarget.style.backgroundColor = '#F8FAFC'; }}
-                  onMouseLeave={e => { if (!isActive) e.currentTarget.style.backgroundColor = 'white'; }}
-                >
-                  <File size={14} style={{ color: isActive ? 'var(--navy)' : 'var(--text-muted)', marginTop: 2, flexShrink: 0 }} />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.name}</div>
-                    <div style={{ fontSize: 11, color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.fileName} · {d.fileSize}</div>
-                  </div>
-                  {isActive && <CheckCircle size={14} style={{ color: '#16A34A', flexShrink: 0, marginTop: 2 }} />}
-                </div>
-              );
-            })
-          )}
-        </div>
-        </div>
-
-        <button onClick={onManageDocuments} style={{ width: '100%', padding: '10px 14px', background: 'white', border: 'none', borderTop: '1px solid var(--border)', fontSize: 12, fontWeight: 500, color: 'var(--navy)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, flexShrink: 0 }}>
-          <Edit3 size={12} /> Manage Document Vault
-        </button>
+        <MenuItem
+          icon={FolderOpen}
+          label={activeDocument ? `Doc: ${activeDocument.name}` : 'Document Vault'}
+          subtitle={activeDocument ? 'Attached as context' : 'Select a saved document'}
+          onClick={onOpenDocumentVault}
+          active={!!activeDocument}
+          onRemove={onClearDocument}
+        />
       </div>
     </>
   );
@@ -2130,27 +2064,33 @@ export default function ChatView() {
         // Build context layers for prioritised answer flow
         const contextLayers = {};
 
-        // Tier 1: User's uploaded document (from pending attachments with extracted content)
+        // Tier 1: User's uploaded documents (from pending attachments with extracted content)
         // Check current message attachments first, then fall back to persisted session doc
-        const docWithContent = userMsg.attachments?.find(a => a.content);
-        if (docWithContent) {
-          // New document attached to this message — extract and persist for follow-ups
-          const rawContent = docWithContent.content || '';
-          const printableChars = rawContent.replace(/[^\x20-\x7E\n\r\t\u00A0-\u024F]/g, '');
-          const printableRatio = rawContent.length > 0 ? (printableChars.length / rawContent.length) : 1;
-          const garbleMatches = rawContent.match(/[\u25A0-\u25FF\u2600-\u26FF\uFFFD\u2580-\u259F]{2,}/g);
-          const garbleCount = garbleMatches ? garbleMatches.reduce((s, m) => s + m.length, 0) : 0;
-          const hasGarble = garbleCount > rawContent.length * 0.1;
-          const isReadable = rawContent.length < 50 || (printableRatio > 0.7 && !hasGarble);
-          if (isReadable) {
-            contextLayers.uploadedDoc = { name: docWithContent.name, content: rawContent };
-            // Persist doc context for follow-up questions in this session
-            setSessionDocContext({ name: docWithContent.name, content: rawContent });
-          } else {
-            const fallbackContent = `[File: ${docWithContent.name}] The text content could not be extracted from this document. It may be a scanned PDF, image-based, or use non-standard encoding.`;
-            contextLayers.uploadedDoc = { name: docWithContent.name, content: fallbackContent };
-            setSessionDocContext({ name: docWithContent.name, content: fallbackContent });
-          }
+        const docsWithContent = (userMsg.attachments || []).filter(a => a.content);
+        if (docsWithContent.length > 0) {
+          // New documents attached to this message — merge and persist for follow-ups
+          const docParts = [];
+          const docNames = [];
+          docsWithContent.forEach(doc => {
+            const rawContent = doc.content || '';
+            const printableChars = rawContent.replace(/[^\x20-\x7E\n\r\t\u00A0-\u024F]/g, '');
+            const printableRatio = rawContent.length > 0 ? (printableChars.length / rawContent.length) : 1;
+            const garbleMatches = rawContent.match(/[\u25A0-\u25FF\u2600-\u26FF\uFFFD\u2580-\u259F]{2,}/g);
+            const garbleCount = garbleMatches ? garbleMatches.reduce((s, m) => s + m.length, 0) : 0;
+            const hasGarble = garbleCount > rawContent.length * 0.1;
+            const isReadable = rawContent.length < 50 || (printableRatio > 0.7 && !hasGarble);
+            docNames.push(doc.name);
+            if (isReadable) {
+              docParts.push(`--- ${doc.name} ---\n${rawContent}`);
+            } else {
+              docParts.push(`--- ${doc.name} ---\n[File: ${doc.name}] The text content could not be extracted from this document. It may be a scanned PDF, image-based, or use non-standard encoding.`);
+            }
+          });
+          const mergedName = docNames.length === 1 ? docNames[0] : `${docNames.length} documents`;
+          const mergedContent = docParts.join('\n\n');
+          contextLayers.uploadedDoc = { name: mergedName, content: mergedContent };
+          // Persist doc context for follow-up questions in this session
+          setSessionDocContext({ name: mergedName, content: mergedContent });
         } else if (sessionDocContext) {
           // No new attachment — reuse persisted document from earlier in this session
           contextLayers.uploadedDoc = sessionDocContext;
@@ -2232,14 +2172,14 @@ export default function ChatView() {
     }));
     // DEC-095: Scenario 3 — Option C confirmed
     // See knowledge-pack-strategy.md
-    if (kind === 'doc' && sessionState.sessionDocId !== null) {
-      // A document already exists in this session — show mid-session banner
+    // Only block new docs if docs have already been SENT in a message (sessionDocContext is set)
+    if (kind === 'doc' && sessionDocContext) {
+      // Documents already sent in this session — show mid-session banner
       setPendingNewDoc(newAtts[0]);
       setShowDocVersionBanner(true);
       return; // Don't add to pending yet — user must choose
     }
-    if (kind === 'doc' && sessionState.sessionDocId === null) {
-      // First document upload in this session — lock it
+    if (kind === 'doc') {
       setSessionState(prev => ({ ...prev, sessionDocId: `doc-${Date.now()}` }));
     }
     setPendingAttachments(prev => [...prev, ...newAtts]);
@@ -2524,21 +2464,17 @@ export default function ChatView() {
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, border: '1.5px solid var(--border)', borderRadius: 24, background: '#fff', minHeight: 48, padding: '8px 8px 8px 12px' }}>
               <div style={{ position: 'relative' }}>
-                <div onClick={() => setShowPackPicker(v => !v)} title="Attach knowledge pack" style={{ width: 28, height: 28, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: activeKnowledgePack ? 'var(--navy)' : 'var(--text-muted)', background: activeKnowledgePack ? 'rgba(10, 36, 99, 0.08)' : 'transparent' }}><Plus size={20} /></div>
+                <div onClick={() => setShowPackPicker(v => !v)} title="Attach files or context" style={{ width: 28, height: 28, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: (activeKnowledgePack || activeVaultDocument) ? 'var(--navy)' : 'var(--text-muted)', background: (activeKnowledgePack || activeVaultDocument) ? 'rgba(10, 36, 99, 0.08)' : 'transparent' }}><Plus size={20} /></div>
                 {showPackPicker && (
-                  <KnowledgePackPicker
-                    packs={knowledgePacks}
+                  <AttachMenu
                     activePack={activeKnowledgePack}
-                    onSelect={(p) => { setActiveKnowledgePack(p); setShowPackPicker(false); }}
-                    onClear={() => { setActiveKnowledgePack(null); setShowPackPicker(false); }}
-                    onManage={() => { setShowPackPicker(false); setShowKnowledgePacksPanel(true); }}
+                    activeDocument={activeVaultDocument}
                     onClose={() => setShowPackPicker(false)}
                     onAttachFiles={(files, kind) => { handleAttachFiles(files, kind); setShowPackPicker(false); }}
-                    documents={documentVault}
-                    activeDocument={activeVaultDocument}
-                    onSelectDocument={(d) => { setActiveVaultDocument(d); setShowPackPicker(false); }}
-                    onClearDocument={() => { setActiveVaultDocument(null); setShowPackPicker(false); }}
-                    onManageDocuments={() => { setShowPackPicker(false); setShowDocumentVaultPanel(true); }}
+                    onOpenKnowledgePacks={() => { setShowPackPicker(false); setShowKnowledgePacksPanel(true); }}
+                    onOpenDocumentVault={() => { setShowPackPicker(false); setShowDocumentVaultPanel(true); }}
+                    onClearPack={() => { setActiveKnowledgePack(null); }}
+                    onClearDocument={() => { setActiveVaultDocument(null); }}
                   />
                 )}
               </div>
@@ -2598,10 +2534,12 @@ export default function ChatView() {
       {showKnowledgePacksPanel && (
         <KnowledgePacksPanel
           packs={knowledgePacks}
+          activePack={activeKnowledgePack}
           onClose={() => setShowKnowledgePacksPanel(false)}
           onCreateNew={() => { setShowKnowledgePacksPanel(false); setEditingPack({ isNew: true }); }}
           onEdit={(pack) => { setShowKnowledgePacksPanel(false); setEditingPack(pack); }}
           onDelete={handleDeletePack}
+          onSelect={(p) => { setActiveKnowledgePack(p); setShowKnowledgePacksPanel(false); }}
         />
       )}
 
@@ -2618,9 +2556,11 @@ export default function ChatView() {
       {showDocumentVaultPanel && (
         <DocumentVaultPanel
           documents={documentVault}
+          activeDocument={activeVaultDocument}
           onClose={() => setShowDocumentVaultPanel(false)}
           onCreateNew={() => { setShowDocumentVaultPanel(false); setEditingDocument({ isNew: true }); }}
           onEdit={(doc) => { setShowDocumentVaultPanel(false); setEditingDocument(doc); }}
+          onSelect={(d) => { setActiveVaultDocument(d); setShowDocumentVaultPanel(false); }}
           onDelete={handleDeleteDocument}
         />
       )}
