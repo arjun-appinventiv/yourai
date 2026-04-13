@@ -2218,11 +2218,14 @@ export default function ChatView() {
         sessionDocId: `doc-${Date.now()}`,
         sessionStartTime: new Date().toISOString(),
       });
-      if (pendingNewDoc) {
+      if (pendingNewDoc?.kind === 'vault' && pendingNewDoc?.vaultDoc) {
+        // Vault document — set as active context, not as pending attachment
+        setActiveVaultDocument(pendingNewDoc.vaultDoc);
+      } else if (pendingNewDoc) {
         setPendingAttachments([pendingNewDoc]);
       }
       setActiveKnowledgePack(null);
-      setActiveVaultDocument(null);
+      if (!pendingNewDoc?.vaultDoc) setActiveVaultDocument(null);
       setInput('');
       // Update thread
       const newThread = {
@@ -2246,6 +2249,21 @@ export default function ChatView() {
   const removeAttachment = (id) => {
     setPendingAttachments(prev => prev.filter(a => a.id !== id));
   };
+
+  // Guard: switching vault doc or knowledge pack mid-session triggers new-convo banner
+  const handleSelectVaultDocument = useCallback((doc) => {
+    if (sessionDocContext) {
+      // Docs already sent — changing context requires new conversation
+      setPendingNewDoc({ id: Date.now(), name: doc.name, kind: 'vault', vaultDoc: doc });
+      setShowDocVersionBanner(true);
+      return;
+    }
+    setActiveVaultDocument(doc);
+  }, [sessionDocContext]);
+
+  const handleSelectKnowledgePack = useCallback((pack) => {
+    setActiveKnowledgePack(pack);
+  }, []);
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(input); }
@@ -2539,7 +2557,7 @@ export default function ChatView() {
           onCreateNew={() => { setShowKnowledgePacksPanel(false); setEditingPack({ isNew: true }); }}
           onEdit={(pack) => { setShowKnowledgePacksPanel(false); setEditingPack(pack); }}
           onDelete={handleDeletePack}
-          onSelect={(p) => { setActiveKnowledgePack(p); setShowKnowledgePacksPanel(false); }}
+          onSelect={(p) => { handleSelectKnowledgePack(p); setShowKnowledgePacksPanel(false); }}
         />
       )}
 
@@ -2560,7 +2578,7 @@ export default function ChatView() {
           onClose={() => setShowDocumentVaultPanel(false)}
           onCreateNew={() => { setShowDocumentVaultPanel(false); setEditingDocument({ isNew: true }); }}
           onEdit={(doc) => { setShowDocumentVaultPanel(false); setEditingDocument(doc); }}
-          onSelect={(d) => { setActiveVaultDocument(d); setShowDocumentVaultPanel(false); }}
+          onSelect={(d) => { handleSelectVaultDocument(d); setShowDocumentVaultPanel(false); }}
           onDelete={handleDeleteDocument}
         />
       )}
