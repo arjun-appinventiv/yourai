@@ -334,7 +334,6 @@ export default function SuperAdminDashboard() {
           { icon: UserPlus, label: 'Add Tenant', desc: 'Onboard a new organisation', path: '/super-admin/tenants' },
           { icon: Upload, label: 'Upload KB Doc', desc: 'Add to global knowledge base', path: '/super-admin/knowledge-base' },
           { icon: Send, label: 'Send Broadcast', desc: 'Notify all org admins', path: '/super-admin/notifications' },
-          { icon: FileBarChart, label: 'View Reports', desc: 'Platform analytics & reports', path: '/super-admin/reports' },
         ].map(({ icon: Icon, label, desc, path }) => (
           <button
             key={label}

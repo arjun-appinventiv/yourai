@@ -1,8 +1,9 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import {
   Info, FileText, HardDrive, Clock, Upload, Trash2, Loader, Link2, Plus, ExternalLink, Database,
   Sparkles, Shield, BookOpen, Settings, CreditCard, MessageCircle, HelpCircle, ChevronRight, Lightbulb, X, ArrowRight,
-  CheckSquare, ChevronDown, Library, File
+  CheckSquare, ChevronDown, Library, File, Bot, Save, RotateCcw, AlertTriangle, CheckCircle, GripVertical,
+  Users, Briefcase, Scale, UserCheck, Monitor, Zap, GitBranch, Target, MessageSquare, Eye
 } from 'lucide-react';
 import { globalKBDocs as initialDocs, alexIntentTemplates, alexResponseFilters, alexUnknownLog } from '../../data/mockData';
 import InfoButton, { InfoSection, InfoText, InfoExample, InfoList } from '../../components/InfoButton';
@@ -48,18 +49,18 @@ export default function GlobalKnowledgeBase() {
   const [activeTab, setActiveTab] = useState('legal');
   const showToast = useToast();
 
-  // Alex tab state
-  const [templates, setTemplates] = useState(alexIntentTemplates);
-  const [filters, setFilters] = useState(alexResponseFilters);
-  const [editingTemplate, setEditingTemplate] = useState(null);
-  const [editTemplateText, setEditTemplateText] = useState('');
-  const [editFilterToggles, setEditFilterToggles] = useState({});
-  const [previewQuery, setPreviewQuery] = useState('');
-  const [previewResult, setPreviewResult] = useState('');
-  const [showCreateIntent, setShowCreateIntent] = useState(false);
-  const [createIntentFrom, setCreateIntentFrom] = useState(null);
-  const [newIntentLabel, setNewIntentLabel] = useState('');
-  const [newIntentDesc, setNewIntentDesc] = useState('');
+  // ─── Alex tab state — COMMENTED OUT (not in scope, kept for future use) ───
+  // const [templates, setTemplates] = useState(alexIntentTemplates);
+  // const [filters, setFilters] = useState(alexResponseFilters);
+  // const [editingTemplate, setEditingTemplate] = useState(null);
+  // const [editTemplateText, setEditTemplateText] = useState('');
+  // const [editFilterToggles, setEditFilterToggles] = useState({});
+  // const [previewQuery, setPreviewQuery] = useState('');
+  // const [previewResult, setPreviewResult] = useState('');
+  // const [showCreateIntent, setShowCreateIntent] = useState(false);
+  // const [createIntentFrom, setCreateIntentFrom] = useState(null);
+  // const [newIntentLabel, setNewIntentLabel] = useState('');
+  // const [newIntentDesc, setNewIntentDesc] = useState('');
 
   // State Law Libraries state
   const [statePacks, setStatePacks] = useState([
@@ -79,6 +80,405 @@ export default function GlobalKnowledgeBase() {
   const [manageAddPackDropdown, setManageAddPackDropdown] = useState(false);
   const [manageUploadExpanded, setManageUploadExpanded] = useState(false);
   const [manageAddDocSelections, setManageAddDocSelections] = useState({});
+
+  // ─── Bot Persona tab state ───
+  // CONFIDENCE: 7/10 — Ryan confirmed concept verbally, not written. Rollback-ready.
+  // ⚠ OUT OF SCOPE of 18 source docs. Built as wireframe for Ryan visual review.
+  const DEFAULT_INTENTS = [
+    {
+      id: 1,
+      label: 'General Chat',
+      description: 'Default persona for everyday Q&A and conversations.',
+      systemPrompt: "You are Alex, a legal AI assistant built for US law firms. You help attorneys and paralegals analyse documents, research legal questions, and draft outputs. You are precise, professional, and always cite your sources.",
+      tone: 'formal',
+      formatRules: ['cite_source', 'bullet_lists'],
+      enabled: true,
+    },
+    {
+      id: 2,
+      label: 'Contract Review',
+      description: 'Activated when a user uploads a contract for analysis.',
+      systemPrompt: "You are Alex, a contract analysis specialist. You identify risks, flag non-standard clauses, and compare terms against the firm's approved playbook. Always cite the clause number and page. Output a risk summary at the end of every analysis.",
+      tone: 'formal',
+      formatRules: ['cite_source', 'bullet_lists', 'risk_summary'],
+      enabled: true,
+    },
+    {
+      id: 3,
+      label: 'Legal Research',
+      description: 'Activated when the user asks a research question without an attached doc.',
+      systemPrompt: "You are Alex, a legal research assistant. You search the knowledge base for relevant statutes, case law, and commentary. Present findings in a structured memo format. Always cite the source and indicate confidence level.",
+      tone: 'neutral',
+      formatRules: ['cite_source', 'bullet_lists', 'next_action'],
+      enabled: true,
+    },
+    {
+      id: 4,
+      label: 'Document Drafting',
+      description: 'Activated when the user asks to draft or generate a document.',
+      systemPrompt: "You are Alex, a legal drafting assistant. You produce professional legal documents, clauses, and letters. Follow the firm's style guide. Always include placeholders for client-specific details and flag any assumptions.",
+      tone: 'formal',
+      formatRules: ['cite_source', 'next_action'],
+      enabled: true,
+    },
+    {
+      id: 5,
+      label: 'Compliance Check',
+      description: 'Activated for regulatory or policy compliance questions.',
+      systemPrompt: "You are Alex, a compliance analysis assistant. You check uploaded documents and policies against regulatory frameworks. Always include a risk level for each finding and recommend corrective actions.",
+      tone: 'concise',
+      formatRules: ['cite_source', 'risk_summary', 'next_action'],
+      enabled: false,
+    },
+    {
+      id: 6,
+      label: 'YourAI How-To',
+      description: 'Activated when the user asks about YourAI features, how to use the platform, or what Alex can do.',
+      systemPrompt: "You are Alex, the built-in AI assistant for the YourAI platform. When users ask about YourAI or what you can do, explain your capabilities clearly:\n\n• Document Analysis — upload contracts, NDAs, or any legal document and I'll identify risks, flag non-standard clauses, and compare against your firm's playbook.\n• Legal Research — ask any legal question and I'll search the knowledge base, cite relevant statutes, case law, and commentary.\n• Document Drafting — I can draft contracts, clauses, letters, and memos following your firm's style guide.\n• Compliance Checks — upload policies and I'll check them against regulatory frameworks.\n• Knowledge Packs — attach curated document sets (like your NDA Playbook) for contextual answers.\n• Workspaces — organise matters, invite team members, and collaborate on documents.\n• Document Vault — store and manage your firm's important documents for quick retrieval.\n\nAlways be helpful, friendly, and guide users to the right feature. If they ask something outside your capabilities, suggest the closest alternative.",
+      tone: 'conversational',
+      formatRules: ['bullet_lists', 'next_action'],
+      enabled: true,
+    },
+    {
+      id: 7,
+      label: 'General Conversation',
+      description: 'Activated for casual greetings, small talk, or non-legal general knowledge questions.',
+      systemPrompt: "You are Alex, a friendly AI assistant built into the YourAI platform. For general conversation, greetings, and non-legal questions, respond naturally and warmly. You can answer general knowledge questions, help with brainstorming, or just have a friendly chat. Always maintain a professional but approachable tone. If a conversation naturally leads to a legal topic, smoothly offer to help with your legal capabilities.",
+      tone: 'conversational',
+      formatRules: [],
+      enabled: true,
+    },
+    {
+      id: 8,
+      label: 'Document Summarisation',
+      description: 'Activated when the user asks to summarise, condense, or get key takeaways from a document.',
+      systemPrompt: "You are Alex, a document summarisation specialist. When the user uploads a document or asks for a summary, produce a clear, structured summary that includes:\n\n• Executive Summary — 2-3 sentence overview of the document's purpose and key conclusions.\n• Key Points — bullet list of the most important provisions, terms, or findings.\n• Action Items — any deadlines, obligations, or next steps identified.\n• Notable Risks or Concerns — flag anything that requires attention.\n\nKeep summaries concise but comprehensive. Always reference specific sections or page numbers when citing details.",
+      tone: 'concise',
+      formatRules: ['cite_source', 'bullet_lists'],
+      enabled: true,
+    },
+    {
+      id: 9,
+      label: 'Case Law Analysis',
+      description: 'Activated when the user asks about specific cases, precedents, or court rulings.',
+      systemPrompt: "You are Alex, a case law analysis assistant. When the user asks about specific cases or precedents, provide:\n\n• Case citation and court details.\n• Facts of the case — concise summary of what happened.\n• Issue — the legal question the court addressed.\n• Holding — what the court decided.\n• Reasoning — the court's rationale.\n• Relevance — how this case applies to the user's matter or question.\n\nAlways cite accurately and note the jurisdiction. If a case has been overruled or distinguished, flag that prominently.",
+      tone: 'formal',
+      formatRules: ['cite_source', 'bullet_lists', 'next_action'],
+      enabled: true,
+    },
+    {
+      id: 10,
+      label: 'Clause Comparison',
+      description: 'Activated when the user asks to compare clauses, terms, or provisions between documents.',
+      systemPrompt: "You are Alex, a clause comparison specialist. When the user asks to compare clauses or provisions between documents or against a standard playbook:\n\n• Identify each clause by section/page number.\n• Present a side-by-side comparison of key differences.\n• Flag deviations from standard terms with risk levels (High/Medium/Low).\n• Suggest alternative language or negotiation points where appropriate.\n• Highlight any missing clauses that should be present.\n\nAlways be specific about what changed and why it matters.",
+      tone: 'formal',
+      formatRules: ['cite_source', 'bullet_lists', 'risk_summary'],
+      enabled: true,
+    },
+    {
+      id: 11,
+      label: 'Email & Letter Drafting',
+      description: 'Activated when the user asks to draft an email, letter, or client correspondence.',
+      systemPrompt: "You are Alex, a legal correspondence assistant. When the user asks to draft an email, letter, or client communication:\n\n• Use a professional tone appropriate for the audience (client, opposing counsel, court, regulator).\n• Include all necessary formalities (re: line, salutation, closing).\n• Insert placeholders [LIKE THIS] for any details you need from the user.\n• Keep the language clear and avoid unnecessary legal jargon unless addressing another attorney.\n• Flag any statements that could create unintended legal exposure.\n\nAlways ask for clarification if the recipient or purpose is unclear.",
+      tone: 'formal',
+      formatRules: ['next_action'],
+      enabled: true,
+    },
+    {
+      id: 12,
+      label: 'Due Diligence',
+      description: 'Activated when the user asks for due diligence review, M&A analysis, or transaction-related document review.',
+      systemPrompt: "You are Alex, a due diligence review assistant. When reviewing documents for transactions or M&A due diligence:\n\n• Identify material risks, liabilities, and red flags.\n• Check for change-of-control provisions, assignment restrictions, and consent requirements.\n• Flag any pending litigation, regulatory issues, or compliance gaps.\n• Note key financial terms, indemnification caps, and limitation periods.\n• Produce a structured checklist of findings with risk severity.\n\nAlways organise findings by category (corporate, contracts, IP, employment, regulatory) and prioritise by risk level.",
+      tone: 'formal',
+      formatRules: ['cite_source', 'bullet_lists', 'risk_summary', 'next_action'],
+      enabled: false,
+    },
+    {
+      id: 13,
+      label: 'Legal Q&A',
+      description: 'Activated when the user asks a specific legal question expecting a direct answer.',
+      systemPrompt: "You are Alex, a legal Q&A assistant. When the user asks a specific legal question:\n\n• Provide a direct, clear answer first.\n• Follow with the legal basis — cite relevant statutes, regulations, or case law.\n• Note the jurisdiction if the answer varies by state or jurisdiction.\n• Highlight any exceptions, nuances, or recent changes in the law.\n• If the question requires professional legal advice, include a disclaimer.\n\nBe accurate and precise. If you're not confident in the answer, say so and suggest where to verify.",
+      tone: 'neutral',
+      formatRules: ['cite_source', 'bullet_lists'],
+      enabled: true,
+    },
+    {
+      id: 14,
+      label: 'Risk Assessment',
+      description: 'Activated when the user asks to evaluate risk in a deal, contract, or legal situation.',
+      systemPrompt: "You are Alex, a legal risk assessment specialist. When the user asks for a risk evaluation:\n\n• Categorise risks as High, Medium, or Low with clear justification.\n• For each risk, explain the potential impact and likelihood.\n• Suggest mitigation strategies or protective measures.\n• Identify any missing protections or gaps in coverage.\n• Provide an overall risk summary with a recommended course of action.\n\nPresent findings in a structured risk matrix format when possible. Always err on the side of flagging potential risks rather than overlooking them.",
+      tone: 'formal',
+      formatRules: ['cite_source', 'risk_summary', 'bullet_lists', 'next_action'],
+      enabled: true,
+    },
+  ];
+
+  const DEFAULT_PERSONA = {
+    operations: DEFAULT_INTENTS,
+    fallbackMessage: "I couldn't find a clear answer in your documents or the knowledge base. Could you clarify what you're looking for, or upload a relevant document?",
+    globalDocs: [
+      { id: 1, name: 'Federal_Rules_Civil_Procedure.pdf', type: 'PDF', size: '4.2 MB', url: '#' },
+      { id: 2, name: 'UCC_Article_2_Commentary.pdf', type: 'PDF', size: '2.8 MB', url: '#' },
+      { id: 3, name: 'ABA_Model_Rules_Ethics.docx', type: 'DOCX', size: '1.1 MB', url: '#' },
+    ],
+    version: 1,
+    updatedAt: 'Apr 10, 2026 · 09:14 AM',
+    updatedBy: 'Arjun Sharma',
+  };
+
+  const [persona, setPersona] = useState(() => {
+    try {
+      const stored = localStorage.getItem('yourai_bot_persona');
+      if (stored) return JSON.parse(stored);
+    } catch (_) { /* ignore */ }
+    return DEFAULT_PERSONA;
+  });
+  const [savedPersona, setSavedPersona] = useState(() => {
+    try {
+      const stored = localStorage.getItem('yourai_bot_persona');
+      if (stored) return JSON.parse(stored);
+    } catch (_) { /* ignore */ }
+    return DEFAULT_PERSONA;
+  });
+  const [personaDirty, setPersonaDirty] = useState(false);
+  const [personaSaved, setPersonaSaved] = useState(true);
+  const [editingOp, setEditingOp] = useState(null);
+  const [showAddOp, setShowAddOp] = useState(false);
+  const personaFileInputRef = useRef(null);
+  const [clConnected, setClConnected] = useState(() => !!localStorage.getItem('yourai_courtlistener_kb'));
+  const [clLoading, setClLoading] = useState(false);
+  const [clStats, setClStats] = useState(() => {
+    try {
+      const s = localStorage.getItem('yourai_cl_stats');
+      return s ? JSON.parse(s) : null;
+    } catch { return null; }
+  });
+
+  const TONE_OPTIONS = [
+    { id: 'formal', label: 'Formal' },
+    { id: 'conversational', label: 'Conversational' },
+    { id: 'neutral', label: 'Neutral' },
+    { id: 'concise', label: 'Concise' },
+  ];
+
+  const FORMAT_RULES = [
+    { id: 'cite_source', label: 'Always cite the source document and page number' },
+    { id: 'bullet_lists', label: 'Use bullet points for lists of 3 or more items' },
+    { id: 'risk_summary', label: 'Always include a risk level summary (High/Medium/Low)' },
+    { id: 'next_action', label: 'End every response with a suggested next action' },
+  ];
+
+  // TODO: confirm confidence threshold with AI team
+  // OQ-pending — do not ship without confirmation
+  const INTENT_CONFIDENCE_THRESHOLD = 0.75;
+
+  // ─── Per-Persona Response Format ───
+  // Maps to onboarding Step 1 personas (user-personas.md / DEC-060–063)
+  const USER_PERSONAS = [
+    {
+      id: 'partner_senior',
+      label: 'Partner / Senior Attorney',
+      icon: Briefcase,
+      description: 'Decision-makers who need executive summaries, risk assessments, and strategic recommendations.',
+      defaults: { tone: 'formal', formatRules: ['cite_source', 'risk_summary', 'next_action'], promptModifier: 'Prioritise strategic implications, risk-reward analysis, and executive-level summaries. Assume deep legal expertise — skip foundational explanations.' },
+    },
+    {
+      id: 'associate_junior',
+      label: 'Associate / Junior Attorney',
+      icon: Scale,
+      description: 'Practitioners who need detailed analysis, case citations, and step-by-step reasoning.',
+      defaults: { tone: 'formal', formatRules: ['cite_source', 'bullet_lists', 'next_action'], promptModifier: 'Provide detailed legal analysis with full case citations and statutory references. Include step-by-step reasoning and procedural guidance.' },
+    },
+    {
+      id: 'paralegal_assistant',
+      label: 'Paralegal / Legal Assistant',
+      icon: UserCheck,
+      description: 'Support staff who need clear instructions, checklists, and document-level details.',
+      defaults: { tone: 'conversational', formatRules: ['cite_source', 'bullet_lists'], promptModifier: 'Use clear, accessible language. Provide checklists, document references, and actionable steps. Explain legal terms when first used.' },
+    },
+    {
+      id: 'legal_ops_it',
+      label: 'Legal Intents / IT',
+      icon: Monitor,
+      description: 'Tech-focused users who need system-level answers, data references, and configuration guidance.',
+      defaults: { tone: 'concise', formatRules: ['bullet_lists', 'next_action'], promptModifier: 'Focus on system configuration, data management, and operational efficiency. Use technical terminology where appropriate. Provide structured outputs.' },
+    },
+  ];
+
+  const DEFAULT_PERSONA_FORMATS = USER_PERSONAS.reduce((acc, p) => {
+    acc[p.id] = { tone: p.defaults.tone, formatRules: [...p.defaults.formatRules], promptModifier: p.defaults.promptModifier, enabled: true };
+    return acc;
+  }, {});
+
+  const [personaFormats, setPersonaFormats] = useState(DEFAULT_PERSONA_FORMATS);
+  const [savedPersonaFormats, setSavedPersonaFormats] = useState(DEFAULT_PERSONA_FORMATS);
+  const [expandedPersona, setExpandedPersona] = useState(null);
+
+  const updatePersonaFormat = (personaId, key, value) => {
+    setPersonaFormats(prev => ({ ...prev, [personaId]: { ...prev[personaId], [key]: value } }));
+    setPersonaDirty(true);
+  };
+
+  const togglePersonaFormatRule = (personaId, ruleId) => {
+    setPersonaFormats(prev => {
+      const current = prev[personaId].formatRules;
+      const updated = current.includes(ruleId) ? current.filter(r => r !== ruleId) : [...current, ruleId];
+      return { ...prev, [personaId]: { ...prev[personaId], formatRules: updated } };
+    });
+    setPersonaDirty(true);
+  };
+
+  const resetPersonaFormat = (personaId) => {
+    const persona = USER_PERSONAS.find(p => p.id === personaId);
+    if (persona) {
+      setPersonaFormats(prev => ({
+        ...prev,
+        [personaId]: { tone: persona.defaults.tone, formatRules: [...persona.defaults.formatRules], promptModifier: persona.defaults.promptModifier, enabled: true },
+      }));
+      setPersonaDirty(true);
+    }
+  };
+
+  const updatePersona = (key, value) => {
+    setPersona(prev => ({ ...prev, [key]: value }));
+    setPersonaDirty(true);
+  };
+
+  const updateIntent = (opId, key, value) => {
+    setPersona(prev => ({
+      ...prev,
+      operations: prev.operations.map(op => op.id === opId ? { ...op, [key]: value } : op),
+    }));
+    setPersonaDirty(true);
+  };
+
+  const toggleOpFormatRule = (opId, ruleId) => {
+    setPersona(prev => ({
+      ...prev,
+      operations: prev.operations.map(op => {
+        if (op.id !== opId) return op;
+        const rules = op.formatRules.includes(ruleId)
+          ? op.formatRules.filter(r => r !== ruleId)
+          : [...op.formatRules, ruleId];
+        return { ...op, formatRules: rules };
+      }),
+    }));
+    setPersonaDirty(true);
+  };
+
+  const toggleOpEnabled = (opId) => {
+    updateIntent(opId, 'enabled', !persona.operations.find(o => o.id === opId)?.enabled);
+  };
+
+  const deleteIntent = (opId) => {
+    setPersona(prev => ({
+      ...prev,
+      operations: prev.operations.filter(op => op.id !== opId),
+    }));
+    setPersonaDirty(true);
+    if (editingOp?.id === opId) setEditingOp(null);
+  };
+
+  const addIntent = (data) => {
+    const newOp = {
+      id: Date.now(),
+      label: data.label || 'New Intent',
+      description: data.description || '',
+      systemPrompt: data.systemPrompt || '',
+      tone: data.tone || 'formal',
+      formatRules: data.formatRules || ['cite_source'],
+      enabled: true,
+    };
+    setPersona(prev => ({ ...prev, operations: [...prev.operations, newOp] }));
+    setPersonaDirty(true);
+  };
+
+  const handleSavePersona = () => {
+    const updated = {
+      ...persona,
+      version: savedPersona.version + 1,
+      updatedAt: new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' }),
+      updatedBy: 'Arjun Sharma',
+    };
+    setPersona(updated);
+    setSavedPersona(updated);
+    setSavedPersonaFormats(JSON.parse(JSON.stringify(personaFormats)));
+    setPersonaDirty(false);
+    setPersonaSaved(true);
+    // Persist to localStorage so ChatView can read it
+    try {
+      localStorage.setItem('yourai_bot_persona', JSON.stringify(updated));
+    } catch (_) {
+      showToast('Failed to save — localStorage quota exceeded. Remove some documents and try again.', 'error');
+      return;
+    }
+    showToast('Bot persona saved — changes apply immediately to new chats', 'success');
+  };
+
+  const handleDiscardPersona = () => {
+    setPersona(savedPersona);
+    setPersonaFormats(JSON.parse(JSON.stringify(savedPersonaFormats)));
+    setPersonaDirty(false);
+    setEditingOp(null);
+    setExpandedPersona(null);
+    showToast('Changes discarded', 'info');
+  };
+
+  const handlePersonaFileUpload = async (files) => {
+    const newDocs = [];
+    for (const f of Array.from(files)) {
+      const doc = {
+        id: Date.now() + newDocs.length,
+        name: f.name,
+        type: f.name.split('.').pop().toUpperCase(),
+        size: `${(f.size / (1024 * 1024)).toFixed(1)} MB`,
+        url: '#',
+        content: '',
+      };
+      // Extract text content for knowledge base context
+      try {
+        if (f.type === 'text/plain' || f.name.endsWith('.txt') || f.name.endsWith('.md') || f.name.endsWith('.csv')) {
+          doc.content = await f.text();
+        } else {
+          // For PDF/DOCX, store raw text extraction attempt
+          doc.content = await f.text().catch(() => '');
+        }
+        // Truncate to 50k chars to avoid localStorage quota
+        if (doc.content.length > 50000) doc.content = doc.content.slice(0, 50000);
+      } catch (_) { /* ignore extraction errors */ }
+      newDocs.push(doc);
+    }
+    updatePersona('globalDocs', [...persona.globalDocs, ...newDocs]);
+  };
+
+  const handleConnectCourtListener = async () => {
+    setClLoading(true);
+    try {
+      const { fetchCourtListenerKB } = await import('../../lib/courtlistener');
+      const { courts, opinions, contextText } = await fetchCourtListenerKB();
+      localStorage.setItem('yourai_courtlistener_kb', contextText);
+      const stats = { courts: courts.length, opinions: opinions.length, lastSync: new Date().toLocaleString() };
+      localStorage.setItem('yourai_cl_stats', JSON.stringify(stats));
+      setClStats(stats);
+      setClConnected(true);
+      showToast(`CourtListener connected — ${courts.length} courts, ${opinions.length} opinions loaded`, 'success');
+    } catch (err) {
+      showToast('Failed to connect to CourtListener: ' + (err.message || 'Network error'), 'error');
+    }
+    setClLoading(false);
+  };
+
+  const handleDisconnectCourtListener = () => {
+    localStorage.removeItem('yourai_courtlistener_kb');
+    localStorage.removeItem('yourai_cl_stats');
+    setClConnected(false);
+    setClStats(null);
+    showToast('CourtListener disconnected', 'info');
+  };
+
+  const handleRemovePersonaDoc = (id) => {
+    updatePersona('globalDocs', persona.globalDocs.filter(d => d.id !== id));
+  };
 
   const filtered = useMemo(() => {
     return docs.filter((d) => {
@@ -128,6 +528,8 @@ export default function GlobalKnowledgeBase() {
     showToast('Link added — indexing will begin shortly');
   };
 
+  // ─── Alex tab handlers — COMMENTED OUT (not in scope, kept for future use) ───
+  /*
   const openEditTemplate = (t) => {
     setEditingTemplate(t);
     setEditTemplateText(t.template);
@@ -185,6 +587,7 @@ export default function GlobalKnowledgeBase() {
     setNewIntentDesc('');
     showToast('New intent template created');
   };
+  */
 
   const handleRemovePackFromState = (stateId, packName) => {
     setStatePacks((prev) =>
@@ -291,9 +694,10 @@ export default function GlobalKnowledgeBase() {
     return f ? f.label : id;
   };
 
-  const getIconComponent = (iconName) => {
-    return iconMap[iconName] || Sparkles;
-  };
+  // ─── getIconComponent — COMMENTED OUT (only used by Alex tab, kept for future use) ───
+  // const getIconComponent = (iconName) => {
+  //   return iconMap[iconName] || Sparkles;
+  // };
 
   return (
     <div className="space-y-6">
@@ -309,7 +713,13 @@ export default function GlobalKnowledgeBase() {
       {/* Tabs */}
       <div style={{ borderBottom: '1px solid var(--border)' }} className="flex gap-0">
         <button onClick={() => setActiveTab('legal')} style={tabStyle('legal')}>Legal Content</button>
-        <button onClick={() => setActiveTab('alex')} style={tabStyle('alex')}>Alex Response Templates</button>
+        {/* Alex Response Templates tab — COMMENTED OUT (not in scope, kept for future use) */}
+        {/* <button onClick={() => setActiveTab('alex')} style={tabStyle('alex')}>Alex Response Templates</button> */}
+        <button onClick={() => setActiveTab('persona')} style={tabStyle('persona')}>
+          <span className="flex items-center gap-1.5">
+            <Bot size={14} /> Bot Persona
+          </span>
+        </button>
       </div>
 
       {/* ============================== TAB 1: Legal Content ============================== */}
@@ -865,8 +1275,8 @@ export default function GlobalKnowledgeBase() {
         </>
       )}
 
-      {/* ============================== TAB 2: Alex Response Templates ============================== */}
-      {activeTab === 'alex' && (
+      {/* ============================== TAB 2: Alex Response Templates — DISABLED (not in scope, kept for future use) ============================== */}
+      {false && activeTab === 'alex' && (
         <>
           {/* Sub-section A: Intent Routing Flow Diagram */}
           <div>
@@ -1356,6 +1766,836 @@ export default function GlobalKnowledgeBase() {
               </div>
             </div>
           </Modal>
+        </>
+      )}
+      {/* ============================== END OF DISABLED TAB 2 ============================== */}
+
+      {/* ============================== TAB 3: Bot Persona ============================== */}
+      {/* CONFIDENCE: 7/10 — Ryan confirmed concept, not written. Built as wireframe for visual review. */}
+      {/* ⚠ OUT OF SCOPE of 18 source-of-truth documents. Do not treat as confirmed until Ryan signs off after demo. */}
+      {activeTab === 'persona' && (
+        <>
+          {/* Top info banner — explains what this entire tab does */}
+          <div className="flex items-start gap-3 p-4 rounded-lg" style={{ backgroundColor: '#EFF6FF', borderLeft: '4px solid #3B82F6' }}>
+            <Info size={18} style={{ color: '#1D4ED8', flexShrink: 0, marginTop: 2 }} />
+            <div>
+              <p className="text-sm font-medium mb-1" style={{ color: '#1E40AF' }}>What is Bot Persona?</p>
+              <p className="text-xs" style={{ color: '#1E40AF', lineHeight: 1.7 }}>
+                Bot Persona controls how the AI assistant "Alex" behaves across the entire platform. You can configure <strong>multiple intent modes</strong> — each with its own system prompt, tone, and format rules — so the bot responds differently for contract reviews vs. legal research vs. general chat. You also set the <strong>fallback message</strong> shown when no answer is found, and manage <strong>global knowledge documents</strong> that serve as the platform-wide backup.
+              </p>
+            </div>
+          </div>
+
+          {/* Status bar */}
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div className="flex items-center gap-3">
+              <h2 style={{ fontFamily: "'DM Serif Display', serif", color: 'var(--text-primary)', fontSize: '16px' }}>
+                Bot Persona Configuration
+              </h2>
+              <InfoButton title="Bot Persona — How It Works">
+                <InfoSection title="What does this control?">
+                  <InfoText>This screen configures Alex, the AI assistant that all tenants interact with. Every setting here is global — no tenant can override it. Only Super Admins can change these values.</InfoText>
+                </InfoSection>
+                <InfoSection title="Intents = Multiple System Prompts">
+                  <InfoText>Instead of one static system prompt, you configure multiple "intents" — each tailored to a specific task. The AI's intent classifier selects the right intent based on what the user is doing (e.g., uploading a contract triggers "Contract Review" mode).</InfoText>
+                  <InfoExample label="Example">User uploads a contract → AI automatically uses the "Contract Review" system prompt, which emphasises clause analysis and risk scoring — not the generic chat prompt.</InfoExample>
+                </InfoSection>
+                <InfoSection title="What is the fallback chain?">
+                  <InfoList items={[
+                    "1. User sends a message → intent classifier picks the intent",
+                    "2. AI searches the user's attached document or knowledge pack first",
+                    "3. If no answer found → searches Global Knowledge Documents (uploaded here)",
+                    "4. If still no answer → shows the Fallback Message you set below",
+                  ]} />
+                </InfoSection>
+                <InfoSection title="When do changes take effect?">
+                  <InfoText>Changes apply from the <strong>next session only</strong>. Any conversation that is already active will finish with the previous persona. This prevents mid-conversation behaviour changes.</InfoText>
+                </InfoSection>
+              </InfoButton>
+              {personaSaved && (
+                <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium" style={{ backgroundColor: '#DCFCE7', color: '#166534' }}>
+                  <CheckCircle size={12} /> Active
+                </span>
+              )}
+              {personaDirty && (
+                <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium" style={{ backgroundColor: '#FEF3C7', color: '#92400E' }}>
+                  Unsaved changes
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-3">
+              <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>v{savedPersona.version} · Last saved {savedPersona.updatedAt} by {savedPersona.updatedBy}</span>
+              <button
+                onClick={handleDiscardPersona}
+                disabled={!personaDirty}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium"
+                style={{
+                  border: '1px solid var(--border)',
+                  backgroundColor: 'white',
+                  color: personaDirty ? 'var(--slate)' : 'var(--text-muted)',
+                  cursor: personaDirty ? 'pointer' : 'not-allowed',
+                  opacity: personaDirty ? 1 : 0.5,
+                }}
+              >
+                <RotateCcw size={14} /> Discard
+              </button>
+              <button
+                onClick={handleSavePersona}
+                disabled={!personaDirty}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium text-white"
+                style={{
+                  backgroundColor: personaDirty ? 'var(--navy)' : '#94A3B8',
+                  cursor: personaDirty ? 'pointer' : 'not-allowed',
+                  border: 'none',
+                }}
+              >
+                <Save size={14} /> Save Persona
+              </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Left column — Intents list + editor */}
+            <div className="lg:col-span-2 space-y-6">
+
+              {/* Intents — Multi-prompt cards */}
+              <div className="p-5 rounded-xl" style={{ backgroundColor: 'white', border: '1px solid var(--border)' }}>
+                <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center gap-2">
+                    <label className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Intents</label>
+                    <InfoButton title="Intents — Multiple AI Modes">
+                      <InfoSection title="What are Intents?">
+                        <InfoText>Each intent is a separate AI personality. When a user sends a message, the intent classifier determines which intent to activate. Each intent has its own system prompt, tone, and formatting rules.</InfoText>
+                      </InfoSection>
+                      <InfoSection title="How does it work?">
+                        <InfoList items={[
+                          "Each intent has an enable/disable toggle",
+                          "Only enabled intents are available to the AI",
+                          "The intent classifier picks the best match based on context",
+                          "If no specific intent matches, 'General Chat' is used as the default",
+                          "You can add custom intents for specialised workflows",
+                        ]} />
+                      </InfoSection>
+                      <InfoSection title="Examples">
+                        <InfoExample label="Contract Review">User uploads a contract → AI activates Contract Review mode → emphasises clause analysis, risk scoring, and playbook comparison.</InfoExample>
+                        <InfoExample label="Legal Research">User asks "What's the statute of limitations for fraud in California?" → AI activates Legal Research mode → searches KB, presents structured memo with citations.</InfoExample>
+                      </InfoSection>
+                    </InfoButton>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{persona.operations.filter(o => o.enabled).length} of {persona.operations.length} enabled</span>
+                    <button
+                      onClick={() => setShowAddOp(true)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium"
+                      style={{ backgroundColor: 'var(--navy)', color: 'white', border: 'none', cursor: 'pointer' }}
+                    >
+                      <Plus size={12} /> Add Intent
+                    </button>
+                  </div>
+                </div>
+                <p className="text-xs mb-4" style={{ color: 'var(--text-muted)' }}>Each intent defines a separate AI mode with its own system prompt, tone, and formatting. The intent classifier picks the right one automatically.</p>
+
+                {/* Intent cards */}
+                <div className="space-y-3">
+                  {persona.operations.map(op => {
+                    const isEditing = editingOp?.id === op.id;
+                    return (
+                      <div key={op.id} className="rounded-xl overflow-hidden" style={{ border: `1px solid ${isEditing ? 'var(--navy)' : 'var(--border)'}`, opacity: op.enabled ? 1 : 0.55, transition: 'all 0.15s' }}>
+                        {/* Card header */}
+                        <div
+                          className="flex items-center gap-3 px-4 py-3 cursor-pointer"
+                          style={{ backgroundColor: isEditing ? 'var(--ice-warm)' : '#FAFBFC' }}
+                          onClick={() => setEditingOp(isEditing ? null : op)}
+                        >
+                          <div className="flex items-center justify-center rounded-lg" style={{ width: 32, height: 32, backgroundColor: op.enabled ? 'var(--navy)' : 'var(--border)', flexShrink: 0 }}>
+                            <Bot size={16} style={{ color: op.enabled ? 'white' : 'var(--text-muted)' }} />
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{op.label}</span>
+                              <span className="px-1.5 py-0.5 rounded text-xs" style={{ backgroundColor: op.enabled ? '#DCFCE7' : '#F1F5F9', color: op.enabled ? '#166534' : 'var(--text-muted)', fontSize: 10, fontWeight: 600 }}>
+                                {op.enabled ? 'ON' : 'OFF'}
+                              </span>
+                              <span className="px-1.5 py-0.5 rounded text-xs" style={{ backgroundColor: 'rgba(10,36,99,0.06)', color: 'var(--navy)', fontSize: 10 }}>
+                                {TONE_OPTIONS.find(t => t.id === op.tone)?.label || op.tone}
+                              </span>
+                            </div>
+                            <p className="text-xs truncate" style={{ color: 'var(--text-muted)', marginTop: 2 }}>{op.description}</p>
+                          </div>
+                          <div className="flex items-center gap-2" style={{ flexShrink: 0 }}>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); toggleOpEnabled(op.id); }}
+                              className="px-2 py-1 rounded text-xs font-medium"
+                              style={{ border: '1px solid var(--border)', background: 'white', cursor: 'pointer', color: 'var(--text-muted)' }}
+                            >
+                              {op.enabled ? 'Disable' : 'Enable'}
+                            </button>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); deleteIntent(op.id); }}
+                              style={{ padding: 4, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}
+                              title="Delete intent"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                            <ChevronDown size={14} style={{ color: 'var(--text-muted)', transform: isEditing ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }} />
+                          </div>
+                        </div>
+
+                        {/* Expanded editor */}
+                        {isEditing && (
+                          <div className="px-4 pb-4 pt-2 space-y-4" style={{ backgroundColor: 'white' }}>
+                            {/* Intent name + description */}
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <div className="flex items-center gap-1.5 mb-1.5">
+                                  <label className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>Intent Name</label>
+                                  <InfoButton title="Intent Name">
+                                    <InfoText>A short label for this AI mode. This is shown internally to Super Admins only — users never see this name. Keep it descriptive so you can identify it at a glance.</InfoText>
+                                  </InfoButton>
+                                </div>
+                                <input
+                                  value={op.label}
+                                  onChange={(e) => updateIntent(op.id, 'label', e.target.value)}
+                                  style={{ width: '100%', height: 36, border: '1px solid var(--border)', borderRadius: 8, padding: '0 10px', fontSize: 13, outline: 'none', boxSizing: 'border-box', fontFamily: "'DM Sans', sans-serif" }}
+                                  onFocus={(e) => (e.target.style.borderColor = 'var(--navy)')}
+                                  onBlur={(e) => (e.target.style.borderColor = 'var(--border)')}
+                                />
+                              </div>
+                              <div>
+                                <div className="flex items-center gap-1.5 mb-1.5">
+                                  <label className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>When this activates</label>
+                                  <InfoButton title="Activation Trigger">
+                                    <InfoText>Describe when this intent should be used. The intent classifier reads this description to decide whether to activate this mode. Be specific — vague descriptions lead to misclassification.</InfoText>
+                                    <InfoExample label="Good">Activated when a user uploads a contract for analysis.</InfoExample>
+                                    <InfoExample label="Bad">Used for documents.</InfoExample>
+                                  </InfoButton>
+                                </div>
+                                <input
+                                  value={op.description}
+                                  onChange={(e) => updateIntent(op.id, 'description', e.target.value)}
+                                  style={{ width: '100%', height: 36, border: '1px solid var(--border)', borderRadius: 8, padding: '0 10px', fontSize: 13, outline: 'none', boxSizing: 'border-box', fontFamily: "'DM Sans', sans-serif" }}
+                                  onFocus={(e) => (e.target.style.borderColor = 'var(--navy)')}
+                                  onBlur={(e) => (e.target.style.borderColor = 'var(--border)')}
+                                />
+                              </div>
+                            </div>
+
+                            {/* System prompt */}
+                            <div>
+                              <div className="flex items-center gap-1.5 mb-1.5">
+                                <label className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>System Prompt</label>
+                                <InfoButton title="System Prompt">
+                                  <InfoSection title="What is a System Prompt?">
+                                    <InfoText>The system prompt is the hidden instruction sent to the AI at the very start of every conversation in this mode. It defines the AI's identity, capabilities, and rules. The user never sees this text, but it shapes every response the AI generates.</InfoText>
+                                  </InfoSection>
+                                  <InfoSection title="Tips for writing a good prompt">
+                                    <InfoList items={[
+                                      "Start with 'You are Alex, a [role]...' to establish identity",
+                                      "Include specific instructions about what to always do (cite sources, include risk levels)",
+                                      "Include what to avoid (don't give legal advice, don't speculate)",
+                                      "Keep it under 500 words — longer prompts slow response time",
+                                      "Test changes in a staging conversation before saving to production",
+                                    ]} />
+                                  </InfoSection>
+                                  <InfoExample label="Example prompt">You are Alex, a contract analysis specialist. You identify risks, flag non-standard clauses, and compare terms against the firm's approved playbook. Always cite the clause number and page.</InfoExample>
+                                </InfoButton>
+                              </div>
+                              <textarea
+                                value={op.systemPrompt}
+                                onChange={(e) => updateIntent(op.id, 'systemPrompt', e.target.value)}
+                                rows={4}
+                                style={{ width: '100%', minHeight: 80, border: '1px solid var(--border)', borderRadius: 8, padding: '10px 12px', fontSize: 13, fontFamily: "'DM Sans', sans-serif", color: 'var(--text-primary)', outline: 'none', resize: 'vertical', lineHeight: 1.6, boxSizing: 'border-box' }}
+                                onFocus={(e) => (e.target.style.borderColor = 'var(--navy)')}
+                                onBlur={(e) => (e.target.style.borderColor = 'var(--border)')}
+                              />
+                            </div>
+
+                            {/* Tone */}
+                            <div>
+                              <div className="flex items-center gap-1.5 mb-1.5">
+                                <label className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>Tone</label>
+                                <InfoButton title="Tone Setting">
+                                  <InfoText>Controls the writing style for this intent. Each mode can have a different tone. For example, "Formal" for contract reviews, "Concise" for compliance checks, "Conversational" for general chat.</InfoText>
+                                  <InfoList items={[
+                                    "Formal — Professional language, full sentences, structured paragraphs",
+                                    "Conversational — Friendly, approachable, uses simpler language",
+                                    "Neutral — Balanced, neither overly formal nor casual",
+                                    "Concise — Shortest possible answers, bullet points preferred",
+                                  ]} />
+                                </InfoButton>
+                              </div>
+                              <div className="flex flex-wrap gap-2">
+                                {TONE_OPTIONS.map(t => (
+                                  <button key={t.id} onClick={() => updateIntent(op.id, 'tone', t.id)} className="px-3 py-1.5 rounded-full text-xs font-medium" style={{ border: op.tone === t.id ? '2px solid var(--navy)' : '1px solid var(--border)', backgroundColor: op.tone === t.id ? 'var(--ice-warm)' : 'white', color: op.tone === t.id ? 'var(--navy)' : 'var(--text-secondary)', cursor: 'pointer' }}>
+                                    {t.label}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+
+                            {/* Format rules */}
+                            <div>
+                              <div className="flex items-center gap-1.5 mb-1.5">
+                                <label className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>Response Format Rules</label>
+                                <InfoButton title="Format Rules">
+                                  <InfoText>These rules are appended to the system prompt and instruct the AI on how to structure every response in this mode. Different intents can have different rules — e.g., Contract Review always includes a risk summary, but General Chat does not.</InfoText>
+                                  <InfoList items={[
+                                    "Cite source — AI always mentions which document and page the answer came from",
+                                    "Bullet points — Lists of 3+ items rendered as bullets for readability",
+                                    "Risk summary — Every response ends with a High/Medium/Low risk assessment",
+                                    "Next action — Every response ends with a suggested next step for the user",
+                                  ]} />
+                                </InfoButton>
+                              </div>
+                              <div className="flex flex-wrap gap-2">
+                                {FORMAT_RULES.map(rule => (
+                                  <label key={rule.id} className="flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer text-xs" style={{ border: `1px solid ${op.formatRules.includes(rule.id) ? 'var(--navy)' : 'var(--border)'}`, backgroundColor: op.formatRules.includes(rule.id) ? 'var(--ice-warm)' : 'white' }}>
+                                    <input type="checkbox" checked={op.formatRules.includes(rule.id)} onChange={() => toggleOpFormatRule(op.id, rule.id)} style={{ accentColor: 'var(--navy)' }} />
+                                    <span style={{ color: 'var(--text-primary)' }}>{rule.label}</span>
+                                  </label>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Fallback Message */}
+              <div className="p-5 rounded-xl" style={{ backgroundColor: 'white', border: '1px solid var(--border)' }}>
+                <div className="flex items-center gap-2 mb-1">
+                  <label className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Fallback Message</label>
+                  <InfoButton title="Fallback Message">
+                    <InfoSection title="When is this shown?">
+                      <InfoText>This message is displayed to the user when the AI cannot find a relevant answer in either (1) the user's attached document / knowledge pack, or (2) the Global Knowledge Documents uploaded below. It is the last resort in the fallback chain.</InfoText>
+                    </InfoSection>
+                    <InfoSection title="Fallback chain">
+                      <InfoList items={[
+                        "1. Search user's attached document / knowledge pack",
+                        "2. If no answer → search Global Knowledge Documents",
+                        "3. If still no answer → show this fallback message",
+                      ]} />
+                    </InfoSection>
+                    <InfoExample label="Default message">I couldn't find a clear answer in your documents or the knowledge base. Could you clarify what you're looking for, or upload a relevant document?</InfoExample>
+                  </InfoButton>
+                </div>
+                <p className="text-xs mb-3" style={{ color: 'var(--text-muted)' }}>Shown when the bot cannot find an answer in the user's document or the global knowledge base. This is the last step of the fallback chain.</p>
+                <input
+                  type="text"
+                  value={persona.fallbackMessage}
+                  onChange={(e) => updatePersona('fallbackMessage', e.target.value)}
+                  style={{
+                    width: '100%', height: 40, border: '1px solid var(--border)', borderRadius: 8,
+                    padding: '0 12px', fontSize: 13, fontFamily: "'DM Sans', sans-serif",
+                    color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box',
+                  }}
+                  onFocus={(e) => (e.target.style.borderColor = 'var(--navy)')}
+                  onBlur={(e) => (e.target.style.borderColor = 'var(--border)')}
+                />
+              </div>
+              {/* Per-Persona Response Format Configuration */}
+              <div className="p-5 rounded-xl" style={{ backgroundColor: 'white', border: '1px solid var(--border)' }}>
+                <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center gap-2">
+                    <Users size={16} style={{ color: 'var(--navy)' }} />
+                    <label className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Per-Persona Response Format</label>
+                    <InfoButton title="Per-Persona Format — Tailored Responses by Role">
+                      <InfoSection title="What is this?">
+                        <InfoText>Different users need different kinds of answers. A <strong>Partner</strong> wants executive summaries and risk assessments. A <strong>Paralegal</strong> wants checklists and clear instructions. This section lets you configure how the AI tailors its response format for each user role selected during onboarding.</InfoText>
+                      </InfoSection>
+                      <InfoSection title="How does it work?">
+                        <InfoList items={[
+                          "When a user completes onboarding, they select their role (Step 1)",
+                          "That role is stored in their profile and sent with every message",
+                          "The AI appends the persona-specific modifiers to the system prompt",
+                          "Tone and format rules for the persona override the intent defaults",
+                          "If a persona is disabled, the AI uses the intent defaults instead",
+                        ]} />
+                      </InfoSection>
+                      <InfoSection title="Priority order">
+                        <InfoText>Intent system prompt → Persona prompt modifier → Persona tone → Persona format rules. The persona settings layer ON TOP of the intent — they don't replace it.</InfoText>
+                      </InfoSection>
+                      <InfoExample label="Example">User selects "Paralegal / Legal Assistant" during onboarding → AI uses conversational tone, includes checklists, and explains legal terms — even in Contract Review mode.</InfoExample>
+                    </InfoButton>
+                  </div>
+                  <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{Object.values(personaFormats).filter(p => p.enabled).length} of {USER_PERSONAS.length} active</span>
+                </div>
+                <p className="text-xs mb-4" style={{ color: 'var(--text-muted)' }}>Configure how Alex adapts its response style for each user role. These settings layer on top of the intent-level prompt — they don't replace it.</p>
+
+                <div className="space-y-3">
+                  {USER_PERSONAS.map(up => {
+                    const fmt = personaFormats[up.id];
+                    const isExpanded = expandedPersona === up.id;
+                    const Icon = up.icon;
+                    return (
+                      <div key={up.id} className="rounded-xl overflow-hidden" style={{ border: `1px solid ${isExpanded ? 'var(--navy)' : 'var(--border)'}`, opacity: fmt.enabled ? 1 : 0.55, transition: 'all 0.15s' }}>
+                        {/* Header */}
+                        <div
+                          className="flex items-center gap-3 px-4 py-3 cursor-pointer"
+                          style={{ backgroundColor: isExpanded ? 'var(--ice-warm)' : '#FAFBFC' }}
+                          onClick={() => setExpandedPersona(isExpanded ? null : up.id)}
+                        >
+                          <div className="flex items-center justify-center rounded-lg" style={{ width: 32, height: 32, backgroundColor: fmt.enabled ? 'var(--navy)' : 'var(--border)', flexShrink: 0 }}>
+                            <Icon size={16} style={{ color: fmt.enabled ? 'white' : 'var(--text-muted)' }} />
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{up.label}</span>
+                              <span className="px-1.5 py-0.5 rounded text-xs" style={{ backgroundColor: fmt.enabled ? '#DCFCE7' : '#F1F5F9', color: fmt.enabled ? '#166534' : 'var(--text-muted)', fontSize: 10, fontWeight: 600 }}>
+                                {fmt.enabled ? 'ACTIVE' : 'OFF'}
+                              </span>
+                              <span className="px-1.5 py-0.5 rounded text-xs" style={{ backgroundColor: 'rgba(10,36,99,0.06)', color: 'var(--navy)', fontSize: 10 }}>
+                                {TONE_OPTIONS.find(t => t.id === fmt.tone)?.label || fmt.tone}
+                              </span>
+                            </div>
+                            <p className="text-xs truncate" style={{ color: 'var(--text-muted)', marginTop: 2 }}>{up.description}</p>
+                          </div>
+                          <div className="flex items-center gap-2" style={{ flexShrink: 0 }}>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); updatePersonaFormat(up.id, 'enabled', !fmt.enabled); }}
+                              className="px-2 py-1 rounded text-xs font-medium"
+                              style={{ border: '1px solid var(--border)', background: 'white', cursor: 'pointer', color: 'var(--text-muted)' }}
+                            >
+                              {fmt.enabled ? 'Disable' : 'Enable'}
+                            </button>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); resetPersonaFormat(up.id); }}
+                              style={{ padding: 4, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}
+                              title="Reset to defaults"
+                            >
+                              <RotateCcw size={13} />
+                            </button>
+                            <ChevronDown size={14} style={{ color: 'var(--text-muted)', transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }} />
+                          </div>
+                        </div>
+
+                        {/* Expanded editor */}
+                        {isExpanded && (
+                          <div className="px-4 pb-4 pt-2 space-y-4" style={{ backgroundColor: 'white' }}>
+                            {/* Prompt modifier */}
+                            <div>
+                              <div className="flex items-center gap-1.5 mb-1.5">
+                                <label className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>Prompt Modifier</label>
+                                <InfoButton title="Prompt Modifier">
+                                  <InfoText>This text is appended to the intent's system prompt when the user has this persona. It customises the AI's behaviour for their specific role without changing the core intent. For example, a Paralegal modifier might say "explain legal terms when first used" — that gets added to Contract Review, Legal Research, etc.</InfoText>
+                                  <InfoExample label="How it's applied">Final prompt = Intent system prompt + "\n\nPersona: " + this modifier</InfoExample>
+                                </InfoButton>
+                              </div>
+                              <textarea
+                                value={fmt.promptModifier}
+                                onChange={(e) => updatePersonaFormat(up.id, 'promptModifier', e.target.value)}
+                                rows={3}
+                                style={{ width: '100%', minHeight: 60, border: '1px solid var(--border)', borderRadius: 8, padding: '10px 12px', fontSize: 13, fontFamily: "'DM Sans', sans-serif", color: 'var(--text-primary)', outline: 'none', resize: 'vertical', lineHeight: 1.6, boxSizing: 'border-box' }}
+                                onFocus={(e) => (e.target.style.borderColor = 'var(--navy)')}
+                                onBlur={(e) => (e.target.style.borderColor = 'var(--border)')}
+                              />
+                            </div>
+
+                            {/* Tone override */}
+                            <div>
+                              <div className="flex items-center gap-1.5 mb-1.5">
+                                <label className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>Tone Override</label>
+                                <InfoButton title="Tone Override">
+                                  <InfoText>Overrides the tone from the intent. A Partner gets "Formal" responses even if the intent default is "Conversational". If disabled, the intent's tone is used.</InfoText>
+                                </InfoButton>
+                              </div>
+                              <div className="flex flex-wrap gap-2">
+                                {TONE_OPTIONS.map(t => (
+                                  <button key={t.id} onClick={() => updatePersonaFormat(up.id, 'tone', t.id)} className="px-3 py-1.5 rounded-full text-xs font-medium" style={{ border: fmt.tone === t.id ? '2px solid var(--navy)' : '1px solid var(--border)', backgroundColor: fmt.tone === t.id ? 'var(--ice-warm)' : 'white', color: fmt.tone === t.id ? 'var(--navy)' : 'var(--text-secondary)', cursor: 'pointer' }}>
+                                    {t.label}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+
+                            {/* Format rules override */}
+                            <div>
+                              <div className="flex items-center gap-1.5 mb-1.5">
+                                <label className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>Format Rules</label>
+                                <InfoButton title="Persona Format Rules">
+                                  <InfoText>These format rules are specific to this persona. They merge with (and can override) the intent-level rules. For example, you might want Partners to always see risk summaries, even in intents that don't normally include them.</InfoText>
+                                </InfoButton>
+                              </div>
+                              <div className="flex flex-wrap gap-2">
+                                {FORMAT_RULES.map(rule => (
+                                  <label key={rule.id} className="flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer text-xs" style={{ border: `1px solid ${fmt.formatRules.includes(rule.id) ? 'var(--navy)' : 'var(--border)'}`, backgroundColor: fmt.formatRules.includes(rule.id) ? 'var(--ice-warm)' : 'white' }}>
+                                    <input type="checkbox" checked={fmt.formatRules.includes(rule.id)} onChange={() => togglePersonaFormatRule(up.id, rule.id)} style={{ accentColor: 'var(--navy)' }} />
+                                    <span style={{ color: 'var(--text-primary)' }}>{rule.label}</span>
+                                  </label>
+                                ))}
+                              </div>
+                            </div>
+
+                            {/* Preview of effective prompt */}
+                            <div className="p-3 rounded-lg" style={{ backgroundColor: '#F8FAFC', border: '1px solid var(--border)' }}>
+                              <div className="flex items-center gap-1.5 mb-2">
+                                <Eye size={12} style={{ color: 'var(--text-muted)' }} />
+                                <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>Preview: How this persona affects responses</span>
+                              </div>
+                              <div className="space-y-1.5">
+                                <div className="flex items-start gap-2">
+                                  <span className="text-xs font-medium" style={{ color: 'var(--navy)', minWidth: 50 }}>Tone:</span>
+                                  <span className="text-xs" style={{ color: 'var(--text-primary)' }}>{TONE_OPTIONS.find(t => t.id === fmt.tone)?.label} (overrides intent default)</span>
+                                </div>
+                                <div className="flex items-start gap-2">
+                                  <span className="text-xs font-medium" style={{ color: 'var(--navy)', minWidth: 50 }}>Rules:</span>
+                                  <span className="text-xs" style={{ color: 'var(--text-primary)' }}>{fmt.formatRules.map(r => FORMAT_RULES.find(fr => fr.id === r)?.label.split(' ')[1] || r).join(', ') || 'None'}</span>
+                                </div>
+                                <div className="flex items-start gap-2">
+                                  <span className="text-xs font-medium" style={{ color: 'var(--navy)', minWidth: 50 }}>Added:</span>
+                                  <span className="text-xs italic" style={{ color: 'var(--text-muted)' }}>"{fmt.promptModifier.substring(0, 80)}{fmt.promptModifier.length > 80 ? '...' : ''}"</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Right column — Global Knowledge Documents + Auto-Routing preview */}
+            <div className="space-y-6">
+
+              {/* Global Knowledge Documents */}
+              <div className="p-5 rounded-xl" style={{ backgroundColor: 'white', border: '1px solid var(--border)' }}>
+                <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center gap-2">
+                    <label className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Global Knowledge Documents</label>
+                    <InfoButton title="Global Knowledge Documents">
+                      <InfoSection title="What are these?">
+                        <InfoText>These documents form the <strong>platform-wide fallback knowledge base</strong>. When a user's attached document or knowledge pack doesn't contain the answer, the AI searches these global documents next — before showing the fallback message.</InfoText>
+                      </InfoSection>
+                      <InfoSection title="Who sees these?">
+                        <InfoText>All tenants benefit from these documents, but users don't see them directly. The AI uses them as a source and cites them in responses. Only Super Admins can upload, view, or remove global documents.</InfoText>
+                      </InfoSection>
+                      <InfoSection title="Best practices">
+                        <InfoList items={[
+                          "Upload broadly applicable legal references (Federal Rules, UCC, ABA Model Rules)",
+                          "Avoid firm-specific or client-specific documents — those belong in Knowledge Packs",
+                          "PDF and DOCX only, max 100MB per file",
+                          "Documents are indexed automatically — allow ~2 minutes for indexing after upload",
+                        ]} />
+                      </InfoSection>
+                      <InfoExample label="Confirmed source">DEC-042: Super Admin global KB serves as fallback if no answer found in selected pack (Apr 8 MOM).</InfoExample>
+                    </InfoButton>
+                  </div>
+                  <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{persona.globalDocs.length} docs</span>
+                </div>
+                <p className="text-xs mb-4" style={{ color: 'var(--text-muted)' }}>Fallback KB when a user has not attached a document in chat. These are searched after the user's pack.</p>
+
+                {/* Drag and drop zone */}
+                <div
+                  onDragOver={(e) => { e.preventDefault(); e.currentTarget.style.borderColor = 'var(--navy)'; e.currentTarget.style.backgroundColor = 'var(--ice-warm)'; }}
+                  onDragLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.backgroundColor = 'white'; }}
+                  onDrop={(e) => { e.preventDefault(); e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.backgroundColor = 'white'; handlePersonaFileUpload(e.dataTransfer.files); }}
+                  onClick={() => personaFileInputRef.current?.click()}
+                  className="flex flex-col items-center gap-2 py-5 mb-4 rounded-lg cursor-pointer"
+                  style={{ border: '2px dashed var(--border)', backgroundColor: 'white', transition: 'all 0.15s' }}
+                >
+                  <Upload size={20} style={{ color: 'var(--text-muted)' }} />
+                  <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Drag & drop PDF / DOCX (max 100MB)</span>
+                  <span className="text-xs font-medium" style={{ color: 'var(--navy)' }}>or browse files</span>
+                </div>
+                <input
+                  ref={personaFileInputRef}
+                  type="file"
+                  accept=".pdf,.docx"
+                  multiple
+                  style={{ display: 'none' }}
+                  onChange={(e) => { handlePersonaFileUpload(e.target.files); e.target.value = ''; }}
+                />
+
+                {/* Doc list */}
+                <div className="space-y-2">
+                  {persona.globalDocs.map(doc => (
+                    <div key={doc.id} className="flex items-center gap-2.5 p-2.5 rounded-lg" style={{ backgroundColor: 'var(--ice-warm)', border: '1px solid var(--border)' }}>
+                      <File size={14} style={{ color: 'var(--navy)', flexShrink: 0 }} />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div className="text-xs font-medium truncate" style={{ color: 'var(--text-primary)' }}>{doc.name}</div>
+                        <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                          <span className="inline-block px-1.5 py-0.5 rounded text-xs font-medium mr-1" style={{ backgroundColor: 'rgba(10,36,99,0.08)', color: 'var(--navy)', fontSize: 10 }}>{doc.type}</span>
+                          {doc.size}
+                        </div>
+                      </div>
+                      <button onClick={() => handleRemovePersonaDoc(doc.id)} style={{ padding: 4, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', flexShrink: 0 }}>
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+
+                {/* CourtListener Integration */}
+                <div className="mt-4 p-4 rounded-lg" style={{ backgroundColor: 'var(--ice-warm)', border: '1px solid var(--border)' }}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <Scale size={15} style={{ color: 'var(--navy)' }} />
+                    <span className="text-xs font-semibold" style={{ color: 'var(--text-primary)' }}>CourtListener — Live Legal Data</span>
+                    <InfoButton title="CourtListener Integration">
+                      <InfoSection title="What is this?">
+                        <InfoText>CourtListener (Free Law Project) provides free access to federal court data, opinions, and case law. When connected, the AI can reference real legal precedents in its responses.</InfoText>
+                      </InfoSection>
+                      <InfoSection title="What gets loaded?">
+                        <InfoList items={[
+                          "Active federal courts and their jurisdictions",
+                          "Recent federal opinions with citations and excerpts",
+                          "Live search for relevant case law when users ask legal questions",
+                        ]} />
+                      </InfoSection>
+                    </InfoButton>
+                  </div>
+
+                  {!clConnected ? (
+                    <button
+                      onClick={handleConnectCourtListener}
+                      disabled={clLoading}
+                      className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium w-full justify-center"
+                      style={{ backgroundColor: 'var(--navy)', color: 'white', border: 'none', cursor: clLoading ? 'wait' : 'pointer', opacity: clLoading ? 0.7 : 1 }}
+                    >
+                      {clLoading ? (
+                        <>
+                          <Loader size={13} className="animate-spin" />
+                          Connecting to CourtListener...
+                        </>
+                      ) : (
+                        <>
+                          <Database size={13} />
+                          Connect CourtListener
+                        </>
+                      )}
+                    </button>
+                  ) : (
+                    <div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <CheckCircle size={13} style={{ color: '#16a34a' }} />
+                        <span className="text-xs font-medium" style={{ color: '#16a34a' }}>Connected</span>
+                      </div>
+                      {clStats && (
+                        <div className="grid grid-cols-3 gap-2 mb-3">
+                          <div className="text-center p-2 rounded" style={{ backgroundColor: 'white', border: '1px solid var(--border)' }}>
+                            <div className="text-sm font-bold" style={{ color: 'var(--navy)' }}>{clStats.courts}</div>
+                            <div className="text-xs" style={{ color: 'var(--text-muted)' }}>Courts</div>
+                          </div>
+                          <div className="text-center p-2 rounded" style={{ backgroundColor: 'white', border: '1px solid var(--border)' }}>
+                            <div className="text-sm font-bold" style={{ color: 'var(--navy)' }}>{clStats.opinions}</div>
+                            <div className="text-xs" style={{ color: 'var(--text-muted)' }}>Opinions</div>
+                          </div>
+                          <div className="text-center p-2 rounded" style={{ backgroundColor: 'white', border: '1px solid var(--border)' }}>
+                            <div className="text-xs" style={{ color: 'var(--text-muted)' }}>Last sync</div>
+                            <div className="text-xs font-medium" style={{ color: 'var(--text-primary)' }}>{clStats.lastSync}</div>
+                          </div>
+                        </div>
+                      )}
+                      <div className="flex gap-2">
+                        <button
+                          onClick={handleConnectCourtListener}
+                          disabled={clLoading}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium"
+                          style={{ backgroundColor: 'white', color: 'var(--navy)', border: '1px solid var(--border)', cursor: clLoading ? 'wait' : 'pointer' }}
+                        >
+                          {clLoading ? <Loader size={12} className="animate-spin" /> : <RotateCcw size={12} />}
+                          Refresh
+                        </button>
+                        <button
+                          onClick={handleDisconnectCourtListener}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium"
+                          style={{ backgroundColor: 'white', color: '#dc2626', border: '1px solid #fecaca', cursor: 'pointer' }}
+                        >
+                          <Trash2 size={12} />
+                          Disconnect
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Auto-Routing Preview (visual only — not confirmed) */}
+              {/* CONFIDENCE: 3/10 — Intent classifier not confirmed by Ryan. Visual wireframe only. */}
+              {/* TODO: confirm confidence threshold with AI team */}
+              {/* OQ-pending — do not ship without confirmation */}
+              <div className="p-5 rounded-xl" style={{ backgroundColor: 'white', border: '1px solid var(--border)' }}>
+                <div className="flex items-center gap-2 mb-1">
+                  <GitBranch size={15} style={{ color: 'var(--navy)' }} />
+                  <label className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Message Routing Flow</label>
+                  <InfoButton title="Message Routing — How the AI Picks the Right Mode">
+                    <InfoSection title="What is message routing?">
+                      <InfoText>When a user sends a message, the AI doesn't just use one static prompt. It runs an intent classifier that analyses the message and determines which intent to activate. This happens automatically — the user doesn't need to choose a mode.</InfoText>
+                    </InfoSection>
+                    <InfoSection title="The 4-step flow">
+                      <InfoList items={[
+                        `Step 1: Intent classifier analyses the message (confidence threshold: ${INTENT_CONFIDENCE_THRESHOLD})`,
+                        "Step 2: If confident → picks the matching intent + applies persona format",
+                        "Step 3: If not confident → asks the user to clarify before proceeding",
+                        "Step 4: If no answer found → shows the Fallback Message",
+                      ]} />
+                    </InfoSection>
+                    <InfoSection title="Status">
+                      <InfoText><strong>⚠ DRAFT — Not confirmed.</strong> This flow has not been signed off by Ryan or the AI team. The confidence threshold ({INTENT_CONFIDENCE_THRESHOLD}) is a placeholder. This is a visual preview only — do not treat as final.</InfoText>
+                    </InfoSection>
+                  </InfoButton>
+                  <span className="px-1.5 py-0.5 rounded text-xs font-medium" style={{ backgroundColor: '#FEF3C7', color: '#92400E', fontSize: 10 }}>DRAFT</span>
+                </div>
+                <p className="text-xs mb-4" style={{ color: 'var(--text-muted)' }}>Visual preview of how the AI routes every message. Not confirmed — for Ryan review.</p>
+
+                {/* Flow diagram — vertical pipeline */}
+                <div className="relative" style={{ paddingLeft: 20 }}>
+                  {/* Vertical connector line */}
+                  <div style={{ position: 'absolute', left: 33, top: 14, bottom: 14, width: 2, backgroundColor: 'var(--border)', zIndex: 0 }} />
+
+                  {[
+                    { step: 1, label: 'User Sends Message', desc: 'Text, document upload, or follow-up question', icon: MessageSquare, bg: '#EDE9FE', color: '#5B21B6', borderColor: '#C4B5FD' },
+                    { step: 2, label: 'Intent Classifier', desc: `Analyses message → picks intent (confidence ≥ ${INTENT_CONFIDENCE_THRESHOLD})`, icon: Target, bg: '#DBEAFE', color: '#1E40AF', borderColor: '#93C5FD' },
+                    { step: 3, label: 'Persona Format Applied', desc: 'User role overrides tone + format rules on top of intent prompt', icon: Users, bg: '#F0FDF4', color: '#166534', borderColor: '#86EFAC' },
+                    { step: 4, label: 'Source Resolution', desc: 'Search user doc → knowledge pack → global KB → fallback', icon: Database, bg: '#FFF7ED', color: '#9A3412', borderColor: '#FDBA74' },
+                    { step: 5, label: 'Response Streamed', desc: 'With source badge: "your document" or "YourAI knowledge base"', icon: Zap, bg: '#F0F9FF', color: 'var(--navy)', borderColor: '#93C5FD' },
+                  ].map((s, i) => {
+                    const Icon = s.icon;
+                    return (
+                      <div key={i} className="flex items-start gap-3 relative" style={{ marginBottom: i < 4 ? 8 : 0, zIndex: 1 }}>
+                        {/* Step number circle */}
+                        <div className="flex items-center justify-center rounded-full" style={{ width: 28, height: 28, backgroundColor: s.bg, border: `2px solid ${s.borderColor}`, flexShrink: 0, zIndex: 2 }}>
+                          <span className="text-xs font-bold" style={{ color: s.color }}>{s.step}</span>
+                        </div>
+                        {/* Content card */}
+                        <div className="flex-1 p-3 rounded-lg" style={{ backgroundColor: s.bg, border: `1px solid ${s.borderColor}` }}>
+                          <div className="flex items-center gap-2 mb-0.5">
+                            <Icon size={13} style={{ color: s.color }} />
+                            <span className="text-xs font-semibold" style={{ color: s.color }}>{s.label}</span>
+                          </div>
+                          <p className="text-xs" style={{ color: s.color, opacity: 0.8 }}>{s.desc}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Branching: Low confidence + No answer */}
+                <div className="mt-4 grid grid-cols-2 gap-3">
+                  <div className="p-3 rounded-lg" style={{ backgroundColor: '#FFFBEB', border: '1px solid #FDE68A' }}>
+                    <div className="flex items-center gap-2 mb-1">
+                      <HelpCircle size={13} style={{ color: '#D97706' }} />
+                      <span className="text-xs font-semibold" style={{ color: '#92400E' }}>Low Confidence</span>
+                    </div>
+                    <p className="text-xs" style={{ color: '#92400E', lineHeight: 1.5 }}>Confidence &lt; {INTENT_CONFIDENCE_THRESHOLD} → AI asks clarifying question before proceeding.</p>
+                  </div>
+                  <div className="p-3 rounded-lg" style={{ backgroundColor: '#FEF2F2', border: '1px solid #FECACA' }}>
+                    <div className="flex items-center gap-2 mb-1">
+                      <AlertTriangle size={13} style={{ color: '#DC2626' }} />
+                      <span className="text-xs font-semibold" style={{ color: '#991B1B' }}>No Answer Found</span>
+                    </div>
+                    <p className="text-xs" style={{ color: '#991B1B', lineHeight: 1.5 }}>All sources exhausted → Fallback message shown to user.</p>
+                  </div>
+                </div>
+
+                {/* Active intents summary */}
+                <div className="mt-4 p-3 rounded-lg" style={{ backgroundColor: '#F8FAFC', border: '1px solid var(--border)' }}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <Bot size={13} style={{ color: 'var(--navy)' }} />
+                    <span className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>Active Intents ({persona.operations.filter(o => o.enabled).length})</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {persona.operations.filter(o => o.enabled).map(op => (
+                      <span key={op.id} className="px-2 py-1 rounded text-xs" style={{ backgroundColor: 'var(--ice-warm)', color: 'var(--navy)', border: '1px solid rgba(10,36,99,0.1)', fontWeight: 500 }}>
+                        {op.label}
+                      </span>
+                    ))}
+                    {persona.operations.filter(o => !o.enabled).map(op => (
+                      <span key={op.id} className="px-2 py-1 rounded text-xs line-through" style={{ backgroundColor: '#F1F5F9', color: 'var(--text-muted)', fontSize: 10 }}>
+                        {op.label}
+                      </span>
+                    ))}
+                  </div>
+                  <div className="flex items-center gap-2 mt-2 pt-2" style={{ borderTop: '1px solid var(--border)' }}>
+                    <Users size={12} style={{ color: 'var(--navy)' }} />
+                    <span className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>Active Personas ({Object.values(personaFormats).filter(p => p.enabled).length})</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5 mt-1.5">
+                    {USER_PERSONAS.map(up => {
+                      const fmt = personaFormats[up.id];
+                      return (
+                        <span key={up.id} className="px-2 py-1 rounded text-xs" style={{ backgroundColor: fmt.enabled ? '#F0FDF4' : '#F1F5F9', color: fmt.enabled ? '#166534' : 'var(--text-muted)', border: `1px solid ${fmt.enabled ? '#BBF7D0' : 'var(--border)'}`, fontWeight: 500, textDecoration: fmt.enabled ? 'none' : 'line-through' }}>
+                          {up.label.split(' / ')[0]}
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Warning banner */}
+          <div className="flex items-center gap-3 p-4 rounded-lg" style={{ backgroundColor: '#FFFBEB', border: '1px solid #FEF3C7' }}>
+            <AlertTriangle size={16} style={{ color: '#92400E', flexShrink: 0 }} />
+            <p className="text-sm" style={{ color: '#92400E' }}>
+              Changes apply from the next session — active conversations will finish with the current persona.
+            </p>
+          </div>
+
+          {/* Add Intent Modal */}
+          {showAddOp && (
+            <Modal title="Add New Intent" onClose={() => setShowAddOp(false)}>
+              <div className="space-y-4" style={{ padding: '16px 0' }}>
+                <div className="flex items-start gap-3 p-3 rounded-lg" style={{ backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE' }}>
+                  <Info size={14} style={{ color: '#1D4ED8', flexShrink: 0, marginTop: 2 }} />
+                  <p className="text-xs" style={{ color: '#1E40AF', lineHeight: 1.6 }}>An intent is a separate AI mode with its own system prompt, tone, and formatting rules. The intent classifier will automatically activate this mode when a user's message matches the description you provide.</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-primary)' }}>Intent Name *</label>
+                  <input
+                    id="newOpLabel"
+                    placeholder="e.g., Due Diligence Review"
+                    style={{ width: '100%', height: 40, border: '1px solid var(--border)', borderRadius: 8, padding: '0 12px', fontSize: 13, outline: 'none', boxSizing: 'border-box', fontFamily: "'DM Sans', sans-serif" }}
+                    onFocus={(e) => (e.target.style.borderColor = 'var(--navy)')}
+                    onBlur={(e) => (e.target.style.borderColor = 'var(--border)')}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-primary)' }}>When should this activate?</label>
+                  <input
+                    id="newOpDesc"
+                    placeholder="e.g., Activated when user uploads transaction docs for due diligence"
+                    style={{ width: '100%', height: 40, border: '1px solid var(--border)', borderRadius: 8, padding: '0 12px', fontSize: 13, outline: 'none', boxSizing: 'border-box', fontFamily: "'DM Sans', sans-serif" }}
+                    onFocus={(e) => (e.target.style.borderColor = 'var(--navy)')}
+                    onBlur={(e) => (e.target.style.borderColor = 'var(--border)')}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-primary)' }}>System Prompt</label>
+                  <textarea
+                    id="newOpPrompt"
+                    placeholder="You are Alex, a..."
+                    rows={4}
+                    style={{ width: '100%', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 12px', fontSize: 13, outline: 'none', boxSizing: 'border-box', fontFamily: "'DM Sans', sans-serif", resize: 'vertical', lineHeight: 1.6 }}
+                    onFocus={(e) => (e.target.style.borderColor = 'var(--navy)')}
+                    onBlur={(e) => (e.target.style.borderColor = 'var(--border)')}
+                  />
+                </div>
+                <div className="flex justify-end gap-3 pt-2">
+                  <button onClick={() => setShowAddOp(false)} className="px-4 py-2 rounded-lg text-sm font-medium" style={{ border: '1px solid var(--border)', color: 'var(--slate)', backgroundColor: 'white' }}>Cancel</button>
+                  <button
+                    onClick={() => {
+                      const label = document.getElementById('newOpLabel')?.value?.trim();
+                      const desc = document.getElementById('newOpDesc')?.value?.trim();
+                      const prompt = document.getElementById('newOpPrompt')?.value?.trim();
+                      if (!label) return;
+                      addIntent({ label, description: desc || '', systemPrompt: prompt || '' });
+                      setShowAddOp(false);
+                    }}
+                    className="px-4 py-2 rounded-lg text-sm font-medium text-white"
+                    style={{ backgroundColor: 'var(--navy)' }}
+                  >
+                    Add Intent
+                  </button>
+                </div>
+              </div>
+            </Modal>
+          )}
         </>
       )}
     </div>

@@ -21,7 +21,6 @@ const allNavSections = [
     label: 'LIBRARY',
     items: [
       { label: 'Document Vault',   icon: FileText,     path: '/app/vault',             roles: ['Admin','Manager','Team'] },
-      { label: 'Reports',          icon: FileBarChart,  path: '/app/reports',           roles: ['Admin','Manager','Team'] },
       { label: 'Workflows',        icon: Workflow,      path: '/app/workflows',         roles: ['Admin','Manager','Team'] },
       { label: 'Knowledge Packs',  icon: Database,      path: '/app/knowledge-packs',  roles: ['Admin'] },
       { label: 'Prompt Templates', icon: Sparkles,      path: '/app/prompt-templates', roles: ['Admin','Manager','Team'] },

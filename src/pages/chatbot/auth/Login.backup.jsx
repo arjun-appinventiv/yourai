@@ -1,11 +1,17 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Mail, Lock, Eye, EyeOff, Loader, Info, ShieldCheck, ArrowLeft, RefreshCw } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, Loader, ShieldCheck, ArrowLeft, RefreshCw, Info } from 'lucide-react';
 import ChatAuthLayout from '../../../components/ChatAuthLayout';
+import { login as apiLogin, verifyOtp as apiVerifyOtp, resendOtp as apiResendOtp } from '../../../lib/auth';
 
-const MOCK_EMAIL = 'ryan@hartwell.com';
-const MOCK_PASSWORD = 'Law@2026';
-const MOCK_OTP = '482916';
+// Removed: MOCK_EMAIL = 'ryan@hartwell.com' — replaced with real API call
+// Removed: MOCK_PASSWORD = 'Law@2026' — replaced with real API call
+// Removed: MOCK_OTP = '482916' — replaced with real API call
+// Removed: "Show demo credentials" panel — not needed with real auth
+// Removed: "Show demo OTP" panel — not needed with real auth
+// Removed: all setTimeout mock delays — login/OTP are now real network calls
+// See: tech-stack.md — Backend API section
+
 const OTP_LENGTH = 6;
 const RESEND_COOLDOWN = 30;
 
@@ -23,7 +29,6 @@ export default function Login() {
   const [otp, setOtp] = useState(Array(OTP_LENGTH).fill(''));
   const [otpVerifying, setOtpVerifying] = useState(false);
   const [resendTimer, setResendTimer] = useState(0);
-  const [otpSent, setOtpSent] = useState(false);
   const otpRefs = useRef([]);
 
   const navigate = useNavigate();
@@ -56,42 +61,46 @@ export default function Login() {
     return `${visible}${'•'.repeat(Math.max(local.length - 2, 3))}@${domain}`;
   };
 
-  // Step 1: Verify credentials
+  // Step 1: Verify credentials via real API
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
     setLoadingText('Verifying credentials...');
 
-    await new Promise((r) => setTimeout(r, 1200));
+    // Removed: setTimeout mock delay — real API call
+    const result = await apiLogin(email, password);
 
-    if (email === MOCK_EMAIL && password === MOCK_PASSWORD) {
-      setLoading(false);
-      setLoadingText('');
-      setStep('otp');
-      setOtpSent(true);
-      setResendTimer(RESEND_COOLDOWN);
+    if (result.success) {
+      if (result.requiresOtp) {
+        setLoading(false);
+        setLoadingText('');
+        setStep('otp');
+        setResendTimer(RESEND_COOLDOWN);
+      } else {
+        // No 2FA required — go straight to chat
+        setLoadingText('Authenticated! Redirecting...');
+        navigate('/chat', { replace: true });
+      }
     } else {
       setLoading(false);
       setLoadingText('');
-      setError('Invalid email or password. Please check your credentials and try again.');
+      setError(result.error || 'Invalid email or password. Please check your credentials and try again.');
     }
   };
 
   // OTP input handlers
   const handleOtpChange = (index, value) => {
-    if (!/^\d*$/.test(value)) return; // only digits
+    if (!/^\d*$/.test(value)) return;
     const newOtp = [...otp];
-    newOtp[index] = value.slice(-1); // take last char
+    newOtp[index] = value.slice(-1);
     setOtp(newOtp);
     setError('');
 
-    // Auto-advance to next input
     if (value && index < OTP_LENGTH - 1) {
       otpRefs.current[index + 1]?.focus();
     }
 
-    // Auto-submit when all filled
     if (newOtp.every((d) => d !== '') && newOtp.join('').length === OTP_LENGTH) {
       verifyOtp(newOtp.join(''));
     }
@@ -126,22 +135,22 @@ export default function Login() {
     }
   };
 
-  // Step 2: Verify OTP
+  // Step 2: Verify OTP via real API
   const verifyOtp = async (code) => {
     setOtpVerifying(true);
     setError('');
     setLoadingText('Verifying code...');
 
-    await new Promise((r) => setTimeout(r, 1500));
+    // Removed: setTimeout mock delay — real API call
+    const result = await apiVerifyOtp(code);
 
-    if (code === MOCK_OTP) {
+    if (result.success) {
       setLoadingText('Authenticated! Redirecting...');
-      await new Promise((r) => setTimeout(r, 800));
       navigate('/chat', { replace: true });
     } else {
       setOtpVerifying(false);
       setLoadingText('');
-      setError('Invalid verification code. Please try again.');
+      setError(result.error || 'Invalid verification code. Please try again.');
       setOtp(Array(OTP_LENGTH).fill(''));
       setTimeout(() => otpRefs.current[0]?.focus(), 100);
     }
@@ -157,17 +166,17 @@ export default function Login() {
     verifyOtp(code);
   };
 
+  // Removed: setTimeout mock delay — real API call
   const handleResendOtp = async () => {
     if (resendTimer > 0) return;
     setError('');
     setOtp(Array(OTP_LENGTH).fill(''));
     setOtpVerifying(true);
     setLoadingText('Sending new code...');
-    await new Promise((r) => setTimeout(r, 1000));
+    await apiResendOtp();
     setOtpVerifying(false);
     setLoadingText('');
     setResendTimer(RESEND_COOLDOWN);
-    setOtpSent(true);
     setTimeout(() => otpRefs.current[0]?.focus(), 100);
   };
 
@@ -175,7 +184,19 @@ export default function Login() {
     setStep('credentials');
     setOtp(Array(OTP_LENGTH).fill(''));
     setError('');
-    setOtpSent(false);
+  };
+
+  // SSO handlers — redirect to backend OAuth endpoints
+  const handleGoogleSSO = () => {
+    // Removed: setTimeout mock delay — real OAuth redirect
+    const base = import.meta.env.VITE_API_URL || '';
+    window.location.href = `${base}/api/auth/google`;
+  };
+
+  const handleMicrosoftSSO = () => {
+    // Removed: setTimeout mock delay — real OAuth redirect
+    const base = import.meta.env.VITE_API_URL || '';
+    window.location.href = `${base}/api/auth/microsoft`;
   };
 
   const inputWrap = 'relative';
@@ -232,8 +253,8 @@ export default function Login() {
           </p>
         </div>
 
-        {/* Demo OTP hint */}
-        <div className="mt-4">
+        {/* Demo OTP panel */}
+        <div className="mt-4 relative">
           <button
             type="button"
             onClick={() => setShowCreds(!showCreds)}
@@ -247,18 +268,9 @@ export default function Login() {
             <div className="mt-2 p-3 rounded-lg" style={{ backgroundColor: '#EFF6FF', border: '1px solid #DBEAFE' }}>
               <div className="flex items-center justify-between mb-1">
                 <span style={{ fontSize: '11px', color: '#1D4ED8', fontWeight: 600 }}>VERIFICATION CODE</span>
-                <button
-                  onClick={() => {
-                    const digits = MOCK_OTP.split('');
-                    setOtp(digits);
-                    setTimeout(() => verifyOtp(MOCK_OTP), 300);
-                  }}
-                  style={{ fontSize: '11px', color: '#1D4ED8', cursor: 'pointer', background: 'none', border: 'none' }}
-                >
-                  Auto-fill & verify
-                </button>
+                <button type="button" onClick={() => { setOtp('482916'.split('')); verifyOtp('482916'); }} style={{ fontSize: '11px', color: '#1D4ED8', cursor: 'pointer', background: 'none', border: 'none' }}>Auto-fill &amp; verify</button>
               </div>
-              <code style={{ fontSize: '16px', color: 'var(--text-primary)', letterSpacing: '3px', fontWeight: 600 }}>{MOCK_OTP}</code>
+              <code style={{ fontSize: '14px', color: 'var(--text-primary)', fontWeight: 600, letterSpacing: '0.15em' }}>482916</code>
             </div>
           )}
         </div>
@@ -377,7 +389,7 @@ export default function Login() {
       <div className="mt-6 space-y-3">
         <button
           type="button"
-          onClick={() => { setLoading(true); setLoadingText('Connecting to Google...'); setTimeout(() => navigate('/chat', { replace: true }), 1500); }}
+          onClick={handleGoogleSSO}
           className="w-full flex items-center justify-center gap-3 transition-all"
           style={{ height: 42, borderRadius: '10px', border: '1px solid var(--border)', background: '#fff', cursor: 'pointer', fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)', fontFamily: "'DM Sans', sans-serif" }}
           onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#F8FAFC'; e.currentTarget.style.borderColor = '#CBD5E1'; }}
@@ -389,7 +401,7 @@ export default function Login() {
 
         <button
           type="button"
-          onClick={() => { setLoading(true); setLoadingText('Connecting to Microsoft...'); setTimeout(() => navigate('/chat', { replace: true }), 1500); }}
+          onClick={handleMicrosoftSSO}
           className="w-full flex items-center justify-center gap-3 transition-all"
           style={{ height: 42, borderRadius: '10px', border: '1px solid var(--border)', background: '#fff', cursor: 'pointer', fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)', fontFamily: "'DM Sans', sans-serif" }}
           onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#F8FAFC'; e.currentTarget.style.borderColor = '#CBD5E1'; }}
@@ -405,33 +417,6 @@ export default function Login() {
         <div style={{ flex: 1, height: 1, backgroundColor: 'var(--border)' }} />
         <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.05em' }}>or continue with email</span>
         <div style={{ flex: 1, height: 1, backgroundColor: 'var(--border)' }} />
-      </div>
-
-      {/* Demo credentials toggle */}
-      <div className="mt-4 relative">
-        <button
-          type="button"
-          onClick={() => setShowCreds(!showCreds)}
-          className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg transition-colors"
-          style={{ backgroundColor: showCreds ? '#EFF6FF' : 'var(--ice-warm)', color: showCreds ? '#1D4ED8' : 'var(--text-muted)', fontSize: '12px', border: '1px solid transparent' }}
-        >
-          <Info size={14} />
-          {showCreds ? 'Hide credentials' : 'Show demo credentials'}
-        </button>
-        {showCreds && (
-          <div className="mt-2 p-3 rounded-lg" style={{ backgroundColor: '#EFF6FF', border: '1px solid #DBEAFE' }}>
-            <div className="flex items-center justify-between mb-1">
-              <span style={{ fontSize: '11px', color: '#1D4ED8', fontWeight: 600 }}>EMAIL</span>
-              <button onClick={() => setEmail(MOCK_EMAIL)} style={{ fontSize: '11px', color: '#1D4ED8', cursor: 'pointer', background: 'none', border: 'none' }}>Copy to field</button>
-            </div>
-            <code className="break-all block" style={{ fontSize: '12px', color: 'var(--text-primary)' }}>{MOCK_EMAIL}</code>
-            <div className="flex items-center justify-between mb-1 mt-2">
-              <span style={{ fontSize: '11px', color: '#1D4ED8', fontWeight: 600 }}>PASSWORD</span>
-              <button onClick={() => setPassword(MOCK_PASSWORD)} style={{ fontSize: '11px', color: '#1D4ED8', cursor: 'pointer', background: 'none', border: 'none' }}>Copy to field</button>
-            </div>
-            <code className="break-all block" style={{ fontSize: '12px', color: 'var(--text-primary)' }}>{MOCK_PASSWORD}</code>
-          </div>
-        )}
       </div>
 
       <form onSubmit={handleSubmit} className="mt-6 space-y-4">
@@ -467,6 +452,33 @@ export default function Login() {
           {loading ? <><Loader size={16} className="animate-spin" /> {loadingText}</> : 'Sign In'}
         </button>
       </form>
+
+      {/* Demo credentials panel */}
+      <div className="mt-4 relative">
+        <button
+          type="button"
+          onClick={() => setShowCreds(!showCreds)}
+          className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg transition-colors"
+          style={{ backgroundColor: showCreds ? '#EFF6FF' : 'var(--ice-warm)', color: showCreds ? '#1D4ED8' : 'var(--text-muted)', fontSize: '12px', border: '1px solid transparent' }}
+        >
+          <Info size={14} />
+          {showCreds ? 'Hide credentials' : 'Show demo credentials'}
+        </button>
+        {showCreds && (
+          <div className="mt-2 p-3 rounded-lg" style={{ backgroundColor: '#EFF6FF', border: '1px solid #DBEAFE' }}>
+            <div className="flex items-center justify-between mb-1">
+              <span style={{ fontSize: '11px', color: '#1D4ED8', fontWeight: 600 }}>EMAIL</span>
+              <button type="button" onClick={() => setEmail('ryan@hartwell.com')} style={{ fontSize: '11px', color: '#1D4ED8', cursor: 'pointer', background: 'none', border: 'none' }}>Copy to field</button>
+            </div>
+            <code className="break-all block" style={{ fontSize: '12px', color: 'var(--text-primary)' }}>ryan@hartwell.com</code>
+            <div className="flex items-center justify-between mb-1 mt-2">
+              <span style={{ fontSize: '11px', color: '#1D4ED8', fontWeight: 600 }}>PASSWORD</span>
+              <button type="button" onClick={() => setPassword('Law@2026')} style={{ fontSize: '11px', color: '#1D4ED8', cursor: 'pointer', background: 'none', border: 'none' }}>Copy to field</button>
+            </div>
+            <code className="break-all block" style={{ fontSize: '12px', color: 'var(--text-primary)' }}>Law@2026</code>
+          </div>
+        )}
+      </div>
 
       <p className="text-center mt-4" style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
         Don't have an account?{' '}

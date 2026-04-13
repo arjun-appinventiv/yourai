@@ -1731,63 +1731,14 @@ export default function GlobalKnowledgeBase() {
                     )}
                   </td>
                   <td className="px-4 py-3">
-                    <button
-                      onClick={() => {
-                        setCreateIntentFrom(row);
-                        setNewIntentLabel('');
-                        setNewIntentDesc('');
-                        setShowCreateIntent(true);
-                      }}
-                      className="px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5"
-                      style={{ border: '1px solid var(--border)', color: 'var(--navy)', backgroundColor: 'white' }}
-                    >
-                      <Plus size={12} /> Create Intent
-                    </button>
+                    {/* SA cannot create new intents — managed by engineering */}
                   </td>
                 </tr>
               ))}
             </Table>
           </div>
 
-          {/* Create Intent Modal */}
-          <Modal open={showCreateIntent} onClose={() => { setShowCreateIntent(false); setCreateIntentFrom(null); }} title="Create New Intent">
-            <div className="space-y-4">
-              {createIntentFrom && (
-                <div className="p-3 rounded-lg" style={{ backgroundColor: 'var(--ice-warm)', border: '1px solid var(--border)' }}>
-                  <p className="text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>Source Query</p>
-                  <p className="text-sm" style={{ color: 'var(--text-primary)' }}>{createIntentFrom.query}</p>
-                </div>
-              )}
-              <div>
-                <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-primary)' }}>Intent Label</label>
-                <input
-                  type="text"
-                  value={newIntentLabel}
-                  onChange={(e) => setNewIntentLabel(e.target.value)}
-                  placeholder="e.g. Document Drafting"
-                  style={{ ...inputStyle, width: '100%' }}
-                  onFocus={(e) => (e.target.style.borderColor = 'var(--navy)')}
-                  onBlur={(e) => (e.target.style.borderColor = 'var(--border)')}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-primary)' }}>Description</label>
-                <textarea
-                  value={newIntentDesc}
-                  onChange={(e) => setNewIntentDesc(e.target.value)}
-                  placeholder="When users ask about..."
-                  rows={3}
-                  style={{ ...inputStyle, width: '100%', height: 'auto', padding: '10px 12px', resize: 'vertical' }}
-                  onFocus={(e) => (e.target.style.borderColor = 'var(--navy)')}
-                  onBlur={(e) => (e.target.style.borderColor = 'var(--border)')}
-                />
-              </div>
-              <div className="flex justify-end gap-3 pt-2">
-                <button onClick={() => { setShowCreateIntent(false); setCreateIntentFrom(null); }} className="px-4 py-2 rounded-lg text-sm font-medium" style={{ border: '1px solid var(--border)', color: 'var(--slate)', backgroundColor: 'white' }}>Cancel</button>
-                <button onClick={handleCreateIntent} disabled={!newIntentLabel.trim()} className="px-4 py-2 rounded-lg text-sm font-medium text-white" style={{ backgroundColor: !newIntentLabel.trim() ? '#94A3B8' : 'var(--navy)', cursor: !newIntentLabel.trim() ? 'not-allowed' : 'pointer' }}>Create Intent</button>
-              </div>
-            </div>
-          </Modal>
+          {/* Create Intent Modal removed — SA cannot create new intents */}
         </>
       )}
       {/* ============================== END OF DISABLED TAB 2 ============================== */}
@@ -1906,13 +1857,7 @@ export default function GlobalKnowledgeBase() {
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{persona.operations.filter(o => o.enabled).length} of {persona.operations.length} enabled</span>
-                    <button
-                      onClick={() => setShowAddOp(true)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium"
-                      style={{ backgroundColor: 'var(--navy)', color: 'white', border: 'none', cursor: 'pointer' }}
-                    >
-                      <Plus size={12} /> Add Intent
-                    </button>
+                    {/* SA cannot add new intents — managed by engineering */}
                   </div>
                 </div>
                 <p className="text-xs mb-4" style={{ color: 'var(--text-muted)' }}>Each intent defines a separate AI mode with its own system prompt, tone, and formatting. The intent classifier picks the right one automatically.</p>
@@ -2559,65 +2504,7 @@ export default function GlobalKnowledgeBase() {
             </p>
           </div>
 
-          {/* Add Intent Modal */}
-          {showAddOp && (
-            <Modal title="Add New Intent" onClose={() => setShowAddOp(false)}>
-              <div className="space-y-4" style={{ padding: '16px 0' }}>
-                <div className="flex items-start gap-3 p-3 rounded-lg" style={{ backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE' }}>
-                  <Info size={14} style={{ color: '#1D4ED8', flexShrink: 0, marginTop: 2 }} />
-                  <p className="text-xs" style={{ color: '#1E40AF', lineHeight: 1.6 }}>An intent is a separate AI mode with its own system prompt, tone, and formatting rules. The intent classifier will automatically activate this mode when a user's message matches the description you provide.</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-primary)' }}>Intent Name *</label>
-                  <input
-                    id="newOpLabel"
-                    placeholder="e.g., Due Diligence Review"
-                    style={{ width: '100%', height: 40, border: '1px solid var(--border)', borderRadius: 8, padding: '0 12px', fontSize: 13, outline: 'none', boxSizing: 'border-box', fontFamily: "'DM Sans', sans-serif" }}
-                    onFocus={(e) => (e.target.style.borderColor = 'var(--navy)')}
-                    onBlur={(e) => (e.target.style.borderColor = 'var(--border)')}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-primary)' }}>When should this activate?</label>
-                  <input
-                    id="newOpDesc"
-                    placeholder="e.g., Activated when user uploads transaction docs for due diligence"
-                    style={{ width: '100%', height: 40, border: '1px solid var(--border)', borderRadius: 8, padding: '0 12px', fontSize: 13, outline: 'none', boxSizing: 'border-box', fontFamily: "'DM Sans', sans-serif" }}
-                    onFocus={(e) => (e.target.style.borderColor = 'var(--navy)')}
-                    onBlur={(e) => (e.target.style.borderColor = 'var(--border)')}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-primary)' }}>System Prompt</label>
-                  <textarea
-                    id="newOpPrompt"
-                    placeholder="You are Alex, a..."
-                    rows={4}
-                    style={{ width: '100%', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 12px', fontSize: 13, outline: 'none', boxSizing: 'border-box', fontFamily: "'DM Sans', sans-serif", resize: 'vertical', lineHeight: 1.6 }}
-                    onFocus={(e) => (e.target.style.borderColor = 'var(--navy)')}
-                    onBlur={(e) => (e.target.style.borderColor = 'var(--border)')}
-                  />
-                </div>
-                <div className="flex justify-end gap-3 pt-2">
-                  <button onClick={() => setShowAddOp(false)} className="px-4 py-2 rounded-lg text-sm font-medium" style={{ border: '1px solid var(--border)', color: 'var(--slate)', backgroundColor: 'white' }}>Cancel</button>
-                  <button
-                    onClick={() => {
-                      const label = document.getElementById('newOpLabel')?.value?.trim();
-                      const desc = document.getElementById('newOpDesc')?.value?.trim();
-                      const prompt = document.getElementById('newOpPrompt')?.value?.trim();
-                      if (!label) return;
-                      addIntent({ label, description: desc || '', systemPrompt: prompt || '' });
-                      setShowAddOp(false);
-                    }}
-                    className="px-4 py-2 rounded-lg text-sm font-medium text-white"
-                    style={{ backgroundColor: 'var(--navy)' }}
-                  >
-                    Add Intent
-                  </button>
-                </div>
-              </div>
-            </Modal>
-          )}
+          {/* Add Intent Modal removed — SA cannot add new intents */}
         </>
       )}
     </div>

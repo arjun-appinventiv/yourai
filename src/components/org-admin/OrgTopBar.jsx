@@ -14,7 +14,6 @@ const pageConfig = {
   '/app/workspaces':       { title: 'Workspaces',       icon: Briefcase },
   '/app/clients':          { title: 'Clients',          icon: Users },
   '/app/vault':            { title: 'Document Vault',   icon: FileText },
-  '/app/reports':          { title: 'Reports',          icon: FileBarChart },
   '/app/workflows':        { title: 'Workflows',        icon: Workflow },
   '/app/knowledge-packs':  { title: 'Knowledge Packs',  icon: Database },
   '/app/prompt-templates': { title: 'Prompt Templates', icon: Sparkles },

@@ -133,7 +133,7 @@ export default function Dashboard() {
             </h4>
             {Object.entries(billingData.usage).map(([key, val]) => {
               const pct = Math.round((val.used / val.limit) * 100);
-              const labels = { docs: 'Documents', workflows: 'Workflows', reports: 'Reports', knowledgePacks: 'Knowledge Packs' };
+              const labels = { docs: 'Documents', workflows: 'Workflows', knowledgePacks: 'Knowledge Packs' };
               return (
                 <div key={key} className="mb-4">
                   <div className="flex items-center justify-between mb-1">

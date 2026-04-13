@@ -2,6 +2,10 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { User, Mail, Building2, Lock, Eye, EyeOff, Loader, Check, Circle } from 'lucide-react';
 import ChatAuthLayout from '../../../components/ChatAuthLayout';
+import { signUp as apiSignUp } from '../../../lib/auth';
+
+// Removed: setTimeout mock delays — replaced with real API calls
+// See: tech-stack.md — Backend API section
 
 export default function SignUp() {
   const [fullName, setFullName] = useState('');
@@ -45,8 +49,19 @@ export default function SignUp() {
     }
 
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 2000));
-    navigate('/chat/onboarding', { replace: true });
+    // Removed: setTimeout mock delay — real API call
+    try {
+      const result = await apiSignUp({ name: fullName, email, password, orgName: firmName });
+      if (result.success) {
+        navigate('/chat/onboarding', { replace: true });
+      } else {
+        setError(result.error || 'Sign up failed. Please try again.');
+        setLoading(false);
+      }
+    } catch {
+      setError('Sign up failed. Please try again.');
+      setLoading(false);
+    }
   };
 
   const inputWrap = 'relative';
@@ -84,7 +99,7 @@ export default function SignUp() {
       <div className="mt-6 space-y-3">
         <button
           type="button"
-          onClick={() => { setLoading(true); setTimeout(() => navigate('/chat/onboarding', { replace: true }), 1500); }}
+          onClick={() => { const base = import.meta.env.VITE_API_URL || ''; window.location.href = `${base}/api/auth/google`; }}
           className="w-full flex items-center justify-center gap-3 transition-all"
           style={{ height: 42, borderRadius: '10px', border: '1px solid var(--border)', background: '#fff', cursor: 'pointer', fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)', fontFamily: "'DM Sans', sans-serif" }}
           onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#F8FAFC'; e.currentTarget.style.borderColor = '#CBD5E1'; }}
@@ -96,7 +111,7 @@ export default function SignUp() {
 
         <button
           type="button"
-          onClick={() => { setLoading(true); setTimeout(() => navigate('/chat/onboarding', { replace: true }), 1500); }}
+          onClick={() => { const base = import.meta.env.VITE_API_URL || ''; window.location.href = `${base}/api/auth/microsoft`; }}
           className="w-full flex items-center justify-center gap-3 transition-all"
           style={{ height: 42, borderRadius: '10px', border: '1px solid var(--border)', background: '#fff', cursor: 'pointer', fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)', fontFamily: "'DM Sans', sans-serif" }}
           onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#F8FAFC'; e.currentTarget.style.borderColor = '#CBD5E1'; }}

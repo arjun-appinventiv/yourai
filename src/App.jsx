@@ -19,12 +19,10 @@ import PlatformBilling from './pages/super-admin/PlatformBilling';
 import UsageAnalytics from './pages/super-admin/UsageAnalytics';
 import ComplianceAudit from './pages/super-admin/ComplianceAudit';
 import StaticContent from './pages/super-admin/StaticContent';
-import ReportTemplates from './pages/super-admin/ReportTemplates';
 import IntegrationManagement from './pages/super-admin/IntegrationManagement';
 import GlobalKnowledgeBase from './pages/super-admin/GlobalKnowledgeBase';
 import WorkflowTemplates from './pages/super-admin/WorkflowTemplates';
 import BroadcastNotifications from './pages/super-admin/BroadcastNotifications';
-import ReportsAnalytics from './pages/super-admin/ReportsAnalytics';
 import PlatformSettings from './pages/super-admin/PlatformSettings';
 import UserStories from './pages/super-admin/UserStories';
 import BotTester from './pages/super-admin/BotTester';
@@ -36,7 +34,6 @@ import Dashboard from './pages/org-admin/Dashboard';
 import WorkspaceList from './pages/org-admin/WorkspaceList';
 import WorkspaceDetail from './pages/org-admin/WorkspaceDetail';
 import DocumentVault from './pages/org-admin/DocumentVault';
-import ReportsPage from './pages/org-admin/ReportsPage';
 import WorkflowsPage from './pages/org-admin/WorkflowsPage';
 import KnowledgePacksPage from './pages/org-admin/KnowledgePacksPage';
 import ClientsPage from './pages/org-admin/ClientsPage';
@@ -80,12 +77,10 @@ export default function App() {
               <Route path="/super-admin/usage" element={<UsageAnalytics />} />
               <Route path="/super-admin/compliance" element={<ComplianceAudit />} />
               <Route path="/super-admin/static-content" element={<StaticContent />} />
-              <Route path="/super-admin/report-templates" element={<ReportTemplates />} />
               <Route path="/super-admin/integrations" element={<IntegrationManagement />} />
               <Route path="/super-admin/knowledge-base" element={<GlobalKnowledgeBase />} />
               <Route path="/super-admin/workflows" element={<WorkflowTemplates />} />
               <Route path="/super-admin/notifications" element={<BroadcastNotifications />} />
-              <Route path="/super-admin/reports" element={<ReportsAnalytics />} />
               <Route path="/super-admin/settings" element={<PlatformSettings />} />
               <Route path="/super-admin/user-stories" element={<UserStories />} />
               <Route path="/super-admin/bot-tester" element={<BotTester />} />
@@ -109,7 +104,6 @@ export default function App() {
               <Route path="/app/workspaces" element={<WorkspaceList />} />
               <Route path="/app/workspaces/:id" element={<WorkspaceDetail />} />
               <Route path="/app/vault" element={<DocumentVault />} />
-              <Route path="/app/reports" element={<ReportsPage />} />
               <Route path="/app/workflows" element={<WorkflowsPage />} />
               <Route path="/app/knowledge-packs" element={<KnowledgePacksPage />} />
               <Route path="/app/clients" element={<ClientsPage />} />

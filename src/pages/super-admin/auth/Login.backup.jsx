@@ -4,6 +4,12 @@ import { Mail, Lock, Eye, EyeOff, Loader, Info } from 'lucide-react';
 import AuthLayout from '../../../components/AuthLayout';
 import { useAuth } from '../../../context/AuthContext';
 
+// Removed: MOCK_CREDENTIALS — replaced with real API call to /api/auth/login
+// Removed: mock setTimeout delay — login is now a real network call
+// Removed: hardcoded arjun@appinventiv.com — no mock credentials
+// Removed: "Show demo credentials" panel — not needed with real auth
+// See: tech-stack.md — Backend API section
+
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -13,7 +19,7 @@ export default function Login() {
   const [loadingText, setLoadingText] = useState('');
   const [showCreds, setShowCreds] = useState(false);
   const navigate = useNavigate();
-  const { login, completeAuth } = useAuth();
+  const { login } = useAuth();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -21,17 +27,21 @@ export default function Login() {
     setLoading(true);
     setLoadingText('Signing in...');
 
-    await new Promise((r) => setTimeout(r, 1500));
+    // Removed: setTimeout mock delay — real API call
+    const result = await login(email, password);
 
-    const result = login(email, password);
     if (!result.success) {
       setLoading(false);
       setLoadingText('');
-      setError(result.error);
+      setError(result.error || 'Invalid email or password. Please try again.');
       return;
     }
 
-    completeAuth();
+    if (result.requiresOtp) {
+      navigate('/super-admin/verify-otp', { replace: true });
+      return;
+    }
+
     navigate('/super-admin/dashboard', { replace: true });
   };
 
@@ -59,43 +69,12 @@ export default function Login() {
         <p className="mt-1" style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Sign in to the operations portal</p>
       </div>
 
-      {/* Credentials info button */}
-      <div className="mt-4 relative">
-        <button
-          type="button"
-          onClick={() => setShowCreds(!showCreds)}
-          className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg transition-colors"
-          style={{ backgroundColor: showCreds ? '#EFF6FF' : 'var(--ice-warm)', color: showCreds ? '#1D4ED8' : 'var(--text-muted)', fontSize: '12px', border: '1px solid transparent' }}
-        >
-          <Info size={14} />
-          {showCreds ? 'Hide credentials' : 'Show demo credentials'}
-        </button>
-        {showCreds && (
-          <div className="mt-2 p-3 rounded-lg" style={{ backgroundColor: '#EFF6FF', border: '1px solid #DBEAFE' }}>
-            <div className="flex items-center justify-between mb-1">
-              <span style={{ fontSize: '11px', color: '#1D4ED8', fontWeight: 600 }}>EMAIL</span>
-              <button onClick={() => { setEmail('arjun@appinventiv.com'); }} style={{ fontSize: '11px', color: '#1D4ED8', cursor: 'pointer' }}>Copy to field</button>
-            </div>
-            <code style={{ fontSize: '12px', color: 'var(--text-primary)' }}>arjun@appinventiv.com</code>
-            <div className="flex items-center justify-between mb-1 mt-2">
-              <span style={{ fontSize: '11px', color: '#1D4ED8', fontWeight: 600 }}>PASSWORD</span>
-              <button onClick={() => { setPassword('Admin@123'); }} style={{ fontSize: '11px', color: '#1D4ED8', cursor: 'pointer' }}>Copy to field</button>
-            </div>
-            <code style={{ fontSize: '12px', color: 'var(--text-primary)' }}>Admin@123</code>
-            <div className="mt-2">
-              <span style={{ fontSize: '11px', color: '#1D4ED8', fontWeight: 600 }}>FORGOT PASSWORD OTP</span>
-              <code className="ml-2" style={{ fontSize: '12px', color: 'var(--text-primary)' }}>123456</code>
-            </div>
-          </div>
-        )}
-      </div>
-
       <form onSubmit={handleSubmit} className="mt-6 space-y-4">
         <div>
           <label className="block mb-1.5" style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-secondary)' }}>Email address</label>
           <div className={inputWrap}>
             <Mail size={16} style={iconStyle} />
-            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="arjun@appinventiv.com" required style={inputStyle} />
+            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Enter your email" required style={inputStyle} />
           </div>
         </div>
 
@@ -124,8 +103,39 @@ export default function Login() {
         </button>
       </form>
 
+      {/* Demo credentials panel */}
+      <div className="mt-4 relative">
+        <button
+          type="button"
+          onClick={() => setShowCreds(!showCreds)}
+          className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg transition-colors"
+          style={{ backgroundColor: showCreds ? '#EFF6FF' : 'var(--ice-warm)', color: showCreds ? '#1D4ED8' : 'var(--text-muted)', fontSize: '12px', border: '1px solid transparent' }}
+        >
+          <Info size={14} />
+          {showCreds ? 'Hide credentials' : 'Show demo credentials'}
+        </button>
+        {showCreds && (
+          <div className="mt-2 p-3 rounded-lg" style={{ backgroundColor: '#EFF6FF', border: '1px solid #DBEAFE' }}>
+            <div className="flex items-center justify-between mb-1">
+              <span style={{ fontSize: '11px', color: '#1D4ED8', fontWeight: 600 }}>EMAIL</span>
+              <button type="button" onClick={() => setEmail('arjun@appinventiv.com')} style={{ fontSize: '11px', color: '#1D4ED8', cursor: 'pointer', background: 'none', border: 'none' }}>Copy to field</button>
+            </div>
+            <code style={{ fontSize: '12px', color: 'var(--text-primary)' }}>arjun@appinventiv.com</code>
+            <div className="flex items-center justify-between mb-1 mt-2">
+              <span style={{ fontSize: '11px', color: '#1D4ED8', fontWeight: 600 }}>PASSWORD</span>
+              <button type="button" onClick={() => setPassword('Admin@123')} style={{ fontSize: '11px', color: '#1D4ED8', cursor: 'pointer', background: 'none', border: 'none' }}>Copy to field</button>
+            </div>
+            <code style={{ fontSize: '12px', color: 'var(--text-primary)' }}>Admin@123</code>
+            <div className="mt-2">
+              <span style={{ fontSize: '11px', color: '#1D4ED8', fontWeight: 600 }}>FORGOT PASSWORD OTP</span>
+              <code className="ml-2" style={{ fontSize: '12px', color: 'var(--text-primary)' }}>123456</code>
+            </div>
+          </div>
+        )}
+      </div>
+
       <p className="text-center mt-4" style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-        Access is restricted to authorised Appinventiv operators only.
+        Access is restricted to authorised operators only.
       </p>
     </AuthLayout>
   );

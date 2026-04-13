@@ -44,6 +44,16 @@ const orgContacts = {
   8: { admin: 'Karen Tanaka', email: 'karen@pacificrim.com', stripeId: 'cus_Xs9qW3cEwT' },
 };
 
+const firmProfiles = {
+  1: { primaryState: 'New York', additionalStates: ['California', 'Connecticut'], federalPractice: true, practiceAreas: ['Corporate & M&A', 'Litigation', 'Real Estate'], firmSize: 'Small Firm' },
+  2: { primaryState: 'California', additionalStates: ['Nevada'], federalPractice: false, practiceAreas: ['Litigation', 'Employment & Labor'], firmSize: 'Mid-size Firm' },
+  3: { primaryState: 'Illinois', additionalStates: [], federalPractice: true, practiceAreas: ['Corporate & M&A', 'Tax & Compliance'], firmSize: 'Small Firm' },
+  4: { primaryState: 'Texas', additionalStates: ['Oklahoma'], federalPractice: false, practiceAreas: ['Family Law', 'Criminal Defense'], firmSize: 'Small Firm' },
+  5: { primaryState: 'Florida', additionalStates: [], federalPractice: false, practiceAreas: ['Real Estate', 'Immigration'], firmSize: 'Solo Practitioner' },
+  6: { primaryState: 'Georgia', additionalStates: ['Alabama'], federalPractice: false, practiceAreas: ['Litigation'], firmSize: 'Mid-size Firm' },
+  7: { primaryState: 'Massachusetts', additionalStates: [], federalPractice: true, practiceAreas: ['Intellectual Property'], firmSize: 'Small Firm' },
+  8: { primaryState: 'Washington', additionalStates: ['Oregon'], federalPractice: false, practiceAreas: ['Employment & Labor', 'Healthcare Law'], firmSize: 'Mid-size Firm' },
+};
 
 const planLimits = {
   Free: { docs: 50, workflows: 10, kpacks: 1 },
@@ -243,7 +253,8 @@ export default function TenantManagement() {
             created: createdDate,
             logins: 0,
             docsUploaded: 0,
-              onboardingCompleted: false,
+            reportsGenerated: 0,
+            onboardingCompleted: false,
           });
           localStorage.setItem('yourai_mgmt_users', JSON.stringify(storedUsers));
         }
@@ -272,33 +283,10 @@ export default function TenantManagement() {
     outline: 'none',
   };
 
-  // For dynamic tenants (created via signup), pull user/profile data from localStorage
-  const dynamicContact = useMemo(() => {
-    if (!selectedOrg || orgContacts[selectedOrg.id]) return null;
-    try {
-      const mgmtUsers = JSON.parse(localStorage.getItem('yourai_mgmt_users') || '[]');
-      const orgUser = mgmtUsers.find(u => u.org === selectedOrg.name);
-      if (orgUser) return { admin: orgUser.name, email: orgUser.email, stripeId: null };
-    } catch {}
-    return null;
-  }, [selectedOrg]);
-
-  const contact = selectedOrg ? (orgContacts[selectedOrg.id] || dynamicContact || { admin: 'Unknown', email: '—', stripeId: null }) : null;
-
-  const dynamicUsers = useMemo(() => {
-    if (!selectedOrg || orgUsers[selectedOrg.id]) return null;
-    try {
-      const mgmtUsers = JSON.parse(localStorage.getItem('yourai_mgmt_users') || '[]');
-      return mgmtUsers
-        .filter(u => u.org === selectedOrg.name)
-        .map(u => ({ name: u.name, email: u.email, role: u.role || 'Admin', status: u.status || 'Active', lastActive: u.lastActive || 'Today', onboardingRole: u.onboardingRole || null }));
-    } catch {}
-    return null;
-  }, [selectedOrg]);
-
-  const users = selectedOrg ? (orgUsers[selectedOrg.id] || (dynamicUsers && dynamicUsers.length > 0 ? dynamicUsers : [{ name: contact?.admin || 'Admin', email: contact?.email || '—', role: 'Admin', status: 'Active', lastActive: 'Today' }])) : [];
+  const contact = selectedOrg ? (orgContacts[selectedOrg.id] || { admin: 'Unknown', email: '—', stripeId: null }) : null;
+  const users = selectedOrg ? (orgUsers[selectedOrg.id] || [{ name: contact?.admin || 'Admin', email: contact?.email || '—', role: 'Admin', status: 'Active', lastActive: 'Today' }]) : [];
   const workspaces = selectedOrg ? (orgWorkspaces[selectedOrg.id] || [{ name: 'Default Workspace', members: selectedOrg.users, documents: selectedOrg.documents, created: selectedOrg.created, status: 'Active' }]) : [];
-
+  const firmProfile = selectedOrg ? (firmProfiles[selectedOrg.id] || null) : null;
   const limits = selectedOrg ? planLimits[selectedOrg.plan] : null;
 
   const filteredOrgUsers = users.filter((u) =>
@@ -357,7 +345,7 @@ export default function TenantManagement() {
         <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} style={inputStyle}>
           <option>All</option><option>Active</option><option>Suspended</option>
         </select>
-        <button onClick={handleExportCSV} disabled={filtered.length === 0} className="px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 whitespace-nowrap" style={{ border: '1px solid var(--border)', color: filtered.length === 0 ? '#94A3B8' : 'var(--slate)', backgroundColor: 'white', cursor: filtered.length === 0 ? 'not-allowed' : 'pointer', opacity: filtered.length === 0 ? 0.6 : 1 }}>
+        <button onClick={handleExportCSV} className="px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 whitespace-nowrap" style={{ border: '1px solid var(--border)', color: 'var(--slate)', backgroundColor: 'white' }}>
           <Download size={16} /> Export CSV
         </button>
         <span className="text-sm whitespace-nowrap" style={{ color: 'var(--text-muted)' }}>Showing {filtered.length} organisations</span>
@@ -385,17 +373,6 @@ export default function TenantManagement() {
             </td>
           </tr>
         ))}
-        {filtered.length === 0 && (
-          <tr>
-            <td colSpan={8} className="px-4 py-12 text-center">
-              <div style={{ color: 'var(--text-muted)', fontSize: '14px' }}>
-                <Search size={24} style={{ margin: '0 auto 8px', opacity: 0.4 }} />
-                <p style={{ fontWeight: 500 }}>No organisations found</p>
-                <p style={{ fontSize: '12px', marginTop: 4 }}>Try adjusting your search or filters.</p>
-              </div>
-            </td>
-          </tr>
-        )}
       </Table>
 
       {/* Edit Tenant Modal */}
@@ -451,8 +428,8 @@ export default function TenantManagement() {
 
       {/* Org Detail Slide-over */}
       {selectedOrg && (
-        <div className="fixed inset-0 z-50 flex justify-end" style={{ backgroundColor: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)' }}>
-          <div className="w-full bg-white h-full overflow-y-auto" style={{ maxWidth: 480, boxShadow: '-4px 0 20px rgba(0,0,0,0.1)' }}>
+        <div className="fixed inset-0 z-50 flex justify-end" style={{ backgroundColor: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)' }} onClick={() => setSelectedOrg(null)}>
+          <div className="w-full bg-white h-full overflow-y-auto" style={{ maxWidth: 480, boxShadow: '-4px 0 20px rgba(0,0,0,0.1)' }} onClick={(e) => e.stopPropagation()}>
             {/* Header */}
             <div className="sticky top-0 bg-white z-10 px-6 py-4 flex items-center justify-between" style={{ borderBottom: '1px solid var(--border)' }}>
               <div className="flex items-center gap-3">
@@ -488,7 +465,13 @@ export default function TenantManagement() {
                       <div className="p-4 rounded-lg" style={{ border: '1px solid var(--border)' }}>
                         <div className="flex items-center justify-between mb-3">
                           <div className="text-xs font-semibold uppercase" style={{ color: 'var(--text-muted)' }}>Subscription</div>
-                          {/* SA cannot change plan — managed by user/billing */}
+                          <button
+                            onClick={() => openPlanOverride(selectedOrg)}
+                            className="flex items-center gap-1 rounded-lg font-medium"
+                            style={{ height: 28, padding: '0 10px', fontSize: '12px', border: '1px solid var(--border)', color: 'var(--navy)', backgroundColor: 'white' }}
+                          >
+                            <Pencil size={12} /> Change Plan
+                          </button>
                         </div>
                         <div className="space-y-2.5">
                           <div className="flex items-center justify-between">
@@ -544,6 +527,35 @@ export default function TenantManagement() {
                     <div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{contact?.admin}</div>
                     <div className="text-sm" style={{ color: 'var(--text-muted)' }}>{contact?.email}</div>
                   </div>
+                  {/* Firm Profile */}
+                  <div style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 16 }}>
+                    <div className="text-xs font-semibold uppercase mb-3" style={{ color: 'var(--text-muted)' }}>Firm Profile</div>
+                    <div className="grid grid-cols-2 gap-3">
+                      {[
+                        ['Primary State', firmProfile?.primaryState || 'Not set'],
+                        ['Federal Practice', firmProfile ? (firmProfile.federalPractice ? 'Yes' : 'No') : 'Not set'],
+                        ['Firm Size', firmProfile?.firmSize || 'Not set'],
+                        ['Additional States', firmProfile ? (firmProfile.additionalStates.length > 0 ? firmProfile.additionalStates.join(', ') : 'None') : 'Not set'],
+                      ].map(([l, v]) => (
+                        <div key={l} className="p-3 rounded-lg" style={{ backgroundColor: 'var(--ice-warm)' }}>
+                          <div className="text-xs font-semibold uppercase" style={{ color: 'var(--text-muted)' }}>{l}</div>
+                          <div className="text-sm font-medium mt-1" style={{ color: 'var(--text-primary)' }}>{v}</div>
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{ marginTop: 12 }}>
+                      <div className="text-xs" style={{ color: 'var(--text-muted)', marginBottom: 6 }}>Practice Areas</div>
+                      {firmProfile && firmProfile.practiceAreas.length > 0 ? (
+                        <div className="flex flex-wrap gap-1.5">
+                          {firmProfile.practiceAreas.map((area) => (
+                            <span key={area} style={{ backgroundColor: '#F3F4F6', color: '#374151', fontSize: 11, borderRadius: 20, padding: '2px 10px', display: 'inline-block' }}>{area}</span>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-sm" style={{ color: 'var(--text-muted)' }}>Not set</div>
+                      )}
+                    </div>
+                  </div>
 
                   <div className="p-4 rounded-lg" style={{ border: `1px solid ${selectedOrg.status === 'Active' ? '#FEE2E2' : '#DCFCE7'}`, backgroundColor: selectedOrg.status === 'Active' ? '#FEF2F2' : '#F0FDF4' }}>
                     <div className="text-xs font-semibold uppercase mb-1" style={{ color: selectedOrg.status === 'Active' ? '#991B1B' : '#166534' }}>
@@ -575,14 +587,6 @@ export default function TenantManagement() {
                         </tr>
                       </thead>
                       <tbody>
-                        {filteredOrgUsers.length === 0 && (
-                          <tr>
-                            <td colSpan={4} className="px-3 py-8 text-center">
-                              <Users size={20} style={{ margin: '0 auto 6px', color: 'var(--text-muted)', opacity: 0.4 }} />
-                              <p style={{ fontSize: '13px', color: 'var(--text-muted)', fontWeight: 500 }}>{orgUserSearch ? 'No users match your search' : 'No users yet'}</p>
-                            </td>
-                          </tr>
-                        )}
                         {filteredOrgUsers.map((u, i) => (
                           <tr key={i} className="transition-colors" style={{ borderBottom: '1px solid var(--border)' }}>
                             <td className="px-3 py-2.5">
@@ -625,14 +629,6 @@ export default function TenantManagement() {
                       </tr>
                     </thead>
                     <tbody>
-                      {workspaces.length === 0 && (
-                        <tr>
-                          <td colSpan={5} className="px-3 py-8 text-center">
-                            <Building2 size={20} style={{ margin: '0 auto 6px', color: 'var(--text-muted)', opacity: 0.4 }} />
-                            <p style={{ fontSize: '13px', color: 'var(--text-muted)', fontWeight: 500 }}>No workspaces yet</p>
-                          </td>
-                        </tr>
-                      )}
                       {workspaces.map((w, i) => (
                         <tr key={i} style={{ borderBottom: '1px solid var(--border)' }}>
                           <td className="px-3 py-2.5 text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{w.name}</td>
@@ -776,12 +772,7 @@ export default function TenantManagement() {
                   <div>
                     <label className="block mb-1.5" style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-secondary)' }}>Email Address *</label>
                     <input type="email" value={newAdmin.email} onChange={(e) => setNewAdmin({ ...newAdmin, email: e.target.value })} placeholder="ryan@hartwell.com" style={{ ...inputStyle, width: '100%' }} />
-                    {newAdmin.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newAdmin.email) && (
-                      <p className="mt-1" style={{ fontSize: '11px', color: '#EF4444' }}>Please enter a valid email address.</p>
-                    )}
-                    {(!newAdmin.email || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newAdmin.email)) && (
-                      <p className="mt-1" style={{ fontSize: '11px', color: 'var(--text-muted)' }}>The invitation email will be sent to this address.</p>
-                    )}
+                    <p className="mt-1" style={{ fontSize: '11px', color: 'var(--text-muted)' }}>The invitation email will be sent to this address.</p>
                   </div>
 
                   <div>
@@ -877,29 +868,20 @@ export default function TenantManagement() {
                 </div>
                 <div className="flex gap-3">
                   <button onClick={closeAddTenant} className="px-4 py-2 rounded-lg text-sm font-medium" style={{ border: '1px solid var(--border)', color: 'var(--text-secondary)' }}>Cancel</button>
-                  {(() => {
-                    if (addStep < 3) {
-                      const step1Invalid = addStep === 1 && !newOrg.name.trim();
-                      const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newAdmin.email);
-                      const step2Invalid = addStep === 2 && (!newAdmin.firstName.trim() || !newAdmin.lastName.trim() || !emailValid);
-                      const isStepDisabled = step1Invalid || step2Invalid;
-                      return (
-                        <button
-                          onClick={() => setAddStep(addStep + 1)}
-                          disabled={isStepDisabled}
-                          className="px-5 py-2 rounded-lg text-sm font-medium text-white flex items-center gap-1.5"
-                          style={{ backgroundColor: isStepDisabled ? '#94A3B8' : 'var(--navy)', cursor: isStepDisabled ? 'not-allowed' : 'pointer' }}
-                        >
-                          Continue <ChevronRight size={14} />
-                        </button>
-                      );
-                    }
-                    return (
-                      <button onClick={handleCreateTenant} className="px-5 py-2 rounded-lg text-sm font-medium text-white flex items-center gap-1.5" style={{ backgroundColor: 'var(--navy)' }}>
-                        <Send size={14} /> Send Invitation
-                      </button>
-                    );
-                  })()}
+                  {addStep < 3 ? (
+                    <button
+                      onClick={() => setAddStep(addStep + 1)}
+                      disabled={(addStep === 1 && !newOrg.name.trim()) || (addStep === 2 && (!newAdmin.firstName.trim() || !newAdmin.email.trim()))}
+                      className="px-5 py-2 rounded-lg text-sm font-medium text-white flex items-center gap-1.5"
+                      style={{ backgroundColor: (addStep === 1 && !newOrg.name.trim()) || (addStep === 2 && (!newAdmin.firstName.trim() || !newAdmin.email.trim())) ? '#94A3B8' : 'var(--navy)', cursor: (addStep === 1 && !newOrg.name.trim()) || (addStep === 2 && (!newAdmin.firstName.trim() || !newAdmin.email.trim())) ? 'not-allowed' : 'pointer' }}
+                    >
+                      Continue <ChevronRight size={14} />
+                    </button>
+                  ) : (
+                    <button onClick={handleCreateTenant} className="px-5 py-2 rounded-lg text-sm font-medium text-white flex items-center gap-1.5" style={{ backgroundColor: 'var(--navy)' }}>
+                      <Send size={14} /> Send Invitation
+                    </button>
+                  )}
                 </div>
               </div>
             )}
@@ -907,7 +889,115 @@ export default function TenantManagement() {
         </div>
       )}
 
-      {/* Plan Override Modal removed — SA cannot change plan or payment data */}
+      {/* ═══ Plan Override Modal ═══ */}
+      {overrideOrg && (
+        <>
+          <div onClick={() => setOverrideOrg(null)} style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)', zIndex: 60, backdropFilter: 'blur(4px)' }} />
+          <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 520, maxHeight: '90vh', overflowY: 'auto', backgroundColor: 'white', borderRadius: 16, boxShadow: '0 20px 60px rgba(0,0,0,0.2)', zIndex: 61 }}>
+            <div className="flex items-center justify-between px-6 py-5" style={{ borderBottom: '1px solid var(--border)' }}>
+              <h3 style={{ fontFamily: "'DM Serif Display', serif", fontSize: '18px', color: 'var(--text-primary)' }}>Change Plan — {overrideOrg.name}</h3>
+              <button onClick={() => setOverrideOrg(null)} className="p-1.5 rounded-lg hover:bg-gray-100"><X size={18} style={{ color: 'var(--text-muted)' }} /></button>
+            </div>
+            <div className="px-6 py-5 space-y-5">
+              {/* Current Plan */}
+              <div className="p-4 rounded-lg" style={{ backgroundColor: 'var(--ice-warm)', border: '1px solid var(--border)' }}>
+                <div className="text-xs font-semibold uppercase mb-2" style={{ color: 'var(--text-muted)' }}>Current Plan</div>
+                <div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+                  {overrideOrg.plan} · ${subscriptionPlans.find(p => p.name === overrideOrg.plan)?.price || 0}/user/month
+                </div>
+                <div className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
+                  Seats: {overrideOrg.users} users · ${overrideOrg.mrr.toLocaleString()}/month total
+                </div>
+                <div className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
+                  Active since: {overrideOrg.billedSince || overrideOrg.created} · Next renewal: {billingMeta[overrideOrg.id]?.nextRenewal || '—'}
+                </div>
+              </div>
+              {/* Plan Cards */}
+              <div>
+                <label className="block text-sm font-medium mb-3" style={{ color: 'var(--text-primary)' }}>Select New Plan</label>
+                <div className="grid grid-cols-2 gap-3">
+                  {subscriptionPlans.map((p) => {
+                    const isCurrent = p.name === overrideOrg.plan;
+                    const isSelected = p.name === overrideSelectedPlan;
+                    return (
+                      <div key={p.id} onClick={() => !isCurrent && setOverrideSelectedPlan(p.name)} className="rounded-lg p-4 transition-all" style={{ border: isSelected ? '2px solid var(--navy)' : '1px solid var(--border)', backgroundColor: isCurrent ? '#F9FAFB' : isSelected ? '#EFF6FF' : 'white', cursor: isCurrent ? 'not-allowed' : 'pointer', opacity: isCurrent ? 0.7 : 1, borderLeft: `3px solid ${p.colour}`, position: 'relative' }}>
+                        {isCurrent && <span className="absolute top-2 right-2 text-xs px-1.5 py-0.5 rounded-full" style={{ backgroundColor: '#F3F4F6', color: '#6B7280', fontSize: '10px' }}>Current</span>}
+                        {isSelected && <span className="absolute top-2 right-2 w-5 h-5 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--navy)' }}><Check size={12} color="white" /></span>}
+                        <div style={{ fontFamily: "'DM Serif Display', serif", fontSize: '15px', color: 'var(--navy)' }}>{p.name}</div>
+                        <div className="text-sm font-medium mt-1" style={{ color: 'var(--text-primary)' }}>{p.price === 0 ? 'Free' : `$${p.price}/user/mo`}</div>
+                        <div className="mt-2 space-y-0.5">
+                          <div className="text-xs" style={{ color: 'var(--text-muted)' }}>• {p.docsPerMonth === null ? 'Unlimited' : p.docsPerMonth.toLocaleString()} docs/mo</div>
+                          <div className="text-xs" style={{ color: 'var(--text-muted)' }}>• {p.workflowRuns === null ? 'Unlimited' : p.workflowRuns} workflows/mo</div>
+                          <div className="text-xs" style={{ color: 'var(--text-muted)' }}>• {p.aiModels}</div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                {(() => {
+                  const curIdx = PLAN_ORDER.indexOf(overrideOrg.plan);
+                  const selIdx = overrideSelectedPlan ? PLAN_ORDER.indexOf(overrideSelectedPlan) : -1;
+                  if (selIdx >= 0 && selIdx < curIdx) return (
+                    <div className="flex items-start gap-2.5 p-3 mt-3 rounded-lg" style={{ backgroundColor: '#FFFBEB', borderLeft: '3px solid #F59E0B' }}>
+                      <AlertTriangle size={15} style={{ color: '#92400E', flexShrink: 0, marginTop: 1 }} />
+                      <p className="text-xs" style={{ color: '#92400E' }}>Downgrading takes effect at next billing cycle ({overrideOrg.nextRenewal || 'May 1, 2026'}). Current features remain active until then.</p>
+                    </div>
+                  );
+                  if (selIdx >= 0 && selIdx > curIdx) return (
+                    <div className="flex items-start gap-2.5 p-3 mt-3 rounded-lg" style={{ backgroundColor: '#F0FDF4', borderLeft: '3px solid #166534' }}>
+                      <CheckCircle size={15} style={{ color: '#166534', flexShrink: 0, marginTop: 1 }} />
+                      <p className="text-xs" style={{ color: '#166534' }}>Upgrading takes effect immediately. The org will be charged a prorated amount.</p>
+                    </div>
+                  );
+                  return null;
+                })()}
+              </div>
+              {/* Reason */}
+              <div>
+                <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-primary)' }}>Reason for manual plan change *</label>
+                <select value={overrideReason} onChange={(e) => { setOverrideReason(e.target.value); setOverrideError(''); }} style={{ ...inputStyle, width: '100%', height: 40, cursor: 'pointer', appearance: 'auto' }}>
+                  <option value="">Select a reason...</option>
+                  {OVERRIDE_REASONS.map((r) => <option key={r} value={r}>{r}</option>)}
+                </select>
+                {overrideReason === 'Other' && (
+                  <div className="mt-2">
+                    <input type="text" value={overrideCustomReason} onChange={(e) => { setOverrideCustomReason(e.target.value); setOverrideError(''); }} placeholder="Describe the reason..." style={{ ...inputStyle, width: '100%' }} />
+                    {overrideError && <p className="text-xs mt-1" style={{ color: '#991B1B' }}>{overrideError}</p>}
+                  </div>
+                )}
+              </div>
+              {/* Notes */}
+              <div>
+                <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-primary)' }}>Internal notes</label>
+                <textarea rows={3} value={overrideNotes} onChange={(e) => setOverrideNotes(e.target.value)} placeholder="Add any notes visible only to Super Admins..." style={{ ...inputStyle, width: '100%', height: 'auto', padding: '10px 12px', resize: 'none' }} />
+              </div>
+              {/* Effective */}
+              <div>
+                <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-primary)' }}>When should this take effect?</label>
+                <div className="grid grid-cols-2 gap-3">
+                  {[{ value: 'immediately', label: 'Immediately', desc: 'Takes effect now' }, { value: 'next_cycle', label: 'Next billing cycle', desc: overrideOrg.nextRenewal || 'May 1, 2026' }].map((opt) => (
+                    <div key={opt.value} onClick={() => setOverrideEffective(opt.value)} className="rounded-lg p-3 cursor-pointer transition-all" style={{ border: overrideEffective === opt.value ? '2px solid var(--navy)' : '1px solid var(--border)', backgroundColor: overrideEffective === opt.value ? '#EFF6FF' : 'white' }}>
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 rounded-full flex items-center justify-center" style={{ border: `2px solid ${overrideEffective === opt.value ? 'var(--navy)' : 'var(--border)'}` }}>
+                          {overrideEffective === opt.value && <div className="w-2 h-2 rounded-full" style={{ backgroundColor: 'var(--navy)' }} />}
+                        </div>
+                        <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{opt.label}</span>
+                      </div>
+                      <p className="text-xs mt-1 ml-6" style={{ color: 'var(--text-muted)' }}>{opt.desc}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 px-6 py-4" style={{ borderTop: '1px solid var(--border)' }}>
+              <button onClick={() => setOverrideOrg(null)} className="px-4 py-2.5 rounded-lg text-sm font-medium" style={{ border: '1px solid var(--border)', color: 'var(--slate)', backgroundColor: 'white' }}>Cancel</button>
+              <button onClick={handleApplyPlanChange} disabled={!overrideSelectedPlan || !overrideReason} className="px-5 py-2.5 rounded-lg text-sm font-medium text-white" style={{ backgroundColor: (!overrideSelectedPlan || !overrideReason) ? '#94A3B8' : 'var(--navy)', cursor: (!overrideSelectedPlan || !overrideReason) ? 'not-allowed' : 'pointer' }}>
+                Apply Plan Change
+              </button>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

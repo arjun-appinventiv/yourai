@@ -6,16 +6,14 @@ import {
   Search, Bell, ArrowUp, Shield, Sparkles, FileText, Building2, Scale,
   LayoutDashboard, Send, MapPin, FileSearch, Lock, X, AlertTriangle, Info, Zap,
   BookOpen, UserPlus, Trash2, Edit3, Copy, Phone, Mail, Briefcase, Hash, Menu,
-  Package, Link2, File, Upload, Paperclip, Image, Video
+  Package, Link2, File, Upload, Paperclip, Database, GitBranch, Settings, LogOut
 } from 'lucide-react';
 import { billingData, subscriptionPlans } from '../../data/mockData';
+import { callLLM, getApiKey } from '../../lib/llm-client';
+import { extractFileText } from '../../lib/file-parser';
 
-/* ─── mock data ─── */
-const MOCK_RESPONSES = [
-  "I'll analyze that for you. Give me a moment to process the document...",
-  "Based on my review of the relevant case law, here are the key findings...",
-  "I've completed the analysis. Here's a summary of the results...",
-];
+// Removed: MOCK_RESPONSES array — replaced with real streaming fetch to /api/chat
+// See: tech-stack.md — Backend API section
 
 const INITIAL_MESSAGES = [
   {
@@ -51,13 +49,6 @@ const INITIAL_MESSAGES = [
   },
 ];
 
-const QUICK_ACTIONS = [
-  { emoji: '\ud83d\udccb', label: 'Analyze contract' },
-  { emoji: '\ud83c\udfe2', label: 'Summarize workspace' },
-  { emoji: '\ud83d\udcc4', label: 'Compare documents' },
-  { emoji: '\ud83d\udd0d', label: 'Run web search' },
-];
-const QUICK_ACTIONS_2 = [{ emoji: '\u2728', label: 'Generate artifact' }];
 
 /* ─── Default Prompt Templates ─── */
 const DEFAULT_PROMPT_TEMPLATES = [
@@ -121,6 +112,33 @@ const DEFAULT_KNOWLEDGE_PACKS = [
   },
 ];
 
+/* ─── Chat Threads (conversation history) ─── */
+const DEFAULT_THREADS = [
+  {
+    id: 'thread-1',
+    title: 'New Conversation',
+    preview: '',
+    updatedAt: 'Just now',
+    messageCount: 0,
+    isActive: true,
+  },
+];
+
+const THREAD_MESSAGES = {
+  'thread-2': [
+    { id: 101, sender: 'user', content: 'Can an employer enforce a non-compete in California?', timestamp: 'Yesterday, 4:32 PM' },
+    { id: 102, sender: 'bot', content: 'Short answer: **No** — California generally does not allow non-compete agreements. Under California Business and Professions Code Section 16600, any contract that prevents someone from working in their profession is void.', timestamp: 'Yesterday, 4:32 PM', sourceBadge: 'Answered from: YourAI knowledge base' },
+  ],
+  'thread-3': [
+    { id: 201, sender: 'user', content: 'Draft a non-compete clause for an employment agreement in Texas', timestamp: 'Apr 9, 2026 · 2:15 PM' },
+    { id: 202, sender: 'bot', content: 'Here\'s a draft non-compete clause tailored for Texas employment law. Note that Texas requires non-competes to be "ancillary to or part of an otherwise enforceable agreement" per TX Bus. & Com. Code §15.50.', timestamp: 'Apr 9, 2026 · 2:15 PM', sourceBadge: 'Answered from: YourAI knowledge base' },
+  ],
+  'thread-4': [
+    { id: 301, sender: 'user', content: 'Review the indemnification section of the Acme Corp MSA', timestamp: 'Apr 8, 2026 · 10:00 AM' },
+    { id: 302, sender: 'bot', content: 'I\'ve reviewed the indemnification provisions in the **Acme Corp Master Services Agreement (v4)**. I found 2 indemnification clauses on pages 18-19 with one flagged concern.', timestamp: 'Apr 8, 2026 · 10:00 AM', sourceBadge: 'Answered from: your document' },
+  ],
+};
+
 const DEFAULT_DOCUMENT_VAULT = [
   {
     id: 1,
@@ -174,16 +192,58 @@ const AI_MODELS_BY_PLAN = {
 };
 
 /* ─── tiny helpers ─── */
-const bold = (str) => {
-  const parts = str.split(/(\*\*[^*]+\*\*)/g);
-  return parts.map((p, i) =>
-    p.startsWith('**') && p.endsWith('**') ? (
-      <strong key={i}>{p.slice(2, -2)}</strong>
-    ) : (
-      <span key={i}>{p}</span>
-    ),
-  );
+/** Lightweight markdown renderer: bold, bullets, numbered lists, newlines */
+const renderMarkdown = (str) => {
+  if (!str) return null;
+  const lines = str.split('\n');
+  const elements = [];
+  let listItems = [];
+  let listType = null; // 'ul' or 'ol'
+
+  const flushList = () => {
+    if (listItems.length > 0) {
+      const Tag = listType === 'ol' ? 'ol' : 'ul';
+      elements.push(<Tag key={`list-${elements.length}`} style={{ margin: '6px 0', paddingLeft: 22 }}>{listItems}</Tag>);
+      listItems = [];
+      listType = null;
+    }
+  };
+
+  const inlineBold = (text, keyPrefix) => {
+    const parts = text.split(/(\*\*[^*]+\*\*)/g);
+    return parts.map((p, i) =>
+      p.startsWith('**') && p.endsWith('**')
+        ? <strong key={`${keyPrefix}-${i}`}>{p.slice(2, -2)}</strong>
+        : <span key={`${keyPrefix}-${i}`}>{p}</span>
+    );
+  };
+
+  lines.forEach((line, i) => {
+    const bulletMatch = line.match(/^\s*[\*\-•]\s+(.*)/);
+    const numberedMatch = line.match(/^\s*(\d+)[\.\)]\s+(.*)/);
+
+    if (bulletMatch) {
+      if (listType !== 'ul') flushList();
+      listType = 'ul';
+      listItems.push(<li key={`li-${i}`} style={{ marginBottom: 3 }}>{inlineBold(bulletMatch[1], `b-${i}`)}</li>);
+    } else if (numberedMatch) {
+      if (listType !== 'ol') flushList();
+      listType = 'ol';
+      listItems.push(<li key={`li-${i}`} style={{ marginBottom: 3 }}>{inlineBold(numberedMatch[2], `n-${i}`)}</li>);
+    } else {
+      flushList();
+      if (line.trim() === '') {
+        elements.push(<div key={`br-${i}`} style={{ height: 8 }} />);
+      } else {
+        elements.push(<p key={`p-${i}`} style={{ margin: '3px 0' }}>{inlineBold(line, `p-${i}`)}</p>);
+      }
+    }
+  });
+  flushList();
+  return elements;
 };
+// Backward compat alias
+const bold = renderMarkdown;
 
 const riskColors = {
   HIGH: { bg: '#FEE2E2', text: '#991B1B' },
@@ -192,47 +252,107 @@ const riskColors = {
 };
 
 /* ─────────────────── Sidebar ─────────────────── */
-const sidebarItems = [
-  { icon: LayoutDashboard, label: 'Dashboard', active: true, dotColor: '#22C55E', subtitle: '3 workflows running \u00b7 2 artifacts pending' },
-  { icon: Share2, label: 'Knowledge Graph', badge: 'New', badgeStyle: 'green', subtitle: '12 entities \u00b7 47 relationships' },
-  { icon: Grid3X3, label: 'Workspaces', badge: '3', badgeStyle: 'navy', subtitle: '3 active \u00b7 1 shared with you' },
-];
+/* CONFIDENCE: 5/10 — Sidebar redesign based on Arjun wireframe (Apr 2026).
+   Layout structure confirmed by Arjun. Not signed off by Ryan.
+   All existing nav items preserved — reorganised only. */
 
-function Sidebar({ onOpenPromptTemplates, onOpenClients, onOpenKnowledgePacks, onOpenDocumentVault, promptCount, clientCount, packCount, vaultCount, isOpen, onClose }) {
-  const renderItem = (item, idx) => {
+function Sidebar({ onOpenPromptTemplates, onOpenClients, onOpenKnowledgePacks, onOpenDocumentVault, promptCount, clientCount, packCount, vaultCount, isOpen, onClose, threads, activeThreadId, onSwitchThread, onNewThread, onDeleteThread, threadSearch, onThreadSearchChange }) {
+  // Collapse state — persisted to localStorage
+  const [workspaceOpen, setWorkspaceOpen] = useState(() => {
+    try { const v = localStorage.getItem('yourai_sidebar_workspace_open'); return v === null ? true : v === 'true'; } catch { return true; }
+  });
+  const [knowledgeOpen, setKnowledgeOpen] = useState(() => {
+    try { const v = localStorage.getItem('yourai_sidebar_knowledge_open'); return v === null ? true : v === 'true'; } catch { return true; }
+  });
+  const [showChatSearch, setShowChatSearch] = useState(false);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [hoveredItem, setHoveredItem] = useState(null);
+  const [hoveredThread, setHoveredThread] = useState(null);
+
+  const toggleWorkspace = () => {
+    setWorkspaceOpen(prev => { const next = !prev; try { localStorage.setItem('yourai_sidebar_workspace_open', String(next)); } catch {} return next; });
+  };
+  const toggleKnowledge = () => {
+    setKnowledgeOpen(prev => { const next = !prev; try { localStorage.setItem('yourai_sidebar_knowledge_open', String(next)); } catch {} return next; });
+  };
+
+  // ─── Workspace items ───
+  const workspaceItems = [
+    { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard', active: true, rightText: '3 running' },
+    { id: 'workspaces', icon: Briefcase, label: 'Workspaces', rightText: '3' },
+    { id: 'clients', icon: Users, label: 'Clients', rightText: String(clientCount), onClick: onOpenClients },
+    { id: 'knowledge-graph', icon: GitBranch, label: 'Knowledge Graph', badge: 'New' },
+  ];
+
+  // ─── Knowledge items ───
+  const knowledgeItems = [
+    { id: 'document-vault', icon: FolderOpen, label: 'Document vault', rightText: String(vaultCount), onClick: onOpenDocumentVault },
+    { id: 'knowledge-packs', icon: Package, label: 'Knowledge packs', rightText: String(packCount), onClick: onOpenKnowledgePacks },
+    { id: 'prompt-templates', icon: FileText, label: 'Prompt templates', rightText: String(promptCount), onClick: onOpenPromptTemplates },
+  ];
+
+  // ─── Shared nav item renderer ───
+  const renderNavItem = (item) => {
     const Icon = item.icon;
+    const isActive = item.active;
+    const isHovered = hoveredItem === item.id;
     return (
-      <div key={idx}>
-        <div onClick={item.onClick || undefined} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '8px 12px', borderRadius: 8, cursor: item.onClick ? 'pointer' : 'default', background: item.active ? '#EDF3FA' : 'transparent', position: 'relative', userSelect: 'none' }}
-          onMouseEnter={(e) => { if (item.onClick) e.currentTarget.style.background = item.active ? '#EDF3FA' : '#F8FAFC'; }}
-          onMouseLeave={(e) => { if (item.onClick) e.currentTarget.style.background = item.active ? '#EDF3FA' : 'transparent'; }}
-        >
-          {item.dotColor && <span style={{ position: 'absolute', left: 4, top: 14, width: 6, height: 6, borderRadius: '50%', background: item.dotColor }} />}
-          <Icon size={16} style={{ marginTop: 2, color: 'var(--text-secondary)', flexShrink: 0 }} />
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>{item.label}</span>
-              {item.badge && (
-                <span style={{ fontSize: 10, fontWeight: 600, padding: '1px 7px', borderRadius: 999, ...(item.badgeStyle === 'navy' ? { background: 'var(--navy)', color: '#fff' } : { background: '#DCFCE7', color: '#166534' }) }}>{item.badge}</span>
-              )}
-            </div>
-            {item.subtitle && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.subtitle}</div>}
-          </div>
-        </div>
+      <div
+        key={item.id}
+        onClick={item.onClick || undefined}
+        onMouseEnter={() => setHoveredItem(item.id)}
+        onMouseLeave={() => setHoveredItem(null)}
+        style={{
+          display: 'flex', alignItems: 'center', gap: 8,
+          height: 32, padding: '7px 8px', borderRadius: 6,
+          cursor: item.onClick ? 'pointer' : 'default',
+          userSelect: 'none',
+          background: isActive ? '#fff' : isHovered ? '#fff' : 'transparent',
+          border: isActive ? '0.5px solid var(--border)' : '0.5px solid transparent',
+          transition: 'background 150ms ease, border-color 150ms ease',
+        }}
+      >
+        <Icon size={14} style={{ color: isActive ? 'var(--text-primary)' : 'var(--text-muted)', flexShrink: 0 }} />
+        <span style={{ flex: 1, fontSize: 13, fontWeight: isActive ? 500 : 400, color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          {item.label}
+        </span>
+        {item.badge && (
+          <span style={{ fontSize: 10, fontWeight: 600, padding: '1px 7px', borderRadius: 999, background: '#DCFCE7', color: '#166534', flexShrink: 0 }}>
+            {item.badge}
+          </span>
+        )}
+        {item.rightText && !item.badge && (
+          <span style={{ fontSize: 11, color: 'var(--text-muted)', flexShrink: 0 }}>
+            {item.rightText}
+          </span>
+        )}
       </div>
     );
   };
 
-  const allMainItems = [
-    ...sidebarItems,
-    { icon: Package, label: 'Knowledge Packs', badge: String(packCount), badgeStyle: 'navy', subtitle: 'Docs & links bundled for chat', onClick: onOpenKnowledgePacks },
-    { icon: BookOpen, label: 'Prompt Templates', badge: String(promptCount), badgeStyle: 'navy', subtitle: 'Saved prompts for quick access', onClick: onOpenPromptTemplates },
-    { icon: Users, label: 'Clients', badge: String(clientCount), badgeStyle: 'navy', subtitle: 'Manage your client directory', onClick: onOpenClients },
-  ];
+  // ─── Section header renderer ───
+  const renderSectionHeader = (label, isOpen, onToggle) => (
+    <div
+      onClick={onToggle}
+      style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '0 8px', marginBottom: 4, cursor: 'pointer', userSelect: 'none',
+      }}
+    >
+      <span style={{ fontSize: 10, fontWeight: 500, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+        {label}
+      </span>
+      <ChevronDown size={12} style={{
+        color: 'var(--text-muted)',
+        transform: isOpen ? 'rotate(0deg)' : 'rotate(-90deg)',
+        transition: 'transform 200ms ease',
+      }} />
+    </div>
+  );
 
-  const libraryMainItems = [
-    { icon: FolderOpen, label: 'Document Vault', badge: String(vaultCount), badgeStyle: 'navy', subtitle: 'Single docs to attach to chats', onClick: onOpenDocumentVault },
-  ];
+  // ─── Recent chats — show only 3 most recent ───
+  const recentThreads = (threads || []).slice(0, 3);
+  const totalThreads = (threads || []).length;
 
   return (
     <>
@@ -248,46 +368,224 @@ function Sidebar({ onOpenPromptTemplates, onOpenClients, onOpenKnowledgePacks, o
       className={`fixed inset-y-0 left-0 z-40 transform transition-transform md:relative md:translate-x-0 md:flex ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}
       style={{ width: 248, minWidth: 248, background: '#fff', borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}
     >
-      <div style={{ padding: '18px 16px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div>
+      {/* ═══ ZONE 1 — Header ═══ */}
+      <div style={{ padding: '14px 12px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <span style={{ fontFamily: "'DM Serif Display', serif", fontSize: 18 }}>
           <span style={{ color: 'var(--navy)' }}>Your</span><span style={{ color: '#C9A84C' }}>AI</span>
         </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {/* Green online dot + avatar — desktop */}
+          <div className="hidden md:flex" style={{ alignItems: 'center', gap: 6 }}>
+            <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#22C55E', flexShrink: 0 }} />
+            <div style={{ width: 26, height: 26, borderRadius: '50%', background: '#EFF6FF', color: '#1D4ED8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 600 }}>RM</div>
+          </div>
+          {/* Close button — mobile only */}
+          <button
+            onClick={onClose}
+            className="md:hidden p-1 rounded-lg"
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}
+            aria-label="Close sidebar"
+          >
+            <X size={18} />
+          </button>
         </div>
+      </div>
+
+      {/* ═══ ZONE 2 — New Chat Button ═══ */}
+      <div style={{ padding: '12px 12px 0' }}>
         <button
-          onClick={onClose}
-          className="md:hidden p-1 rounded-lg"
-          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}
-          aria-label="Close sidebar"
+          onClick={onNewThread}
+          style={{
+            width: '100%', height: 34, borderRadius: 8,
+            display: 'flex', alignItems: 'center', gap: 6,
+            padding: '0 12px', background: '#fff',
+            border: '0.5px solid var(--border)',
+            fontSize: 13, fontWeight: 500, color: 'var(--text-secondary)',
+            cursor: 'pointer', transition: 'background 150ms ease',
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = '#F8FAFC'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; }}
         >
-          <X size={18} />
+          <Plus size={14} />
+          <span>New chat</span>
         </button>
       </div>
-      <div style={{ flex: 1, overflowY: 'auto', padding: '0 8px' }}>
-        <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', padding: '20px 12px 6px' }}>Main</div>
-        {allMainItems.map(renderItem)}
-        <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', padding: '18px 12px 6px' }}>Library</div>
-        {libraryMainItems.map(renderItem)}
-      </div>
-      <div style={{ borderTop: '1px solid var(--border)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px' }}>
-          <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--navy)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 600, flexShrink: 0 }}>RM</div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)' }}>Ryan Melade</div>
-            <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Admin &middot; Team Plan</div>
+
+      {/* ═══ Scrollable area: sections ═══ */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '12px 12px 0', display: 'flex', flexDirection: 'column', gap: 12 }}>
+
+        {/* ═══ ZONE 3 — WORKSPACE Section ═══ */}
+        <div>
+          {renderSectionHeader('Workspace', workspaceOpen, toggleWorkspace)}
+          <div style={{
+            overflow: 'hidden',
+            maxHeight: workspaceOpen ? '400px' : '0px',
+            transition: 'max-height 200ms ease',
+          }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {workspaceItems.map(renderNavItem)}
+            </div>
           </div>
-          <MoreVertical size={16} color="var(--text-muted)" style={{ cursor: 'pointer' }} />
         </div>
-        <div style={{ display: 'flex' }}>
-          <button style={{ flex: 1, padding: '10px 0', border: '1px solid var(--border)', background: '#fff', fontSize: 12, fontWeight: 500, cursor: 'pointer', borderBottomLeftRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, color: 'var(--text-secondary)' }}><Plus size={14} /> New</button>
-          <button style={{ flex: 1, padding: '10px 0', border: '1px solid var(--border)', borderLeft: 'none', background: '#fff', fontSize: 12, fontWeight: 500, cursor: 'pointer', borderBottomRightRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, color: 'var(--text-secondary)' }}><Download size={14} /> Export</button>
+
+        {/* ═══ ZONE 4 — KNOWLEDGE Section ═══ */}
+        <div>
+          {renderSectionHeader('Knowledge', knowledgeOpen, toggleKnowledge)}
+          <div style={{
+            overflow: 'hidden',
+            maxHeight: knowledgeOpen ? '400px' : '0px',
+            transition: 'max-height 200ms ease',
+          }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {knowledgeItems.map(renderNavItem)}
+            </div>
+          </div>
         </div>
+
+        {/* ═══ ZONE 5 — RECENT CHATS Section ═══ */}
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 8px', marginBottom: 4 }}>
+            <span style={{ fontSize: 10, fontWeight: 500, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Recent Chats
+            </span>
+            <button
+              onClick={() => setShowChatSearch(v => !v)}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, display: 'flex', alignItems: 'center', color: 'var(--text-muted)' }}
+              title="Search chats"
+            >
+              <Search size={12} />
+            </button>
+          </div>
+
+          {/* Chat search — toggled by search icon */}
+          {showChatSearch && (
+            <div style={{ padding: '0 4px 6px', position: 'relative' }}>
+              <Search size={11} style={{ position: 'absolute', left: 14, top: 8, color: 'var(--text-muted)' }} />
+              <input
+                value={threadSearch}
+                onChange={(e) => onThreadSearchChange(e.target.value)}
+                placeholder="Search chats..."
+                autoFocus
+                style={{ width: '100%', height: 28, borderRadius: 6, border: '1px solid var(--border)', paddingLeft: 26, fontSize: 11, outline: 'none', boxSizing: 'border-box', fontFamily: "'DM Sans', sans-serif", color: 'var(--text-primary)' }}
+              />
+            </div>
+          )}
+
+          {/* Recent thread list — 3 max */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {recentThreads.map(t => {
+              const isActive = t.id === activeThreadId;
+              const isHov = hoveredThread === t.id;
+              return (
+                <div
+                  key={t.id}
+                  onClick={() => onSwitchThread(t.id)}
+                  onMouseEnter={() => setHoveredThread(t.id)}
+                  onMouseLeave={() => setHoveredThread(null)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 8,
+                    padding: '6px 8px', borderRadius: 6,
+                    cursor: 'pointer', userSelect: 'none',
+                    minHeight: 44,
+                    background: isActive ? '#fff' : isHov ? '#fff' : 'transparent',
+                    border: isActive ? '0.5px solid var(--border)' : '0.5px solid transparent',
+                    transition: 'background 150ms ease, border-color 150ms ease',
+                  }}
+                >
+                  <MessageSquare size={13} style={{ color: isActive ? 'var(--navy)' : 'var(--text-muted)', flexShrink: 0, marginTop: 1 }} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 12, fontWeight: isActive ? 500 : 400, color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {t.title}
+                    </div>
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>
+                      {t.updatedAt} &middot; {t.messageCount} msgs
+                    </div>
+                  </div>
+                  {/* Delete — appears on hover */}
+                  {isHov && totalThreads > 1 && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onDeleteThread(t.id); }}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, color: 'var(--text-muted)', flexShrink: 0 }}
+                      title="Delete conversation"
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* View all link */}
+          {totalThreads > 3 && (
+            <div
+              onClick={() => setShowChatSearch(true)}
+              style={{ fontSize: 11, color: 'var(--text-muted)', padding: '6px 8px', cursor: 'pointer', userSelect: 'none' }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--navy)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; }}
+            >
+              View all chats &rarr;
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ═══ ZONE 6 — User Profile Footer ═══ */}
+      <div style={{ borderTop: '0.5px solid var(--border)', position: 'relative' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px' }}>
+          <div style={{ width: 26, height: 26, borderRadius: '50%', background: '#EFF6FF', color: '#1D4ED8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 600, flexShrink: 0 }}>RM</div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-primary)', lineHeight: 1.3 }}>Ryan Melade</div>
+            <div style={{ fontSize: 10, color: 'var(--text-muted)', lineHeight: 1.3 }}>Admin &middot; Team Plan</div>
+          </div>
+          <button
+            onClick={() => setShowProfileMenu(v => !v)}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, color: 'var(--text-muted)', display: 'flex', alignItems: 'center' }}
+          >
+            <MoreVertical size={14} />
+          </button>
+        </div>
+
+        {/* Three-dot popover menu */}
+        {showProfileMenu && (
+          <>
+            <div onClick={() => setShowProfileMenu(false)} style={{ position: 'fixed', inset: 0, zIndex: 50 }} />
+            <div style={{
+              position: 'absolute', bottom: '100%', left: 12, right: 12, marginBottom: 4,
+              background: '#fff', border: '1px solid var(--border)', borderRadius: 8,
+              boxShadow: '0 4px 16px rgba(0,0,0,0.1)', zIndex: 51, overflow: 'hidden',
+            }}>
+              {[
+                { icon: Download, label: 'Export', onClick: () => { setShowProfileMenu(false); } },
+                { icon: Settings, label: 'Settings', onClick: () => { setShowProfileMenu(false); } },
+                { icon: LogOut, label: 'Sign out', onClick: () => { setShowProfileMenu(false); }, danger: true },
+              ].map((menuItem, i) => {
+                const MIcon = menuItem.icon;
+                return (
+                  <div
+                    key={i}
+                    onClick={menuItem.onClick}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 8,
+                      padding: '8px 12px', cursor: 'pointer', fontSize: 12,
+                      color: menuItem.danger ? '#DC2626' : 'var(--text-secondary)',
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = '#F8FAFC'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                  >
+                    <MIcon size={13} />
+                    <span>{menuItem.label}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        )}
       </div>
     </div>
     </>
   );
 }
-
 /* ─────────────────── Prompt Templates Panel ─────────────────── */
 function PromptTemplatesPanel({ templates, onUsePrompt, onClose, onCreateNew, onDelete }) {
   const [search, setSearch] = useState('');
@@ -941,8 +1239,6 @@ function EditDocumentModal({ document: docItem, onClose, onSave }) {
 
 /* ─────────────────── Knowledge Pack Picker (+ icon popover) ─────────────────── */
 function KnowledgePackPicker({ packs, activePack, onSelect, onClear, onManage, onClose, onAttachFiles, documents, activeDocument, onSelectDocument, onClearDocument, onManageDocuments }) {
-  const photoInputRef = useRef(null);
-  const videoInputRef = useRef(null);
   const docInputRef = useRef(null);
 
   const handleFiles = (e, kind) => {
@@ -965,8 +1261,6 @@ function KnowledgePackPicker({ packs, activePack, onSelect, onClear, onManage, o
 
   return (
     <>
-      <input ref={photoInputRef} type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={(e) => handleFiles(e, 'photo')} />
-      <input ref={videoInputRef} type="file" accept="video/*" multiple style={{ display: 'none' }} onChange={(e) => handleFiles(e, 'video')} />
       <input ref={docInputRef} type="file" accept=".pdf,.doc,.docx,.txt,.rtf,.odt,.xls,.xlsx,.csv,.ppt,.pptx" multiple style={{ display: 'none' }} onChange={(e) => handleFiles(e, 'doc')} />
 
       <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 40 }} />
@@ -976,9 +1270,7 @@ function KnowledgePackPicker({ packs, activePack, onSelect, onClear, onManage, o
         <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--border)' }}>
           <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>Quick Attach</div>
           <div style={{ display: 'flex', gap: 8 }}>
-            <QuickAttachBtn icon={Image} label="Photos" onClick={() => photoInputRef.current?.click()} />
-            <QuickAttachBtn icon={Video} label="Videos" onClick={() => videoInputRef.current?.click()} />
-            <QuickAttachBtn icon={File} label="Docs" onClick={() => docInputRef.current?.click()} />
+            <QuickAttachBtn icon={File} label="Documents" onClick={() => docInputRef.current?.click()} />
           </div>
         </div>
 
@@ -1226,7 +1518,7 @@ function MessageBubble({ msg }) {
         {msg.attachments && msg.attachments.length > 0 && (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
             {msg.attachments.map(a => {
-              const Icon = a.kind === 'photo' ? Image : a.kind === 'video' ? Video : File;
+              const Icon = File;
               return (
                 <div key={a.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 10px', borderRadius: 8, background: 'white', border: '1px solid var(--border)', maxWidth: 220 }}>
                   <Icon size={12} style={{ color: 'var(--navy)', flexShrink: 0 }} />
@@ -1247,6 +1539,13 @@ function MessageBubble({ msg }) {
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 8, padding: '4px 10px', borderRadius: 999, background: 'rgba(10, 36, 99, 0.06)', border: '1px solid rgba(10, 36, 99, 0.18)' }}>
             <File size={12} style={{ color: 'var(--navy)' }} />
             <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--navy)' }}>Using: {msg.vaultDocument}</span>
+          </div>
+        )}
+        {/* Source badge — CONFIDENCE: 3/10. Intent classifier not confirmed. Visual wireframe for Ryan. */}
+        {isBot && msg.sourceBadge && (
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 8, padding: '4px 10px', borderRadius: 999, background: msg.sourceBadge.includes('your document') ? '#EFF6FF' : '#F0FDF4', border: `1px solid ${msg.sourceBadge.includes('your document') ? '#BFDBFE' : '#BBF7D0'}` }}>
+            <Database size={11} style={{ color: msg.sourceBadge.includes('your document') ? '#1D4ED8' : '#16A34A' }} />
+            <span style={{ fontSize: 10, fontWeight: 500, color: msg.sourceBadge.includes('your document') ? '#1D4ED8' : '#16A34A' }}>{msg.sourceBadge}</span>
           </div>
         )}
         {msg.card && <RiskCard card={msg.card} />}
@@ -1559,7 +1858,7 @@ function EmptyState({ profile, plan, onPromptClick, navigate, onViewPlans }) {
 /* ═══════════════════ ChatView ═══════════════════ */
 export default function ChatView() {
   const navigate = useNavigate();
-  const [messages, setMessages] = useState(INITIAL_MESSAGES);
+  const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [showEmptyState, setShowEmptyState] = useState(true);
@@ -1583,9 +1882,31 @@ export default function ChatView() {
   const [showClientsPanel, setShowClientsPanel] = useState(false);
   const [showAddClient, setShowAddClient] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  // ─── Chat Threads state ───
+  const [threads, setThreads] = useState(DEFAULT_THREADS);
+  const [activeThreadId, setActiveThreadId] = useState('thread-1');
+  const [threadSearch, setThreadSearch] = useState('');
+  // Per-thread message store — persists messages when switching between threads
+  const threadMessagesRef = useRef({});
+
+  // ─── Session Document Version Handling (DEC-093, DEC-094, DEC-095) ───
+  // See knowledge-pack-strategy.md — Document Version Handling section
+  const [sessionState, setSessionState] = useState({
+    // DEC-093: KB locked at session start
+    // See knowledge-pack-strategy.md — Scenario 1
+    sessionKbSnapshotId: `kb-snapshot-${Date.now()}`, // uuid — snapshot of global KB at session start
+    // DEC-095: User doc locked for session unless user chooses restart
+    sessionDocId: null,                                // uuid, nullable — user's uploaded doc for this session
+    sessionStartTime: new Date().toISOString(),        // timestamp — when session began
+    // TODO: Phase 2 — replace snapshot reference with
+    // full document_versions table for audit trail
+    // Confirmed by Arjun — cutover only for this release
+  });
+  const [showDocVersionBanner, setShowDocVersionBanner] = useState(false);
+  const [pendingNewDoc, setPendingNewDoc] = useState(null); // holds the new doc until user decides
   const scrollRef = useRef(null);
   const inputRef = useRef(null);
-  const responseIdx = useRef(0);
+  // Removed: responseIdx — no longer needed with real LLM responses
 
   const plan = billingData.plan;
   const usage = billingData.usage;
@@ -1598,11 +1919,13 @@ export default function ChatView() {
     } catch (_) { /* ignore */ }
   }, []);
 
+  const [streamingContent, setStreamingContent] = useState('');
+
   const scrollToBottom = useCallback(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
   }, []);
 
-  useEffect(() => { scrollToBottom(); }, [messages, isTyping, scrollToBottom]);
+  useEffect(() => { scrollToBottom(); }, [messages, isTyping, streamingContent, scrollToBottom]);
 
   const inputPlaceholder = profile && profile.primaryState
     ? `Ask anything about ${profile.primaryState} law or your documents...`
@@ -1613,22 +1936,246 @@ export default function ChatView() {
     if (inputRef.current) inputRef.current.focus();
   }, []);
 
-  const sendMessage = useCallback((text) => {
+  // ─── Chat Thread handlers ───
+  const handleNewThread = useCallback(() => {
+    // Save current thread messages before switching
+    threadMessagesRef.current[activeThreadId] = messages;
+
+    const newThread = {
+      id: `thread-${Date.now()}`,
+      title: 'New Conversation',
+      preview: '',
+      updatedAt: 'Just now',
+      messageCount: 0,
+      isActive: true,
+    };
+    threadMessagesRef.current[newThread.id] = [];
+    setThreads(prev => prev.map(t => ({ ...t, isActive: false })));
+    setThreads(prev => [newThread, ...prev]);
+    setActiveThreadId(newThread.id);
+    setMessages([]);
+    setShowEmptyState(true);
+    setActiveKnowledgePack(null);
+    setActiveVaultDocument(null);
+    setPendingAttachments([]);
+    setInput('');
+    // DEC-093 + DEC-094: New session gets current KB snapshot
+    setSessionState({
+      sessionKbSnapshotId: `kb-snapshot-${Date.now()}`,
+      sessionDocId: null,
+      sessionStartTime: new Date().toISOString(),
+    });
+    setShowDocVersionBanner(false);
+    setPendingNewDoc(null);
+  }, [activeThreadId, messages]);
+
+  const handleSwitchThread = useCallback((threadId) => {
+    if (threadId === activeThreadId) return;
+    // Save current thread messages before switching
+    threadMessagesRef.current[activeThreadId] = messages;
+    // Update thread metadata
+    setThreads(prev => prev.map(t => {
+      if (t.id === activeThreadId) {
+        const firstUserMsg = messages.find(m => m.sender === 'user');
+        return {
+          ...t,
+          isActive: false,
+          title: firstUserMsg ? (firstUserMsg.content.length > 50 ? firstUserMsg.content.substring(0, 50) + '...' : firstUserMsg.content) : t.title,
+          preview: firstUserMsg ? firstUserMsg.content : t.preview,
+          messageCount: messages.length,
+        };
+      }
+      if (t.id === threadId) return { ...t, isActive: true };
+      return t;
+    }));
+    setActiveThreadId(threadId);
+    // Load messages from per-thread store (fall back to hardcoded for legacy threads)
+    const stored = threadMessagesRef.current[threadId];
+    if (stored && stored.length > 0) {
+      setMessages(stored);
+      setShowEmptyState(false);
+    } else if (THREAD_MESSAGES[threadId]) {
+      setMessages(THREAD_MESSAGES[threadId]);
+      setShowEmptyState(false);
+    } else {
+      setMessages([]);
+      setShowEmptyState(true);
+    }
+    setActiveKnowledgePack(null);
+    setActiveVaultDocument(null);
+    setPendingAttachments([]);
+    setInput('');
+  }, [activeThreadId, messages]);
+
+  const handleDeleteThread = useCallback((threadId) => {
+    if (threads.length <= 1) return;
+    delete threadMessagesRef.current[threadId];
+    const remaining = threads.filter(t => t.id !== threadId);
+    setThreads(remaining);
+    if (threadId === activeThreadId) {
+      const next = remaining[0];
+      setActiveThreadId(next.id);
+      setThreads(prev => prev.map(t => t.id === next.id ? { ...t, isActive: true } : t));
+      const stored = threadMessagesRef.current[next.id];
+      if (stored && stored.length > 0) {
+        setMessages(stored);
+        setShowEmptyState(false);
+      } else if (THREAD_MESSAGES[next.id]) {
+        setMessages(THREAD_MESSAGES[next.id]);
+        setShowEmptyState(false);
+      } else {
+        setMessages([]);
+        setShowEmptyState(true);
+      }
+    }
+  }, [threads, activeThreadId]);
+
+  const filteredThreads = threads.filter(t =>
+    !threadSearch || t.title.toLowerCase().includes(threadSearch.toLowerCase()) || t.preview.toLowerCase().includes(threadSearch.toLowerCase())
+  );
+
+  // Keep per-thread message store in sync as messages change
+  useEffect(() => {
+    threadMessagesRef.current[activeThreadId] = messages;
+  }, [messages, activeThreadId]);
+
+  const sendMessage = useCallback(async (text) => {
     const trimmed = (text || '').trim();
     if ((!trimmed && pendingAttachments.length === 0) || isTyping) return;
     if (showEmptyState) setShowEmptyState(false);
     const userMsg = { id: Date.now(), sender: 'user', content: trimmed, timestamp: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }), attachments: pendingAttachments };
     setMessages((prev) => [...prev, userMsg]);
     setInput('');
+    if (inputRef.current) inputRef.current.style.height = 'auto';
     setPendingAttachments([]);
     setIsTyping(true);
-    setTimeout(() => {
-      const botMsg = { id: Date.now() + 1, sender: 'bot', content: MOCK_RESPONSES[responseIdx.current % MOCK_RESPONSES.length], timestamp: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }), knowledgePack: activeKnowledgePack?.name || null, vaultDocument: activeVaultDocument?.name || null };
-      responseIdx.current += 1;
+    setStreamingContent('');
+
+    // Build history for LLM context
+    const history = messages.slice(-20).map(m => ({
+      role: m.sender === 'user' ? 'user' : 'assistant',
+      content: m.content,
+    }));
+
+    try {
+      // Try backend first
+      const base = import.meta.env.VITE_API_URL || '';
+      let usedBackend = false;
+      let fullContent = '';
+      let sourceBadge = 'Answered from: YourAI knowledge base';
+
+      try {
+        const response = await fetch(`${base}/api/chat`, {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            conversationId: activeThreadId,
+            message: trimmed,
+            sessionId: sessionState.sessionKbSnapshotId,
+            sessionDocId: sessionState.sessionDocId,
+          }),
+        });
+
+        const contentType = response.headers.get('content-type') || '';
+        if (response.ok && (contentType.includes('text/plain') || contentType.includes('application/json'))) {
+          usedBackend = true;
+          const reader = response.body.getReader();
+          const decoder = new TextDecoder();
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            const chunk = decoder.decode(value);
+            fullContent += chunk;
+            setStreamingContent(fullContent);
+          }
+          const sourceTypeHeader = response.headers.get('X-Source-Type');
+          sourceBadge = sourceTypeHeader === 'UPLOADED_DOC'
+            ? 'Answered from: your document'
+            : 'Answered from: YourAI knowledge base';
+        }
+      } catch { /* backend unreachable — fall through to client-side LLM */ }
+
+      // Fallback: call Groq directly from client (Vercel static deploy)
+      // 4-tier priority: Uploaded Doc → Knowledge Pack → Global KB → Fallback
+      if (!usedBackend) {
+        if (!getApiKey()) {
+          setIsTyping(false);
+          setStreamingContent('');
+          const errMsg = { id: Date.now() + 1, sender: 'bot', content: 'No LLM backend available. Please configure the API key or start the backend server.', timestamp: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }), sourceBadge: null };
+          setMessages((prev) => [...prev, errMsg]);
+          return;
+        }
+
+        // Build context layers for prioritised answer flow
+        const contextLayers = {};
+
+        // Tier 1: User's uploaded document (from pending attachments with extracted content)
+        const docWithContent = userMsg.attachments?.find(a => a.content) || pendingAttachments.find(a => a.content);
+        if (docWithContent) {
+          contextLayers.uploadedDoc = { name: docWithContent.name, content: docWithContent.content };
+        } else if (activeVaultDocument) {
+          // Vault document selected as context — use its metadata as reference
+          contextLayers.uploadedDoc = { name: activeVaultDocument.name, content: activeVaultDocument.description || '' };
+        }
+
+        // Tier 2: Knowledge Pack (selected by user)
+        if (activeKnowledgePack) {
+          contextLayers.knowledgePack = {
+            name: activeKnowledgePack.name,
+            description: activeKnowledgePack.description,
+            content: activeKnowledgePack.docs?.map(d => `[${d.name}]`).join(', '),
+          };
+        }
+
+        // Tier 3 (Global KB) and Tier 4 (Fallback) are handled inside callLLM via persona
+        const result = await callLLM(trimmed, history, (streaming) => {
+          setStreamingContent(streaming);
+        }, contextLayers);
+        fullContent = result.fullContent;
+
+        // Map source type to user-friendly badge
+        const sourceBadgeMap = {
+          UPLOADED_DOC: 'Answered from: your document',
+          KNOWLEDGE_PACK: `Answered from: ${activeKnowledgePack?.name || 'knowledge pack'}`,
+          GLOBAL_KB: 'Answered from: YourAI knowledge base',
+          NONE: 'Answered from: AI',
+        };
+        sourceBadge = sourceBadgeMap[result.sourceType] || 'Answered from: AI';
+      }
+
+      const botMsg = {
+        id: Date.now() + 1,
+        sender: 'bot',
+        content: fullContent,
+        timestamp: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
+        knowledgePack: activeKnowledgePack?.name || null,
+        vaultDocument: activeVaultDocument?.name || null,
+        sourceBadge,
+        sessionKbSnapshotId: sessionState.sessionKbSnapshotId,
+      };
       setMessages((prev) => [...prev, botMsg]);
       setIsTyping(false);
-    }, 1500);
-  }, [isTyping, showEmptyState, activeKnowledgePack, activeVaultDocument, pendingAttachments]);
+      setStreamingContent('');
+
+      // Update thread metadata
+      setThreads(prev => prev.map(t => {
+        if (t.id !== activeThreadId) return t;
+        return {
+          ...t,
+          title: t.title === 'New Conversation' ? (trimmed.length > 50 ? trimmed.substring(0, 50) + '...' : trimmed) : t.title,
+          preview: trimmed,
+          updatedAt: 'Just now',
+          messageCount: (t.messageCount || 0) + 2,
+        };
+      }));
+    } catch (err) {
+      setIsTyping(false);
+      setStreamingContent('');
+      const errMsg = { id: Date.now() + 1, sender: 'bot', content: err?.message || 'Connection error. Please check your network and try again.', timestamp: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }), sourceBadge: null };
+      setMessages((prev) => [...prev, errMsg]);
+    }
+  }, [isTyping, showEmptyState, messages, activeKnowledgePack, activeVaultDocument, pendingAttachments, activeThreadId, sessionState]);
 
   const handleAttachFiles = (files, kind) => {
     const newAtts = files.map((f, i) => ({
@@ -1636,9 +2183,74 @@ export default function ChatView() {
       name: f.name,
       size: f.size,
       kind, // 'photo' | 'video' | 'doc'
+      content: null, // will be populated by FileReader for docs
     }));
+    // DEC-095: Scenario 3 — Option C confirmed
+    // See knowledge-pack-strategy.md
+    if (kind === 'doc' && sessionState.sessionDocId !== null) {
+      // A document already exists in this session — show mid-session banner
+      setPendingNewDoc(newAtts[0]);
+      setShowDocVersionBanner(true);
+      return; // Don't add to pending yet — user must choose
+    }
+    if (kind === 'doc' && sessionState.sessionDocId === null) {
+      // First document upload in this session — lock it
+      setSessionState(prev => ({ ...prev, sessionDocId: `doc-${Date.now()}` }));
+    }
     setPendingAttachments(prev => [...prev, ...newAtts]);
+    // Extract text content from doc files using RAG file parser
+    if (kind === 'doc') {
+      files.forEach((file, i) => {
+        extractFileText(file).then(({ text }) => {
+          setPendingAttachments(prev => prev.map(a =>
+            a.id === newAtts[i].id ? { ...a, content: text } : a
+          ));
+        }).catch((err) => {
+          console.error('File extraction failed:', err);
+          setPendingAttachments(prev => prev.map(a =>
+            a.id === newAtts[i].id ? { ...a, content: `[File: ${file.name}] Could not extract text.` } : a
+          ));
+        });
+      });
+    }
   };
+
+  // DEC-095: Handler for mid-session document version banner
+  const handleDocVersionChoice = useCallback((choice) => {
+    if (choice === 'new') {
+      // Start new conversation with the new document
+      // DEC-095: Clear messages, reset session, new session_doc_id
+      setMessages([]);
+      setShowEmptyState(true);
+      setSessionState({
+        sessionKbSnapshotId: `kb-snapshot-${Date.now()}`, // DEC-093 + DEC-094: New session gets current KB
+        sessionDocId: `doc-${Date.now()}`,
+        sessionStartTime: new Date().toISOString(),
+      });
+      if (pendingNewDoc) {
+        setPendingAttachments([pendingNewDoc]);
+      }
+      setActiveKnowledgePack(null);
+      setActiveVaultDocument(null);
+      setInput('');
+      // Update thread
+      const newThread = {
+        id: `thread-${Date.now()}`,
+        title: pendingNewDoc ? `New: ${pendingNewDoc.name}` : 'New Conversation',
+        preview: 'Started with updated document',
+        updatedAt: 'Just now',
+        messageCount: 0,
+        isActive: true,
+      };
+      setThreads(prev => [newThread, ...prev.map(t => ({ ...t, isActive: false }))]);
+      setActiveThreadId(newThread.id);
+    } else {
+      // Continue with original — dismiss banner, doc saved but not used in this session
+      // DEC-095: session_doc_id unchanged, new doc saved to storage but not active
+    }
+    setShowDocVersionBanner(false);
+    setPendingNewDoc(null);
+  }, [pendingNewDoc]);
 
   const removeAttachment = (id) => {
     setPendingAttachments(prev => prev.filter(a => a.id !== id));
@@ -1727,6 +2339,13 @@ export default function ChatView() {
         vaultCount={documentVault.length}
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
+        threads={filteredThreads}
+        activeThreadId={activeThreadId}
+        onSwitchThread={(id) => { handleSwitchThread(id); setSidebarOpen(false); }}
+        onNewThread={() => { handleNewThread(); setSidebarOpen(false); }}
+        onDeleteThread={handleDeleteThread}
+        threadSearch={threadSearch}
+        onThreadSearchChange={setThreadSearch}
       />
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
         <TopNav plan={plan} usage={usage} onOpenSidebar={() => setSidebarOpen(true)} />
@@ -1758,25 +2377,59 @@ export default function ChatView() {
           ) : (
             <div ref={scrollRef} className="px-3 sm:px-4 md:px-10 py-6" style={{ flex: 1, overflowY: 'auto' }}>
               {messages.map((msg) => <MessageBubble key={msg.id} msg={msg} />)}
-              {isTyping && <TypingIndicator />}
-              {!isTyping && (
-                <div style={{ marginTop: 8, marginBottom: 8 }}>
-                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                    {QUICK_ACTIONS.map((a) => (
-                      <button key={a.label} onClick={() => sendMessage(a.label)} style={{ display: 'flex', alignItems: 'center', gap: 6, border: '1px solid var(--border)', borderRadius: 8, background: '#fff', padding: '8px 16px', fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}>
-                        <span>{a.emoji}</span> {a.label}
-                      </button>
-                    ))}
+              {/* Streaming response — shows tokens as they arrive */}
+              {isTyping && streamingContent && (
+                <MessageBubble msg={{ id: 'streaming', sender: 'bot', content: streamingContent, timestamp: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) }} />
+              )}
+              {isTyping && !streamingContent && <TypingIndicator />}
+            </div>
+          )}
+
+          {/* DEC-095: Mid-session document version banner — Scenario 3, Option C */}
+          {/* See knowledge-pack-strategy.md — "User's Uploaded Document Updated Mid-Conversation" */}
+          {/* CONFIDENCE: 8/10 — Confirmed by Arjun (PM). Aligns with session isolation principle. */}
+          {/* NOT dismissible by X — user MUST choose one of the two options */}
+          {showDocVersionBanner && (
+            <div className="px-3 sm:px-4 md:px-10" style={{ paddingTop: 8, paddingBottom: 0 }}>
+              <div style={{
+                display: 'flex', alignItems: 'flex-start', gap: 12,
+                padding: '14px 18px', borderRadius: 12,
+                background: '#FFFBEB', border: '1px solid #F59E0B',
+                boxShadow: '0 1px 3px rgba(245, 158, 11, 0.15)',
+              }}>
+                <AlertTriangle size={18} style={{ color: '#D97706', flexShrink: 0, marginTop: 2 }} />
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: '#92400E', marginBottom: 4 }}>
+                    You've uploaded a new version of this document.
                   </div>
-                  <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-                    {QUICK_ACTIONS_2.map((a) => (
-                      <button key={a.label} onClick={() => sendMessage(a.label)} style={{ display: 'flex', alignItems: 'center', gap: 6, border: '1px solid var(--border)', borderRadius: 8, background: '#fff', padding: '8px 16px', fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}>
-                        <span>{a.emoji}</span> {a.label}
-                      </button>
-                    ))}
+                  <div style={{ fontSize: 12, color: '#A16207', marginBottom: 12 }}>
+                    Start a new conversation to use it, or continue with the original.
+                    {pendingNewDoc && (
+                      <span style={{ fontWeight: 500 }}> New file: {pendingNewDoc.name}</span>
+                    )}
+                  </div>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button
+                      onClick={() => handleDocVersionChoice('new')}
+                      style={{
+                        padding: '7px 16px', borderRadius: 8, fontSize: 12, fontWeight: 600,
+                        background: '#D97706', color: '#fff', border: 'none', cursor: 'pointer',
+                      }}
+                    >
+                      Start new conversation
+                    </button>
+                    <button
+                      onClick={() => handleDocVersionChoice('continue')}
+                      style={{
+                        padding: '7px 16px', borderRadius: 8, fontSize: 12, fontWeight: 600,
+                        background: '#fff', color: '#92400E', border: '1px solid #F59E0B', cursor: 'pointer',
+                      }}
+                    >
+                      Continue with original
+                    </button>
                   </div>
                 </div>
-              )}
+              </div>
             </div>
           )}
 
@@ -1806,7 +2459,7 @@ export default function ChatView() {
             {pendingAttachments.length > 0 && (
               <div style={{ marginBottom: 8, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                 {pendingAttachments.map(a => {
-                  const Icon = a.kind === 'photo' ? Image : a.kind === 'video' ? Video : File;
+                  const Icon = File;
                   return (
                     <div key={a.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 10px', borderRadius: 999, background: 'white', border: '1px solid var(--border)', maxWidth: 220 }}>
                       <Icon size={12} style={{ color: 'var(--navy)', flexShrink: 0 }} />
@@ -1838,7 +2491,7 @@ export default function ChatView() {
                   />
                 )}
               </div>
-              <input ref={inputRef} value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={handleKeyDown} placeholder={inputPlaceholder} style={{ flex: 1, border: 'none', outline: 'none', fontSize: 14, color: 'var(--text-primary)', background: 'transparent' }} />
+              <textarea ref={inputRef} value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={handleKeyDown} placeholder={inputPlaceholder} rows={1} style={{ flex: 1, border: 'none', outline: 'none', fontSize: 14, color: 'var(--text-primary)', background: 'transparent', resize: 'none', maxHeight: 120, overflowY: 'auto', lineHeight: '1.5', fontFamily: 'inherit' }} onInput={(e) => { e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px'; }} />
               <div onClick={() => sendMessage(input)} style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--navy)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}><ArrowUp size={16} color="#fff" /></div>
             </div>
             <div style={{ textAlign: 'center', fontSize: 12, color: 'var(--text-muted)', marginTop: 8 }}>

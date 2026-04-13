@@ -218,7 +218,6 @@ export default function ProfilePage() {
               { key: 'email', label: 'Email notifications', desc: 'Receive notifications via email' },
               { key: 'workflow', label: 'Workflow completions', desc: 'Alert when workflows finish running' },
               { key: 'classification', label: 'Classification alerts', desc: 'Flagged documents needing review' },
-              { key: 'reports', label: 'Report generation', desc: 'Notify when reports are ready' },
             ].map((pref) => (
               <div key={pref.key} className="flex items-center justify-between py-3" style={{ borderBottom: '1px solid var(--border)' }}>
                 <div>

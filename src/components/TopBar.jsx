@@ -10,12 +10,10 @@ const pageConfig = {
   '/super-admin/usage': { title: 'Usage & Analytics', icon: BarChart3 },
   '/super-admin/compliance': { title: 'Compliance & Audit', icon: Shield },
   '/super-admin/static-content': { title: 'Static Content', icon: BookOpen },
-  '/super-admin/report-templates': { title: 'Report Templates', icon: FileText },
   '/super-admin/integrations': { title: 'Integrations', icon: Plug },
   '/super-admin/knowledge-base': { title: 'Knowledge Base', icon: Database },
   '/super-admin/workflows': { title: 'Workflow Templates', icon: Workflow },
   '/super-admin/notifications': { title: 'Notifications', icon: Bell },
-  '/super-admin/reports': { title: 'Reports & Analytics', icon: FileBarChart },
   '/super-admin/settings': { title: 'Platform Settings', icon: Settings },
   '/super-admin/user-stories': { title: 'User Stories', icon: BookMarked },
 };

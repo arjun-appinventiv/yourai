@@ -12,6 +12,7 @@ import {
 import { billingData, subscriptionPlans } from '../../data/mockData';
 import { callLLM, getApiKey } from '../../lib/llm-client';
 import { extractFileText } from '../../lib/file-parser';
+import { trackDocUpload } from '../../lib/auth';
 
 // Removed: MOCK_RESPONSES array — replaced with real streaming fetch to /api/chat
 // See: tech-stack.md — Backend API section
@@ -1443,7 +1444,6 @@ function TopNav({ plan, usage, onOpenSidebar }) {
                 <div style={{ fontFamily: "'DM Serif Display', serif", fontSize: 15, color: 'var(--text-primary)', marginBottom: 12 }}>Your Plan Usage — {plan}</div>
                 <UsageBar label="Documents" used={usage.docs.used} limit={usage.docs.limit} />
                 <UsageBar label="Workflows" used={usage.workflows.used} limit={usage.workflows.limit} />
-                <UsageBar label="Reports" used={usage.reports.used} limit={usage.reports.limit} />
                 <div style={{ borderTop: '1px solid var(--border)', paddingTop: 10, marginTop: 6 }}>
                   <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 6 }}>Resets May 1, 2026</div>
                   <a href="/app/billing" style={{ fontSize: 12, color: 'var(--navy)', textDecoration: 'none', fontWeight: 500 }} onMouseEnter={(e) => e.target.style.textDecoration = 'underline'} onMouseLeave={(e) => e.target.style.textDecoration = 'none'}>View Full Billing →</a>
@@ -2239,6 +2239,11 @@ export default function ChatView() {
       setSessionState(prev => ({ ...prev, sessionDocId: `doc-${Date.now()}` }));
     }
     setPendingAttachments(prev => [...prev, ...newAtts]);
+    // Track document uploads for usage stats
+    if (kind === 'doc') {
+      const userEmail = localStorage.getItem('yourai_current_email');
+      if (userEmail) files.forEach(() => trackDocUpload(userEmail));
+    }
     // Extract text content from doc files using RAG file parser
     if (kind === 'doc') {
       files.forEach((file, i) => {

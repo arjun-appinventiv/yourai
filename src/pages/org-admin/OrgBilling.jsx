@@ -63,7 +63,7 @@ export default function OrgBilling() {
           <div className="grid grid-cols-4 gap-4">
             {Object.entries(billingData.usage).map(([key, val]) => {
               const pct = Math.round((val.used / val.limit) * 100);
-              const labels = { docs: 'Documents', workflows: 'Workflows', reports: 'Reports', knowledgePacks: 'Knowledge Packs' };
+              const labels = { docs: 'Documents', workflows: 'Workflows', knowledgePacks: 'Knowledge Packs' };
               return (
                 <div key={key} className="bg-white p-4 rounded-xl" style={{ border: '1px solid var(--border)' }}>
                   <div className="flex items-center justify-between mb-2">

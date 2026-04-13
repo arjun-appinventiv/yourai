@@ -14,7 +14,6 @@ export default function ClientsPage() {
     { key: 'profile', label: 'Profile' },
     { key: 'sessions', label: 'Sessions' },
     { key: 'documents', label: 'Documents' },
-    { key: 'reports', label: 'Reports' },
     { key: 'knowledge', label: 'Knowledge Memory' },
   ];
 
@@ -123,19 +122,6 @@ export default function ClientsPage() {
               </Table>
             )}
 
-            {clientTab === 'reports' && (
-              <Table columns={['Report', 'Type', 'Created By', 'Status', 'Date']}>
-                {clientReports.map((r) => (
-                  <tr key={r.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                    <td style={{ padding: '12px 16px', fontSize: '13px', color: 'var(--text-primary)', fontWeight: 500 }}>{r.name}</td>
-                    <td style={{ padding: '12px 16px' }}><Badge>{r.type}</Badge></td>
-                    <td style={{ padding: '12px 16px', fontSize: '12px', color: 'var(--text-secondary)' }}>{r.createdBy}</td>
-                    <td style={{ padding: '12px 16px' }}><Badge variant={r.status === 'Final' ? 'Active' : 'Draft'}>{r.status}</Badge></td>
-                    <td style={{ padding: '12px 16px', fontSize: '12px', color: 'var(--text-muted)' }}>{r.date}</td>
-                  </tr>
-                ))}
-              </Table>
-            )}
 
             {clientTab === 'knowledge' && (
               <div>

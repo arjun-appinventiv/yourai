@@ -203,7 +203,6 @@ export const billingData = {
   usage: {
     docs: { used: 46, limit: 2000 },
     workflows: { used: 12, limit: 500 },
-    reports: { used: 23, limit: 200 },
     knowledgePacks: { used: 2, limit: 10 }
   },
   invoices: [

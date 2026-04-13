@@ -299,3 +299,34 @@ function persistRegisteredUser(data: { name: string; email: string; password: st
     }
   } catch { /* localStorage full — ignore */ }
 }
+
+/**
+ * Track a successful login — increment login count and update lastActive.
+ * Called after login() succeeds.
+ */
+export function trackLogin(email: string): void {
+  try {
+    const mgmtUsers = JSON.parse(localStorage.getItem('yourai_mgmt_users') || '[]');
+    const user = mgmtUsers.find((u: any) => u.email === email);
+    if (user) {
+      user.logins = (user.logins || 0) + 1;
+      user.lastActive = 'Just now';
+      localStorage.setItem('yourai_mgmt_users', JSON.stringify(mgmtUsers));
+    }
+  } catch { /* ignore */ }
+}
+
+/**
+ * Track a document upload — increment docsUploaded for the current user.
+ */
+export function trackDocUpload(email: string): void {
+  try {
+    const mgmtUsers = JSON.parse(localStorage.getItem('yourai_mgmt_users') || '[]');
+    const user = mgmtUsers.find((u: any) => u.email === email);
+    if (user) {
+      user.docsUploaded = (user.docsUploaded || 0) + 1;
+      user.lastActive = 'Just now';
+      localStorage.setItem('yourai_mgmt_users', JSON.stringify(mgmtUsers));
+    }
+  } catch { /* ignore */ }
+}

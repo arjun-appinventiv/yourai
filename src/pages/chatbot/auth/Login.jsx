@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, Loader, ShieldCheck, ArrowLeft, RefreshCw, Info } from 'lucide-react';
 import ChatAuthLayout from '../../../components/ChatAuthLayout';
-import { login as apiLogin, verifyOtp as apiVerifyOtp, resendOtp as apiResendOtp } from '../../../lib/auth';
+import { login as apiLogin, verifyOtp as apiVerifyOtp, resendOtp as apiResendOtp, trackLogin } from '../../../lib/auth';
 
 // Removed: MOCK_EMAIL = 'ryan@hartwell.com' — replaced with real API call
 // Removed: MOCK_PASSWORD = 'Law@2026' — replaced with real API call
@@ -80,6 +80,8 @@ export default function Login() {
           setResendTimer(RESEND_COOLDOWN);
         } else {
           // No 2FA required — go straight to chat
+          trackLogin(email);
+          localStorage.setItem('yourai_current_email', email);
           setLoadingText('Authenticated! Redirecting...');
           navigate('/chat', { replace: true });
         }
@@ -152,6 +154,8 @@ export default function Login() {
       const result = await apiVerifyOtp(code);
 
       if (result.success) {
+        trackLogin(email);
+        localStorage.setItem('yourai_current_email', email);
         setLoadingText('Authenticated! Redirecting...');
         navigate('/chat', { replace: true });
       } else {

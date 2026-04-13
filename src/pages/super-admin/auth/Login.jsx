@@ -3,6 +3,7 @@ import { useNavigate, Navigate, Link } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, Loader, Info } from 'lucide-react';
 import AuthLayout from '../../../components/AuthLayout';
 import { useAuth } from '../../../context/AuthContext';
+import { trackLogin } from '../../../lib/auth';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -44,6 +45,8 @@ export default function Login() {
         return;
       }
 
+      trackLogin(email);
+      localStorage.setItem('yourai_current_email', email);
       navigate('/super-admin/dashboard', { replace: true });
     } catch {
       setLoading(false);
