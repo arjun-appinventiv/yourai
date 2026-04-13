@@ -2512,7 +2512,7 @@ export default function ChatView() {
               </div>
             )}
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, border: '1px solid var(--border)', borderRadius: 16, background: '#fff', height: 48, padding: '0 6px 0 12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, border: '1.5px solid var(--border)', borderRadius: 24, background: '#fff', minHeight: 48, padding: '8px 8px 8px 12px' }}>
               <div style={{ position: 'relative' }}>
                 <div onClick={() => setShowPackPicker(v => !v)} title="Attach knowledge pack" style={{ width: 28, height: 28, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: activeKnowledgePack ? 'var(--navy)' : 'var(--text-muted)', background: activeKnowledgePack ? 'rgba(10, 36, 99, 0.08)' : 'transparent' }}><Plus size={20} /></div>
                 {showPackPicker && (
