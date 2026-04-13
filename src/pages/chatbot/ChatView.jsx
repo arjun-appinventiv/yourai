@@ -1416,11 +1416,6 @@ function TopNav({ plan, usage, onOpenSidebar }) {
         >
           <Menu size={20} />
         </button>
-        <div className="hidden md:flex" style={{ gap: 24 }}>
-          {['Models', 'Infrastructure', 'Security', 'Artifacts'].map((t) => (
-            <span key={t} style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-muted)', cursor: 'pointer' }}>{t}</span>
-          ))}
-        </div>
       </div>
       <div className="flex items-center gap-2 sm:gap-3 md:gap-4">
         {/* Usage pill */}
