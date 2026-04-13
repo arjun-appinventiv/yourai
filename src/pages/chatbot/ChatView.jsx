@@ -2409,12 +2409,12 @@ export default function ChatView() {
                 <AlertTriangle size={18} style={{ color: '#D97706', flexShrink: 0, marginTop: 2 }} />
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 13, fontWeight: 600, color: '#92400E', marginBottom: 4 }}>
-                    You've uploaded a new version of this document.
+                    Switching documents mid-conversation
                   </div>
-                  <div style={{ fontSize: 12, color: '#A16207', marginBottom: 12 }}>
-                    Start a new conversation to use it, or continue with the original.
+                  <div style={{ fontSize: 12, color: '#A16207', marginBottom: 12, lineHeight: 1.6 }}>
+                    Alex is currently using a different document as context. Mixing documents in the same conversation can lead to confused answers — the AI may accidentally reference the wrong file. Starting fresh ensures Alex focuses only on your new document.
                     {pendingNewDoc && (
-                      <span style={{ fontWeight: 500 }}> New file: {pendingNewDoc.name}</span>
+                      <div style={{ marginTop: 6, fontWeight: 500 }}>New: {pendingNewDoc.name}</div>
                     )}
                   </div>
                   <div style={{ display: 'flex', gap: 8 }}>
