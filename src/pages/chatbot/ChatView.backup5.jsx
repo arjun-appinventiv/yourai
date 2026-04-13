@@ -13,7 +13,6 @@ import { billingData, subscriptionPlans } from '../../data/mockData';
 import { callLLM, getApiKey } from '../../lib/llm-client';
 import { extractFileText } from '../../lib/file-parser';
 import { trackDocUpload } from '../../lib/auth';
-import { detectIntent } from '../../lib/intentDetector';
 
 // Removed: MOCK_RESPONSES array — replaced with real streaming fetch to /api/chat
 // See: tech-stack.md — Backend API section
@@ -1851,9 +1850,6 @@ export default function ChatView() {
   });
   const [sessionDocContext, setSessionDocContext] = useState(null); // { name, content } — persisted doc for follow-up questions
   const [selectedIntent, setSelectedIntent] = useState(null); // User-selected intent label — bypasses classifier
-  const [suggestedIntent, setSuggestedIntent] = useState(null); // Smart suggestion from keyword detection
-  const [dismissedSuggestion, setDismissedSuggestion] = useState(null); // Dismissed suggestion for current message
-  const suggestionTimer = useRef(null);
 
   // Load intents from bot persona for the intent selector
   const availableIntents = useMemo(() => {
@@ -2027,8 +2023,6 @@ export default function ChatView() {
     const userMsg = { id: Date.now(), sender: 'user', content: trimmed, timestamp: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }), attachments: pendingAttachments };
     setMessages((prev) => [...prev, userMsg]);
     setInput('');
-    setSuggestedIntent(null);
-    setDismissedSuggestion(null);
     if (inputRef.current) inputRef.current.style.height = 'auto';
     setPendingAttachments([]);
     setIsTyping(true);
@@ -2552,28 +2546,6 @@ export default function ChatView() {
               </div>
             )}
 
-            {/* Smart intent suggestion banner */}
-            {suggestedIntent && !showDocVersionBanner && (
-              <div style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
-                padding: '10px 14px', marginBottom: 6, borderRadius: 12,
-                backgroundColor: 'var(--ice-warm)', border: '0.5px solid var(--border)',
-                fontSize: 13, color: 'var(--text-secondary)',
-              }}>
-                <span>Looks like <strong style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{suggestedIntent}</strong></span>
-                <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-                  <button
-                    onClick={() => { setSelectedIntent(suggestedIntent); setSuggestedIntent(null); setDismissedSuggestion(null); }}
-                    style={{ fontSize: 12, padding: '4px 12px', border: '0.5px solid var(--border)', borderRadius: 999, background: 'white', color: 'var(--text-primary)', cursor: 'pointer', whiteSpace: 'nowrap' }}
-                  >Yes, switch</button>
-                  <button
-                    onClick={() => { setDismissedSuggestion(suggestedIntent); setSuggestedIntent(null); }}
-                    style={{ fontSize: 12, padding: '4px 12px', border: 'none', background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer', whiteSpace: 'nowrap' }}
-                  >Keep {selectedIntent || 'General Chat'}</button>
-                </div>
-              </div>
-            )}
-
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, border: '1.5px solid var(--border)', borderRadius: 24, background: '#fff', minHeight: 48, padding: '8px 8px 8px 12px' }}>
               <div style={{ position: 'relative' }}>
                 <div onClick={() => setShowPackPicker(v => !v)} title="Attach files or context" style={{ width: 28, height: 28, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: (activeKnowledgePack || activeVaultDocument) ? 'var(--navy)' : 'var(--text-muted)', background: (activeKnowledgePack || activeVaultDocument) ? 'rgba(10, 36, 99, 0.08)' : 'transparent' }}><Plus size={20} /></div>
@@ -2590,24 +2562,7 @@ export default function ChatView() {
                   />
                 )}
               </div>
-              <textarea ref={inputRef} className="no-focus-ring" value={input} onChange={(e) => {
-                const val = e.target.value;
-                setInput(val);
-                // Smart intent suggestion — debounce 600ms
-                clearTimeout(suggestionTimer.current);
-                if (val.trim().length < 10) {
-                  setSuggestedIntent(null);
-                  return;
-                }
-                suggestionTimer.current = setTimeout(() => {
-                  const detected = detectIntent(val, selectedIntent);
-                  if (detected && detected !== dismissedSuggestion) {
-                    setSuggestedIntent(detected);
-                  } else {
-                    setSuggestedIntent(null);
-                  }
-                }, 600);
-              }} onKeyDown={handleKeyDown} placeholder={inputPlaceholder} rows={1} style={{ flex: 1, border: 'none', outline: 'none', fontSize: 14, color: 'var(--text-primary)', background: 'transparent', resize: 'none', maxHeight: 120, overflowY: 'auto', lineHeight: '1.5', fontFamily: 'inherit' }} onInput={(e) => { e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px'; }} />
+              <textarea ref={inputRef} className="no-focus-ring" value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={handleKeyDown} placeholder={inputPlaceholder} rows={1} style={{ flex: 1, border: 'none', outline: 'none', fontSize: 14, color: 'var(--text-primary)', background: 'transparent', resize: 'none', maxHeight: 120, overflowY: 'auto', lineHeight: '1.5', fontFamily: 'inherit' }} onInput={(e) => { e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px'; }} />
               {(() => { const canSend = (input.trim() || pendingAttachments.length > 0) && !isTyping; return (
               <div onClick={() => canSend && sendMessage(input)} style={{ width: 32, height: 32, borderRadius: '50%', background: canSend ? 'var(--navy)' : '#94A3B8', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: canSend ? 'pointer' : 'not-allowed', flexShrink: 0, opacity: canSend ? 1 : 0.6, transition: 'background 150ms, opacity 150ms' }}><ArrowUp size={16} color="#fff" /></div>
               ); })()}
