@@ -1858,29 +1858,104 @@ export default function GlobalKnowledgeBase() {
                 </div>
                 <p className="text-xs mb-4" style={{ color: 'var(--text-muted)' }}>Each intent defines a separate AI mode with its own system prompt, tone, and formatting. The intent classifier picks the right one automatically.</p>
 
-                {/* Intent cards — read-only display */}
+                {/* Intent cards — expandable read-only view with enable/disable */}
                 <div className="space-y-3">
-                  {persona.operations.map(op => (
-                    <div key={op.id} className="rounded-xl overflow-hidden" style={{ border: '1px solid var(--border)', opacity: op.enabled ? 1 : 0.55 }}>
-                      <div className="flex items-center gap-3 px-4 py-3" style={{ backgroundColor: '#FAFBFC' }}>
-                        <div className="flex items-center justify-center rounded-lg" style={{ width: 32, height: 32, backgroundColor: op.enabled ? 'var(--navy)' : 'var(--border)', flexShrink: 0 }}>
-                          <Bot size={16} style={{ color: op.enabled ? 'white' : 'var(--text-muted)' }} />
-                        </div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{op.label}</span>
-                            <span className="px-1.5 py-0.5 rounded text-xs" style={{ backgroundColor: op.enabled ? '#DCFCE7' : '#F1F5F9', color: op.enabled ? '#166534' : 'var(--text-muted)', fontSize: 10, fontWeight: 600 }}>
-                              {op.enabled ? 'ON' : 'OFF'}
-                            </span>
-                            <span className="px-1.5 py-0.5 rounded text-xs" style={{ backgroundColor: 'rgba(10,36,99,0.06)', color: 'var(--navy)', fontSize: 10 }}>
-                              {TONE_OPTIONS.find(t => t.id === op.tone)?.label || op.tone}
-                            </span>
+                  {persona.operations.map(op => {
+                    const isExpanded = editingOp === op.id;
+                    return (
+                      <div key={op.id} className="rounded-xl overflow-hidden" style={{ border: `1px solid ${isExpanded ? 'var(--navy)' : 'var(--border)'}`, opacity: op.enabled ? 1 : 0.55, transition: 'all 0.15s' }}>
+                        {/* Header — clickable to expand */}
+                        <div
+                          className="flex items-center gap-3 px-4 py-3 cursor-pointer"
+                          style={{ backgroundColor: isExpanded ? 'var(--ice-warm)' : '#FAFBFC' }}
+                          onClick={() => setEditingOp(isExpanded ? null : op.id)}
+                        >
+                          <div className="flex items-center justify-center rounded-lg" style={{ width: 32, height: 32, backgroundColor: op.enabled ? 'var(--navy)' : 'var(--border)', flexShrink: 0 }}>
+                            <Bot size={16} style={{ color: op.enabled ? 'white' : 'var(--text-muted)' }} />
                           </div>
-                          <p className="text-xs truncate" style={{ color: 'var(--text-muted)', marginTop: 2 }}>{op.description}</p>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{op.label}</span>
+                              <span className="px-1.5 py-0.5 rounded text-xs" style={{ backgroundColor: op.enabled ? '#DCFCE7' : '#F1F5F9', color: op.enabled ? '#166534' : 'var(--text-muted)', fontSize: 10, fontWeight: 600 }}>
+                                {op.enabled ? 'ON' : 'OFF'}
+                              </span>
+                              <span className="px-1.5 py-0.5 rounded text-xs" style={{ backgroundColor: 'rgba(10,36,99,0.06)', color: 'var(--navy)', fontSize: 10 }}>
+                                {TONE_OPTIONS.find(t => t.id === op.tone)?.label || op.tone}
+                              </span>
+                            </div>
+                            <p className="text-xs truncate" style={{ color: 'var(--text-muted)', marginTop: 2 }}>{op.description}</p>
+                          </div>
+                          <div className="flex items-center gap-2" style={{ flexShrink: 0 }}>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); toggleOpEnabled(op.id); }}
+                              className="px-2.5 py-1 rounded text-xs font-medium"
+                              style={{ border: '1px solid var(--border)', background: 'white', cursor: 'pointer', color: op.enabled ? '#dc2626' : '#166534' }}
+                            >
+                              {op.enabled ? 'Disable' : 'Enable'}
+                            </button>
+                            <ChevronDown size={14} style={{ color: 'var(--text-muted)', transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }} />
+                          </div>
                         </div>
+
+                        {/* Expanded read-only view */}
+                        {isExpanded && (
+                          <div className="px-4 pb-4 pt-2 space-y-4" style={{ backgroundColor: 'white' }}>
+                            {/* System Prompt */}
+                            <div>
+                              <div className="flex items-center gap-1.5 mb-1.5">
+                                <label className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>System Prompt</label>
+                                <span className="flex items-center gap-1 px-1.5 py-0.5 rounded text-xs" style={{ backgroundColor: '#F1F5F9', color: 'var(--text-muted)', fontSize: 9 }}>
+                                  <Lock size={8} /> Read-only
+                                </span>
+                              </div>
+                              <div
+                                className="p-3 rounded-lg text-xs"
+                                style={{ backgroundColor: '#F8FAFC', border: '1px solid var(--border)', fontSize: 12, fontFamily: "'DM Sans', sans-serif", color: 'var(--text-secondary)', lineHeight: 1.7, whiteSpace: 'pre-wrap', maxHeight: 200, overflowY: 'auto' }}
+                              >{op.systemPrompt}</div>
+                            </div>
+
+                            {/* Tone */}
+                            <div>
+                              <label className="text-xs font-medium mb-1.5 block" style={{ color: 'var(--text-secondary)' }}>Tone</label>
+                              <div className="flex flex-wrap gap-2">
+                                {TONE_OPTIONS.map(t => (
+                                  <span key={t.id} className="px-3 py-1.5 rounded-full text-xs font-medium" style={{ border: op.tone === t.id ? '2px solid var(--navy)' : '1px solid var(--border)', backgroundColor: op.tone === t.id ? 'var(--ice-warm)' : 'white', color: op.tone === t.id ? 'var(--navy)' : 'var(--text-muted)' }}>
+                                    {t.label}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+
+                            {/* Format Rules */}
+                            <div>
+                              <label className="text-xs font-medium mb-1.5 block" style={{ color: 'var(--text-secondary)' }}>Format Rules</label>
+                              <div className="flex flex-wrap gap-2">
+                                {FORMAT_RULES.map(rule => (
+                                  <span key={rule.id} className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs" style={{ border: `1px solid ${op.formatRules.includes(rule.id) ? 'var(--navy)' : 'var(--border)'}`, backgroundColor: op.formatRules.includes(rule.id) ? 'var(--ice-warm)' : 'white', color: op.formatRules.includes(rule.id) ? 'var(--navy)' : 'var(--text-muted)' }}>
+                                    {op.formatRules.includes(rule.id) ? '✓' : '○'} {rule.label}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+
+                            {/* Example Queries — if available */}
+                            {op.exampleQueries && op.exampleQueries.length > 0 && (
+                              <div>
+                                <label className="text-xs font-medium mb-1.5 block" style={{ color: 'var(--text-secondary)' }}>Example Queries</label>
+                                <div className="flex flex-wrap gap-2">
+                                  {op.exampleQueries.map((q, i) => (
+                                    <span key={i} className="px-2.5 py-1.5 rounded-lg text-xs" style={{ backgroundColor: '#F1F5F9', color: 'var(--text-secondary)', border: '1px solid var(--border)' }}>
+                                      "{q}"
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
 
