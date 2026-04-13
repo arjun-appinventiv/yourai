@@ -2408,33 +2408,38 @@ export default function ChatView() {
               }}>
                 <AlertTriangle size={18} style={{ color: '#D97706', flexShrink: 0, marginTop: 2 }} />
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: '#92400E', marginBottom: 4 }}>
-                    Switching documents mid-conversation
+                  <div style={{ fontSize: 13, fontWeight: 600, color: '#92400E', marginBottom: 6 }}>
+                    We recommend starting a new conversation
                   </div>
-                  <div style={{ fontSize: 12, color: '#A16207', marginBottom: 12, lineHeight: 1.6 }}>
-                    Alex is currently using a different document as context. Mixing documents in the same conversation can lead to confused answers — the AI may accidentally reference the wrong file. Starting fresh ensures Alex focuses only on your new document.
-                    {pendingNewDoc && (
-                      <div style={{ marginTop: 6, fontWeight: 500 }}>New: {pendingNewDoc.name}</div>
-                    )}
+                  <div style={{ fontSize: 12, color: '#A16207', marginBottom: 10, lineHeight: 1.7 }}>
+                    Alex builds context from your conversation history. When you switch documents mid-chat, the earlier Q&amp;A was based on a different file — so Alex may mix up facts, cite the wrong clauses, or carry over assumptions that don't apply to your new document.
                   </div>
+                  <div style={{ fontSize: 12, color: '#A16207', marginBottom: 14, lineHeight: 1.7 }}>
+                    A fresh conversation gives Alex a clean slate to focus entirely on your new document, so every answer is accurate and based only on what's in front of you.
+                  </div>
+                  {pendingNewDoc && (
+                    <div style={{ fontSize: 12, fontWeight: 600, color: '#92400E', marginBottom: 14, padding: '8px 12px', background: 'rgba(217, 119, 6, 0.08)', borderRadius: 8, display: 'inline-block' }}>
+                      {pendingNewDoc.name}
+                    </div>
+                  )}
                   <div style={{ display: 'flex', gap: 8 }}>
                     <button
                       onClick={() => handleDocVersionChoice('new')}
                       style={{
-                        padding: '7px 16px', borderRadius: 8, fontSize: 12, fontWeight: 600,
+                        padding: '8px 20px', borderRadius: 8, fontSize: 12, fontWeight: 600,
                         background: '#D97706', color: '#fff', border: 'none', cursor: 'pointer',
                       }}
                     >
-                      Start new conversation
+                      Start fresh with new document
                     </button>
                     <button
                       onClick={() => handleDocVersionChoice('continue')}
                       style={{
-                        padding: '7px 16px', borderRadius: 8, fontSize: 12, fontWeight: 600,
+                        padding: '8px 20px', borderRadius: 8, fontSize: 12, fontWeight: 600,
                         background: '#fff', color: '#92400E', border: '1px solid #F59E0B', cursor: 'pointer',
                       }}
                     >
-                      Continue with original
+                      Keep current document
                     </button>
                   </div>
                 </div>
