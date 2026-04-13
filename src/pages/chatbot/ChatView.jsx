@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import {
@@ -1849,6 +1849,19 @@ export default function ChatView() {
     // Confirmed by Arjun — cutover only for this release
   });
   const [sessionDocContext, setSessionDocContext] = useState(null); // { name, content } — persisted doc for follow-up questions
+  const [selectedIntent, setSelectedIntent] = useState(null); // User-selected intent label — bypasses classifier
+
+  // Load intents from bot persona for the intent selector
+  const availableIntents = useMemo(() => {
+    try {
+      const raw = localStorage.getItem('yourai_bot_persona');
+      if (raw) {
+        const p = JSON.parse(raw);
+        return (p.operations || []).filter(op => op.enabled);
+      }
+    } catch (_) { /* ignore */ }
+    return [];
+  }, []);
   const [showDocVersionBanner, setShowDocVersionBanner] = useState(false);
   const [pendingNewDoc, setPendingNewDoc] = useState(null); // holds the new doc until user decides
   const scrollRef = useRef(null);
@@ -2108,6 +2121,11 @@ export default function ChatView() {
           };
         }
 
+        // Pass user-selected intent (if any) to skip classifier
+        if (selectedIntent) {
+          contextLayers.intentLabel = selectedIntent;
+        }
+
         // Tier 3 (Global KB) and Tier 4 (Fallback) are handled inside callLLM via persona
         const result = await callLLM(trimmed, history, (streaming) => {
           setStreamingContent(streaming);
@@ -2160,7 +2178,7 @@ export default function ChatView() {
       const errMsg = { id: Date.now() + 1, sender: 'bot', content: safeMessage, timestamp: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }), sourceBadge: null };
       setMessages((prev) => [...prev, errMsg]);
     }
-  }, [isTyping, showEmptyState, messages, activeKnowledgePack, activeVaultDocument, pendingAttachments, activeThreadId, sessionState]);
+  }, [isTyping, showEmptyState, messages, activeKnowledgePack, activeVaultDocument, pendingAttachments, activeThreadId, sessionState, selectedIntent]);
 
   const handleAttachFiles = (files, kind) => {
     const newAtts = files.map((f, i) => ({
@@ -2480,6 +2498,34 @@ export default function ChatView() {
                       <span style={{ fontSize: 11, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{a.name}</span>
                       <button onClick={() => removeAttachment(a.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', color: 'var(--text-muted)', flexShrink: 0 }}><X size={11} /></button>
                     </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Intent selector pills */}
+            {availableIntents.length > 0 && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
+                {availableIntents.map(intent => {
+                  const isActive = selectedIntent === intent.label;
+                  return (
+                    <button
+                      key={intent.id}
+                      onClick={() => setSelectedIntent(isActive ? null : intent.label)}
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 5,
+                        padding: '4px 12px', borderRadius: 999,
+                        fontSize: 11, fontWeight: 500, fontFamily: "'DM Sans', sans-serif",
+                        border: isActive ? '1.5px solid var(--navy)' : '1px solid var(--border)',
+                        backgroundColor: isActive ? 'rgba(10, 36, 99, 0.08)' : 'white',
+                        color: isActive ? 'var(--navy)' : 'var(--text-secondary)',
+                        cursor: 'pointer', transition: 'all 120ms',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {isActive && <Zap size={10} />}
+                      {intent.label}
+                    </button>
                   );
                 })}
               </div>

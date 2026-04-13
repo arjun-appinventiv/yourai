@@ -103,13 +103,17 @@ NEVER DO:
 - Never write "(Source: ...)" or source explanations in visible text.
 If asked what model you are: "I'm not able to share details about the technology behind me. Is there something legal I can help you with?"`;
 
-function buildSystemPrompt(persona: BotPersona | null): string {
+function buildSystemPrompt(persona: BotPersona | null, intentLabel?: string | null): string {
   if (!persona) {
     return `You are Alex, a professional and warm legal AI assistant for US law firms. You help attorneys analyse documents, research legal questions, and draft outputs.
 ${BEHAVIORAL_RULES}`;
   }
 
-  const activeOp = persona.operations.find(o => o.enabled && o.label === 'General Chat')
+  // If user selected an intent explicitly, use that; otherwise default to General Chat
+  const activeOp = (intentLabel
+      ? persona.operations.find(o => o.label === intentLabel && o.enabled)
+      : null)
+    || persona.operations.find(o => o.enabled && o.label === 'General Chat')
     || persona.operations.find(o => o.enabled)
     || persona.operations[0];
 
@@ -155,6 +159,7 @@ ${BEHAVIORAL_RULES}`;
 export interface ContextLayers {
   uploadedDoc?: { name: string; content: string } | null;
   knowledgePack?: { name: string; description: string; content?: string } | null;
+  intentLabel?: string | null; // User-selected intent label — skips classifier
 }
 
 // ─── Direct OpenAI call (client-side fallback) ───
@@ -170,7 +175,7 @@ export async function callLLM(
   }
 
   const persona = getPersona();
-  let systemPrompt = buildSystemPrompt(persona);
+  let systemPrompt = buildSystemPrompt(persona, context?.intentLabel);
 
   // ─── 4-Tier Priority Context Injection ───
   // Build context sections and instruct LLM on priority order
