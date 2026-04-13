@@ -14,7 +14,6 @@ import { callLLM, getApiKey } from '../../lib/llm-client';
 import { extractFileText } from '../../lib/file-parser';
 import { trackDocUpload } from '../../lib/auth';
 import { detectIntent } from '../../lib/intentDetector';
-import { INTENTS, DEFAULT_INTENT, getIntentLabel } from '../../lib/intents';
 
 // Removed: MOCK_RESPONSES array — replaced with real streaming fetch to /api/chat
 // See: tech-stack.md — Backend API section
@@ -1851,15 +1850,37 @@ export default function ChatView() {
     // Confirmed by Arjun — cutover only for this release
   });
   const [sessionDocContext, setSessionDocContext] = useState(null); // { name, content } — persisted doc for follow-up questions
-  // ─── Intent system state ───
-  const [activeIntent, setActiveIntent] = useState(DEFAULT_INTENT);
-  const [pendingIntent, setPendingIntent] = useState(null); // For Option C mid-convo switch
-  const [showSwitchBanner, setShowSwitchBanner] = useState(false); // Option C banner
-  const [isIntentDropdownOpen, setIsIntentDropdownOpen] = useState(false);
+  const [selectedIntent, setSelectedIntent] = useState(null); // User-selected intent label — bypasses classifier
   const [suggestedIntent, setSuggestedIntent] = useState(null); // Smart suggestion from keyword detection
-  const [dismissedSuggestion, setDismissedSuggestion] = useState(null);
+  const [dismissedSuggestion, setDismissedSuggestion] = useState(null); // Dismissed suggestion for current message
   const suggestionTimer = useRef(null);
-  const intentDropdownRef = useRef(null);
+
+  // Load intents from bot persona for the intent selector
+  const availableIntents = useMemo(() => {
+    try {
+      const raw = localStorage.getItem('yourai_bot_persona');
+      if (raw) {
+        const p = JSON.parse(raw);
+        const ops = (p.operations || []).filter(op => op.enabled);
+        if (ops.length > 0) return ops;
+      }
+    } catch (_) { /* ignore */ }
+    // Fallback: default intent labels when persona not yet saved to localStorage
+    return [
+      { id: 1, label: 'General Chat' },
+      { id: 2, label: 'Contract Review' },
+      { id: 3, label: 'Legal Research' },
+      { id: 4, label: 'Document Drafting' },
+      { id: 6, label: 'YourAI How-To' },
+      { id: 7, label: 'General Conversation' },
+      { id: 8, label: 'Document Summarisation' },
+      { id: 9, label: 'Case Law Analysis' },
+      { id: 10, label: 'Clause Comparison' },
+      { id: 11, label: 'Email & Letter Drafting' },
+      { id: 13, label: 'Legal Q&A' },
+      { id: 14, label: 'Risk Assessment' },
+    ];
+  }, []);
   const [showDocVersionBanner, setShowDocVersionBanner] = useState(false);
   const [pendingNewDoc, setPendingNewDoc] = useState(null); // holds the new doc until user decides
   const scrollRef = useRef(null);
@@ -1918,12 +1939,6 @@ export default function ChatView() {
     setPendingAttachments([]);
     setInput('');
     setSessionDocContext(null);
-    setActiveIntent(DEFAULT_INTENT);
-    setPendingIntent(null);
-    setShowSwitchBanner(false);
-    setSuggestedIntent(null);
-    setDismissedSuggestion(null);
-    setIsIntentDropdownOpen(false);
     // DEC-093 + DEC-094: New session gets current KB snapshot
     setSessionState({
       sessionKbSnapshotId: `kb-snapshot-${Date.now()}`,
@@ -2128,9 +2143,9 @@ export default function ChatView() {
         }
 
         // Pass user-selected intent (if any) to skip classifier
-        // Removed: auto intent classifier — replaced by user-selected intent pill
-        // See: src/lib/intents.ts, src/lib/intentDetector.ts
-        contextLayers.intentLabel = getIntentLabel(activeIntent);
+        if (selectedIntent) {
+          contextLayers.intentLabel = selectedIntent;
+        }
 
         // Tier 3 (Global KB) and Tier 4 (Fallback) are handled inside callLLM via persona
         const result = await callLLM(trimmed, history, (streaming) => {
@@ -2184,7 +2199,7 @@ export default function ChatView() {
       const errMsg = { id: Date.now() + 1, sender: 'bot', content: safeMessage, timestamp: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }), sourceBadge: null };
       setMessages((prev) => [...prev, errMsg]);
     }
-  }, [isTyping, showEmptyState, messages, activeKnowledgePack, activeVaultDocument, pendingAttachments, activeThreadId, sessionState, activeIntent]);
+  }, [isTyping, showEmptyState, messages, activeKnowledgePack, activeVaultDocument, pendingAttachments, activeThreadId, sessionState, selectedIntent]);
 
   const handleAttachFiles = (files, kind) => {
     const newAtts = files.map((f, i) => ({
@@ -2290,7 +2305,6 @@ export default function ChatView() {
   }, []);
 
   const handleKeyDown = (e) => {
-    if (e.key === 'Escape' && isIntentDropdownOpen) { setIsIntentDropdownOpen(false); return; }
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(input); }
   };
 
@@ -2510,29 +2524,27 @@ export default function ChatView() {
               </div>
             )}
 
-            {/* ─── STATE 1: Intent pills above input (empty chat only) ─── */}
-            {showEmptyState && (
+            {/* Intent selector pills */}
+            {availableIntents.length > 0 && (
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
-                {INTENTS.map(intent => {
-                  const isActive = activeIntent === intent.id;
+                {availableIntents.map(intent => {
+                  const isActive = selectedIntent === intent.label;
                   return (
                     <button
                       key={intent.id}
-                      onClick={() => setActiveIntent(intent.id)}
+                      onClick={() => setSelectedIntent(isActive ? null : intent.label)}
                       style={{
                         display: 'inline-flex', alignItems: 'center', gap: 5,
-                        padding: '6px 14px', borderRadius: 999,
-                        fontSize: 13, fontFamily: "'DM Sans', sans-serif",
-                        fontWeight: isActive ? 500 : 400,
-                        border: isActive ? '1.5px solid var(--text-primary)' : '0.5px solid var(--border)',
-                        backgroundColor: 'white',
-                        color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
-                        cursor: 'pointer', transition: 'border-color 150ms ease, color 150ms ease',
+                        padding: '4px 12px', borderRadius: 999,
+                        fontSize: 11, fontWeight: 500, fontFamily: "'DM Sans', sans-serif",
+                        border: isActive ? '1.5px solid var(--navy)' : '1px solid var(--border)',
+                        backgroundColor: isActive ? 'rgba(10, 36, 99, 0.08)' : 'white',
+                        color: isActive ? 'var(--navy)' : 'var(--text-secondary)',
+                        cursor: 'pointer', transition: 'all 120ms',
                         whiteSpace: 'nowrap',
                       }}
-                      onMouseEnter={(e) => { if (!isActive) { e.currentTarget.style.borderColor = 'var(--text-muted)'; e.currentTarget.style.color = 'var(--text-primary)'; } }}
-                      onMouseLeave={(e) => { if (!isActive) { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-secondary)'; } }}
                     >
+                      {isActive && <Zap size={10} />}
                       {intent.label}
                     </button>
                   );
@@ -2540,133 +2552,29 @@ export default function ChatView() {
               </div>
             )}
 
-            {/* ─── Option C: Mid-conversation intent switch banner ─── */}
-            {showSwitchBanner && pendingIntent && (
-              <div style={{
-                padding: '12px 16px', marginBottom: 8, borderRadius: 12,
-                backgroundColor: 'var(--ice-warm)', border: '0.5px solid var(--border)',
-                fontSize: 13, color: 'var(--text-secondary)',
-              }}>
-                <div style={{ marginBottom: 10 }}>
-                  You switched to <strong style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{getIntentLabel(pendingIntent)}</strong>.
-                </div>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <button
-                    onClick={() => {
-                      setActiveIntent(pendingIntent);
-                      setPendingIntent(null);
-                      setShowSwitchBanner(false);
-                      // Start fresh — clear messages & session
-                      setMessages([]);
-                      setShowEmptyState(true);
-                      setSessionDocContext(null);
-                      setPendingAttachments([]);
-                      setActiveKnowledgePack(null);
-                      setActiveVaultDocument(null);
-                    }}
-                    style={{ fontSize: 12, padding: '6px 14px', border: '0.5px solid var(--border)', borderRadius: 999, background: 'white', color: 'var(--text-primary)', cursor: 'pointer', whiteSpace: 'nowrap', fontWeight: 500 }}
-                  >Start fresh conversation</button>
-                  <button
-                    onClick={() => {
-                      setActiveIntent(pendingIntent);
-                      setPendingIntent(null);
-                      setShowSwitchBanner(false);
-                    }}
-                    style={{ fontSize: 12, padding: '6px 14px', border: 'none', background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer', whiteSpace: 'nowrap' }}
-                  >Continue with this intent</button>
-                </div>
-              </div>
-            )}
-
-            {/* ─── Smart intent suggestion banner (Banner A) ─── */}
-            {suggestedIntent && !showDocVersionBanner && !showSwitchBanner && (
+            {/* Smart intent suggestion banner */}
+            {suggestedIntent && !showDocVersionBanner && (
               <div style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
                 padding: '10px 14px', marginBottom: 6, borderRadius: 12,
                 backgroundColor: 'var(--ice-warm)', border: '0.5px solid var(--border)',
                 fontSize: 13, color: 'var(--text-secondary)',
               }}>
-                <span>Looks like <strong style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{getIntentLabel(suggestedIntent)}</strong></span>
+                <span>Looks like <strong style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{suggestedIntent}</strong></span>
                 <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
                   <button
-                    onClick={() => { setActiveIntent(suggestedIntent); setSuggestedIntent(null); setDismissedSuggestion(null); }}
+                    onClick={() => { setSelectedIntent(suggestedIntent); setSuggestedIntent(null); setDismissedSuggestion(null); }}
                     style={{ fontSize: 12, padding: '4px 12px', border: '0.5px solid var(--border)', borderRadius: 999, background: 'white', color: 'var(--text-primary)', cursor: 'pointer', whiteSpace: 'nowrap' }}
                   >Yes, switch</button>
                   <button
                     onClick={() => { setDismissedSuggestion(suggestedIntent); setSuggestedIntent(null); }}
                     style={{ fontSize: 12, padding: '4px 12px', border: 'none', background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer', whiteSpace: 'nowrap' }}
-                  >Keep {getIntentLabel(activeIntent)}</button>
+                  >Keep {selectedIntent || 'General Chat'}</button>
                 </div>
               </div>
             )}
 
-            {/* ─── Input bar ─── */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, border: '1.5px solid var(--border)', borderRadius: 24, background: '#fff', minHeight: 48, padding: '8px 8px 8px 12px', opacity: showSwitchBanner ? 0.5 : 1, pointerEvents: showSwitchBanner ? 'none' : 'auto' }}>
-              {/* STATE 2: Collapsed intent pill (conversation active) */}
-              {!showEmptyState && (
-                <div style={{ position: 'relative' }} ref={intentDropdownRef}>
-                  <button
-                    onClick={() => setIsIntentDropdownOpen(v => !v)}
-                    style={{
-                      display: 'inline-flex', alignItems: 'center', gap: 4,
-                      padding: '4px 10px', borderRadius: 999,
-                      fontSize: 12, fontWeight: 500, fontFamily: "'DM Sans', sans-serif",
-                      border: '1.5px solid var(--text-primary)',
-                      backgroundColor: 'white', color: 'var(--text-primary)',
-                      cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
-                    }}
-                  >
-                    {getIntentLabel(activeIntent)}
-                    <ChevronDown size={12} style={{ transform: isIntentDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 150ms' }} />
-                  </button>
-                  {/* Dropdown — opens UPWARD */}
-                  {isIntentDropdownOpen && (
-                    <>
-                      <div onClick={() => setIsIntentDropdownOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 50 }} />
-                      <div style={{
-                        position: 'absolute', bottom: '100%', left: 0, marginBottom: 6, width: 260,
-                        backgroundColor: 'white', borderRadius: 12, border: '1px solid var(--border)',
-                        boxShadow: '0 8px 24px rgba(0,0,0,0.12)', zIndex: 51,
-                        maxHeight: 320, overflowY: 'auto',
-                      }}>
-                        {INTENTS.map(intent => {
-                          const isCurrent = activeIntent === intent.id;
-                          return (
-                            <div
-                              key={intent.id}
-                              onClick={() => {
-                                if (intent.id === activeIntent) {
-                                  setIsIntentDropdownOpen(false);
-                                } else if (!showEmptyState) {
-                                  // Option C — mid-conversation switch
-                                  setPendingIntent(intent.id);
-                                  setShowSwitchBanner(true);
-                                  setIsIntentDropdownOpen(false);
-                                } else {
-                                  setActiveIntent(intent.id);
-                                  setIsIntentDropdownOpen(false);
-                                }
-                              }}
-                              style={{
-                                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                                padding: '8px 14px', cursor: 'pointer', fontSize: 13,
-                                color: isCurrent ? 'var(--text-primary)' : 'var(--text-secondary)',
-                                fontWeight: isCurrent ? 500 : 400,
-                                backgroundColor: 'transparent', transition: 'background 100ms',
-                              }}
-                              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--ice-warm)'; }}
-                              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
-                            >
-                              <span>{intent.label}</span>
-                              {isCurrent && <CheckCircle size={14} style={{ color: 'var(--navy)', flexShrink: 0 }} />}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </>
-                  )}
-                </div>
-              )}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, border: '1.5px solid var(--border)', borderRadius: 24, background: '#fff', minHeight: 48, padding: '8px 8px 8px 12px' }}>
               <div style={{ position: 'relative' }}>
                 <div onClick={() => setShowPackPicker(v => !v)} title="Attach files or context" style={{ width: 28, height: 28, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: (activeKnowledgePack || activeVaultDocument) ? 'var(--navy)' : 'var(--text-muted)', background: (activeKnowledgePack || activeVaultDocument) ? 'rgba(10, 36, 99, 0.08)' : 'transparent' }}><Plus size={20} /></div>
                 {showPackPicker && (
@@ -2692,7 +2600,7 @@ export default function ChatView() {
                   return;
                 }
                 suggestionTimer.current = setTimeout(() => {
-                  const detected = detectIntent(val, activeIntent);
+                  const detected = detectIntent(val, selectedIntent);
                   if (detected && detected !== dismissedSuggestion) {
                     setSuggestedIntent(detected);
                   } else {
@@ -2700,7 +2608,7 @@ export default function ChatView() {
                   }
                 }, 600);
               }} onKeyDown={handleKeyDown} placeholder={inputPlaceholder} rows={1} style={{ flex: 1, border: 'none', outline: 'none', fontSize: 14, color: 'var(--text-primary)', background: 'transparent', resize: 'none', maxHeight: 120, overflowY: 'auto', lineHeight: '1.5', fontFamily: 'inherit' }} onInput={(e) => { e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px'; }} />
-              {(() => { const canSend = (input.trim() || pendingAttachments.length > 0) && !isTyping && !showSwitchBanner; return (
+              {(() => { const canSend = (input.trim() || pendingAttachments.length > 0) && !isTyping; return (
               <div onClick={() => canSend && sendMessage(input)} style={{ width: 32, height: 32, borderRadius: '50%', background: canSend ? 'var(--navy)' : '#94A3B8', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: canSend ? 'pointer' : 'not-allowed', flexShrink: 0, opacity: canSend ? 1 : 0.6, transition: 'background 150ms, opacity 150ms' }}><ArrowUp size={16} color="#fff" /></div>
               ); })()}
             </div>
