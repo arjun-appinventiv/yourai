@@ -75,19 +75,19 @@ export default function ChatAuthLayout({ children }) {
         }} />
 
         <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', height: '100%', padding: '28px 36px' }}>
-          {/* Logo */}
-          <div>
-            <span style={{ fontFamily: "'DM Serif Display', serif", fontSize: 22, fontWeight: 700 }}>
-              <span style={{ color: 'var(--navy)' }}>Your</span>
-              <span style={{ color: '#C9A84C' }}>AI</span>
-            </span>
-          </div>
-
           {/* Center content */}
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 20 }}>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 18 }}>
+            {/* Logo */}
+            <div style={{ textAlign: 'center' }}>
+              <span style={{ fontFamily: "'DM Serif Display', serif", fontSize: 26, fontWeight: 700 }}>
+                <span style={{ color: 'var(--navy)' }}>Your</span>
+                <span style={{ color: '#C9A84C' }}>AI</span>
+              </span>
+            </div>
+
             {/* Badge */}
             <span style={{
-              alignSelf: 'flex-start', display: 'inline-flex', alignItems: 'center', gap: 6,
+              alignSelf: 'center', display: 'inline-flex', alignItems: 'center', gap: 6,
               padding: '5px 14px', borderRadius: 20, fontSize: 11, fontWeight: 600,
               color: '#C9A84C', letterSpacing: '0.04em',
               backgroundColor: 'rgba(201,168,76,0.10)', border: '1px solid rgba(201,168,76,0.25)',
