@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { User, Mail, Building2, Lock, Eye, EyeOff, Loader, Check, Circle } from 'lucide-react';
+import { User, Mail, Building2, Lock, Eye, EyeOff, Loader, Check, Circle, AlertTriangle, XCircle } from 'lucide-react';
 import ChatAuthLayout from '../../../components/ChatAuthLayout';
 import { signUp as apiSignUp } from '../../../lib/auth';
 
@@ -19,6 +19,17 @@ export default function SignUp() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
+
+  // Domain mismatch detection
+  const domainMismatch = useMemo(() => {
+    if (!email.includes('@') || !firmName.trim()) return false;
+    const domain = email.split('@')[1]?.toLowerCase().replace(/\.(com|org|net|io|co|law|legal)$/, '').replace(/[^a-z]/g, '') || '';
+    const firm = firmName.toLowerCase().replace(/[^a-z]/g, '');
+    if (!domain || !firm) return false;
+    return !firm.includes(domain) && !domain.includes(firm);
+  }, [email, firmName]);
+
+  const isAlreadyRegistered = error.toLowerCase().includes('already registered') || error.toLowerCase().includes('already exists');
 
   const passwordChecks = [
     { label: 'At least 8 characters', met: password.length >= 8 },
@@ -160,6 +171,7 @@ export default function SignUp() {
               style={inputStyle}
             />
           </div>
+          <p className="mt-1" style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Use your firm email so we can connect to the right workspace.</p>
         </div>
 
         {/* Firm Name */}
@@ -176,6 +188,13 @@ export default function SignUp() {
               style={inputStyle}
             />
           </div>
+          <p className="mt-1" style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Solo practitioner? You can use your own name or chambers name.</p>
+          {domainMismatch && (
+            <div className="flex items-start gap-2 mt-2" style={{ backgroundColor: '#FFFBEB', borderRadius: 8, padding: '10px 14px', border: '1px solid #FDE68A' }}>
+              <AlertTriangle size={14} style={{ color: '#D97706', flexShrink: 0, marginTop: 1 }} />
+              <p style={{ fontSize: '12px', color: '#92400E', lineHeight: 1.5 }}>If your work email domain does not match your firm name, we'll ask you to confirm firm affiliation before workspace access is approved.</p>
+            </div>
+          )}
         </div>
 
         {/* Password */}
@@ -266,8 +285,13 @@ export default function SignUp() {
 
         {/* Error message */}
         {error && (
-          <div className="flex items-start gap-2" style={{ backgroundColor: '#FEF2F2', borderLeft: '3px solid #EF4444', borderRadius: '0 8px 8px 0', padding: '10px 14px' }}>
-            <p style={{ fontSize: '13px', color: '#9B2C2C' }}>{error}</p>
+          <div className="flex items-start gap-2" style={{ backgroundColor: '#FEF2F2', borderRadius: 8, padding: '10px 14px', border: '1px solid #FECACA' }}>
+            <XCircle size={14} style={{ color: '#DC2626', flexShrink: 0, marginTop: 1 }} />
+            <p style={{ fontSize: '12px', color: '#9B2C2C', lineHeight: 1.5 }}>
+              {isAlreadyRegistered ? (
+                <>This email is already registered. <Link to="/chat/login" style={{ color: '#1D4ED8', fontWeight: 600, textDecoration: 'none' }}>Sign in</Link> or request a password reset to continue.</>
+              ) : error}
+            </p>
           </div>
         )}
 

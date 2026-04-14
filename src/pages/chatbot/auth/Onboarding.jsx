@@ -120,20 +120,20 @@ function SelectableCard({ icon: Icon, title, desc, selected, onClick }) {
         alignItems: 'center',
         gap: 14,
         padding: '16px 18px',
-        borderRadius: 10,
-        border: `1.5px solid ${selected ? 'var(--navy)' : 'var(--border)'}`,
-        background: selected ? 'rgba(11,29,58,0.04)' : '#fff',
+        borderRadius: 12,
+        border: `1.5px solid ${selected ? '#C9A84C' : 'var(--border)'}`,
+        background: selected ? 'rgba(201,168,76,0.06)' : '#fff',
         cursor: 'pointer',
         textAlign: 'left',
         width: '100%',
         transition: 'all 0.2s ease',
-        boxShadow: selected ? '0 0 0 1px var(--navy)' : 'none',
+        boxShadow: selected ? '0 0 0 1px rgba(201,168,76,0.3)' : 'none',
       }}
       onMouseEnter={(e) => {
         if (!selected) e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)';
       }}
       onMouseLeave={(e) => {
-        if (!selected) e.currentTarget.style.boxShadow = 'none';
+        if (!selected) e.currentTarget.style.boxShadow = selected ? '0 0 0 1px rgba(201,168,76,0.3)' : 'none';
       }}
     >
       <div
@@ -144,8 +144,8 @@ function SelectableCard({ icon: Icon, title, desc, selected, onClick }) {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          background: selected ? 'var(--navy)' : 'var(--ice-warm)',
-          color: selected ? '#fff' : 'var(--navy)',
+          background: selected ? 'rgba(201,168,76,0.12)' : 'var(--ice-warm)',
+          color: selected ? '#C9A84C' : 'var(--navy)',
           flexShrink: 0,
           transition: 'all 0.2s ease',
         }}
@@ -172,14 +172,15 @@ function SelectableCard({ icon: Icon, title, desc, selected, onClick }) {
             width: 22,
             height: 22,
             borderRadius: '50%',
-            background: 'var(--navy)',
+            background: 'rgba(201,168,76,0.15)',
+            border: '1.5px solid #C9A84C',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             flexShrink: 0,
           }}
         >
-          <Check size={14} color="#fff" />
+          <Check size={14} color="#C9A84C" />
         </div>
       )}
     </button>
@@ -197,8 +198,8 @@ function PracticeChip({ label, selected, onClick }) {
         gap: 6,
         padding: '8px 14px',
         borderRadius: 20,
-        border: `1.5px solid ${selected ? 'var(--navy)' : 'var(--border)'}`,
-        background: selected ? 'var(--navy)' : '#fff',
+        border: `1.5px solid ${selected ? '#C9A84C' : 'var(--border)'}`,
+        background: selected ? '#C9A84C' : '#fff',
         color: selected ? '#fff' : 'var(--text-primary)',
         fontSize: 13,
         fontFamily: "'DM Sans', sans-serif",
@@ -230,8 +231,8 @@ function ProgressDots({ current, total }) {
             width: i + 1 === current ? 24 : 8,
             height: 8,
             borderRadius: 4,
-            background: i + 1 === current ? 'var(--navy)' : 'transparent',
-            border: `1.5px solid ${i + 1 <= current ? 'var(--navy)' : 'var(--border)'}`,
+            background: i + 1 === current ? '#C9A84C' : 'transparent',
+            border: `1.5px solid ${i + 1 <= current ? '#C9A84C' : 'var(--border)'}`,
             transition: 'all 0.3s ease',
           }}
         />
@@ -904,7 +905,13 @@ export default function Onboarding() {
 const styles = {
   wrapper: {
     minHeight: '100vh',
-    background: '#fff',
+    background: 'linear-gradient(135deg, #FEFDFB 0%, #FBF8F1 40%, #F8F6F0 100%)',
+    backgroundImage: `
+      linear-gradient(135deg, #FEFDFB 0%, #FBF8F1 40%, #F8F6F0 100%),
+      linear-gradient(rgba(201,168,76,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(201,168,76,0.04) 1px, transparent 1px)
+    `,
+    backgroundSize: '100% 100%, 40px 40px, 40px 40px',
     display: 'flex',
     flexDirection: 'column',
     overflowX: 'hidden',
@@ -963,7 +970,7 @@ const styles = {
     padding: '13px 0',
     borderRadius: 8,
     border: 'none',
-    background: 'var(--navy)',
+    background: '#C9A84C',
     color: '#fff',
     fontSize: 15,
     fontFamily: "'DM Sans', sans-serif",
