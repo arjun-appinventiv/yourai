@@ -199,8 +199,8 @@ function PracticeChip({ label, selected, onClick }) {
         padding: '8px 14px',
         borderRadius: 20,
         border: `1.5px solid ${selected ? '#C9A84C' : 'var(--border)'}`,
-        background: selected ? '#C9A84C' : '#fff',
-        color: selected ? '#fff' : 'var(--text-primary)',
+        background: selected ? '#FBF8F0' : '#fff',
+        color: 'var(--text-primary)',
         fontSize: 13,
         fontFamily: "'DM Sans', sans-serif",
         fontWeight: 500,
@@ -215,7 +215,14 @@ function PracticeChip({ label, selected, onClick }) {
         if (!selected) e.currentTarget.style.boxShadow = 'none';
       }}
     >
-      {selected && <Check size={14} />}
+      {selected && (
+        <span style={{
+          display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+          width: 18, height: 18, borderRadius: '50%', background: '#C9A84C', flexShrink: 0,
+        }}>
+          <Check size={11} style={{ color: '#fff' }} />
+        </span>
+      )}
       {label}
     </button>
   );
@@ -257,6 +264,8 @@ export default function Onboarding() {
   const [federalPractice, setFederalPractice] = useState(false);
   const [stateSearch, setStateSearch] = useState('');
   const [stateDropdownOpen, setStateDropdownOpen] = useState(false);
+  const [addlSearch, setAddlSearch] = useState('');
+  const [addlDropdownOpen, setAddlDropdownOpen] = useState(false);
   const [direction, setDirection] = useState('forward');
   const [selectedPlan, setSelectedPlan] = useState('');
   const [cardNumber, setCardNumber] = useState('');
@@ -466,7 +475,7 @@ export default function Onboarding() {
 
       {/* SECTION 1 — Primary State */}
       <div style={{ marginTop: 24 }}>
-        <div style={{ fontSize: 12, fontWeight: 600, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 8, fontFamily: "'DM Sans', sans-serif" }}>
+        <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 8, fontFamily: "'DM Sans', sans-serif" }}>
           Primary State
         </div>
         <div style={{ position: 'relative' }}>
@@ -484,19 +493,22 @@ export default function Onboarding() {
             </div>
           ) : (
             <>
-              <input
-                type="text"
-                placeholder="Search states..."
-                value={stateSearch}
-                onChange={(e) => { setStateSearch(e.target.value); setStateDropdownOpen(true); }}
-                onFocus={() => setStateDropdownOpen(true)}
-                style={{
-                  width: '100%', padding: '10px 14px', borderRadius: 8,
-                  border: '1.5px solid var(--border)', fontSize: 13,
-                  fontFamily: "'DM Sans', sans-serif", outline: 'none',
-                  boxSizing: 'border-box',
-                }}
-              />
+              <div style={{ position: 'relative' }}>
+                <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                <input
+                  type="text"
+                  placeholder="Search states..."
+                  value={stateSearch}
+                  onChange={(e) => { setStateSearch(e.target.value); setStateDropdownOpen(true); }}
+                  onFocus={() => setStateDropdownOpen(true)}
+                  style={{
+                    width: '100%', padding: '10px 14px 10px 36px', borderRadius: 8,
+                    border: '1.5px solid var(--border)', fontSize: 13,
+                    fontFamily: "'DM Sans', sans-serif", outline: 'none',
+                    boxSizing: 'border-box',
+                  }}
+                />
+              </div>
               {stateDropdownOpen && (
                 <div style={{
                   position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 10,
@@ -539,94 +551,163 @@ export default function Onboarding() {
         </div>
       </div>
 
-      {/* SECTION 2 — Additional States */}
+      {/* SECTION 2 — Additional States (multi-select dropdown) */}
       <div style={{ marginTop: 28 }}>
         <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)', fontFamily: "'DM Sans', sans-serif" }}>
-          Do you also practice in other states?
+          Additional States
         </div>
         <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4, marginBottom: 12 }}>
           Select all that apply
         </div>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-          {US_STATES.map((s) => {
-            const isPrimary = s === primaryState;
-            const isSelected = isPrimary || additionalStates.includes(s);
-            return (
-              <button
-                key={s}
-                type="button"
-                onClick={() => { if (!isPrimary) toggleAdditionalState(s); }}
-                style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 5,
-                  padding: '7px 12px', borderRadius: 20,
-                  border: `1.5px solid ${isSelected ? 'var(--navy)' : 'var(--border)'}`,
-                  background: isSelected ? 'var(--navy)' : '#fff',
-                  color: isSelected ? '#fff' : 'var(--text-primary)',
-                  fontSize: 12, fontFamily: "'DM Sans', sans-serif", fontWeight: 500,
-                  cursor: isPrimary ? 'default' : 'pointer',
-                  opacity: isPrimary ? 0.75 : 1,
-                  transition: 'all 0.2s ease', whiteSpace: 'nowrap',
-                }}
-              >
-                {isPrimary && <Lock size={11} />}
-                {isSelected && !isPrimary && <Check size={12} />}
-                {s}
-              </button>
-            );
-          })}
-          {/* None pill */}
-          <button
-            type="button"
-            onClick={handleNoneSingleJurisdiction}
+        <div style={{ position: 'relative' }}>
+          <div
+            onClick={() => setAddlDropdownOpen(!addlDropdownOpen)}
             style={{
-              display: 'inline-flex', alignItems: 'center', gap: 5,
-              padding: '7px 12px', borderRadius: 20,
-              border: `1.5px solid ${additionalStates.length === 0 || (additionalStates.length === 1 && additionalStates[0] === primaryState) ? 'var(--navy)' : 'var(--border)'}`,
-              background: additionalStates.length === 0 || (additionalStates.length === 1 && additionalStates[0] === primaryState) ? 'var(--navy)' : '#fff',
-              color: additionalStates.length === 0 || (additionalStates.length === 1 && additionalStates[0] === primaryState) ? '#fff' : 'var(--text-primary)',
-              fontSize: 12, fontFamily: "'DM Sans', sans-serif", fontWeight: 500,
-              cursor: 'pointer', transition: 'all 0.2s ease', whiteSpace: 'nowrap',
+              display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 6,
+              minHeight: 44, padding: '6px 36px 6px 12px', borderRadius: 8,
+              border: '1.5px solid var(--border)', background: '#fff',
+              cursor: 'pointer', position: 'relative',
             }}
           >
-            None — single jurisdiction only
-          </button>
+            {additionalStates.filter(s => s !== primaryState).map(s => (
+              <span key={s} style={{
+                display: 'inline-flex', alignItems: 'center', gap: 4,
+                padding: '3px 8px', borderRadius: 14, fontSize: 12,
+                fontFamily: "'DM Sans', sans-serif", fontWeight: 500,
+                background: '#FBF8F0', border: '1px solid #C9A84C', color: 'var(--text-primary)',
+              }}>
+                <span style={{
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                  width: 16, height: 16, borderRadius: '50%', background: '#C9A84C', flexShrink: 0,
+                }}>
+                  <Check size={9} style={{ color: '#fff' }} />
+                </span>
+                {s}
+                <button type="button" onClick={(e) => { e.stopPropagation(); toggleAdditionalState(s); }} style={{
+                  background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+                  display: 'flex', color: 'var(--text-muted)', marginLeft: 2,
+                }}>
+                  <X size={12} />
+                </button>
+              </span>
+            ))}
+            {additionalStates.filter(s => s !== primaryState).length === 0 && (
+              <span style={{ fontSize: 13, color: 'var(--text-muted)', fontFamily: "'DM Sans', sans-serif" }}>
+                Search and select states...
+              </span>
+            )}
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)' }}>
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+          </div>
+          {addlDropdownOpen && (
+            <div style={{
+              position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 10,
+              background: '#fff', border: '1.5px solid var(--border)', borderRadius: 8,
+              marginTop: 4, boxShadow: '0 4px 12px rgba(0,0,0,0.08)', overflow: 'hidden',
+            }}>
+              <div style={{ padding: '8px 12px', borderBottom: '1px solid var(--border)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <Search size={14} style={{ color: 'var(--text-muted)' }} />
+                  <input
+                    type="text"
+                    placeholder="Search states"
+                    value={addlSearch}
+                    onChange={(e) => setAddlSearch(e.target.value)}
+                    autoFocus
+                    style={{
+                      width: '100%', border: 'none', outline: 'none', fontSize: 13,
+                      fontFamily: "'DM Sans', sans-serif", color: 'var(--text-primary)',
+                      background: 'transparent',
+                    }}
+                  />
+                </div>
+              </div>
+              <div style={{ maxHeight: 200, overflowY: 'auto' }}>
+                <button
+                  type="button"
+                  onClick={() => { handleNoneSingleJurisdiction(); setAddlDropdownOpen(false); setAddlSearch(''); }}
+                  style={{
+                    display: 'block', width: '100%', textAlign: 'left',
+                    padding: '8px 14px', border: 'none', background: 'none',
+                    fontSize: 13, fontFamily: "'DM Sans', sans-serif",
+                    cursor: 'pointer', color: 'var(--text-muted)',
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--ice-warm)')}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = 'none')}
+                >
+                  None – single jurisdiction only
+                </button>
+                {US_STATES.filter(s => s.toLowerCase().includes(addlSearch.toLowerCase())).map(s => {
+                  const isSelected = additionalStates.includes(s);
+                  return (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => { toggleAdditionalState(s); }}
+                      style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        width: '100%', textAlign: 'left',
+                        padding: '8px 14px', border: 'none', background: 'none',
+                        fontSize: 13, fontFamily: "'DM Sans', sans-serif",
+                        cursor: 'pointer', color: 'var(--text-primary)',
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--ice-warm)')}
+                      onMouseLeave={(e) => (e.currentTarget.style.background = 'none')}
+                    >
+                      {s}
+                      {isSelected && (
+                        <span style={{
+                          display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                          width: 18, height: 18, borderRadius: '50%', background: '#C9A84C',
+                        }}>
+                          <Check size={11} style={{ color: '#fff' }} />
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* SECTION 3 — Federal Practice */}
+      {/* SECTION 3 — Federal Practice (gold selection) */}
       <div style={{ marginTop: 28 }}>
         <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)', fontFamily: "'DM Sans', sans-serif", marginBottom: 10 }}>
           Do you handle federal matters?
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
-          <button
-            type="button"
-            onClick={() => setFederalPractice(true)}
-            style={{
-              flex: 1, padding: '10px 0', borderRadius: 8,
-              border: `1.5px solid ${federalPractice ? 'var(--navy)' : 'var(--border)'}`,
-              background: federalPractice ? 'var(--navy)' : '#fff',
-              color: federalPractice ? '#fff' : 'var(--text-primary)',
-              fontSize: 13, fontFamily: "'DM Sans', sans-serif", fontWeight: 500,
-              cursor: 'pointer', transition: 'all 0.2s ease',
-            }}
-          >
-            Yes — Federal Courts
-          </button>
-          <button
-            type="button"
-            onClick={() => setFederalPractice(false)}
-            style={{
-              flex: 1, padding: '10px 0', borderRadius: 8,
-              border: `1.5px solid ${!federalPractice ? 'var(--navy)' : 'var(--border)'}`,
-              background: !federalPractice ? 'var(--navy)' : '#fff',
-              color: !federalPractice ? '#fff' : 'var(--text-primary)',
-              fontSize: 13, fontFamily: "'DM Sans', sans-serif", fontWeight: 500,
-              cursor: 'pointer', transition: 'all 0.2s ease',
-            }}
-          >
-            No — State only
-          </button>
+          {[{ val: true, label: 'Yes – Federal Courts' }, { val: false, label: 'No – State only' }].map(opt => {
+            const sel = federalPractice === opt.val;
+            return (
+              <button
+                key={String(opt.val)}
+                type="button"
+                onClick={() => setFederalPractice(opt.val)}
+                style={{
+                  flex: 1, padding: '10px 14px', borderRadius: 8,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                  border: `1.5px solid ${sel ? '#C9A84C' : 'var(--border)'}`,
+                  background: sel ? '#FBF8F0' : '#fff',
+                  color: 'var(--text-primary)',
+                  fontSize: 13, fontFamily: "'DM Sans', sans-serif", fontWeight: 500,
+                  cursor: 'pointer', transition: 'all 0.2s ease',
+                }}
+              >
+                {opt.label}
+                {sel && (
+                  <span style={{
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                    width: 20, height: 20, borderRadius: '50%', background: '#C9A84C', flexShrink: 0,
+                  }}>
+                    <Check size={12} style={{ color: '#fff' }} />
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
       </div>
     </div>
@@ -970,7 +1051,7 @@ const styles = {
     padding: '13px 0',
     borderRadius: 8,
     border: 'none',
-    background: '#C9A84C',
+    background: 'var(--navy)',
     color: '#fff',
     fontSize: 15,
     fontFamily: "'DM Sans', sans-serif",
