@@ -268,6 +268,7 @@ export default function Onboarding() {
   const [addlDropdownOpen, setAddlDropdownOpen] = useState(false);
   const [direction, setDirection] = useState('forward');
   const [selectedPlan, setSelectedPlan] = useState('');
+  const [billingCycle, setBillingCycle] = useState('monthly');
   const [cardNumber, setCardNumber] = useState('');
   const [cardExpiry, setCardExpiry] = useState('');
   const [cardCvc, setCardCvc] = useState('');
@@ -743,15 +744,47 @@ export default function Onboarding() {
   const planAccent = { free: '#64748B', professional: '#1D4ED8', team: '#166534', enterprise: '#92400E' };
 
   const renderStep6 = () => (
-    <div key="step6" className="w-full" style={{ maxWidth: 640 }}>
+    <div key="step6" className="w-full" style={{ maxWidth: 900 }}>
       <h2 style={styles.title}>Choose your plan</h2>
       <p style={styles.subtitle}>Start free and upgrade anytime. All plans include encrypted storage and ABA compliance.</p>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-6">
+
+      {/* Billing cycle toggle */}
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, marginTop: 20 }}>
+        <div style={{
+          display: 'inline-flex', borderRadius: 24, border: '1.5px solid var(--border)',
+          overflow: 'hidden', background: '#F8FAFC',
+        }}>
+          {['monthly', 'annually'].map(cycle => (
+            <button
+              key={cycle}
+              type="button"
+              onClick={() => setBillingCycle(cycle)}
+              style={{
+                padding: '8px 24px', border: 'none', cursor: 'pointer',
+                fontSize: 13, fontWeight: 600, fontFamily: "'DM Sans', sans-serif",
+                background: billingCycle === cycle ? 'var(--navy)' : 'transparent',
+                color: billingCycle === cycle ? '#fff' : 'var(--text-muted)',
+                transition: 'all 0.2s ease',
+              }}
+            >
+              {cycle.charAt(0).toUpperCase() + cycle.slice(1)}
+            </button>
+          ))}
+        </div>
+        <span style={{ fontSize: 12, color: 'var(--text-muted)', fontFamily: "'DM Sans', sans-serif" }}>
+          Annually you have 2 months free
+        </span>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginTop: 20 }}>
         {subscriptionPlans.map((plan) => {
           const isSelected = selectedPlan === plan.id;
           const Icon = planIcons[plan.id] || Sparkles;
           const accent = planAccent[plan.id] || '#64748B';
           const features = planFeatures[plan.id] || [];
+          const price = billingCycle === 'annually' && plan.price > 0
+            ? Math.round(plan.price * 10 / 12)
+            : plan.price;
           return (
             <button
               key={plan.id}
@@ -761,38 +794,38 @@ export default function Onboarding() {
                 position: 'relative',
                 display: 'flex',
                 flexDirection: 'column',
-                padding: 20,
+                padding: 18,
                 borderRadius: 12,
-                border: `2px solid ${isSelected ? accent : 'var(--border)'}`,
-                background: isSelected ? `${accent}08` : '#fff',
+                border: `2px solid ${isSelected ? '#C9A84C' : 'var(--border)'}`,
+                background: isSelected ? '#FFFDF7' : '#fff',
                 cursor: 'pointer',
                 textAlign: 'left',
                 transition: 'all 0.2s ease',
-                boxShadow: isSelected ? `0 0 0 1px ${accent}` : 'none',
+                boxShadow: isSelected ? '0 0 0 1px #C9A84C' : 'none',
               }}
-              onMouseEnter={(e) => { if (!isSelected) e.currentTarget.style.borderColor = accent + '80'; }}
+              onMouseEnter={(e) => { if (!isSelected) e.currentTarget.style.borderColor = '#C9A84C80'; }}
               onMouseLeave={(e) => { if (!isSelected) e.currentTarget.style.borderColor = 'var(--border)'; }}
             >
               {plan.badge && (
-                <span style={{ position: 'absolute', top: -10, right: 12, fontSize: 10, fontWeight: 600, padding: '3px 10px', borderRadius: 999, backgroundColor: accent + '18', color: accent }}>{plan.badge}</span>
+                <span style={{ position: 'absolute', top: -10, right: 10, fontSize: 10, fontWeight: 600, padding: '3px 10px', borderRadius: 999, backgroundColor: accent + '18', color: accent }}>{plan.badge}</span>
               )}
               {isSelected && (
-                <div style={{ position: 'absolute', top: 12, right: 12, width: 22, height: 22, borderRadius: '50%', background: accent, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Check size={14} color="#fff" />
+                <div style={{ position: 'absolute', bottom: 14, right: 14, width: 22, height: 22, borderRadius: '50%', background: '#C9A84C', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Check size={13} color="#fff" />
                 </div>
               )}
-              <div style={{ width: 36, height: 36, borderRadius: 8, backgroundColor: accent + '14', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
-                <Icon size={18} style={{ color: accent }} />
+              <div style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: accent + '14', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
+                <Icon size={16} style={{ color: accent }} />
               </div>
-              <div style={{ fontFamily: "'DM Serif Display', serif", fontSize: 18, color: 'var(--text-primary)', marginBottom: 2 }}>{plan.name}</div>
+              <div style={{ fontFamily: "'DM Serif Display', serif", fontSize: 16, color: 'var(--text-primary)', marginBottom: 2 }}>{plan.name}</div>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 2, marginBottom: 12 }}>
-                <span style={{ fontSize: 28, fontWeight: 700, color: 'var(--text-primary)' }}>{plan.price === 0 ? 'Free' : `$${plan.price}`}</span>
-                {plan.price > 0 && <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>/user/mo</span>}
+                <span style={{ fontSize: 24, fontWeight: 700, color: 'var(--text-primary)' }}>{price === 0 ? 'Free' : `$${price}`}</span>
+                {price > 0 && <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>/user/mo</span>}
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                 {features.map((f, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-secondary)' }}>
-                    <CheckCircle size={13} style={{ color: accent, flexShrink: 0 }} />
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: 'var(--text-secondary)' }}>
+                    <CheckCircle size={12} style={{ color: '#C9A84C', flexShrink: 0 }} />
                     {f}
                   </div>
                 ))}
@@ -923,7 +956,7 @@ export default function Onboarding() {
         <div
           style={{
             ...styles.card,
-            maxWidth: step === 6 ? 680 : 560,
+            maxWidth: step === 6 ? 960 : 560,
             animation: `${direction === 'forward' ? 'onb-slide-in-right' : 'onb-slide-in-left'} 0.35s ease`,
           }}
         >
