@@ -97,7 +97,7 @@ export default function GlobalKnowledgeBase() {
       opening_behaviour: 'start_immediately',
       custom_instruction: '',
       requires_document: false,
-      response_format: 'plain_prose',
+
     },
     {
       id: 2,
@@ -111,7 +111,7 @@ export default function GlobalKnowledgeBase() {
       opening_behaviour: 'ask_for_document',
       custom_instruction: '',
       requires_document: true,
-      response_format: 'risk_card',
+
     },
     {
       id: 3,
@@ -125,7 +125,7 @@ export default function GlobalKnowledgeBase() {
       opening_behaviour: 'start_immediately',
       custom_instruction: '',
       requires_document: false,
-      response_format: 'structured_sections',
+
     },
     {
       id: 4,
@@ -139,7 +139,7 @@ export default function GlobalKnowledgeBase() {
       opening_behaviour: 'ask_clarifying_question',
       custom_instruction: '',
       requires_document: false,
-      response_format: 'structured_sections',
+
     },
     {
       id: 5,
@@ -153,7 +153,7 @@ export default function GlobalKnowledgeBase() {
       opening_behaviour: 'ask_for_document',
       custom_instruction: '',
       requires_document: true,
-      response_format: 'risk_card',
+
     },
     {
       id: 6,
@@ -167,7 +167,7 @@ export default function GlobalKnowledgeBase() {
       opening_behaviour: 'start_immediately',
       custom_instruction: '',
       requires_document: false,
-      response_format: 'plain_prose',
+
     },
     {
       id: 7,
@@ -181,7 +181,7 @@ export default function GlobalKnowledgeBase() {
       opening_behaviour: 'ask_for_document',
       custom_instruction: '',
       requires_document: true,
-      response_format: 'structured_sections',
+
     },
     {
       id: 8,
@@ -195,7 +195,7 @@ export default function GlobalKnowledgeBase() {
       opening_behaviour: 'ask_for_document',
       custom_instruction: '',
       requires_document: true,
-      response_format: 'structured_sections',
+
     },
     {
       id: 9,
@@ -209,7 +209,7 @@ export default function GlobalKnowledgeBase() {
       opening_behaviour: 'ask_for_document',
       custom_instruction: '',
       requires_document: true,
-      response_format: 'structured_sections',
+
     },
     {
       id: 10,
@@ -223,7 +223,7 @@ export default function GlobalKnowledgeBase() {
       opening_behaviour: 'ask_clarifying_question',
       custom_instruction: '',
       requires_document: false,
-      response_format: 'plain_prose',
+
     },
     {
       id: 11,
@@ -237,7 +237,7 @@ export default function GlobalKnowledgeBase() {
       opening_behaviour: 'ask_for_document',
       custom_instruction: '',
       requires_document: true,
-      response_format: 'risk_card',
+
     },
     {
       id: 12,
@@ -251,7 +251,7 @@ export default function GlobalKnowledgeBase() {
       opening_behaviour: 'start_immediately',
       custom_instruction: '',
       requires_document: false,
-      response_format: 'structured_sections',
+
     },
     {
       id: 13,
@@ -265,7 +265,7 @@ export default function GlobalKnowledgeBase() {
       opening_behaviour: 'ask_for_document',
       custom_instruction: '',
       requires_document: true,
-      response_format: 'risk_card',
+
     },
   ];
 
@@ -477,7 +477,7 @@ export default function GlobalKnowledgeBase() {
       opening_behaviour: data.opening_behaviour || 'start_immediately',
       custom_instruction: data.custom_instruction || '',
       requires_document: data.requires_document || false,
-      response_format: data.response_format || 'plain_prose',
+
     };
     setPersona(prev => ({ ...prev, operations: [...prev.operations, newOp] }));
     setPersonaDirty(true);
@@ -2127,31 +2127,6 @@ export default function GlobalKnowledgeBase() {
                                   transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
                                 }} />
                               </button>
-                            </div>
-
-                            {/* ─── 5. Response Format ─── */}
-                            <div>
-                              <label className="text-xs font-medium mb-1.5 block" style={{ color: 'var(--text-secondary)' }}>Response Format</label>
-                              <p className="text-xs mb-2" style={{ color: 'var(--text-muted)' }}>Controls how the bot structures its output for this intent.</p>
-                              <div className="flex flex-wrap gap-2">
-                                {[
-                                  { id: 'risk_card', label: 'Risk Card (HIGH/MED/LOW)' },
-                                  { id: 'structured_sections', label: 'Structured Sections' },
-                                  { id: 'plain_prose', label: 'Plain Prose' },
-                                ].map(opt => (
-                                  <button
-                                    key={opt.id}
-                                    onClick={() => updateIntent(op.id, 'response_format', opt.id)}
-                                    className="px-3 py-1.5 rounded-full text-xs font-medium"
-                                    style={{
-                                      border: op.response_format === opt.id ? '2px solid var(--navy)' : '1px solid var(--border)',
-                                      backgroundColor: op.response_format === opt.id ? 'var(--ice-warm)' : 'white',
-                                      color: op.response_format === opt.id ? 'var(--navy)' : 'var(--text-muted)',
-                                      cursor: 'pointer',
-                                    }}
-                                  >{opt.label}</button>
-                                ))}
-                              </div>
                             </div>
 
                             {/* Example Queries — if available */}
