@@ -2051,9 +2051,12 @@ export default function GlobalKnowledgeBase() {
                               )}
                             </div>
 
-                            {/* ─── 2. Opening Behaviour ─── */}
+                            {/* ─── 2. Opening Behaviour (Read-only) ─── */}
                             <div>
-                              <label className="text-xs font-medium mb-1.5 block" style={{ color: 'var(--text-secondary)' }}>Opening Behaviour</label>
+                              <div className="flex items-center gap-1.5 mb-1.5">
+                                <label className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>Opening Behaviour</label>
+                                <span className="text-xs px-1.5 py-0.5 rounded" style={{ backgroundColor: 'var(--ice-warm)', color: 'var(--text-muted)', fontSize: 10 }}>Read-only</span>
+                              </div>
                               <p className="text-xs mb-2" style={{ color: 'var(--text-muted)' }}>How the bot responds when this intent is first activated.</p>
                               <div className="flex flex-wrap gap-2">
                                 {[
@@ -2061,17 +2064,17 @@ export default function GlobalKnowledgeBase() {
                                   { id: 'ask_for_document', label: 'Ask for Document' },
                                   { id: 'ask_clarifying_question', label: 'Ask Clarifying Question' },
                                 ].map(opt => (
-                                  <button
+                                  <div
                                     key={opt.id}
-                                    onClick={() => updateIntent(op.id, 'opening_behaviour', opt.id)}
                                     className="px-3 py-1.5 rounded-full text-xs font-medium"
                                     style={{
                                       border: op.opening_behaviour === opt.id ? '2px solid var(--navy)' : '1px solid var(--border)',
                                       backgroundColor: op.opening_behaviour === opt.id ? 'var(--ice-warm)' : 'white',
                                       color: op.opening_behaviour === opt.id ? 'var(--navy)' : 'var(--text-muted)',
-                                      cursor: 'pointer',
+                                      cursor: 'default',
+                                      opacity: op.opening_behaviour === opt.id ? 1 : 0.5,
                                     }}
-                                  >{opt.label}</button>
+                                  >{opt.label}</div>
                                 ))}
                               </div>
                             </div>
