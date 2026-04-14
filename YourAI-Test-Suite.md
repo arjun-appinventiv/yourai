@@ -70,8 +70,8 @@
 | TC-027 | Quick-start card click | Click "Analyze a Contract" card | Appropriate action triggered (e.g., opens file upload or pre-fills prompt) | |
 | TC-028 | Edit preferences link | Look for "Edit your preferences" link | Link is visible beneath quick-start cards | |
 | TC-029 | Team plan badge | Check for plan badge | "Team Plan - All features active" badge visible | |
-| TC-030 | 12 intent pills visible | Check below greeting area | All 12 intent pills displayed in 2 rows | |
-| TC-031 | Intent pill labels correct | Read all pill labels | General Chat, Contract Review, Legal Research, Document Drafting, YourAI How-To, General Conversation, Document Summarisation, Case Law Analysis, Clause Comparison, Email & Letter Drafting, Legal Q&A, Risk Assessment | |
+| TC-030 | 11 intent pills visible | Check below greeting area | All 11 intent pills displayed in 2 rows | |
+| TC-031 | Intent pill labels correct | Read all pill labels | General Chat, Contract Review, Legal Research, Document Drafting, General Conversation, Document Summarisation, Case Law Analysis, Clause Comparison, Email & Letter Drafting, Legal Q&A, Risk Assessment | |
 | TC-032 | Default intent highlighted | Check which pill has dark border | "General Chat" is highlighted with dark border, others have light gray border | |
 | TC-033 | Click different intent pill | Click "Contract Review" pill | Contract Review gets dark border, General Chat reverts to light border | |
 | TC-034 | Input placeholder text | Check textarea placeholder | Shows "Ask anything, analyze files, or search the web..." | |

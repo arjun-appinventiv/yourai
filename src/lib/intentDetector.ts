@@ -54,16 +54,6 @@ export const INTENT_DEFAULTS: Record<string, IntentConfig> = {
     requires_document: false,
     response_format: 'structured_sections',
   },
-  yourai_howto: {
-    keywords: [
-      'how do i use', 'how does yourai', 'how to upload',
-      'what is a knowledge pack', 'how do i start',
-    ],
-    opening_behaviour: 'start_immediately',
-    custom_instruction: '',
-    requires_document: false,
-    response_format: 'plain_prose',
-  },
   document_summarisation: {
     keywords: [
       'summarise this', 'summarize this', 'give me a summary', 'summary of this',
