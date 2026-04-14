@@ -93,6 +93,11 @@ export default function GlobalKnowledgeBase() {
       tone: 'formal',
       formatRules: ['cite_source', 'bullet_lists'],
       enabled: true,
+      keywords: [],
+      opening_behaviour: 'start_immediately',
+      custom_instruction: '',
+      requires_document: false,
+      response_format: 'plain_prose',
     },
     {
       id: 2,
@@ -102,6 +107,11 @@ export default function GlobalKnowledgeBase() {
       tone: 'formal',
       formatRules: ['cite_source', 'bullet_lists', 'risk_summary'],
       enabled: true,
+      keywords: ['contract review', 'review this contract', 'review the contract', 'review a contract', 'check this contract', 'analyse this contract', 'analyze this contract', 'help with contract', 'help me review', 'review contract'],
+      opening_behaviour: 'ask_for_document',
+      custom_instruction: '',
+      requires_document: true,
+      response_format: 'risk_card',
     },
     {
       id: 3,
@@ -111,6 +121,11 @@ export default function GlobalKnowledgeBase() {
       tone: 'neutral',
       formatRules: ['cite_source', 'bullet_lists', 'next_action'],
       enabled: true,
+      keywords: ['what does the law say', 'legal precedent', 'case law on', 'is it legal to', 'what are my legal rights', 'legal position on', 'find case law'],
+      opening_behaviour: 'start_immediately',
+      custom_instruction: '',
+      requires_document: false,
+      response_format: 'structured_sections',
     },
     {
       id: 4,
@@ -120,6 +135,11 @@ export default function GlobalKnowledgeBase() {
       tone: 'formal',
       formatRules: ['cite_source', 'next_action'],
       enabled: true,
+      keywords: ['draft a contract', 'draft an agreement', 'draft a clause', 'draft an nda', 'write a contract', 'create a contract', 'help me draft', 'help with drafting', 'document drafting'],
+      opening_behaviour: 'ask_clarifying_question',
+      custom_instruction: '',
+      requires_document: false,
+      response_format: 'structured_sections',
     },
     {
       id: 5,
@@ -129,6 +149,11 @@ export default function GlobalKnowledgeBase() {
       tone: 'concise',
       formatRules: ['cite_source', 'risk_summary', 'next_action'],
       enabled: false,
+      keywords: ['compliance check', 'is this compliant', 'regulatory review', 'check compliance', 'policy review'],
+      opening_behaviour: 'ask_for_document',
+      custom_instruction: '',
+      requires_document: true,
+      response_format: 'risk_card',
     },
     {
       id: 6,
@@ -138,78 +163,109 @@ export default function GlobalKnowledgeBase() {
       tone: 'conversational',
       formatRules: ['bullet_lists', 'next_action'],
       enabled: true,
+      keywords: ['how do i use', 'how does yourai', 'how to upload', 'what is a knowledge pack', 'how do i start'],
+      opening_behaviour: 'start_immediately',
+      custom_instruction: '',
+      requires_document: false,
+      response_format: 'plain_prose',
     },
     {
       id: 7,
-      label: 'General Conversation',
-      description: 'Activated for casual greetings, small talk, or non-legal general knowledge questions.',
-      systemPrompt: "You are Alex, a friendly AI assistant built into the YourAI platform. For general conversation, greetings, and non-legal questions, respond naturally and warmly. You can answer general knowledge questions, help with brainstorming, or just have a friendly chat. Always maintain a professional but approachable tone. If a conversation naturally leads to a legal topic, smoothly offer to help with your legal capabilities.",
-      tone: 'conversational',
-      formatRules: [],
-      enabled: true,
-    },
-    {
-      id: 8,
       label: 'Document Summarisation',
       description: 'Activated when the user asks to summarise, condense, or get key takeaways from a document.',
       systemPrompt: "You are Alex, a document summarisation specialist. When the user uploads a document or asks for a summary, produce a clear, structured summary that includes:\n\n• Executive Summary — 2-3 sentence overview of the document's purpose and key conclusions.\n• Key Points — bullet list of the most important provisions, terms, or findings.\n• Action Items — any deadlines, obligations, or next steps identified.\n• Notable Risks or Concerns — flag anything that requires attention.\n\nKeep summaries concise but comprehensive. Always reference specific sections or page numbers when citing details.",
       tone: 'concise',
       formatRules: ['cite_source', 'bullet_lists'],
       enabled: true,
+      keywords: ['summarise this', 'summarize this', 'give me a summary', 'summary of this', 'summarise', 'summarize', 'tldr', 'key points from', 'main points of', 'brief me on', 'document summary'],
+      opening_behaviour: 'ask_for_document',
+      custom_instruction: '',
+      requires_document: true,
+      response_format: 'structured_sections',
     },
     {
-      id: 9,
+      id: 8,
       label: 'Case Law Analysis',
       description: 'Activated when the user asks about specific cases, precedents, or court rulings.',
       systemPrompt: "You are Alex, a case law analysis assistant. When the user asks about specific cases or precedents, provide:\n\n• Case citation and court details.\n• Facts of the case — concise summary of what happened.\n• Issue — the legal question the court addressed.\n• Holding — what the court decided.\n• Reasoning — the court's rationale.\n• Relevance — how this case applies to the user's matter or question.\n\nAlways cite accurately and note the jurisdiction. If a case has been overruled or distinguished, flag that prominently.",
       tone: 'formal',
       formatRules: ['cite_source', 'bullet_lists', 'next_action'],
       enabled: true,
+      keywords: ['analyse this case', 'analyze this case', 'case analysis', 'court decision', 'what happened in this case', 'this judgment', 'ruling in'],
+      opening_behaviour: 'ask_for_document',
+      custom_instruction: '',
+      requires_document: true,
+      response_format: 'structured_sections',
     },
     {
-      id: 10,
+      id: 9,
       label: 'Clause Comparison',
       description: 'Activated when the user asks to compare clauses, terms, or provisions between documents.',
       systemPrompt: "You are Alex, a clause comparison specialist. When the user asks to compare clauses or provisions between documents or against a standard playbook:\n\n• Identify each clause by section/page number.\n• Present a side-by-side comparison of key differences.\n• Flag deviations from standard terms with risk levels (High/Medium/Low).\n• Suggest alternative language or negotiation points where appropriate.\n• Highlight any missing clauses that should be present.\n\nAlways be specific about what changed and why it matters.",
       tone: 'formal',
       formatRules: ['cite_source', 'bullet_lists', 'risk_summary'],
       enabled: true,
+      keywords: ['compare these', 'compare the two', 'difference between', 'side by side', 'contrast these', 'compare clause', 'clause comparison', 'compare documents'],
+      opening_behaviour: 'ask_for_document',
+      custom_instruction: '',
+      requires_document: true,
+      response_format: 'structured_sections',
     },
     {
-      id: 11,
+      id: 10,
       label: 'Email & Letter Drafting',
       description: 'Activated when the user asks to draft an email, letter, or client correspondence.',
       systemPrompt: "You are Alex, a legal correspondence assistant. When the user asks to draft an email, letter, or client communication:\n\n• Use a professional tone appropriate for the audience (client, opposing counsel, court, regulator).\n• Include all necessary formalities (re: line, salutation, closing).\n• Insert placeholders [LIKE THIS] for any details you need from the user.\n• Keep the language clear and avoid unnecessary legal jargon unless addressing another attorney.\n• Flag any statements that could create unintended legal exposure.\n\nAlways ask for clarification if the recipient or purpose is unclear.",
       tone: 'formal',
       formatRules: ['next_action'],
       enabled: true,
+      keywords: ['write an email', 'draft an email', 'write a letter', 'draft a letter', 'compose an email', 'demand letter', 'cease and desist', 'help with email', 'email drafting'],
+      opening_behaviour: 'ask_clarifying_question',
+      custom_instruction: '',
+      requires_document: false,
+      response_format: 'plain_prose',
     },
     {
-      id: 12,
+      id: 11,
       label: 'Due Diligence',
       description: 'Activated when the user asks for due diligence review, M&A analysis, or transaction-related document review.',
       systemPrompt: "You are Alex, a due diligence review assistant. When reviewing documents for transactions or M&A due diligence:\n\n• Identify material risks, liabilities, and red flags.\n• Check for change-of-control provisions, assignment restrictions, and consent requirements.\n• Flag any pending litigation, regulatory issues, or compliance gaps.\n• Note key financial terms, indemnification caps, and limitation periods.\n• Produce a structured checklist of findings with risk severity.\n\nAlways organise findings by category (corporate, contracts, IP, employment, regulatory) and prioritise by risk level.",
       tone: 'formal',
       formatRules: ['cite_source', 'bullet_lists', 'risk_summary', 'next_action'],
       enabled: false,
+      keywords: ['due diligence', 'dd review', 'transaction review', 'M&A analysis', 'merger review', 'acquisition review'],
+      opening_behaviour: 'ask_for_document',
+      custom_instruction: '',
+      requires_document: true,
+      response_format: 'risk_card',
     },
     {
-      id: 13,
+      id: 12,
       label: 'Legal Q&A',
       description: 'Activated when the user asks a specific legal question expecting a direct answer.',
       systemPrompt: "You are Alex, a legal Q&A assistant. When the user asks a specific legal question:\n\n• Provide a direct, clear answer first.\n• Follow with the legal basis — cite relevant statutes, regulations, or case law.\n• Note the jurisdiction if the answer varies by state or jurisdiction.\n• Highlight any exceptions, nuances, or recent changes in the law.\n• If the question requires professional legal advice, include a disclaimer.\n\nBe accurate and precise. If you're not confident in the answer, say so and suggest where to verify.",
       tone: 'neutral',
       formatRules: ['cite_source', 'bullet_lists'],
       enabled: true,
+      keywords: ['what is', 'what are', 'how does', 'can i', 'do i have to', 'am i required', 'explain', 'define', 'meaning of', 'is this enforceable'],
+      opening_behaviour: 'start_immediately',
+      custom_instruction: '',
+      requires_document: false,
+      response_format: 'structured_sections',
     },
     {
-      id: 14,
+      id: 13,
       label: 'Risk Assessment',
       description: 'Activated when the user asks to evaluate risk in a deal, contract, or legal situation.',
       systemPrompt: "You are Alex, a legal risk assessment specialist. When the user asks for a risk evaluation:\n\n• Categorise risks as High, Medium, or Low with clear justification.\n• For each risk, explain the potential impact and likelihood.\n• Suggest mitigation strategies or protective measures.\n• Identify any missing protections or gaps in coverage.\n• Provide an overall risk summary with a recommended course of action.\n\nPresent findings in a structured risk matrix format when possible. Always err on the side of flagging potential risks rather than overlooking them.",
       tone: 'formal',
       formatRules: ['cite_source', 'risk_summary', 'bullet_lists', 'next_action'],
       enabled: true,
+      keywords: ['what are the risks', 'identify the risks', 'risk assessment', 'assess the risk', 'any red flags', 'risky clauses', 'risk analysis', 'help with risk', 'evaluate risk'],
+      opening_behaviour: 'ask_for_document',
+      custom_instruction: '',
+      requires_document: true,
+      response_format: 'risk_card',
     },
   ];
 
@@ -244,6 +300,7 @@ export default function GlobalKnowledgeBase() {
   const [personaSaved, setPersonaSaved] = useState(true);
   const [editingOp, setEditingOp] = useState(null);
   const [showAddOp, setShowAddOp] = useState(false);
+  const [keywordInput, setKeywordInput] = useState('');
   const personaFileInputRef = useRef(null);
   const [kbLinkInput, setKbLinkInput] = useState('');
   const [clConnected, setClConnected] = useState(() => !!localStorage.getItem('yourai_courtlistener_kb'));
@@ -367,6 +424,33 @@ export default function GlobalKnowledgeBase() {
     setPersonaDirty(true);
   };
 
+  const addKeyword = (opId, keyword) => {
+    const kw = keyword.trim().toLowerCase();
+    if (!kw) return;
+    setPersona(prev => ({
+      ...prev,
+      operations: prev.operations.map(op => {
+        if (op.id !== opId) return op;
+        if ((op.keywords || []).length >= 20) return op;
+        if ((op.keywords || []).includes(kw)) return op;
+        return { ...op, keywords: [...(op.keywords || []), kw] };
+      }),
+    }));
+    setPersonaDirty(true);
+    setKeywordInput('');
+  };
+
+  const removeKeyword = (opId, keyword) => {
+    setPersona(prev => ({
+      ...prev,
+      operations: prev.operations.map(op => {
+        if (op.id !== opId) return op;
+        return { ...op, keywords: (op.keywords || []).filter(k => k !== keyword) };
+      }),
+    }));
+    setPersonaDirty(true);
+  };
+
   const toggleOpEnabled = (opId) => {
     updateIntent(opId, 'enabled', !persona.operations.find(o => o.id === opId)?.enabled);
   };
@@ -389,6 +473,11 @@ export default function GlobalKnowledgeBase() {
       tone: data.tone || 'formal',
       formatRules: data.formatRules || ['cite_source'],
       enabled: true,
+      keywords: data.keywords || [],
+      opening_behaviour: data.opening_behaviour || 'start_immediately',
+      custom_instruction: data.custom_instruction || '',
+      requires_document: data.requires_document || false,
+      response_format: data.response_format || 'plain_prose',
     };
     setPersona(prev => ({ ...prev, operations: [...prev.operations, newOp] }));
     setPersonaDirty(true);
@@ -1934,6 +2023,133 @@ export default function GlobalKnowledgeBase() {
                                   <span key={rule.id} className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs" style={{ border: `1px solid ${op.formatRules.includes(rule.id) ? 'var(--navy)' : 'var(--border)'}`, backgroundColor: op.formatRules.includes(rule.id) ? 'var(--ice-warm)' : 'white', color: op.formatRules.includes(rule.id) ? 'var(--navy)' : 'var(--text-muted)' }}>
                                     {op.formatRules.includes(rule.id) ? '✓' : '○'} {rule.label}
                                   </span>
+                                ))}
+                              </div>
+                            </div>
+
+                            {/* ─── Divider ─── */}
+                            <div style={{ borderTop: '1px solid var(--border)', margin: '8px 0' }} />
+
+                            {/* ─── 1. Trigger Keywords ─── */}
+                            <div>
+                              <div className="flex items-center gap-1.5 mb-1.5">
+                                <label className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>Trigger Keywords</label>
+                                <span className="text-xs" style={{ color: 'var(--text-muted)' }}>({(op.keywords || []).length}/20)</span>
+                              </div>
+                              <p className="text-xs mb-2" style={{ color: 'var(--text-muted)' }}>User phrases that trigger a suggestion to switch to this intent.</p>
+                              <div className="flex flex-wrap gap-1.5 mb-2">
+                                {(op.keywords || []).map((kw, ki) => (
+                                  <span key={ki} className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs" style={{ backgroundColor: 'var(--ice-warm)', color: 'var(--navy)', border: '1px solid rgba(10,36,99,0.15)' }}>
+                                    {kw}
+                                    <X size={10} style={{ cursor: 'pointer', opacity: 0.6 }} onClick={() => removeKeyword(op.id, kw)} />
+                                  </span>
+                                ))}
+                              </div>
+                              {(op.keywords || []).length < 20 && (
+                                <div className="flex gap-2">
+                                  <input
+                                    type="text"
+                                    placeholder="Type keyword and press Enter..."
+                                    value={editingOp === op.id ? keywordInput : ''}
+                                    onChange={(e) => setKeywordInput(e.target.value)}
+                                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addKeyword(op.id, keywordInput); } }}
+                                    className="flex-1 px-3 py-1.5 rounded-lg text-xs"
+                                    style={{ border: '1px solid var(--border)', outline: 'none', fontFamily: "'DM Sans', sans-serif" }}
+                                  />
+                                  <button
+                                    onClick={() => addKeyword(op.id, keywordInput)}
+                                    className="px-3 py-1.5 rounded-lg text-xs font-medium"
+                                    style={{ backgroundColor: 'var(--navy)', color: 'white', border: 'none', cursor: 'pointer' }}
+                                  >Add</button>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* ─── 2. Opening Behaviour ─── */}
+                            <div>
+                              <label className="text-xs font-medium mb-1.5 block" style={{ color: 'var(--text-secondary)' }}>Opening Behaviour</label>
+                              <p className="text-xs mb-2" style={{ color: 'var(--text-muted)' }}>How the bot responds when this intent is first activated.</p>
+                              <div className="flex flex-wrap gap-2">
+                                {[
+                                  { id: 'start_immediately', label: 'Start Immediately' },
+                                  { id: 'ask_for_document', label: 'Ask for Document' },
+                                  { id: 'ask_clarifying_question', label: 'Ask Clarifying Question' },
+                                ].map(opt => (
+                                  <button
+                                    key={opt.id}
+                                    onClick={() => updateIntent(op.id, 'opening_behaviour', opt.id)}
+                                    className="px-3 py-1.5 rounded-full text-xs font-medium"
+                                    style={{
+                                      border: op.opening_behaviour === opt.id ? '2px solid var(--navy)' : '1px solid var(--border)',
+                                      backgroundColor: op.opening_behaviour === opt.id ? 'var(--ice-warm)' : 'white',
+                                      color: op.opening_behaviour === opt.id ? 'var(--navy)' : 'var(--text-muted)',
+                                      cursor: 'pointer',
+                                    }}
+                                  >{opt.label}</button>
+                                ))}
+                              </div>
+                            </div>
+
+                            {/* ─── 3. Custom Instruction ─── */}
+                            <div>
+                              <div className="flex items-center gap-1.5 mb-1.5">
+                                <label className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>Custom Instruction</label>
+                                <span className="text-xs" style={{ color: 'var(--text-muted)' }}>({(op.custom_instruction || '').length}/500)</span>
+                              </div>
+                              <p className="text-xs mb-2" style={{ color: 'var(--text-muted)' }}>Firm-specific rules injected into the system prompt for this intent only.</p>
+                              <textarea
+                                value={op.custom_instruction || ''}
+                                onChange={(e) => { if (e.target.value.length <= 500) updateIntent(op.id, 'custom_instruction', e.target.value); }}
+                                placeholder="e.g., Always reference California Civil Code when answering..."
+                                rows={3}
+                                className="w-full px-3 py-2 rounded-lg text-xs"
+                                style={{ border: '1px solid var(--border)', outline: 'none', fontFamily: "'DM Sans', sans-serif", resize: 'vertical', lineHeight: 1.6 }}
+                              />
+                            </div>
+
+                            {/* ─── 4. Requires Document ─── */}
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <label className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>Requires Document</label>
+                                <p className="text-xs" style={{ color: 'var(--text-muted)', marginTop: 2 }}>When on, the bot will not proceed without a document upload.</p>
+                              </div>
+                              <button
+                                onClick={() => updateIntent(op.id, 'requires_document', !op.requires_document)}
+                                className="relative rounded-full"
+                                style={{
+                                  width: 40, height: 22, backgroundColor: op.requires_document ? 'var(--navy)' : '#E2E8F0',
+                                  border: 'none', cursor: 'pointer', transition: 'background-color 0.2s', flexShrink: 0,
+                                }}
+                              >
+                                <span style={{
+                                  position: 'absolute', top: 2, left: op.requires_document ? 20 : 2,
+                                  width: 18, height: 18, borderRadius: '50%', backgroundColor: 'white',
+                                  transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                                }} />
+                              </button>
+                            </div>
+
+                            {/* ─── 5. Response Format ─── */}
+                            <div>
+                              <label className="text-xs font-medium mb-1.5 block" style={{ color: 'var(--text-secondary)' }}>Response Format</label>
+                              <p className="text-xs mb-2" style={{ color: 'var(--text-muted)' }}>Controls how the bot structures its output for this intent.</p>
+                              <div className="flex flex-wrap gap-2">
+                                {[
+                                  { id: 'risk_card', label: 'Risk Card (HIGH/MED/LOW)' },
+                                  { id: 'structured_sections', label: 'Structured Sections' },
+                                  { id: 'plain_prose', label: 'Plain Prose' },
+                                ].map(opt => (
+                                  <button
+                                    key={opt.id}
+                                    onClick={() => updateIntent(op.id, 'response_format', opt.id)}
+                                    className="px-3 py-1.5 rounded-full text-xs font-medium"
+                                    style={{
+                                      border: op.response_format === opt.id ? '2px solid var(--navy)' : '1px solid var(--border)',
+                                      backgroundColor: op.response_format === opt.id ? 'var(--ice-warm)' : 'white',
+                                      color: op.response_format === opt.id ? 'var(--navy)' : 'var(--text-muted)',
+                                      cursor: 'pointer',
+                                    }}
+                                  >{opt.label}</button>
                                 ))}
                               </div>
                             </div>

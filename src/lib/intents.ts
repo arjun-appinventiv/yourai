@@ -12,7 +12,6 @@ export const INTENTS: IntentDef[] = [
   { id: 'legal_research', label: 'Legal Research' },
   { id: 'document_drafting', label: 'Document Drafting' },
   { id: 'yourai_howto', label: 'YourAI How-To' },
-  { id: 'general_conversation', label: 'General Conversation' },
   { id: 'document_summarisation', label: 'Document Summarisation' },
   { id: 'case_law_analysis', label: 'Case Law Analysis' },
   { id: 'clause_comparison', label: 'Clause Comparison' },

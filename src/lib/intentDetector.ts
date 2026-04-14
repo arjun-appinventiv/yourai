@@ -64,13 +64,6 @@ export const INTENT_DEFAULTS: Record<string, IntentConfig> = {
     requires_document: false,
     response_format: 'plain_prose',
   },
-  general_conversation: {
-    keywords: [],
-    opening_behaviour: 'start_immediately',
-    custom_instruction: '',
-    requires_document: false,
-    response_format: 'plain_prose',
-  },
   document_summarisation: {
     keywords: [
       'summarise this', 'summarize this', 'give me a summary', 'summary of this',
@@ -180,7 +173,7 @@ export function detectIntent(
   }
 
   // legal_qa — only as fallback when in general intent modes
-  const generalIntents = ['general_chat', 'general_conversation'];
+  const generalIntents = ['general_chat'];
   if (generalIntents.includes(currentIntent)) {
     const config = intentConfigs['legal_qa'] ?? INTENT_DEFAULTS['legal_qa'];
     const matched = (config?.keywords ?? []).some(k => lower.includes(k.toLowerCase()));

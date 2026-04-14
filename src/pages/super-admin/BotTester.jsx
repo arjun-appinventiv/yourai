@@ -5,7 +5,7 @@ import { callLLM, getApiKey } from '../../lib/llm-client';
 /* ─────────────────── Test Cases ─────────────────── */
 const TEST_SUITES = [
   {
-    name: 'General Conversation',
+    name: 'General Chat',
     icon: MessageSquare,
     tests: [
       {
