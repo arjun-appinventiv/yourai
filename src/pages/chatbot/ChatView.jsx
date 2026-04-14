@@ -1490,12 +1490,20 @@ function MessageBubble({ msg }) {
           </div>
         )}
         {/* Source badge — CONFIDENCE: 3/10. Intent classifier not confirmed. Visual wireframe for Ryan. */}
-        {isBot && msg.sourceBadge && (
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 8, padding: '4px 10px', borderRadius: 999, background: msg.sourceBadge.includes('your document') ? '#EFF6FF' : '#F0FDF4', border: `1px solid ${msg.sourceBadge.includes('your document') ? '#BFDBFE' : '#BBF7D0'}` }}>
-            <Database size={11} style={{ color: msg.sourceBadge.includes('your document') ? '#1D4ED8' : '#16A34A' }} />
-            <span style={{ fontSize: 10, fontWeight: 500, color: msg.sourceBadge.includes('your document') ? '#1D4ED8' : '#16A34A' }}>{msg.sourceBadge}</span>
-          </div>
-        )}
+        {isBot && msg.sourceBadge && (() => {
+          const isDoc = msg.sourceBadge.includes('your document');
+          const isAI = msg.sourceBadge.includes('AI-generated');
+          const bg = isDoc ? '#EFF6FF' : isAI ? '#F8FAFC' : '#F0FDF4';
+          const border = isDoc ? '#BFDBFE' : isAI ? '#E2E8F0' : '#BBF7D0';
+          const color = isDoc ? '#1D4ED8' : isAI ? '#64748B' : '#16A34A';
+          const BadgeIcon = isAI ? Sparkles : Database;
+          return (
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 8, padding: '4px 10px', borderRadius: 999, background: bg, border: `1px solid ${border}` }}>
+              <BadgeIcon size={11} style={{ color }} />
+              <span style={{ fontSize: 10, fontWeight: 500, color }}>{msg.sourceBadge}</span>
+            </div>
+          );
+        })()}
         {msg.card && <RiskCard card={msg.card} />}
       </div>
     </div>
@@ -2064,8 +2072,9 @@ export default function ChatView() {
             sourceBadge = `Answered from: ${activeKnowledgePack?.name || 'knowledge pack'}`;
           } else if (sourceTypeHeader === 'GLOBAL_KB') {
             sourceBadge = 'Answered from: YourAI knowledge base';
+          } else {
+            sourceBadge = 'AI-generated response';
           }
-          // else: leave sourceBadge as null (no badge for general AI responses)
         }
       } catch { /* backend unreachable — fall through to client-side LLM */ }
 
@@ -2143,9 +2152,9 @@ export default function ChatView() {
           UPLOADED_DOC: 'Answered from: your document',
           KNOWLEDGE_PACK: `Answered from: ${activeKnowledgePack?.name || 'knowledge pack'}`,
           GLOBAL_KB: 'Answered from: YourAI knowledge base',
-          NONE: null,
+          NONE: 'AI-generated response',
         };
-        sourceBadge = sourceBadgeMap[result.sourceType] ?? null;
+        sourceBadge = sourceBadgeMap[result.sourceType] ?? 'AI-generated response';
       }
 
       const botMsg = {
