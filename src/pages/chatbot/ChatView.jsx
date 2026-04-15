@@ -2620,7 +2620,12 @@ export default function ChatView() {
                 backgroundColor: 'var(--ice-warm)', border: '0.5px solid var(--border)',
                 fontSize: 13, color: 'var(--text-secondary)',
               }}>
-                <span style={{ display: 'block', marginBottom: 8 }}>This could be <strong style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{suggestedIntents.map(m => getIntentLabel(m.intentId)).join(' or ')}</strong>. Which would you like?</span>
+                <span style={{ display: 'block', marginBottom: 8 }}>
+                  {suggestedIntents.length <= 3
+                    ? <>This could be <strong style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{suggestedIntents.map(m => getIntentLabel(m.intentId)).join(' or ')}</strong>. Which would you like?</>
+                    : <>Multiple intents match your message. Which would you like to use?</>
+                  }
+                </span>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                   {suggestedIntents.map(m => (
                     <button
