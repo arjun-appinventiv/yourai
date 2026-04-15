@@ -117,6 +117,7 @@ export interface ContextLayers {
   uploadedDoc?: { name: string; content: string } | null;
   knowledgePack?: { name: string; description: string; content?: string } | null;
   intentLabel?: string | null; // User-selected intent label — skips classifier
+  crossIntentNudge?: string | null; // Injected when message belongs to a different intent
 }
 
 // ─── Direct OpenAI call (client-side fallback) ───
@@ -193,6 +194,11 @@ export async function callLLM(
   // Add context sections to system prompt
   if (contextSections.length > 0) {
     systemPrompt += '\n' + contextSections.join('\n');
+  }
+
+  // Cross-intent nudge: instruct LLM to keep it brief and suggest switching
+  if (context?.crossIntentNudge) {
+    systemPrompt += `\n\n--- CROSS-INTENT GUIDANCE ---\n${context.crossIntentNudge}\n--- END CROSS-INTENT GUIDANCE ---`;
   }
 
   // Add source attribution instructions when context is available

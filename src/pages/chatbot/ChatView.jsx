@@ -2144,6 +2144,14 @@ export default function ChatView() {
         // See: src/lib/intents.ts, src/lib/intentDetector.ts
         contextLayers.intentLabel = getIntentLabel(activeIntent);
 
+        // Cross-intent nudge: if message clearly belongs to a different intent,
+        // tell the LLM to give a brief answer and suggest switching
+        const crossIntentMatch = detectIntent(trimmed, activeIntent);
+        if (crossIntentMatch) {
+          const matchLabel = getIntentLabel(crossIntentMatch);
+          contextLayers.crossIntentNudge = `IMPORTANT: The user's message appears to be a "${matchLabel}" task, but they are currently in "${getIntentLabel(activeIntent)}" mode. You should:\n1. Briefly acknowledge what they're asking for.\n2. Provide only a short, high-level response (NOT a full detailed output).\n3. Suggest they switch to the "${matchLabel}" intent for a more thorough, specialised result. Say something like: "For a more detailed and specialised response, try switching to **${matchLabel}** mode using the intent selector below."\nDo NOT produce a full draft, full analysis, or full review — keep it brief and guide them to the right intent.`;
+        }
+
         // Tier 3 (Global KB) and Tier 4 (Fallback) are handled inside callLLM via persona
         const result = await callLLM(trimmed, history, (streaming) => {
           setStreamingContent(streaming);
