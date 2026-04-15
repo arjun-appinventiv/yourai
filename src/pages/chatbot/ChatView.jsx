@@ -13,7 +13,7 @@ import { billingData, subscriptionPlans } from '../../data/mockData';
 import { callLLM, getApiKey } from '../../lib/llm-client';
 import { extractFileText } from '../../lib/file-parser';
 import { trackDocUpload } from '../../lib/auth';
-import { detectIntent } from '../../lib/intentDetector';
+import { detectIntent, detectAllIntents } from '../../lib/intentDetector';
 import { INTENTS, DEFAULT_INTENT, getIntentLabel } from '../../lib/intents';
 
 // Removed: MOCK_RESPONSES array — replaced with real streaming fetch to /api/chat
@@ -1865,6 +1865,7 @@ export default function ChatView() {
   const [showSwitchBanner, setShowSwitchBanner] = useState(false); // Option C banner
   const [isIntentDropdownOpen, setIsIntentDropdownOpen] = useState(false);
   const [suggestedIntent, setSuggestedIntent] = useState(null); // Smart suggestion from keyword detection
+  const [suggestedIntents, setSuggestedIntents] = useState([]); // Multiple matches for user to pick
   const [dismissedSuggestion, setDismissedSuggestion] = useState(null);
   const suggestionTimer = useRef(null);
   const intentDropdownRef = useRef(null);
@@ -1930,6 +1931,7 @@ export default function ChatView() {
     setPendingIntent(null);
     setShowSwitchBanner(false);
     setSuggestedIntent(null);
+    setSuggestedIntents([]);
     setDismissedSuggestion(null);
     setIsIntentDropdownOpen(false);
     // DEC-093 + DEC-094: New session gets current KB snapshot
@@ -2021,6 +2023,7 @@ export default function ChatView() {
     setMessages((prev) => [...prev, userMsg]);
     setInput('');
     setSuggestedIntent(null);
+    setSuggestedIntents([]);
     setDismissedSuggestion(null);
     if (inputRef.current) inputRef.current.style.height = 'auto';
     setPendingAttachments([]);
@@ -2588,7 +2591,8 @@ export default function ChatView() {
             )}
 
             {/* ─── Smart intent suggestion banner (Banner A) ─── */}
-            {suggestedIntent && !showDocVersionBanner && !showSwitchBanner && (
+            {/* Single intent suggestion */}
+            {suggestedIntent && !suggestedIntents.length && !showDocVersionBanner && !showSwitchBanner && (
               <div style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
                 padding: '10px 14px', marginBottom: 6, borderRadius: 12,
@@ -2598,12 +2602,36 @@ export default function ChatView() {
                 <span>Looks like <strong style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{getIntentLabel(suggestedIntent)}</strong></span>
                 <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
                   <button
-                    onClick={() => { setActiveIntent(suggestedIntent); setSuggestedIntent(null); setDismissedSuggestion(null); }}
+                    onClick={() => { setActiveIntent(suggestedIntent); setSuggestedIntent(null); setSuggestedIntents([]); setDismissedSuggestion(null); }}
                     style={{ fontSize: 12, padding: '4px 12px', border: '0.5px solid var(--border)', borderRadius: 999, background: 'white', color: 'var(--text-primary)', cursor: 'pointer', whiteSpace: 'nowrap' }}
                   >Yes, switch</button>
                   <button
                     onClick={() => { setDismissedSuggestion(suggestedIntent); setSuggestedIntent(null); }}
                     style={{ fontSize: 12, padding: '4px 12px', border: 'none', background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                  >Keep {getIntentLabel(activeIntent)}</button>
+                </div>
+              </div>
+            )}
+
+            {/* Multi-intent suggestion — user picks from tied matches */}
+            {suggestedIntents.length >= 2 && !showDocVersionBanner && !showSwitchBanner && (
+              <div style={{
+                padding: '10px 14px', marginBottom: 6, borderRadius: 12,
+                backgroundColor: 'var(--ice-warm)', border: '0.5px solid var(--border)',
+                fontSize: 13, color: 'var(--text-secondary)',
+              }}>
+                <span style={{ display: 'block', marginBottom: 8 }}>This could be <strong style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{suggestedIntents.map(m => getIntentLabel(m.intentId)).join(' or ')}</strong>. Which would you like?</span>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {suggestedIntents.map(m => (
+                    <button
+                      key={m.intentId}
+                      onClick={() => { setActiveIntent(m.intentId); setSuggestedIntents([]); setSuggestedIntent(null); setDismissedSuggestion(null); }}
+                      style={{ fontSize: 12, padding: '5px 14px', border: '0.5px solid var(--border)', borderRadius: 999, background: 'white', color: 'var(--text-primary)', cursor: 'pointer', whiteSpace: 'nowrap', fontWeight: 500 }}
+                    >{getIntentLabel(m.intentId)}</button>
+                  ))}
+                  <button
+                    onClick={() => { setSuggestedIntents([]); setDismissedSuggestion(suggestedIntents[0]?.intentId); }}
+                    style={{ fontSize: 12, padding: '5px 14px', border: 'none', background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer', whiteSpace: 'nowrap' }}
                   >Keep {getIntentLabel(activeIntent)}</button>
                 </div>
               </div>
@@ -2698,14 +2726,29 @@ export default function ChatView() {
                 clearTimeout(suggestionTimer.current);
                 if (val.trim().length < 10) {
                   setSuggestedIntent(null);
+                  setSuggestedIntents([]);
                   return;
                 }
                 suggestionTimer.current = setTimeout(() => {
-                  const detected = detectIntent(val, activeIntent);
-                  if (detected && detected !== dismissedSuggestion) {
-                    setSuggestedIntent(detected);
-                  } else {
+                  const allMatches = detectAllIntents(val);
+                  // Filter out current intent and dismissed suggestions
+                  const relevant = allMatches.filter(m => m.intentId !== activeIntent && m.intentId !== dismissedSuggestion);
+
+                  if (relevant.length === 0) {
                     setSuggestedIntent(null);
+                    setSuggestedIntents([]);
+                    return;
+                  }
+
+                  // If top 2+ intents have the same score, show multi-pick
+                  if (relevant.length >= 2 && relevant[0].matchCount === relevant[1].matchCount) {
+                    const tied = relevant.filter(m => m.matchCount === relevant[0].matchCount);
+                    setSuggestedIntents(tied);
+                    setSuggestedIntent(null);
+                  } else {
+                    // Clear winner — single suggestion
+                    setSuggestedIntent(relevant[0].intentId);
+                    setSuggestedIntents([]);
                   }
                 }, 600);
               }} onKeyDown={handleKeyDown} placeholder={inputPlaceholder} rows={1} style={{ flex: 1, border: 'none', outline: 'none', fontSize: 14, color: 'var(--text-primary)', background: 'transparent', resize: 'none', maxHeight: 120, overflowY: 'auto', lineHeight: '1.5', fontFamily: 'inherit' }} onInput={(e) => { e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px'; }} />
