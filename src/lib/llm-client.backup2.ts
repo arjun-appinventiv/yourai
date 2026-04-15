@@ -4,7 +4,7 @@
 
 // ─── 5x Encrypted Groq Key ───
 // Encryption: XOR with salt → base64, repeated 5 times
-const ENCRYPTED_KEY = 'EQgjMAsYWmtkWloZKTQlEn8KBF48ci5jYlt/B04bCSoScjEpMUAyHGBzCGNufyIKIR1ibCsyAiYbH2BFUEwYKigvEFkfLDwLEjBGeVF0bEIlUyIefgocWj8mKhpicXt6bwpUJy5YDCwXQDYkeEgFf1N+PhA7HkMtJzAKcCpBA15QX2w1IhVBUhheQQQOIBlTVXp0RTE2VTFkMD5FOi0IdHl0Al1IMS9UEQdgPiEedXxmcGkAUnw+ETwxDGQ=';
+const ENCRYPTED_KEY = ''; // REMOVED — use VITE_OPENAI_API_KEY env var
 const SALT = 'YourAI-2026-salt';
 
 function xorWithSalt(input: string, salt: string): string {

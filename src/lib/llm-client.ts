@@ -1,55 +1,10 @@
-// LLM client — encrypted OpenAI key, client-side fallback when backend is unreachable
-// Key is encrypted 5x with XOR + base64. Never stored in DB.
-// To remove: delete the ENCRYPTED_KEY constant below.
-
-// ─── 5x Encrypted OpenAI Key ───
-// Encryption: XOR with salt → base64, repeated 5 times
-const ENCRYPTED_KEY = 'HDxBIQgYRnthWlp+FydZEHIgLSM/GSZ0fGN/XGEKKA8RYjEpNDUEA2hjaWFsbz43JSBhHD8YGisQeFZDUF4VOyo9RWw4LEA6BBh4a2dcdHQqJBQ3dQocMjwqGBp5SUVEbxpULy1zKQQXN3klZ3BDR29XMigqDm0TLD0KcRAecAZQQUIULwU9dxFeQSAMCkJeal9wGxVQIgdlID5FOhYmaXlaA3pjG1QoNwdgOxEndRBhRWV/YEUUOSU2QxMsHjgzKEp0W2ZOTkAuBgwNCQcSERE+RndpXGxXJQ8mO30KDBA+Jgh9fUlzR0ggMwEiYxw1Fx82MHpmBF9gbBQSPCVbDyQwAnEYHGgAVnIdBiMLA3wfLB4lBz4ZVWdcQnsyKRQafjMMGDByfVV9YlEGaiARVRJsFykgNSItaGNhWG5HJg8qHVcBLSIaGAtrQkNkZ3w8Ki8tfBcWETUCI3RDeANGeiUPCEx8GiIiIwkASHBbdwdoMQY2I1kTCRA6dTBjdmlKU0c+UCAOWy8jHh52EB4Kc1NfbEArFD5YFDtFKg8aGUVRAHdsMlIIIWUhOhI/Bz5efmN7AmExEg8tcx87ICU2JWZIAXRhfwQ2JjFHGCMbIBkQekIEel5kPScuIgMaBjwLCCFGe1VcZHUWU1UEdy4EBzsZGGF8YmsAZxkNBxdsDx4gQTkFaXFpXFJKFC0iDnph';
-const SALT = 'YourAI-2026-salt';
-
-function xorWithSalt(input: string, salt: string): string {
-  let result = '';
-  for (let i = 0; i < input.length; i++) {
-    result += String.fromCharCode(input.charCodeAt(i) ^ salt.charCodeAt(i % salt.length));
-  }
-  return result;
-}
-
-function encrypt(key: string, rounds: number = 5): string {
-  let encoded = key;
-  for (let i = 0; i < rounds; i++) {
-    encoded = btoa(xorWithSalt(encoded, SALT + i));
-  }
-  return encoded;
-}
-
-function decrypt(encoded: string, rounds: number = 5): string {
-  let decoded = encoded;
-  for (let i = rounds - 1; i >= 0; i--) {
-    decoded = xorWithSalt(atob(decoded), SALT + i);
-  }
-  return decoded;
-}
-
-// Call this once in browser console to get the encrypted value:
-// import { encryptKey } from './lib/llm-client'; encryptKey('sk-...')
-export function encryptKey(plainKey: string): string {
-  const result = encrypt(plainKey);
-  console.log('Encrypted key (paste into ENCRYPTED_KEY):', result);
-  return result;
-}
-
-let _cachedKey: string | null = null;
+// LLM client — uses environment variable for OpenAI key
+// Key must be set via VITE_OPENAI_API_KEY env var (never hardcoded in source)
 
 export function getApiKey(): string | null {
-  if (_cachedKey) return _cachedKey;
-  if (!ENCRYPTED_KEY) return null;
-  try {
-    _cachedKey = decrypt(ENCRYPTED_KEY);
-    return _cachedKey;
-  } catch {
-    return null;
-  }
+  // Read from Vite env var (set in .env.local, never committed)
+  const key = import.meta.env.VITE_OPENAI_API_KEY || null;
+  return key;
 }
 
 export function clearKey(): void {
