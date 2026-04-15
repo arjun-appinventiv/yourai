@@ -17,8 +17,9 @@ export interface BotPersona {
     id: number;
     label: string;
     systemPrompt: string;
-    tone: string;
-    formatRules: string[];
+    tonePrompt?: string;
+    tone?: string;        // Legacy — kept for backward compat
+    formatRules?: string[]; // Legacy — kept for backward compat
     enabled: boolean;
   }>;
   fallbackMessage: string;
@@ -74,23 +75,24 @@ ${BEHAVIORAL_RULES}`;
 
   const parts = [activeOp.systemPrompt];
 
-  // Add format rules
-  const ruleLabels: Record<string, string> = {
-    cite_source: 'Always cite the source document and page number.',
-    bullet_lists: 'Use bullet points for lists of 3 or more items.',
-    risk_summary: 'Always include a risk level summary (High/Medium/Low).',
-    next_action: 'End every response with a suggested next action.',
-  };
-  if (activeOp.formatRules?.length) {
-    parts.push('\nResponse format rules:');
-    activeOp.formatRules.forEach(r => {
-      if (ruleLabels[r]) parts.push(`- ${ruleLabels[r]}`);
-    });
-  }
-
-  // Add tone
-  if (activeOp.tone) {
+  // Add tone prompt (combines tone + format rules into a single freeform prompt)
+  if (activeOp.tonePrompt) {
+    parts.push(`\n${activeOp.tonePrompt}`);
+  } else if (activeOp.tone) {
+    // Legacy fallback: old-style separate tone + formatRules
+    const ruleLabels: Record<string, string> = {
+      cite_source: 'Always cite the source document and page number.',
+      bullet_lists: 'Use bullet points for lists of 3 or more items.',
+      risk_summary: 'Always include a risk level summary (High/Medium/Low).',
+      next_action: 'End every response with a suggested next action.',
+    };
     parts.push(`\nTone: ${activeOp.tone}. Maintain this tone throughout your responses.`);
+    if (activeOp.formatRules?.length) {
+      parts.push('\nResponse format rules:');
+      activeOp.formatRules.forEach((r: string) => {
+        if (ruleLabels[r]) parts.push(`- ${ruleLabels[r]}`);
+      });
+    }
   }
 
   // Append shared behavioral rules

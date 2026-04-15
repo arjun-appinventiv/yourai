@@ -90,13 +90,11 @@ export default function GlobalKnowledgeBase() {
       label: 'General Chat',
       description: 'Default persona for everyday Q&A and conversations.',
       systemPrompt: "You are Alex, a legal AI assistant built for US law firms. You help attorneys and paralegals analyse documents, research legal questions, and draft outputs. You are precise, professional, and always cite your sources.",
-      tone: 'formal',
-      formatRules: ['cite_source', 'bullet_lists'],
+      tonePrompt: "Respond in a formal, professional tone suitable for legal correspondence.\n- Always cite the source document and page number.\n- Use bullet points for lists of 3 or more items.",
       enabled: true,
       keywords: [],
       opening_behaviour: 'start_immediately',
       custom_instruction: '',
-      requires_document: false,
 
     },
     {
@@ -104,13 +102,11 @@ export default function GlobalKnowledgeBase() {
       label: 'Contract Review',
       description: 'Activated when a user uploads a contract for analysis.',
       systemPrompt: "You are Alex, a contract analysis specialist. You identify risks, flag non-standard clauses, and compare terms against the firm's approved playbook. Always cite the clause number and page. Output a risk summary at the end of every analysis.",
-      tone: 'formal',
-      formatRules: ['cite_source', 'bullet_lists', 'risk_summary'],
+      tonePrompt: "Respond in a formal, professional tone suitable for legal correspondence.\n- Always cite the source document and page number.\n- Use bullet points for lists of 3 or more items.\n- Always include a risk level summary (High/Medium/Low).",
       enabled: true,
       keywords: ['contract review', 'review this contract', 'review the contract', 'review a contract', 'check this contract', 'analyse this contract', 'analyze this contract', 'help with contract', 'help me review', 'review contract'],
       opening_behaviour: 'ask_for_document',
       custom_instruction: '',
-      requires_document: true,
 
     },
     {
@@ -118,13 +114,11 @@ export default function GlobalKnowledgeBase() {
       label: 'Legal Research',
       description: 'Activated when the user asks a research question without an attached doc.',
       systemPrompt: "You are Alex, a legal research assistant. You search the knowledge base for relevant statutes, case law, and commentary. Present findings in a structured memo format. Always cite the source and indicate confidence level.",
-      tone: 'neutral',
-      formatRules: ['cite_source', 'bullet_lists', 'next_action'],
+      tonePrompt: "Respond in a neutral, balanced tone.\n- Always cite the source document and page number.\n- Use bullet points for lists of 3 or more items.\n- End every response with a suggested next action.",
       enabled: true,
       keywords: ['what does the law say', 'legal precedent', 'case law on', 'is it legal to', 'what are my legal rights', 'legal position on', 'find case law'],
       opening_behaviour: 'start_immediately',
       custom_instruction: '',
-      requires_document: false,
 
     },
     {
@@ -132,13 +126,11 @@ export default function GlobalKnowledgeBase() {
       label: 'Document Drafting',
       description: 'Activated when the user asks to draft or generate a document.',
       systemPrompt: "You are Alex, a legal drafting assistant. You produce professional legal documents, clauses, and letters. Follow the firm's style guide. Always include placeholders for client-specific details and flag any assumptions.",
-      tone: 'formal',
-      formatRules: ['cite_source', 'next_action'],
+      tonePrompt: "Respond in a formal, professional tone suitable for legal correspondence.\n- Always cite the source document and page number.\n- End every response with a suggested next action.",
       enabled: true,
       keywords: ['draft a contract', 'draft an agreement', 'draft a clause', 'draft an nda', 'write a contract', 'create a contract', 'help me draft', 'help with drafting', 'document drafting'],
       opening_behaviour: 'ask_clarifying_question',
       custom_instruction: '',
-      requires_document: false,
 
     },
     {
@@ -146,13 +138,11 @@ export default function GlobalKnowledgeBase() {
       label: 'Compliance Check',
       description: 'Activated for regulatory or policy compliance questions.',
       systemPrompt: "You are Alex, a compliance analysis assistant. You check uploaded documents and policies against regulatory frameworks. Always include a risk level for each finding and recommend corrective actions.",
-      tone: 'concise',
-      formatRules: ['cite_source', 'risk_summary', 'next_action'],
+      tonePrompt: "Respond concisely. Be brief and direct. Avoid unnecessary elaboration.\n- Always cite the source document and page number.\n- Always include a risk level summary (High/Medium/Low).\n- End every response with a suggested next action.",
       enabled: false,
       keywords: ['compliance check', 'is this compliant', 'regulatory review', 'check compliance', 'policy review'],
       opening_behaviour: 'ask_for_document',
       custom_instruction: '',
-      requires_document: true,
 
     },
     {
@@ -160,13 +150,11 @@ export default function GlobalKnowledgeBase() {
       label: 'Document Summarisation',
       description: 'Activated when the user asks to summarise, condense, or get key takeaways from a document.',
       systemPrompt: "You are Alex, a document summarisation specialist. When the user uploads a document or asks for a summary, produce a clear, structured summary that includes:\n\n• Executive Summary — 2-3 sentence overview of the document's purpose and key conclusions.\n• Key Points — bullet list of the most important provisions, terms, or findings.\n• Action Items — any deadlines, obligations, or next steps identified.\n• Notable Risks or Concerns — flag anything that requires attention.\n\nKeep summaries concise but comprehensive. Always reference specific sections or page numbers when citing details.",
-      tone: 'concise',
-      formatRules: ['cite_source', 'bullet_lists'],
+      tonePrompt: "Respond concisely. Be brief and direct. Avoid unnecessary elaboration.\n- Always cite the source document and page number.\n- Use bullet points for lists of 3 or more items.",
       enabled: true,
       keywords: ['summarise this', 'summarize this', 'give me a summary', 'summary of this', 'summarise', 'summarize', 'tldr', 'key points from', 'main points of', 'brief me on', 'document summary'],
       opening_behaviour: 'ask_for_document',
       custom_instruction: '',
-      requires_document: true,
 
     },
     {
@@ -174,13 +162,11 @@ export default function GlobalKnowledgeBase() {
       label: 'Case Law Analysis',
       description: 'Activated when the user asks about specific cases, precedents, or court rulings.',
       systemPrompt: "You are Alex, a case law analysis assistant. When the user asks about specific cases or precedents, provide:\n\n• Case citation and court details.\n• Facts of the case — concise summary of what happened.\n• Issue — the legal question the court addressed.\n• Holding — what the court decided.\n• Reasoning — the court's rationale.\n• Relevance — how this case applies to the user's matter or question.\n\nAlways cite accurately and note the jurisdiction. If a case has been overruled or distinguished, flag that prominently.",
-      tone: 'formal',
-      formatRules: ['cite_source', 'bullet_lists', 'next_action'],
+      tonePrompt: "Respond in a formal, professional tone suitable for legal correspondence.\n- Always cite the source document and page number.\n- Use bullet points for lists of 3 or more items.\n- End every response with a suggested next action.",
       enabled: true,
       keywords: ['analyse this case', 'analyze this case', 'case analysis', 'court decision', 'what happened in this case', 'this judgment', 'ruling in'],
       opening_behaviour: 'ask_for_document',
       custom_instruction: '',
-      requires_document: true,
 
     },
     {
@@ -188,13 +174,11 @@ export default function GlobalKnowledgeBase() {
       label: 'Clause Comparison',
       description: 'Activated when the user asks to compare clauses, terms, or provisions between documents.',
       systemPrompt: "You are Alex, a clause comparison specialist. When the user asks to compare clauses or provisions between documents or against a standard playbook:\n\n• Identify each clause by section/page number.\n• Present a side-by-side comparison of key differences.\n• Flag deviations from standard terms with risk levels (High/Medium/Low).\n• Suggest alternative language or negotiation points where appropriate.\n• Highlight any missing clauses that should be present.\n\nAlways be specific about what changed and why it matters.",
-      tone: 'formal',
-      formatRules: ['cite_source', 'bullet_lists', 'risk_summary'],
+      tonePrompt: "Respond in a formal, professional tone suitable for legal correspondence.\n- Always cite the source document and page number.\n- Use bullet points for lists of 3 or more items.\n- Always include a risk level summary (High/Medium/Low).",
       enabled: true,
       keywords: ['compare these', 'compare the two', 'difference between', 'side by side', 'contrast these', 'compare clause', 'clause comparison', 'compare documents'],
       opening_behaviour: 'ask_for_document',
       custom_instruction: '',
-      requires_document: true,
 
     },
     {
@@ -202,13 +186,11 @@ export default function GlobalKnowledgeBase() {
       label: 'Email & Letter Drafting',
       description: 'Activated when the user asks to draft an email, letter, or client correspondence.',
       systemPrompt: "You are Alex, a legal correspondence assistant. When the user asks to draft an email, letter, or client communication:\n\n• Use a professional tone appropriate for the audience (client, opposing counsel, court, regulator).\n• Include all necessary formalities (re: line, salutation, closing).\n• Insert placeholders [LIKE THIS] for any details you need from the user.\n• Keep the language clear and avoid unnecessary legal jargon unless addressing another attorney.\n• Flag any statements that could create unintended legal exposure.\n\nAlways ask for clarification if the recipient or purpose is unclear.",
-      tone: 'formal',
-      formatRules: ['next_action'],
+      tonePrompt: "Respond in a formal, professional tone suitable for legal correspondence.\n- End every response with a suggested next action.",
       enabled: true,
       keywords: ['write an email', 'draft an email', 'write a letter', 'draft a letter', 'compose an email', 'demand letter', 'cease and desist', 'help with email', 'email drafting'],
       opening_behaviour: 'ask_clarifying_question',
       custom_instruction: '',
-      requires_document: false,
 
     },
     {
@@ -216,13 +198,11 @@ export default function GlobalKnowledgeBase() {
       label: 'Due Diligence',
       description: 'Activated when the user asks for due diligence review, M&A analysis, or transaction-related document review.',
       systemPrompt: "You are Alex, a due diligence review assistant. When reviewing documents for transactions or M&A due diligence:\n\n• Identify material risks, liabilities, and red flags.\n• Check for change-of-control provisions, assignment restrictions, and consent requirements.\n• Flag any pending litigation, regulatory issues, or compliance gaps.\n• Note key financial terms, indemnification caps, and limitation periods.\n• Produce a structured checklist of findings with risk severity.\n\nAlways organise findings by category (corporate, contracts, IP, employment, regulatory) and prioritise by risk level.",
-      tone: 'formal',
-      formatRules: ['cite_source', 'bullet_lists', 'risk_summary', 'next_action'],
+      tonePrompt: "Respond in a formal, professional tone suitable for legal correspondence.\n- Always cite the source document and page number.\n- Use bullet points for lists of 3 or more items.\n- Always include a risk level summary (High/Medium/Low).\n- End every response with a suggested next action.",
       enabled: false,
       keywords: ['due diligence', 'dd review', 'transaction review', 'M&A analysis', 'merger review', 'acquisition review'],
       opening_behaviour: 'ask_for_document',
       custom_instruction: '',
-      requires_document: true,
 
     },
     {
@@ -230,13 +210,11 @@ export default function GlobalKnowledgeBase() {
       label: 'Legal Q&A',
       description: 'Activated when the user asks a specific legal question expecting a direct answer.',
       systemPrompt: "You are Alex, a legal Q&A assistant. When the user asks a specific legal question:\n\n• Provide a direct, clear answer first.\n• Follow with the legal basis — cite relevant statutes, regulations, or case law.\n• Note the jurisdiction if the answer varies by state or jurisdiction.\n• Highlight any exceptions, nuances, or recent changes in the law.\n• If the question requires professional legal advice, include a disclaimer.\n\nBe accurate and precise. If you're not confident in the answer, say so and suggest where to verify.",
-      tone: 'neutral',
-      formatRules: ['cite_source', 'bullet_lists'],
+      tonePrompt: "Respond in a neutral, balanced tone.\n- Always cite the source document and page number.\n- Use bullet points for lists of 3 or more items.",
       enabled: true,
       keywords: ['what is', 'what are', 'how does', 'can i', 'do i have to', 'am i required', 'explain', 'define', 'meaning of', 'is this enforceable'],
       opening_behaviour: 'start_immediately',
       custom_instruction: '',
-      requires_document: false,
 
     },
     {
@@ -244,13 +222,11 @@ export default function GlobalKnowledgeBase() {
       label: 'Risk Assessment',
       description: 'Activated when the user asks to evaluate risk in a deal, contract, or legal situation.',
       systemPrompt: "You are Alex, a legal risk assessment specialist. When the user asks for a risk evaluation:\n\n• Categorise risks as High, Medium, or Low with clear justification.\n• For each risk, explain the potential impact and likelihood.\n• Suggest mitigation strategies or protective measures.\n• Identify any missing protections or gaps in coverage.\n• Provide an overall risk summary with a recommended course of action.\n\nPresent findings in a structured risk matrix format when possible. Always err on the side of flagging potential risks rather than overlooking them.",
-      tone: 'formal',
-      formatRules: ['cite_source', 'risk_summary', 'bullet_lists', 'next_action'],
+      tonePrompt: "Respond in a formal, professional tone suitable for legal correspondence.\n- Always cite the source document and page number.\n- Always include a risk level summary (High/Medium/Low).\n- Use bullet points for lists of 3 or more items.\n- End every response with a suggested next action.",
       enabled: true,
       keywords: ['what are the risks', 'identify the risks', 'risk assessment', 'assess the risk', 'any red flags', 'risky clauses', 'risk analysis', 'help with risk', 'evaluate risk'],
       opening_behaviour: 'ask_for_document',
       custom_instruction: '',
-      requires_document: true,
 
     },
   ];
@@ -298,18 +274,12 @@ export default function GlobalKnowledgeBase() {
     } catch { return null; }
   });
 
+  // Tone options kept for persona format cards (read-only display)
   const TONE_OPTIONS = [
     { id: 'formal', label: 'Formal' },
     { id: 'conversational', label: 'Conversational' },
     { id: 'neutral', label: 'Neutral' },
     { id: 'concise', label: 'Concise' },
-  ];
-
-  const FORMAT_RULES = [
-    { id: 'cite_source', label: 'Always cite the source document and page number' },
-    { id: 'bullet_lists', label: 'Use bullet points for lists of 3 or more items' },
-    { id: 'risk_summary', label: 'Always include a risk level summary (High/Medium/Low)' },
-    { id: 'next_action', label: 'End every response with a suggested next action' },
   ];
 
   // TODO: confirm confidence threshold with AI team
@@ -396,18 +366,9 @@ export default function GlobalKnowledgeBase() {
     setPersonaDirty(true);
   };
 
-  const toggleOpFormatRule = (opId, ruleId) => {
-    setPersona(prev => ({
-      ...prev,
-      operations: prev.operations.map(op => {
-        if (op.id !== opId) return op;
-        const rules = op.formatRules.includes(ruleId)
-          ? op.formatRules.filter(r => r !== ruleId)
-          : [...op.formatRules, ruleId];
-        return { ...op, formatRules: rules };
-      }),
-    }));
-    setPersonaDirty(true);
+  // Opening behaviour toggle — mutual exclusion: only one can be ON
+  const setOpeningBehaviour = (opId, behaviourId) => {
+    updateIntent(opId, 'opening_behaviour', behaviourId);
   };
 
   const addKeyword = (opId, keyword) => {
@@ -456,13 +417,11 @@ export default function GlobalKnowledgeBase() {
       label: data.label || 'New Intent',
       description: data.description || '',
       systemPrompt: data.systemPrompt || '',
-      tone: data.tone || 'formal',
-      formatRules: data.formatRules || ['cite_source'],
+      tonePrompt: data.tonePrompt || 'Respond in a formal, professional tone suitable for legal correspondence.\n- Always cite the source document and page number.',
       enabled: true,
       keywords: data.keywords || [],
       opening_behaviour: data.opening_behaviour || 'start_immediately',
       custom_instruction: data.custom_instruction || '',
-      requires_document: data.requires_document || false,
 
     };
     setPersona(prev => ({ ...prev, operations: [...prev.operations, newOp] }));
@@ -1954,8 +1913,8 @@ export default function GlobalKnowledgeBase() {
                               <span className="px-1.5 py-0.5 rounded text-xs" style={{ backgroundColor: op.enabled ? '#DCFCE7' : '#F1F5F9', color: op.enabled ? '#166534' : 'var(--text-muted)', fontSize: 10, fontWeight: 600 }}>
                                 {op.enabled ? 'ON' : 'OFF'}
                               </span>
-                              <span className="px-1.5 py-0.5 rounded text-xs" style={{ backgroundColor: 'rgba(10,36,99,0.06)', color: 'var(--navy)', fontSize: 10 }}>
-                                {TONE_OPTIONS.find(t => t.id === op.tone)?.label || op.tone}
+                              <span className="px-1.5 py-0.5 rounded text-xs truncate" style={{ backgroundColor: 'rgba(10,36,99,0.06)', color: 'var(--navy)', fontSize: 10, maxWidth: 180 }}>
+                                {(op.tonePrompt || '').split('\n')[0].slice(0, 40)}{(op.tonePrompt || '').split('\n')[0].length > 40 ? '...' : ''}
                               </span>
                             </div>
                             <p className="text-xs truncate" style={{ color: 'var(--text-muted)', marginTop: 2 }}>{op.description}</p>
@@ -1989,28 +1948,21 @@ export default function GlobalKnowledgeBase() {
                               >{op.systemPrompt}</div>
                             </div>
 
-                            {/* Tone */}
+                            {/* Tone Prompt — combines tone + format rules */}
                             <div>
-                              <label className="text-xs font-medium mb-1.5 block" style={{ color: 'var(--text-secondary)' }}>Tone</label>
-                              <div className="flex flex-wrap gap-2">
-                                {TONE_OPTIONS.map(t => (
-                                  <span key={t.id} className="px-3 py-1.5 rounded-full text-xs font-medium" style={{ border: op.tone === t.id ? '2px solid var(--navy)' : '1px solid var(--border)', backgroundColor: op.tone === t.id ? 'var(--ice-warm)' : 'white', color: op.tone === t.id ? 'var(--navy)' : 'var(--text-muted)' }}>
-                                    {t.label}
-                                  </span>
-                                ))}
+                              <div className="flex items-center gap-1.5 mb-1.5">
+                                <label className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>Tone Prompt</label>
+                                <span className="text-xs" style={{ color: 'var(--text-muted)' }}>({(op.tonePrompt || '').length}/800)</span>
                               </div>
-                            </div>
-
-                            {/* Format Rules */}
-                            <div>
-                              <label className="text-xs font-medium mb-1.5 block" style={{ color: 'var(--text-secondary)' }}>Format Rules</label>
-                              <div className="flex flex-wrap gap-2">
-                                {FORMAT_RULES.map(rule => (
-                                  <span key={rule.id} className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs" style={{ border: `1px solid ${op.formatRules.includes(rule.id) ? 'var(--navy)' : 'var(--border)'}`, backgroundColor: op.formatRules.includes(rule.id) ? 'var(--ice-warm)' : 'white', color: op.formatRules.includes(rule.id) ? 'var(--navy)' : 'var(--text-muted)' }}>
-                                    {op.formatRules.includes(rule.id) ? '✓' : '○'} {rule.label}
-                                  </span>
-                                ))}
-                              </div>
+                              <p className="text-xs mb-2" style={{ color: 'var(--text-muted)' }}>Define how the AI should respond — tone, formatting rules, and style preferences. This is injected into every response for this intent.</p>
+                              <textarea
+                                value={op.tonePrompt || ''}
+                                onChange={(e) => { if (e.target.value.length <= 800) updateIntent(op.id, 'tonePrompt', e.target.value); }}
+                                placeholder="e.g., Respond in a formal, professional tone suitable for legal correspondence.&#10;- Always cite the source document and page number.&#10;- Use bullet points for lists of 3 or more items."
+                                rows={5}
+                                className="w-full px-3 py-2 rounded-lg text-xs"
+                                style={{ border: '1px solid var(--border)', outline: 'none', fontFamily: "'DM Sans', sans-serif", resize: 'vertical', lineHeight: 1.6 }}
+                              />
                             </div>
 
                             {/* ─── Divider ─── */}
@@ -2051,31 +2003,49 @@ export default function GlobalKnowledgeBase() {
                               )}
                             </div>
 
-                            {/* ─── 2. Opening Behaviour (Read-only) ─── */}
+                            {/* ─── 2. Opening Behaviour (Toggle switches — only one active) ─── */}
                             <div>
                               <div className="flex items-center gap-1.5 mb-1.5">
                                 <label className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>Opening Behaviour</label>
-                                <span className="text-xs px-1.5 py-0.5 rounded" style={{ backgroundColor: 'var(--ice-warm)', color: 'var(--text-muted)', fontSize: 10 }}>Read-only</span>
                               </div>
-                              <p className="text-xs mb-2" style={{ color: 'var(--text-muted)' }}>How the bot responds when this intent is first activated.</p>
-                              <div className="flex flex-wrap gap-2">
+                              <p className="text-xs mb-2" style={{ color: 'var(--text-muted)' }}>How the bot responds when this intent is first activated. Only one can be enabled.</p>
+                              <div className="space-y-2">
                                 {[
-                                  { id: 'start_immediately', label: 'Start Immediately' },
-                                  { id: 'ask_for_document', label: 'Ask for Document' },
-                                  { id: 'ask_clarifying_question', label: 'Ask Clarifying Question' },
-                                ].map(opt => (
-                                  <div
-                                    key={opt.id}
-                                    className="px-3 py-1.5 rounded-full text-xs font-medium"
-                                    style={{
-                                      border: op.opening_behaviour === opt.id ? '2px solid var(--navy)' : '1px solid var(--border)',
-                                      backgroundColor: op.opening_behaviour === opt.id ? 'var(--ice-warm)' : 'white',
-                                      color: op.opening_behaviour === opt.id ? 'var(--navy)' : 'var(--text-muted)',
-                                      cursor: 'default',
-                                      opacity: op.opening_behaviour === opt.id ? 1 : 0.5,
-                                    }}
-                                  >{opt.label}</div>
-                                ))}
+                                  { id: 'start_immediately', label: 'Start Immediately', desc: 'Bot waits for user message — no opening prompt' },
+                                  { id: 'ask_for_document', label: 'Ask for Document', desc: 'Bot asks user to upload a document before proceeding' },
+                                  { id: 'ask_clarifying_question', label: 'Ask Clarifying Question', desc: 'Bot asks a clarifying question before responding' },
+                                ].map(opt => {
+                                  const isActive = op.opening_behaviour === opt.id;
+                                  return (
+                                    <div
+                                      key={opt.id}
+                                      className="flex items-center justify-between px-3 py-2.5 rounded-lg"
+                                      style={{
+                                        border: `1px solid ${isActive ? 'var(--navy)' : 'var(--border)'}`,
+                                        backgroundColor: isActive ? 'var(--ice-warm)' : 'white',
+                                      }}
+                                    >
+                                      <div>
+                                        <span className="text-xs font-medium" style={{ color: isActive ? 'var(--navy)' : 'var(--text-secondary)' }}>{opt.label}</span>
+                                        <p className="text-xs" style={{ color: 'var(--text-muted)', marginTop: 1 }}>{opt.desc}</p>
+                                      </div>
+                                      <button
+                                        onClick={() => setOpeningBehaviour(op.id, opt.id)}
+                                        className="relative rounded-full"
+                                        style={{
+                                          width: 40, height: 22, backgroundColor: isActive ? 'var(--navy)' : '#E2E8F0',
+                                          border: 'none', cursor: 'pointer', transition: 'background-color 0.2s', flexShrink: 0,
+                                        }}
+                                      >
+                                        <span style={{
+                                          position: 'absolute', top: 2, left: isActive ? 20 : 2,
+                                          width: 18, height: 18, borderRadius: '50%', backgroundColor: 'white',
+                                          transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                                        }} />
+                                      </button>
+                                    </div>
+                                  );
+                                })}
                               </div>
                             </div>
 
@@ -2096,27 +2066,7 @@ export default function GlobalKnowledgeBase() {
                               />
                             </div>
 
-                            {/* ─── 4. Requires Document ─── */}
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <label className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>Requires Document</label>
-                                <p className="text-xs" style={{ color: 'var(--text-muted)', marginTop: 2 }}>When on, the bot will not proceed without a document upload.</p>
-                              </div>
-                              <button
-                                onClick={() => updateIntent(op.id, 'requires_document', !op.requires_document)}
-                                className="relative rounded-full"
-                                style={{
-                                  width: 40, height: 22, backgroundColor: op.requires_document ? 'var(--navy)' : '#E2E8F0',
-                                  border: 'none', cursor: 'pointer', transition: 'background-color 0.2s', flexShrink: 0,
-                                }}
-                              >
-                                <span style={{
-                                  position: 'absolute', top: 2, left: op.requires_document ? 20 : 2,
-                                  width: 18, height: 18, borderRadius: '50%', backgroundColor: 'white',
-                                  transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
-                                }} />
-                              </button>
-                            </div>
+                            {/* Requires Document removed — covered by Opening Behaviour "Ask for Document" */}
 
                             {/* Example Queries — if available */}
                             {op.exampleQueries && op.exampleQueries.length > 0 && (

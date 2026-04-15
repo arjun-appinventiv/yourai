@@ -6,8 +6,13 @@ export interface IntentConfig {
   keywords: string[];
   opening_behaviour: 'ask_for_document' | 'ask_clarifying_question' | 'start_immediately';
   custom_instruction: string;
-  requires_document: boolean;
   response_format: 'risk_card' | 'structured_sections' | 'plain_prose';
+}
+
+export interface IntentMatch {
+  intentId: string;
+  matchCount: number;     // How many keywords matched
+  keywords: string[];     // Which keywords matched
 }
 
 export const INTENT_DEFAULTS: Record<string, IntentConfig> = {
@@ -15,7 +20,7 @@ export const INTENT_DEFAULTS: Record<string, IntentConfig> = {
     keywords: [],
     opening_behaviour: 'start_immediately',
     custom_instruction: '',
-    requires_document: false,
+
     response_format: 'plain_prose',
   },
   contract_review: {
@@ -29,7 +34,7 @@ export const INTENT_DEFAULTS: Record<string, IntentConfig> = {
     ],
     opening_behaviour: 'ask_for_document',
     custom_instruction: '',
-    requires_document: true,
+
     response_format: 'risk_card',
   },
   legal_research: {
@@ -39,7 +44,7 @@ export const INTENT_DEFAULTS: Record<string, IntentConfig> = {
     ],
     opening_behaviour: 'start_immediately',
     custom_instruction: '',
-    requires_document: false,
+
     response_format: 'structured_sections',
   },
   document_drafting: {
@@ -51,7 +56,7 @@ export const INTENT_DEFAULTS: Record<string, IntentConfig> = {
     ],
     opening_behaviour: 'ask_clarifying_question',
     custom_instruction: '',
-    requires_document: false,
+
     response_format: 'structured_sections',
   },
   document_summarisation: {
@@ -63,7 +68,7 @@ export const INTENT_DEFAULTS: Record<string, IntentConfig> = {
     ],
     opening_behaviour: 'ask_for_document',
     custom_instruction: '',
-    requires_document: true,
+
     response_format: 'structured_sections',
   },
   case_law_analysis: {
@@ -74,7 +79,7 @@ export const INTENT_DEFAULTS: Record<string, IntentConfig> = {
     ],
     opening_behaviour: 'ask_for_document',
     custom_instruction: '',
-    requires_document: true,
+
     response_format: 'structured_sections',
   },
   clause_comparison: {
@@ -86,7 +91,7 @@ export const INTENT_DEFAULTS: Record<string, IntentConfig> = {
     ],
     opening_behaviour: 'ask_for_document',
     custom_instruction: '',
-    requires_document: true,
+
     response_format: 'structured_sections',
   },
   email_letter_drafting: {
@@ -98,7 +103,7 @@ export const INTENT_DEFAULTS: Record<string, IntentConfig> = {
     ],
     opening_behaviour: 'ask_clarifying_question',
     custom_instruction: '',
-    requires_document: false,
+
     response_format: 'plain_prose',
   },
   legal_qa: {
@@ -109,7 +114,7 @@ export const INTENT_DEFAULTS: Record<string, IntentConfig> = {
     ],
     opening_behaviour: 'start_immediately',
     custom_instruction: '',
-    requires_document: false,
+
     response_format: 'structured_sections',
   },
   risk_assessment: {
@@ -121,7 +126,7 @@ export const INTENT_DEFAULTS: Record<string, IntentConfig> = {
     ],
     opening_behaviour: 'ask_for_document',
     custom_instruction: '',
-    requires_document: true,
+
     response_format: 'risk_card',
   },
 };
@@ -141,7 +146,17 @@ const PRIORITY_ORDER = [
 /**
  * Detect which intent a message likely maps to.
  * Returns the intent ID or null.
- * Uses SA-configured keywords when available, falls back to INTENT_DEFAULTS.
+ *
+ * Multi-keyword match logic:
+ * - Counts how many keywords from each intent are found in the message.
+ * - The intent with the MOST keyword matches wins (not just first match).
+ * - On tie, priority order breaks the tie.
+ *
+ * Cross-intent handling:
+ * - If the user is in general_chat but the message matches a specific intent,
+ *   returns the matched intent so ChatView can suggest switching.
+ * - If already in a specific intent, only suggests switching if a different
+ *   intent has significantly more keyword matches (2+ more).
  */
 export function detectIntent(
   message: string,
@@ -152,23 +167,73 @@ export function detectIntent(
 
   const lower = message.toLowerCase().trim();
 
-  // Check priority intents first (NOT legal_qa)
-  for (const intentId of PRIORITY_ORDER) {
+  // Score each intent by counting keyword matches
+  const scores: IntentMatch[] = [];
+
+  for (const intentId of [...PRIORITY_ORDER, 'legal_qa']) {
     const config = intentConfigs[intentId] ?? INTENT_DEFAULTS[intentId];
     const keywords = config?.keywords ?? [];
-    const matched = keywords.some(k => lower.includes(k.toLowerCase()));
-    if (matched && intentId !== currentIntent) {
-      return intentId;
+    const matchedKws = keywords.filter(k => lower.includes(k.toLowerCase()));
+
+    if (matchedKws.length > 0) {
+      scores.push({ intentId, matchCount: matchedKws.length, keywords: matchedKws });
     }
   }
 
-  // legal_qa — only as fallback when in general intent modes
-  const generalIntents = ['general_chat'];
-  if (generalIntents.includes(currentIntent)) {
-    const config = intentConfigs['legal_qa'] ?? INTENT_DEFAULTS['legal_qa'];
-    const matched = (config?.keywords ?? []).some(k => lower.includes(k.toLowerCase()));
-    if (matched) return 'legal_qa';
+  if (scores.length === 0) return null;
+
+  // Sort by matchCount descending, then by priority order for tie-breaking
+  scores.sort((a, b) => {
+    if (b.matchCount !== a.matchCount) return b.matchCount - a.matchCount;
+    const aPri = PRIORITY_ORDER.indexOf(a.intentId);
+    const bPri = PRIORITY_ORDER.indexOf(b.intentId);
+    return (aPri === -1 ? 999 : aPri) - (bPri === -1 ? 999 : bPri);
+  });
+
+  const bestMatch = scores[0];
+
+  // If best match is current intent, no switch needed
+  if (bestMatch.intentId === currentIntent) return null;
+
+  // Cross-intent threshold: if user is already in a specific intent (not general_chat),
+  // only suggest switching if the new intent has significantly more matches
+  if (currentIntent !== 'general_chat') {
+    const currentScore = scores.find(s => s.intentId === currentIntent);
+    const currentCount = currentScore?.matchCount ?? 0;
+    // Need 2+ more matches than current intent to warrant a switch suggestion
+    if (bestMatch.matchCount - currentCount < 2) return null;
   }
 
-  return null;
+  // legal_qa — only suggest if no better intent matched OR user is in general_chat
+  if (bestMatch.intentId === 'legal_qa' && currentIntent !== 'general_chat') {
+    return null;
+  }
+
+  return bestMatch.intentId;
+}
+
+/**
+ * Get all matching intents with their scores.
+ * Useful for UI when multiple intents match and user needs to pick.
+ */
+export function detectAllIntents(
+  message: string,
+  intentConfigs: Record<string, IntentConfig> = {}
+): IntentMatch[] {
+  if (message.trim().length < 10) return [];
+
+  const lower = message.toLowerCase().trim();
+  const scores: IntentMatch[] = [];
+
+  for (const intentId of [...PRIORITY_ORDER, 'legal_qa']) {
+    const config = intentConfigs[intentId] ?? INTENT_DEFAULTS[intentId];
+    const keywords = config?.keywords ?? [];
+    const matchedKws = keywords.filter(k => lower.includes(k.toLowerCase()));
+
+    if (matchedKws.length > 0) {
+      scores.push({ intentId, matchCount: matchedKws.length, keywords: matchedKws });
+    }
+  }
+
+  return scores.sort((a, b) => b.matchCount - a.matchCount);
 }
