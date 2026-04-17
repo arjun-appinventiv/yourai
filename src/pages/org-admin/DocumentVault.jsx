@@ -36,10 +36,10 @@ export default function DocumentVault() {
       {flaggedCount > 0 && (
         <div
           className="flex items-center gap-3 p-4 rounded-xl mb-6"
-          style={{ backgroundColor: '#FEF2F2', border: '1px solid #FECACA' }}
+          style={{ backgroundColor: '#F9E7E7', border: '1px solid #F9E7E7' }}
         >
-          <AlertCircle size={16} style={{ color: '#DC2626' }} />
-          <span style={{ fontSize: '13px', color: '#991B1B' }}>
+          <AlertCircle size={16} style={{ color: '#C65454' }} />
+          <span style={{ fontSize: '13px', color: '#C65454' }}>
             <strong>{flaggedCount} documents</strong> in the classification queue need review.
           </span>
         </div>
@@ -90,13 +90,13 @@ export default function DocumentVault() {
               <td style={{ padding: '12px 16px' }}><Badge variant={doc.status}>{doc.status}</Badge></td>
               <td style={{ padding: '12px 16px' }}>
                 {doc.classification === 'Flagged for Review' ? (
-                  <span className="flex items-center gap-1" style={{ fontSize: '11px', color: '#DC2626', fontWeight: 500 }}>
+                  <span className="flex items-center gap-1" style={{ fontSize: '11px', color: '#C65454', fontWeight: 500 }}>
                     <AlertCircle size={12} /> Flagged
                   </span>
                 ) : doc.classification === 'Pending' ? (
-                  <span style={{ fontSize: '11px', color: '#92400E' }}>Pending</span>
+                  <span style={{ fontSize: '11px', color: '#E8A33D' }}>Pending</span>
                 ) : (
-                  <span className="flex items-center gap-1" style={{ fontSize: '11px', color: '#166534' }}>
+                  <span className="flex items-center gap-1" style={{ fontSize: '11px', color: '#5CA868' }}>
                     <CheckCircle size={12} /> Auto-filed
                   </span>
                 )}

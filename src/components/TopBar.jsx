@@ -60,7 +60,7 @@ export default function TopBar() {
           <Bell size={17} style={{ color: 'var(--text-muted)' }} />
           <span
             className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full flex items-center justify-center text-white"
-            style={{ backgroundColor: '#DC2626', fontSize: '9px', fontWeight: 600 }}
+            style={{ backgroundColor: '#C65454', fontSize: '9px', fontWeight: 600 }}
           >
             3
           </span>

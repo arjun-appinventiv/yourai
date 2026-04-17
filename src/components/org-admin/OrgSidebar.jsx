@@ -45,9 +45,9 @@ const allNavSections = [
 ];
 
 const roleBadgeColors = {
-  Admin:   { bg: '#0B1D3A', color: 'white' },
-  Manager: { bg: '#FEF9C3', color: '#92400E' },
-  Team:    { bg: '#F0FDF4', color: '#166534' },
+  Admin:   { bg: '#0A2463', color: 'white' },
+  Manager: { bg: '#FBEED5', color: '#E8A33D' },
+  Team:    { bg: '#E7F3E9', color: '#5CA868' },
 };
 
 export default function OrgSidebar() {
@@ -68,19 +68,19 @@ export default function OrgSidebar() {
       style={{
         width: 240,
         backgroundColor: '#FFFFFF',
-        borderRight: '1px solid #E8EEF4',
+        borderRight: '1px solid #F0F3F6',
       }}
     >
       {/* Logo — prominent company name */}
-      <div style={{ padding: '18px 18px 14px', borderBottom: '1px solid #E8EEF4' }}>
+      <div style={{ padding: '18px 18px 14px', borderBottom: '1px solid #F0F3F6' }}>
         <div className="flex items-center gap-3">
           {/* Logo mark — navy square with gold "Y" */}
-          <div className="flex-shrink-0 rounded-lg flex items-center justify-center" style={{ width: 36, height: 36, backgroundColor: '#0B1D3A' }}>
+          <div className="flex-shrink-0 rounded-lg flex items-center justify-center" style={{ width: 36, height: 36, backgroundColor: '#0A2463' }}>
             <span style={{ fontFamily: "'DM Serif Display', serif", color: '#C9A84C', fontSize: '18px', fontWeight: 700 }}>Y</span>
           </div>
           <div>
             <div style={{ fontSize: '17px', letterSpacing: '-0.02em', lineHeight: 1.2 }}>
-              <span style={{ fontFamily: "'DM Serif Display', serif", color: '#0B1D3A', fontWeight: 700 }}>Your</span>
+              <span style={{ fontFamily: "'DM Serif Display', serif", color: '#0A2463', fontWeight: 700 }}>Your</span>
               <span style={{ fontFamily: "'DM Serif Display', serif", color: '#C9A84C', fontWeight: 700 }}>AI</span>
             </div>
             <div style={{ color: '#8899AB', fontSize: '10px', fontWeight: 500, letterSpacing: '0.04em', textTransform: 'uppercase', marginTop: 1 }}>
@@ -116,7 +116,7 @@ export default function OrgSidebar() {
                   borderRadius: '8px',
                   backgroundColor: isActive ? 'rgba(201,168,76,0.08)' : 'transparent',
                   borderLeft: isActive ? '3px solid #C9A84C' : '3px solid transparent',
-                  color: isActive ? '#0B1D3A' : '#3D5A80',
+                  color: isActive ? '#0A2463' : '#6B7885',
                   fontSize: '13px',
                   fontWeight: isActive ? 600 : 400,
                   lineHeight: '1.5',
@@ -127,20 +127,20 @@ export default function OrgSidebar() {
                 onMouseEnter={(e) => {
                   const isActive = e.currentTarget.getAttribute('aria-current') === 'page';
                   if (!isActive) {
-                    e.currentTarget.style.backgroundColor = '#F4F6F9';
-                    e.currentTarget.style.color = '#0B1D3A';
+                    e.currentTarget.style.backgroundColor = '#F8F4ED';
+                    e.currentTarget.style.color = '#0A2463';
                   }
                 }}
                 onMouseLeave={(e) => {
                   const isActive = e.currentTarget.getAttribute('aria-current') === 'page';
                   e.currentTarget.style.backgroundColor = isActive ? 'rgba(201,168,76,0.08)' : 'transparent';
-                  e.currentTarget.style.color = isActive ? '#0B1D3A' : '#3D5A80';
+                  e.currentTarget.style.color = isActive ? '#0A2463' : '#6B7885';
                 }}
               >
                 <Icon size={16} />
                 <span className="flex-1">{label}</span>
                 {limited && limited.includes(role) && (
-                  <span style={{ fontSize: '9px', backgroundColor: '#E8EEF4', color: '#8899AB', padding: '1px 6px', borderRadius: '8px', fontWeight: 500 }}>
+                  <span style={{ fontSize: '9px', backgroundColor: '#F0F3F6', color: '#8899AB', padding: '1px 6px', borderRadius: '8px', fontWeight: 500 }}>
                     Limited
                   </span>
                 )}
@@ -154,29 +154,29 @@ export default function OrgSidebar() {
       <NavLink
         to="/app/profile"
         style={({ isActive }) => ({
-          borderTop: '1px solid #E8EEF4',
+          borderTop: '1px solid #F0F3F6',
           padding: '14px 16px',
           display: 'flex',
           alignItems: 'center',
           gap: 10,
           textDecoration: 'none',
-          backgroundColor: isActive ? '#F4F6F9' : 'transparent',
+          backgroundColor: isActive ? '#F8F4ED' : 'transparent',
           transition: 'background-color 150ms',
         })}
-        onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#F4F6F9'; }}
+        onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#F8F4ED'; }}
         onMouseLeave={(e) => {
           const isActive = e.currentTarget.getAttribute('aria-current') === 'page';
-          e.currentTarget.style.backgroundColor = isActive ? '#F4F6F9' : 'transparent';
+          e.currentTarget.style.backgroundColor = isActive ? '#F8F4ED' : 'transparent';
         }}
       >
         <div
           className="rounded-full flex items-center justify-center text-white"
-          style={{ width: 32, height: 32, backgroundColor: '#0B1D3A', fontSize: '11px', fontWeight: 600 }}
+          style={{ width: 32, height: 32, backgroundColor: '#0A2463', fontSize: '11px', fontWeight: 600 }}
         >
           {currentUser.avatar}
         </div>
         <div className="flex-1">
-          <div style={{ fontSize: '13px', fontWeight: 500, color: '#0B1D3A' }}>
+          <div style={{ fontSize: '13px', fontWeight: 500, color: '#0A2463' }}>
             {currentUser.name}
           </div>
           <span

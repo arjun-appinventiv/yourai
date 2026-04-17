@@ -120,7 +120,7 @@ export default function UsageAnalytics() {
                     className="h-full rounded-full"
                     style={{
                       width: `${m.pct}%`,
-                      backgroundColor: m.model.includes('GPT-4o-mini') ? '#94A3B8' : m.model.includes('Claude') ? 'var(--gold)' : 'var(--navy)',
+                      backgroundColor: m.model.includes('GPT-4o-mini') ? '#9CA3AF' : m.model.includes('Claude') ? 'var(--gold)' : 'var(--navy)',
                     }}
                   />
                 </div>
@@ -162,7 +162,7 @@ export default function UsageAnalytics() {
               <td className="px-4 py-3">
                 <div className="flex items-center gap-2">
                   <div className="w-20 h-2 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--ice)' }}>
-                    <div className="h-full rounded-full" style={{ width: `${o.aiUsage}%`, backgroundColor: o.aiUsage > 70 ? '#166534' : o.aiUsage > 40 ? 'var(--gold)' : '#94A3B8' }} />
+                    <div className="h-full rounded-full" style={{ width: `${o.aiUsage}%`, backgroundColor: o.aiUsage > 70 ? '#5CA868' : o.aiUsage > 40 ? 'var(--gold)' : '#9CA3AF' }} />
                   </div>
                   <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{o.aiUsage}%</span>
                 </div>

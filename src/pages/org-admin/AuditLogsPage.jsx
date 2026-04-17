@@ -38,7 +38,7 @@ export default function AuditLogsPage() {
       {role === 'Manager' && (
         <div
           className="flex items-center gap-2 p-3 rounded-lg mb-6"
-          style={{ backgroundColor: '#FEF3C7', border: '1px solid #FDE68A', fontSize: '13px', color: '#92400E' }}
+          style={{ backgroundColor: '#FBEED5', border: '1px solid #FBEED5', fontSize: '13px', color: '#E8A33D' }}
         >
           <Shield size={14} />
           You are viewing a limited audit log. Some administrative actions are hidden.
@@ -71,7 +71,7 @@ export default function AuditLogsPage() {
                   className="rounded-full flex items-center justify-center text-white"
                   style={{
                     width: 28, height: 28,
-                    backgroundColor: log.user === 'System' ? '#1D4ED8' : 'var(--navy)',
+                    backgroundColor: log.user === 'System' ? '#1E3A8A' : 'var(--navy)',
                     fontSize: '10px', fontWeight: 600,
                   }}
                 >

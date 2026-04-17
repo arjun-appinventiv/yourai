@@ -45,22 +45,22 @@ function getModuleIcon(moduleId) {
 
 /* ── Status / priority badge helpers ── */
 const statusStyles = {
-  Draft:        { bg: '#F1F5F9', color: '#64748B' },
-  'In Progress':{ bg: '#EFF6FF', color: '#1D4ED8' },
-  Review:       { bg: '#FEF3C7', color: '#92400E' },
-  Approved:     { bg: '#DCFCE7', color: '#166534' },
-  Done:         { bg: '#DCFCE7', color: '#166534' },
+  Draft:        { bg: '#F0F3F6', color: '#6B7885' },
+  'In Progress':{ bg: '#F0F3F6', color: '#1E3A8A' },
+  Review:       { bg: '#FBEED5', color: '#E8A33D' },
+  Approved:     { bg: '#E7F3E9', color: '#5CA868' },
+  Done:         { bg: '#E7F3E9', color: '#5CA868' },
 };
 
 const priorityStyles = {
-  Critical: { bg: '#FEE2E2', color: '#991B1B' },
+  Critical: { bg: '#F9E7E7', color: '#C65454' },
   High:     { bg: '#FED7AA', color: '#9A3412' },
-  Medium:   { bg: '#FEF3C7', color: '#92400E' },
-  Low:      { bg: '#DCFCE7', color: '#166534' },
+  Medium:   { bg: '#FBEED5', color: '#E8A33D' },
+  Low:      { bg: '#E7F3E9', color: '#5CA868' },
 };
 
 function MiniPill({ label, styles }) {
-  const s = styles[label] || { bg: '#F1F5F9', color: '#64748B' };
+  const s = styles[label] || { bg: '#F0F3F6', color: '#6B7885' };
   return (
     <span
       style={{
@@ -82,10 +82,10 @@ function MiniPill({ label, styles }) {
 /* ── NFR pill colour detection ── */
 function nfrPillColor(text) {
   const t = (text || '').toLowerCase();
-  if (/second|ms|performance|load|latency|response/.test(t)) return { bg: '#DBEAFE', color: '#1D4ED8' };
-  if (/secur|encrypt|audit|soc|auth|permission/.test(t))     return { bg: '#DCFCE7', color: '#166534' };
+  if (/second|ms|performance|load|latency|response/.test(t)) return { bg: '#F0F3F6', color: '#1E3A8A' };
+  if (/secur|encrypt|audit|soc|auth|permission/.test(t))     return { bg: '#E7F3E9', color: '#5CA868' };
   if (/mobile|responsive|viewport|touch/.test(t))            return { bg: '#F3E8FF', color: '#7C3AED' };
-  return { bg: '#F1F5F9', color: '#64748B' };
+  return { bg: '#F0F3F6', color: '#6B7885' };
 }
 
 /* ── Section label ── */
@@ -329,7 +329,7 @@ export default function StoryTemplate({ open, onClose, story, onEdit, onPrev, on
           {/* ── 2. PRECONDITIONS ── */}
           {story.preconditions?.length > 0 && (
             <section style={{ marginBottom: 28 }}>
-              <SectionLabel icon={CheckSquare} iconColor="#64748B">
+              <SectionLabel icon={CheckSquare} iconColor="#6B7885">
                 Preconditions
               </SectionLabel>
               <div
@@ -372,7 +372,7 @@ export default function StoryTemplate({ open, onClose, story, onEdit, onPrev, on
           {/* ── 3. ACCEPTANCE CRITERIA ── */}
           {story.acceptanceCriteria?.length > 0 && (
             <section style={{ marginBottom: 28 }}>
-              <SectionLabel icon={ClipboardCheck} iconColor="#16A34A">
+              <SectionLabel icon={ClipboardCheck} iconColor="#5CA868">
                 Acceptance Criteria
               </SectionLabel>
               <p style={{ fontSize: 12, color: 'var(--text-muted)', fontStyle: 'italic', margin: '0 0 10px' }}>
@@ -395,26 +395,26 @@ export default function StoryTemplate({ open, onClose, story, onEdit, onPrev, on
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                         {ac.given && (
                           <div className="flex items-start gap-2">
-                            <span style={{ fontSize: 10, fontWeight: 600, color: '#1D4ED8', backgroundColor: '#DBEAFE', borderRadius: 4, padding: '1px 6px', flexShrink: 0 }}>Given</span>
+                            <span style={{ fontSize: 10, fontWeight: 600, color: '#1E3A8A', backgroundColor: '#F0F3F6', borderRadius: 4, padding: '1px 6px', flexShrink: 0 }}>Given</span>
                             <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>{ac.given}</span>
                           </div>
                         )}
                         {ac.when && (
                           <div className="flex items-start gap-2">
-                            <span style={{ fontSize: 10, fontWeight: 600, color: '#92400E', backgroundColor: '#FEF3C7', borderRadius: 4, padding: '1px 6px', flexShrink: 0 }}>When</span>
+                            <span style={{ fontSize: 10, fontWeight: 600, color: '#E8A33D', backgroundColor: '#FBEED5', borderRadius: 4, padding: '1px 6px', flexShrink: 0 }}>When</span>
                             <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>{ac.when}</span>
                           </div>
                         )}
                         {ac.then && (
                           <div className="flex items-start gap-2">
-                            <span style={{ fontSize: 10, fontWeight: 600, color: '#166534', backgroundColor: '#DCFCE7', borderRadius: 4, padding: '1px 6px', flexShrink: 0 }}>Then</span>
+                            <span style={{ fontSize: 10, fontWeight: 600, color: '#5CA868', backgroundColor: '#E7F3E9', borderRadius: 4, padding: '1px 6px', flexShrink: 0 }}>Then</span>
                             <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>{ac.then}</span>
                           </div>
                         )}
                       </div>
                     ) : (
                       <div className="flex items-start gap-2">
-                        <span style={{ color: '#16A34A', marginTop: 1, flexShrink: 0 }}>&#10003;</span>
+                        <span style={{ color: '#5CA868', marginTop: 1, flexShrink: 0 }}>&#10003;</span>
                         <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>{typeof ac === 'string' ? ac : JSON.stringify(ac)}</span>
                       </div>
                     )}
@@ -427,7 +427,7 @@ export default function StoryTemplate({ open, onClose, story, onEdit, onPrev, on
           {/* ── 4. ERROR HANDLING ── */}
           {story.errorHandling?.length > 0 && (
             <section style={{ marginBottom: 28 }}>
-              <SectionLabel icon={AlertTriangle} iconColor="#D97706">
+              <SectionLabel icon={AlertTriangle} iconColor="#E8A33D">
                 Error Handling
               </SectionLabel>
               {typeof story.errorHandling[0] === 'object' && story.errorHandling[0] !== null && (story.errorHandling[0].scenario || story.errorHandling[0].response) ? (
@@ -458,10 +458,10 @@ export default function StoryTemplate({ open, onClose, story, onEdit, onPrev, on
                         border: '1px solid #FCD34D',
                         borderRadius: 8,
                         padding: '8px 12px',
-                        backgroundColor: '#FFFBEB',
+                        backgroundColor: '#FBEED5',
                       }}
                     >
-                      <AlertTriangle size={14} style={{ color: '#D97706', marginTop: 2, flexShrink: 0 }} />
+                      <AlertTriangle size={14} style={{ color: '#E8A33D', marginTop: 2, flexShrink: 0 }} />
                       <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>{typeof item === 'string' ? item : JSON.stringify(item)}</span>
                     </div>
                   ))}
@@ -473,7 +473,7 @@ export default function StoryTemplate({ open, onClose, story, onEdit, onPrev, on
           {/* ── 5. NON-FUNCTIONAL REQUIREMENTS ── */}
           {story.nonFunctionalRequirements?.length > 0 && (
             <section style={{ marginBottom: 28 }}>
-              <SectionLabel icon={Gauge} iconColor="#64748B">
+              <SectionLabel icon={Gauge} iconColor="#6B7885">
                 Non-Functional Requirements
               </SectionLabel>
               <div className="flex flex-wrap gap-2">

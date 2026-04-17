@@ -51,11 +51,11 @@ const initialTemplates = [
 const verticalOptions = ['Legal', 'Healthcare', 'Finance', 'Construction', 'Business'];
 
 const verticalColors = {
-  Legal: { bg: '#EFF6FF', color: '#1D4ED8' },
-  Healthcare: { bg: '#F0FDF4', color: '#166534' },
-  Finance: { bg: '#FEF9C3', color: '#92400E' },
-  Construction: { bg: '#FEE2E2', color: '#991B1B' },
-  Business: { bg: '#F1F5F9', color: '#64748B' },
+  Legal: { bg: '#F0F3F6', color: '#1E3A8A' },
+  Healthcare: { bg: '#E7F3E9', color: '#5CA868' },
+  Finance: { bg: '#FBEED5', color: '#E8A33D' },
+  Construction: { bg: '#F9E7E7', color: '#C65454' },
+  Business: { bg: '#F0F3F6', color: '#6B7885' },
 };
 
 const emptyStep = () => ({ id: `s${Date.now()}`, name: '', taskType: null, instructions: '', referenceFiles: [], parallel: false, async: false, showAdvanced: false });
@@ -151,7 +151,7 @@ export default function WorkflowTemplates() {
       <PageHeader icon={Workflow} title="Workflow Templates" subtitle="Platform-level workflow templates available to all organisations" />
 
       {/* Visual Guide Banner */}
-      <div className="rounded-xl overflow-hidden" style={{ background: 'linear-gradient(135deg, #0B1D3A 0%, #1A3A6B 100%)', padding: '20px 24px' }}>
+      <div className="rounded-xl overflow-hidden" style={{ background: 'linear-gradient(135deg, #0A2463 0%, #1E3A8A 100%)', padding: '20px 24px' }}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ backgroundColor: 'rgba(255,255,255,0.12)' }}>
@@ -175,18 +175,18 @@ export default function WorkflowTemplates() {
             <div className="space-y-2.5">
               <div className="rounded-lg p-3 bg-white" style={{ border: '1px solid var(--border)' }}><span style={{ fontSize: '10px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Template Name</span><div style={{ fontSize: '15px', fontWeight: 500, color: 'var(--text-primary)', marginTop: 4 }}>Contract Risk Review</div></div>
               <div className="flex gap-2.5">
-                <div className="flex-1 rounded-lg p-3 bg-white" style={{ border: '1px solid var(--border)' }}><span style={{ fontSize: '10px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Practice Area</span><div className="mt-1"><span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium" style={{ backgroundColor: '#EFF6FF', color: '#1D4ED8' }}>Legal</span></div></div>
-                <div className="flex-1 rounded-lg p-3 bg-white" style={{ border: '1px solid var(--border)' }}><span style={{ fontSize: '10px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Status</span><div className="mt-1"><span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium" style={{ backgroundColor: '#F3F4F6', color: '#374151' }}>Draft</span></div></div>
+                <div className="flex-1 rounded-lg p-3 bg-white" style={{ border: '1px solid var(--border)' }}><span style={{ fontSize: '10px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Practice Area</span><div className="mt-1"><span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium" style={{ backgroundColor: '#F0F3F6', color: '#1E3A8A' }}>Legal</span></div></div>
+                <div className="flex-1 rounded-lg p-3 bg-white" style={{ border: '1px solid var(--border)' }}><span style={{ fontSize: '10px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Status</span><div className="mt-1"><span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium" style={{ backgroundColor: '#F3F4F6', color: '#6B7885' }}>Draft</span></div></div>
               </div>
             </div>
           )},
           { num: '02', title: 'Pick AI Tasks', desc: 'Select what AI should do at each step. Just click a card — read documents, analyse clauses, generate reports. No coding needed.', emoji: '🧩', visual: (
             <div className="grid grid-cols-4 gap-2">
               {[{ icon: FileText, label: 'Read Docs', sel: true }, { icon: Search, label: 'Analyse', sel: true }, { icon: Scale, label: 'Compare', sel: false }, { icon: FileOutput, label: 'Report', sel: false }].map((t) => (
-                <div key={t.label} className="p-3 rounded-lg text-center" style={{ border: t.sel ? '2px solid var(--navy)' : '1px solid var(--border)', backgroundColor: t.sel ? '#EFF6FF' : 'white' }}>
-                  <t.icon size={18} style={{ color: t.sel ? 'var(--navy)' : '#CBD5E1', margin: '0 auto 4px' }} />
-                  <div style={{ fontSize: '10px', fontWeight: 600, color: t.sel ? 'var(--navy)' : '#CBD5E1' }}>{t.label}</div>
-                  {t.sel && <div className="mt-1"><span style={{ fontSize: '9px', color: '#166534' }}>✓</span></div>}
+                <div key={t.label} className="p-3 rounded-lg text-center" style={{ border: t.sel ? '2px solid var(--navy)' : '1px solid var(--border)', backgroundColor: t.sel ? '#F0F3F6' : 'white' }}>
+                  <t.icon size={18} style={{ color: t.sel ? 'var(--navy)' : '#D6DDE4', margin: '0 auto 4px' }} />
+                  <div style={{ fontSize: '10px', fontWeight: 600, color: t.sel ? 'var(--navy)' : '#D6DDE4' }}>{t.label}</div>
+                  {t.sel && <div className="mt-1"><span style={{ fontSize: '9px', color: '#5CA868' }}>✓</span></div>}
                 </div>
               ))}
             </div>
@@ -200,7 +200,7 @@ export default function WorkflowTemplates() {
               <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white" style={{ border: '1px solid var(--border)' }}>
                 <File size={14} style={{ color: 'var(--navy)' }} />
                 <span style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-primary)' }}>NDA_Playbook_2026.pdf</span>
-                <span className="ml-auto inline-flex items-center gap-1 px-2 py-0.5 rounded-full" style={{ backgroundColor: '#DCFCE7', color: '#166534', fontSize: '10px', fontWeight: 600 }}>✓ AI-indexed</span>
+                <span className="ml-auto inline-flex items-center gap-1 px-2 py-0.5 rounded-full" style={{ backgroundColor: '#E7F3E9', color: '#5CA868', fontSize: '10px', fontWeight: 600 }}>✓ AI-indexed</span>
               </div>
             </div>
           )},
@@ -217,7 +217,7 @@ export default function WorkflowTemplates() {
                   </React.Fragment>
                 ))}
               </div>
-              <div className="text-center"><span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full" style={{ backgroundColor: '#DCFCE7', color: '#166534', fontSize: '11px', fontWeight: 500 }}>✓ 3 steps · ~9 seconds · Ready to publish</span></div>
+              <div className="text-center"><span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full" style={{ backgroundColor: '#E7F3E9', color: '#5CA868', fontSize: '11px', fontWeight: 500 }}>✓ 3 steps · ~9 seconds · Ready to publish</span></div>
             </div>
           )},
         ];
@@ -226,7 +226,7 @@ export default function WorkflowTemplates() {
           <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ backgroundColor: 'rgba(15,23,42,0.5)' }} onClick={() => setShowGuide(false)}>
             <div className="overflow-hidden" style={{ width: '90%', maxWidth: 760, borderRadius: '20px', boxShadow: '0 24px 80px rgba(0,0,0,0.2)' }} onClick={(e) => e.stopPropagation()}>
               {/* Navy header */}
-              <div style={{ background: 'linear-gradient(135deg, #0B1D3A 0%, #1A3A6B 100%)', padding: '20px 28px' }}>
+              <div style={{ background: 'linear-gradient(135deg, #0A2463 0%, #1E3A8A 100%)', padding: '20px 28px' }}>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <Sparkles size={18} style={{ color: 'var(--gold)' }} />
@@ -244,7 +244,7 @@ export default function WorkflowTemplates() {
               </div>
               {/* Body — split */}
               <div className="flex" style={{ backgroundColor: 'white' }}>
-                <div className="flex-1 p-6" style={{ backgroundColor: '#F8FAFC', borderRight: '1px solid var(--border)' }}>
+                <div className="flex-1 p-6" style={{ backgroundColor: '#F8F4ED', borderRight: '1px solid var(--border)' }}>
                   <div className="flex items-center justify-center" style={{ minHeight: 180 }}>
                     <div className="w-full" style={{ maxWidth: 320 }}>{slide.visual}</div>
                   </div>
@@ -321,7 +321,7 @@ export default function WorkflowTemplates() {
                 <h3 className="text-base font-medium mb-1" style={{ fontFamily: "'DM Serif Display', serif", color: 'var(--text-primary)' }}>{t.name}</h3>
                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium" style={verticalColors[t.vertical]}>{t.vertical}</span>
               </div>
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium" style={t.status === 'Active' ? { backgroundColor: '#DCFCE7', color: '#166534' } : { backgroundColor: '#F3F4F6', color: '#374151' }}>{t.status}</span>
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium" style={t.status === 'Active' ? { backgroundColor: '#E7F3E9', color: '#5CA868' } : { backgroundColor: '#F3F4F6', color: '#6B7885' }}>{t.status}</span>
             </div>
             <p className="text-sm mb-4" style={{ color: 'var(--slate)', lineHeight: '1.5', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{t.description}</p>
             <div className="flex items-center justify-between pt-3" style={{ borderTop: '1px solid var(--border)' }}>
@@ -332,7 +332,7 @@ export default function WorkflowTemplates() {
               <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                 <button onClick={() => openEdit(t)} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors" title="Edit"><Pencil size={15} style={{ color: 'var(--slate)' }} /></button>
                 <button onClick={() => toggleStatus(t.id)} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors" title={t.status === 'Active' ? 'Deactivate' : 'Activate'}>
-                  {t.status === 'Active' ? <EyeOff size={15} style={{ color: '#991B1B' }} /> : <Eye size={15} style={{ color: '#166534' }} />}
+                  {t.status === 'Active' ? <EyeOff size={15} style={{ color: '#C65454' }} /> : <Eye size={15} style={{ color: '#5CA868' }} />}
                 </button>
               </div>
             </div>
@@ -360,11 +360,11 @@ export default function WorkflowTemplates() {
               <div className="space-y-6">
                 {/* Simple intro */}
                 {!editTemplate && (
-                  <div className="flex items-start gap-3 p-4 rounded-xl" style={{ backgroundColor: '#F0FDF4', border: '1px solid #BBF7D0' }}>
-                    <Sparkles size={18} style={{ color: '#166534', flexShrink: 0, marginTop: 1 }} />
+                  <div className="flex items-start gap-3 p-4 rounded-xl" style={{ backgroundColor: '#E7F3E9', border: '1px solid #E7F3E9' }}>
+                    <Sparkles size={18} style={{ color: '#5CA868', flexShrink: 0, marginTop: 1 }} />
                     <div>
-                      <p style={{ fontSize: '13px', fontWeight: 500, color: '#166534' }}>Build your workflow in simple steps</p>
-                      <p style={{ fontSize: '12px', color: '#166534', marginTop: 2, lineHeight: '1.5' }}>
+                      <p style={{ fontSize: '13px', fontWeight: 500, color: '#5CA868' }}>Build your workflow in simple steps</p>
+                      <p style={{ fontSize: '12px', color: '#5CA868', marginTop: 2, lineHeight: '1.5' }}>
                         Pick what you want the AI to do at each stage — like reading documents, analysing clauses, or generating a report. The AI handles the technical details automatically.
                       </p>
                     </div>
@@ -434,7 +434,7 @@ export default function WorkflowTemplates() {
                               )}
                             </div>
                             {formSteps.length > 1 && (
-                              <button onClick={() => removeStep(idx)} className="p-1 rounded hover:bg-red-50" style={{ color: '#991B1B' }}><Trash2 size={14} /></button>
+                              <button onClick={() => removeStep(idx)} className="p-1 rounded hover:bg-red-50" style={{ color: '#C65454' }}><Trash2 size={14} /></button>
                             )}
                           </div>
 
@@ -452,7 +452,7 @@ export default function WorkflowTemplates() {
                                     className="p-2.5 rounded-lg text-center transition-all relative"
                                     style={{
                                       border: selected ? '2px solid var(--navy)' : '1px solid var(--border)',
-                                      backgroundColor: selected ? '#EFF6FF' : 'white',
+                                      backgroundColor: selected ? '#F0F3F6' : 'white',
                                       cursor: 'pointer',
                                     }}
                                     title={task.subtitle}
@@ -513,7 +513,7 @@ export default function WorkflowTemplates() {
                                             <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{f.size}</span>
                                           </div>
                                           <div className="flex items-center gap-2">
-                                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium" style={f.status === 'Ready' ? { backgroundColor: '#DCFCE7', color: '#166534' } : { backgroundColor: '#EFF6FF', color: '#1D4ED8' }}>
+                                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium" style={f.status === 'Ready' ? { backgroundColor: '#E7F3E9', color: '#5CA868' } : { backgroundColor: '#F0F3F6', color: '#1E3A8A' }}>
                                               {f.status === 'Ready' ? '✓ Indexed' : '⟳ Processing...'}
                                             </span>
                                             <button onClick={() => removeRefFile(idx, f.id)} className="p-0.5 rounded hover:bg-red-50" style={{ color: 'var(--text-muted)' }}><XCircle size={14} /></button>
@@ -624,7 +624,7 @@ export default function WorkflowTemplates() {
             {/* Footer */}
             <div className="sticky bottom-0 bg-white flex items-center justify-end gap-3" style={{ padding: '16px 28px', borderTop: '1px solid var(--border)' }}>
               <button onClick={() => { setShowCreate(false); setEditTemplate(null); }} className="px-4 py-2 rounded-lg text-sm font-medium" style={{ border: '1px solid var(--border)', color: 'var(--text-secondary)' }}>Cancel</button>
-              <button onClick={handleSave} disabled={!formName.trim() || completedSteps.length === 0} className="px-5 py-2 rounded-lg text-sm font-medium text-white" style={{ backgroundColor: formName.trim() && completedSteps.length > 0 ? 'var(--navy)' : '#94A3B8', cursor: formName.trim() && completedSteps.length > 0 ? 'pointer' : 'not-allowed' }}>
+              <button onClick={handleSave} disabled={!formName.trim() || completedSteps.length === 0} className="px-5 py-2 rounded-lg text-sm font-medium text-white" style={{ backgroundColor: formName.trim() && completedSteps.length > 0 ? 'var(--navy)' : '#9CA3AF', cursor: formName.trim() && completedSteps.length > 0 ? 'pointer' : 'not-allowed' }}>
                 {editTemplate ? 'Save Changes' : 'Create Template'}
               </button>
             </div>

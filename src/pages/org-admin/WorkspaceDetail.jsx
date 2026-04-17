@@ -71,8 +71,8 @@ export default function WorkspaceDetail() {
             <div className="grid grid-cols-4 gap-4 mb-8">
               <StatCard icon={FileText} value={wsDocs.length} label="Documents" accentColor="var(--navy)" />
               <StatCard icon={FileBarChart} value={wsReports.length} label="Reports" accentColor="var(--gold)" />
-              <StatCard icon={Workflow} value={wsRuns.length} label="Workflow Runs" accentColor="#1D4ED8" />
-              <StatCard icon={Users} value={workspace.members} label="Members" accentColor="#166534" />
+              <StatCard icon={Workflow} value={wsRuns.length} label="Workflow Runs" accentColor="#1E3A8A" />
+              <StatCard icon={Users} value={workspace.members} label="Members" accentColor="#5CA868" />
             </div>
             <div className="grid grid-cols-2 gap-6">
               <div className="bg-white p-5" style={{ border: '1px solid var(--border)', borderRadius: 12 }}>
@@ -110,10 +110,10 @@ export default function WorkspaceDetail() {
             {wsDocs.some((d) => d.classification === 'Flagged for Review' || d.classification === 'Pending') && (
               <div
                 className="flex items-center gap-3 p-4 rounded-xl mb-6"
-                style={{ backgroundColor: '#FEF2F2', border: '1px solid #FECACA' }}
+                style={{ backgroundColor: '#F9E7E7', border: '1px solid #F9E7E7' }}
               >
-                <AlertCircle size={16} style={{ color: '#DC2626' }} />
-                <span style={{ fontSize: '13px', color: '#991B1B', fontWeight: 500 }}>
+                <AlertCircle size={16} style={{ color: '#C65454' }} />
+                <span style={{ fontSize: '13px', color: '#C65454', fontWeight: 500 }}>
                   {wsDocs.filter((d) => d.classification === 'Flagged for Review' || d.classification === 'Pending').length} documents need classification review
                 </span>
               </div>
@@ -131,14 +131,14 @@ export default function WorkspaceDetail() {
                       <button
                         onClick={() => setClassifyModal(doc)}
                         className="flex items-center gap-1"
-                        style={{ fontSize: '11px', color: '#DC2626', fontWeight: 500, border: 'none', background: 'none', cursor: 'pointer' }}
+                        style={{ fontSize: '11px', color: '#C65454', fontWeight: 500, border: 'none', background: 'none', cursor: 'pointer' }}
                       >
                         <AlertCircle size={12} /> Review
                       </button>
                     ) : doc.classification === 'Pending' ? (
-                      <span style={{ fontSize: '11px', color: '#92400E' }}>Pending</span>
+                      <span style={{ fontSize: '11px', color: '#E8A33D' }}>Pending</span>
                     ) : (
-                      <span className="flex items-center gap-1" style={{ fontSize: '11px', color: '#166534' }}>
+                      <span className="flex items-center gap-1" style={{ fontSize: '11px', color: '#5CA868' }}>
                         <CheckCircle size={12} /> Auto-filed
                       </span>
                     )}
@@ -222,7 +222,7 @@ export default function WorkspaceDetail() {
                   <td style={{ padding: '12px 16px', fontSize: '12px', color: 'var(--text-muted)' }}>{run.date}</td>
                   <td style={{ padding: '12px 16px' }}>
                     {run.reportGenerated ? (
-                      <span className="flex items-center gap-1" style={{ fontSize: '11px', color: '#166534' }}>
+                      <span className="flex items-center gap-1" style={{ fontSize: '11px', color: '#5CA868' }}>
                         <CheckCircle size={12} /> Generated
                       </span>
                     ) : (
@@ -328,7 +328,7 @@ export default function WorkspaceDetail() {
                       <div className="flex items-center gap-2">
                         <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)' }}>{msg.clientName}</span>
                         {msg.unread > 0 && (
-                          <span className="rounded-full flex items-center justify-center text-white" style={{ width: 18, height: 18, backgroundColor: '#DC2626', fontSize: '9px', fontWeight: 600 }}>
+                          <span className="rounded-full flex items-center justify-center text-white" style={{ width: 18, height: 18, backgroundColor: '#C65454', fontSize: '9px', fontWeight: 600 }}>
                             {msg.unread}
                           </span>
                         )}
@@ -430,7 +430,7 @@ export default function WorkspaceDetail() {
         {classifyModal && (
           <div>
             <div className="flex items-center gap-2 mb-4">
-              <AlertCircle size={16} style={{ color: '#DC2626' }} />
+              <AlertCircle size={16} style={{ color: '#C65454' }} />
               <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)' }}>Low Confidence Classification</span>
             </div>
             <div className="bg-gray-50 p-4 rounded-lg mb-4" style={{ border: '1px solid var(--border)' }}>

@@ -180,7 +180,7 @@ export default function BroadcastNotifications() {
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
                         <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--ice)', maxWidth: 80 }}>
-                          <div className="h-full rounded-full" style={{ width: `${Math.round((n.reads / totalAdmins) * 100)}%`, backgroundColor: n.reads / totalAdmins > 0.5 ? '#22C55E' : 'var(--gold)' }} />
+                          <div className="h-full rounded-full" style={{ width: `${Math.round((n.reads / totalAdmins) * 100)}%`, backgroundColor: n.reads / totalAdmins > 0.5 ? '#5CA868' : 'var(--gold)' }} />
                         </div>
                         <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{n.reads}/{totalAdmins}</span>
                       </div>

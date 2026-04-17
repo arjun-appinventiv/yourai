@@ -10,20 +10,20 @@ import { useRole } from '../../components/org-admin/RoleContext';
 import { timeEntries, orgInvoices, modelUsageStats } from '../../data/mockData';
 
 const activityBadges = {
-  contract_review:    { label: 'Contract Review', bg: '#E8ECF4', color: '#0B1D3A' },
+  contract_review:    { label: 'Contract Review', bg: '#E8ECF4', color: '#0A2463' },
   artifact_generation:{ label: 'Report Gen',      bg: '#EDE9FE', color: '#8B5CF6' },
-  precedent_research: { label: 'Research',         bg: '#DBEAFE', color: '#3B82F6' },
-  document_analysis:  { label: 'Doc Analysis',     bg: '#F1F5F9', color: '#475569' },
-  compliance_check:   { label: 'Compliance',       bg: '#DCFCE7', color: '#166534' },
-  manual:             { label: 'Manual',           bg: '#F3F4F6', color: '#6B7280' },
-  pipeline_execution: { label: 'Workflow',         bg: '#FEF9C3', color: '#92400E' },
+  precedent_research: { label: 'Research',         bg: '#F0F3F6', color: '#1E3A8A' },
+  document_analysis:  { label: 'Doc Analysis',     bg: '#F0F3F6', color: '#6B7885' },
+  compliance_check:   { label: 'Compliance',       bg: '#E7F3E9', color: '#5CA868' },
+  manual:             { label: 'Manual',           bg: '#F3F4F6', color: '#9CA3AF' },
+  pipeline_execution: { label: 'Workflow',         bg: '#FBEED5', color: '#E8A33D' },
 };
 
 const invoiceStatusColors = {
-  Draft:   { bg: '#F1F5F9', color: '#64748B' },
-  Sent:    { bg: '#DBEAFE', color: '#1D4ED8' },
-  Paid:    { bg: '#DCFCE7', color: '#166534' },
-  Overdue: { bg: '#FEE2E2', color: '#991B1B' },
+  Draft:   { bg: '#F0F3F6', color: '#6B7885' },
+  Sent:    { bg: '#F0F3F6', color: '#1E3A8A' },
+  Paid:    { bg: '#E7F3E9', color: '#5CA868' },
+  Overdue: { bg: '#F9E7E7', color: '#C65454' },
 };
 
 export default function UsageCostsPage() {
@@ -75,7 +75,7 @@ export default function UsageCostsPage() {
       {role === 'Manager' && (
         <div
           className="flex items-center gap-2 p-3 rounded-lg mb-6"
-          style={{ backgroundColor: '#FEF3C7', border: '1px solid #FDE68A', fontSize: '13px', color: '#92400E' }}
+          style={{ backgroundColor: '#FBEED5', border: '1px solid #FBEED5', fontSize: '13px', color: '#E8A33D' }}
         >
           <AlertTriangle size={14} />
           Showing data for your workspaces only.
@@ -95,9 +95,9 @@ export default function UsageCostsPage() {
           {/* Stat cards */}
           <div className="grid grid-cols-4 gap-4">
             <StatCard icon={Sparkles} value="128" label="AI Queries" accentColor="var(--navy)" />
-            <StatCard icon={Activity} value="48.2K" label="Tokens Used" accentColor="#3B82F6" />
+            <StatCard icon={Activity} value="48.2K" label="Tokens Used" accentColor="#1E3A8A" />
             <StatCard icon={DollarSign} value="$2.43" label="AI Cost" accentColor="var(--gold)" />
-            <StatCard icon={Clock} value="502 min" label="Billed Time" accentColor="#166534" />
+            <StatCard icon={Clock} value="502 min" label="Billed Time" accentColor="#5CA868" />
           </div>
 
           {/* Two-column layout */}
@@ -185,7 +185,7 @@ export default function UsageCostsPage() {
                       maxWidth: 48,
                       height: barHeight,
                       borderRadius: 4,
-                      backgroundColor: d.cost === 0 ? '#E2E8F0' : isMax ? 'var(--gold)' : 'var(--navy)',
+                      backgroundColor: d.cost === 0 ? '#F0F3F6' : isMax ? 'var(--gold)' : 'var(--navy)',
                       transition: 'height 0.3s ease',
                     }} />
                     <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: 4 }}>{d.date}</span>
@@ -198,10 +198,10 @@ export default function UsageCostsPage() {
           {/* Budget alert */}
           <div
             className="bg-white rounded-xl p-5 flex items-center justify-between"
-            style={{ border: '1px solid var(--border)', borderLeft: '3px solid #F59E0B' }}
+            style={{ border: '1px solid var(--border)', borderLeft: '3px solid #E8A33D' }}
           >
             <div className="flex items-center gap-3">
-              <AlertTriangle size={18} style={{ color: '#F59E0B' }} />
+              <AlertTriangle size={18} style={{ color: '#E8A33D' }} />
               <div>
                 <span style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)' }}>No budget configured</span>
                 <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: 2 }}>Set a monthly AI spend limit to receive alerts when costs approach the threshold.</p>
@@ -312,7 +312,7 @@ export default function UsageCostsPage() {
                   <td style={{ padding: '12px 16px', fontSize: '13px', color: 'var(--text-secondary)' }}>
                     ${te.rate}/hr
                   </td>
-                  <td style={{ padding: '12px 16px', fontSize: '13px', fontWeight: 500, color: te.billable ? '#166534' : 'var(--text-muted)' }}>
+                  <td style={{ padding: '12px 16px', fontSize: '13px', fontWeight: 500, color: te.billable ? '#5CA868' : 'var(--text-muted)' }}>
                     {te.billable ? `$${te.amount.toFixed(2)}` : '$0.00'}
                   </td>
                   <td style={{ padding: '12px 16px' }}>
@@ -321,8 +321,8 @@ export default function UsageCostsPage() {
                       fontSize: '11px',
                       padding: '2px 8px',
                       borderRadius: 20,
-                      backgroundColor: '#F1F5F9',
-                      color: '#64748B',
+                      backgroundColor: '#F0F3F6',
+                      color: '#6B7885',
                     }}>
                       {te.agentId || 'Manual'}
                     </span>
@@ -335,7 +335,7 @@ export default function UsageCostsPage() {
           {/* Totals */}
           <div className="flex items-center gap-6" style={{ fontSize: '13px', color: 'var(--text-secondary)', padding: '4px 0' }}>
             <span>
-              Total billable: <strong style={{ color: 'var(--navy)' }}>{totalBillableMin} min</strong> — <strong style={{ color: '#166534' }}>${totalBillableAmt.toFixed(2)}</strong>
+              Total billable: <strong style={{ color: 'var(--navy)' }}>{totalBillableMin} min</strong> — <strong style={{ color: '#5CA868' }}>${totalBillableAmt.toFixed(2)}</strong>
             </span>
             <span>
               Total non-billable: <strong style={{ color: 'var(--text-muted)' }}>{totalNonBillableMin} min</strong>
@@ -534,7 +534,7 @@ export default function UsageCostsPage() {
               {/* AI disclaimer */}
               <div
                 className="rounded-lg p-4 mt-6"
-                style={{ backgroundColor: '#F8FAFC', border: '1px solid var(--border)' }}
+                style={{ backgroundColor: '#F8F4ED', border: '1px solid var(--border)' }}
               >
                 <div className="flex items-start gap-2">
                   <FileText size={14} style={{ color: 'var(--text-muted)', marginTop: 2, flexShrink: 0 }} />
@@ -574,7 +574,7 @@ export default function UsageCostsPage() {
                       padding: '10px 20px',
                       borderRadius: '8px',
                       border: 'none',
-                      backgroundColor: '#166534',
+                      backgroundColor: '#5CA868',
                       color: 'white',
                       cursor: 'pointer',
                     }}

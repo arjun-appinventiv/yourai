@@ -8,7 +8,7 @@ import Table from '../../components/Table';
 import Modal from '../../components/Modal';
 import { useToast } from '../../components/Toast';
 
-const planColors = { Free: '#64748B', Professional: '#1D4ED8', Team: '#166534', Enterprise: '#92400E' };
+const planColors = { Free: '#6B7885', Professional: '#1E3A8A', Team: '#5CA868', Enterprise: '#E8A33D' };
 
 
 const transactions = [
@@ -154,7 +154,7 @@ export default function PlatformBilling() {
         <StatCard icon={DollarSign} value={`$${totalMRR.toLocaleString()}`} label="Total MRR" accentColor="var(--gold)" />
         <StatCard icon={Building2} value={activeOrgs} label="Active Orgs" />
         <StatCard icon={TrendingUp} value={`$${avgValue.toLocaleString()}/org`} label="Avg Plan Value" />
-        <StatCard icon={AlertCircle} value={failedCount} label="Failed Payments" accentColor="#991B1B" />
+        <StatCard icon={AlertCircle} value={failedCount} label="Failed Payments" accentColor="#C65454" />
       </div>
 
       {/* Tabs */}
@@ -237,7 +237,7 @@ export default function PlatformBilling() {
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-1">
                     <button onClick={() => openEditPlan(p)} className="p-1.5 rounded-lg hover:bg-gray-100" title="Edit"><Edit3 size={16} style={{ color: 'var(--slate)' }} /></button>
-                    <button className="p-1.5 rounded-lg hover:bg-red-50" title="Delete"><Trash2 size={16} style={{ color: '#991B1B' }} /></button>
+                    <button className="p-1.5 rounded-lg hover:bg-red-50" title="Delete"><Trash2 size={16} style={{ color: '#C65454' }} /></button>
                   </div>
                 </td>
               </tr>
@@ -435,7 +435,7 @@ export default function PlatformBilling() {
                         className="rounded-lg p-4 transition-all"
                         style={{
                           border: isSelected ? `2px solid var(--navy)` : '1px solid var(--border)',
-                          backgroundColor: isCurrent ? '#F9FAFB' : isSelected ? '#EFF6FF' : 'white',
+                          backgroundColor: isCurrent ? '#F8F4ED' : isSelected ? '#F0F3F6' : 'white',
                           cursor: isCurrent ? 'not-allowed' : 'pointer',
                           opacity: isCurrent ? 0.7 : 1,
                           borderLeft: `3px solid ${p.colour}`,
@@ -443,7 +443,7 @@ export default function PlatformBilling() {
                         }}
                       >
                         {isCurrent && (
-                          <span className="absolute top-2 right-2 text-xs px-1.5 py-0.5 rounded-full" style={{ backgroundColor: '#F3F4F6', color: '#6B7280', fontSize: '10px' }}>Current</span>
+                          <span className="absolute top-2 right-2 text-xs px-1.5 py-0.5 rounded-full" style={{ backgroundColor: '#F3F4F6', color: '#9CA3AF', fontSize: '10px' }}>Current</span>
                         )}
                         {isSelected && (
                           <span className="absolute top-2 right-2 w-5 h-5 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--navy)' }}>
@@ -466,17 +466,17 @@ export default function PlatformBilling() {
 
                 {/* Upgrade/Downgrade callouts */}
                 {isDowngrade && (
-                  <div className="flex items-start gap-2.5 p-3 mt-3 rounded-lg" style={{ backgroundColor: '#FFFBEB', borderLeft: '3px solid #F59E0B' }}>
-                    <AlertTriangle size={15} style={{ color: '#92400E', flexShrink: 0, marginTop: 1 }} />
-                    <p className="text-xs" style={{ color: '#92400E' }}>
+                  <div className="flex items-start gap-2.5 p-3 mt-3 rounded-lg" style={{ backgroundColor: '#FBEED5', borderLeft: '3px solid #E8A33D' }}>
+                    <AlertTriangle size={15} style={{ color: '#E8A33D', flexShrink: 0, marginTop: 1 }} />
+                    <p className="text-xs" style={{ color: '#E8A33D' }}>
                       Downgrading takes effect at next billing cycle ({overrideOrg.nextRenewal || 'May 1, 2026'}). Current features remain active until then.
                     </p>
                   </div>
                 )}
                 {isUpgrade && (
-                  <div className="flex items-start gap-2.5 p-3 mt-3 rounded-lg" style={{ backgroundColor: '#F0FDF4', borderLeft: '3px solid #166534' }}>
-                    <CheckCircle size={15} style={{ color: '#166534', flexShrink: 0, marginTop: 1 }} />
-                    <p className="text-xs" style={{ color: '#166534' }}>
+                  <div className="flex items-start gap-2.5 p-3 mt-3 rounded-lg" style={{ backgroundColor: '#E7F3E9', borderLeft: '3px solid #5CA868' }}>
+                    <CheckCircle size={15} style={{ color: '#5CA868', flexShrink: 0, marginTop: 1 }} />
+                    <p className="text-xs" style={{ color: '#5CA868' }}>
                       Upgrading takes effect immediately. The org will be charged a prorated amount.
                     </p>
                   </div>
@@ -499,7 +499,7 @@ export default function PlatformBilling() {
                       placeholder="Describe the reason..."
                       style={{ ...inputStyle, width: '100%' }}
                     />
-                    {overrideError && <p className="text-xs mt-1" style={{ color: '#991B1B' }}>{overrideError}</p>}
+                    {overrideError && <p className="text-xs mt-1" style={{ color: '#C65454' }}>{overrideError}</p>}
                   </div>
                 )}
               </div>
@@ -530,7 +530,7 @@ export default function PlatformBilling() {
                       className="rounded-lg p-3 cursor-pointer transition-all"
                       style={{
                         border: overrideEffective === opt.value ? '2px solid var(--navy)' : '1px solid var(--border)',
-                        backgroundColor: overrideEffective === opt.value ? '#EFF6FF' : 'white',
+                        backgroundColor: overrideEffective === opt.value ? '#F0F3F6' : 'white',
                       }}
                     >
                       <div className="flex items-center gap-2">
@@ -554,7 +554,7 @@ export default function PlatformBilling() {
                 disabled={!overrideSelectedPlan || !overrideReason}
                 className="px-5 py-2.5 rounded-lg text-sm font-medium text-white"
                 style={{
-                  backgroundColor: (!overrideSelectedPlan || !overrideReason) ? '#94A3B8' : 'var(--navy)',
+                  backgroundColor: (!overrideSelectedPlan || !overrideReason) ? '#9CA3AF' : 'var(--navy)',
                   cursor: (!overrideSelectedPlan || !overrideReason) ? 'not-allowed' : 'pointer',
                 }}
               >

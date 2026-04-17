@@ -2,10 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Pencil, MoreHorizontal, CheckCircle2, AlertTriangle, Eye, Copy, Trash2 } from 'lucide-react';
 
 const PRIORITY_STYLES = {
-  'Must Have':   { bg: '#FEE2E2', color: '#991B1B' },
-  'Should Have': { bg: '#FEF9C3', color: '#92400E' },
-  'Could Have':  { bg: '#DCFCE7', color: '#166534' },
-  'Won\'t Have': { bg: '#F1F5F9', color: '#64748B' },
+  'Must Have':   { bg: '#F9E7E7', color: '#C65454' },
+  'Should Have': { bg: '#FBEED5', color: '#E8A33D' },
+  'Could Have':  { bg: '#E7F3E9', color: '#5CA868' },
+  'Won\'t Have': { bg: '#F0F3F6', color: '#6B7885' },
 };
 
 function Badge({ label, bg, color, style }) {
@@ -112,7 +112,7 @@ export default function StoryCard({ story, onEdit, onView, onDuplicate, onDelete
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
         {story.status && <Badge label={story.status} bg="var(--ice-warm)" color="var(--navy)" />}
         {story.points != null && (
-          <span style={{ fontSize: '11px', fontWeight: 600, padding: '2px 8px', borderRadius: '6px', background: '#F3F4F6', color: '#374151' }}>
+          <span style={{ fontSize: '11px', fontWeight: 600, padding: '2px 8px', borderRadius: '6px', background: '#F3F4F6', color: '#6B7885' }}>
             {story.points} pts
           </span>
         )}
@@ -147,11 +147,11 @@ export default function StoryCard({ story, onEdit, onView, onDuplicate, onDelete
                 {[
                   { label: 'View Full Story', icon: Eye, action: () => onView?.(story) },
                   { label: 'Duplicate', icon: Copy, action: () => onDuplicate?.(story) },
-                  { label: 'Delete', icon: Trash2, action: () => onDelete?.(story), color: '#DC2626' },
+                  { label: 'Delete', icon: Trash2, action: () => onDelete?.(story), color: '#C65454' },
                 ].map(({ label, icon: Icon, action, color }) => (
                   <button key={label} onClick={(e) => { e.preventDefault(); e.stopPropagation(); setMenuOpen(false); action(); }}
                     style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', padding: '8px 14px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '13px', color: color || 'var(--text-primary)', textAlign: 'left' }}
-                    onMouseEnter={(e) => { e.currentTarget.style.background = '#F9FAFB'; }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = '#F8F4ED'; }}
                     onMouseLeave={(e) => { e.currentTarget.style.background = 'none'; }}
                   >
                     <Icon size={14} /> {label}

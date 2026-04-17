@@ -367,7 +367,7 @@ export default function UserStories() {
             onClick={handleDeleteConfirm}
             style={{
               padding: '8px 18px', borderRadius: 8,
-              border: 'none', backgroundColor: '#DC2626',
+              border: 'none', backgroundColor: '#C65454',
               color: '#fff', fontSize: '13px', fontWeight: 600,
               cursor: 'pointer', fontFamily: "'DM Sans', sans-serif",
             }}

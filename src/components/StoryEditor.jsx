@@ -4,10 +4,10 @@ import { X, Plus, ChevronRight, ChevronLeft, Check, Trash2 } from 'lucide-react'
 const ROLES = ['Super Admin', 'Admin', 'Manager', 'Team', 'Client', 'Platform Operator'];
 const STATUSES = ['Draft', 'Ready', 'In Review', 'Approved'];
 const PRIORITIES = [
-  { label: 'Must Have', color: '#DC2626', bg: '#FEF2F2' },
-  { label: 'Should Have', color: '#D97706', bg: '#FFFBEB' },
-  { label: 'Could Have', color: '#16A34A', bg: '#F0FDF4' },
-  { label: "Won't Have", color: '#6B7280', bg: '#F9FAFB' },
+  { label: 'Must Have', color: '#C65454', bg: '#F9E7E7' },
+  { label: 'Should Have', color: '#E8A33D', bg: '#FBEED5' },
+  { label: 'Could Have', color: '#5CA868', bg: '#E7F3E9' },
+  { label: "Won't Have", color: '#9CA3AF', bg: '#F8F4ED' },
 ];
 const NFR_SUGGESTIONS = [
   'Audit logged',
@@ -190,10 +190,10 @@ export default function StoryEditor({ open, onClose, story, moduleId, onSave }) 
       {/* Title */}
       <div style={{ marginBottom: 16 }}>
         <label style={labelStyle}>
-          Title <span style={{ color: '#DC2626' }}>*</span>
+          Title <span style={{ color: '#C65454' }}>*</span>
         </label>
         <input
-          style={{ ...inputStyle, borderColor: errors.title ? '#DC2626' : undefined }}
+          style={{ ...inputStyle, borderColor: errors.title ? '#C65454' : undefined }}
           value={form.title}
           onChange={(e) => update('title', e.target.value)}
           placeholder="e.g. Create new tenant organisation"
@@ -203,10 +203,10 @@ export default function StoryEditor({ open, onClose, story, moduleId, onSave }) 
       {/* Role */}
       <div style={{ marginBottom: 16 }}>
         <label style={labelStyle}>
-          Role <span style={{ color: '#DC2626' }}>*</span>
+          Role <span style={{ color: '#C65454' }}>*</span>
         </label>
         <select
-          style={{ ...inputStyle, borderColor: errors.role ? '#DC2626' : undefined, appearance: 'auto' }}
+          style={{ ...inputStyle, borderColor: errors.role ? '#C65454' : undefined, appearance: 'auto' }}
           value={form.role}
           onChange={(e) => update('role', e.target.value)}
         >
@@ -309,7 +309,7 @@ export default function StoryEditor({ open, onClose, story, moduleId, onSave }) 
           <div>
             <span style={{ ...labelStyle, color: 'var(--gold)', fontWeight: 700, fontSize: '13px' }}>I want to</span>
             <textarea
-              style={{ ...textareaStyle, borderColor: errors.goal ? '#DC2626' : undefined }}
+              style={{ ...textareaStyle, borderColor: errors.goal ? '#C65454' : undefined }}
               rows={2}
               value={form.goal}
               onChange={(e) => update('goal', e.target.value)}
@@ -320,7 +320,7 @@ export default function StoryEditor({ open, onClose, story, moduleId, onSave }) 
           <div>
             <span style={{ ...labelStyle, color: 'var(--gold)', fontWeight: 700, fontSize: '13px' }}>So that</span>
             <textarea
-              style={{ ...textareaStyle, borderColor: errors.benefit ? '#DC2626' : undefined }}
+              style={{ ...textareaStyle, borderColor: errors.benefit ? '#C65454' : undefined }}
               rows={2}
               value={form.benefit}
               onChange={(e) => update('benefit', e.target.value)}
@@ -334,7 +334,7 @@ export default function StoryEditor({ open, onClose, story, moduleId, onSave }) 
       {(form.role || form.goal || form.benefit) && (
         <div
           style={{
-            backgroundColor: '#F8FAFC',
+            backgroundColor: '#F8F4ED',
             borderRadius: 10,
             padding: 16,
             marginBottom: 20,
@@ -354,7 +354,7 @@ export default function StoryEditor({ open, onClose, story, moduleId, onSave }) 
       <div>
         <h4 style={sectionTitle}>Preconditions</h4>
         {errors.preconditions && (
-          <p style={{ color: '#DC2626', fontSize: '12px', marginBottom: 8 }}>At least 1 precondition required</p>
+          <p style={{ color: '#C65454', fontSize: '12px', marginBottom: 8 }}>At least 1 precondition required</p>
         )}
         {form.preconditions.map((pc, i) => (
           <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 8, alignItems: 'center' }}>
@@ -407,7 +407,7 @@ export default function StoryEditor({ open, onClose, story, moduleId, onSave }) 
       <div style={{ marginBottom: 24 }}>
         <h4 style={sectionTitle}>Acceptance Criteria</h4>
         {errors.acceptanceCriteria && (
-          <p style={{ color: '#DC2626', fontSize: '12px', marginBottom: 8 }}>At least 1 criterion required</p>
+          <p style={{ color: '#C65454', fontSize: '12px', marginBottom: 8 }}>At least 1 criterion required</p>
         )}
         {form.acceptanceCriteria.map((c, i) => (
           <div
@@ -693,7 +693,7 @@ export default function StoryEditor({ open, onClose, story, moduleId, onSave }) 
       <div>
         <h4 style={sectionTitle}>Test Scenarios</h4>
         {errors.testScenarios && (
-          <p style={{ color: '#DC2626', fontSize: '12px', marginBottom: 8 }}>At least 1 test scenario required</p>
+          <p style={{ color: '#C65454', fontSize: '12px', marginBottom: 8 }}>At least 1 test scenario required</p>
         )}
         {form.testScenarios.map((ts, i) => (
           <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 8, alignItems: 'start' }}>

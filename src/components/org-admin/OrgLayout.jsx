@@ -8,7 +8,7 @@ export default function OrgLayout() {
   const { role, setRole } = useRole();
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: '#F4F6F9' }}>
+    <div className="min-h-screen" style={{ backgroundColor: '#F8F4ED' }}>
       <OrgSidebar />
       <OrgTopBar />
 
@@ -23,7 +23,7 @@ export default function OrgLayout() {
         className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-between"
         style={{
           height: 36,
-          backgroundColor: '#0B1D3A',
+          backgroundColor: '#0A2463',
           color: 'rgba(255,255,255,0.7)',
           padding: '0 24px',
           fontSize: '12px',

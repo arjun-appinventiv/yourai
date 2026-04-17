@@ -116,8 +116,8 @@ function DailyBarChart({ data }) {
 }
 
 /* ─── Activity Timeline ─── */
-const planColorsMap = { Free: '#64748B', Professional: '#1D4ED8', Team: '#166534', Enterprise: '#92400E' };
-const typeColors = { access: '#1D4ED8', data: '#166534', system: '#94A3B8', comms: '#C9A84C', billing: '#9333EA' };
+const planColorsMap = { Free: '#6B7885', Professional: '#1E3A8A', Team: '#5CA868', Enterprise: '#E8A33D' };
+const typeColors = { access: '#1E3A8A', data: '#5CA868', system: '#9CA3AF', comms: '#C9A84C', billing: '#9333EA' };
 const typeIcons = { access: UserCheck, data: Upload, system: Server, comms: Bell, billing: CreditCard };
 
 function ActivityTimeline({ events }) {
@@ -125,7 +125,7 @@ function ActivityTimeline({ events }) {
     <div style={{ maxHeight: 380, overflowY: 'auto' }}>
       {events.map((e, i) => {
         const Icon = typeIcons[e.type] || Activity;
-        const color = typeColors[e.type] || '#94A3B8';
+        const color = typeColors[e.type] || '#9CA3AF';
         return (
           <div key={e.id} className="flex gap-3" style={{ padding: '12px 0' }}>
             <div className="flex flex-col items-center" style={{ width: 24 }}>
@@ -309,7 +309,7 @@ export default function SuperAdminDashboard() {
               <td className="px-4 py-3 text-sm font-medium" style={{ color: 'var(--text-primary)' }}>${t.mrr.toLocaleString()}</td>
               <td className="px-4 py-3 text-sm" style={{ color: 'var(--text-muted)' }}>{t.users}</td>
               <td className="px-4 py-3">
-                <span className="inline-flex items-center gap-1 text-xs font-medium" style={{ color: '#16A34A' }}>
+                <span className="inline-flex items-center gap-1 text-xs font-medium" style={{ color: '#5CA868' }}>
                   <TrendingUp size={13} /> +{12 - i * 2}%
                 </span>
               </td>
@@ -322,8 +322,8 @@ export default function SuperAdminDashboard() {
       <div>
         <h2 className="mb-4" style={{ fontFamily: "'DM Serif Display', serif", fontSize: '16px', color: 'var(--text-primary)' }}>System Health</h2>
         <div className="grid grid-cols-3 gap-4">
-          <HealthCard icon={Server} value={`${systemHealth.apiResponseTime}ms`} label="API Response" current={systemHealth.apiResponseTime} max={200} color="#059669" />
-          <HealthCard icon={Shield} value={`${systemHealth.errorRate}%`} label="Error Rate" current={systemHealth.errorRate} max={5} color="#059669" />
+          <HealthCard icon={Server} value={`${systemHealth.apiResponseTime}ms`} label="API Response" current={systemHealth.apiResponseTime} max={200} color="#5CA868" />
+          <HealthCard icon={Shield} value={`${systemHealth.errorRate}%`} label="Error Rate" current={systemHealth.errorRate} max={5} color="#5CA868" />
           <HealthCard icon={HardDrive} value={`${systemHealth.storageUsed} GB`} label={`/ ${systemHealth.storageTotal} GB`} current={systemHealth.storageUsed} max={systemHealth.storageTotal} color="var(--navy)" />
         </div>
       </div>

@@ -316,7 +316,7 @@ export default function ProfilePage() {
                   );
                 })}
               </div>
-              {prefsErrors.role && <p style={{ fontSize: 12, color: '#dc2626', margin: '6px 0 0' }}>Please make a selection</p>}
+              {prefsErrors.role && <p style={{ fontSize: 12, color: '#C65454', margin: '6px 0 0' }}>Please make a selection</p>}
             </div>
 
             {/* Practice Areas */}
@@ -342,7 +342,7 @@ export default function ProfilePage() {
                   );
                 })}
               </div>
-              {prefsErrors.practiceAreas && <p style={{ fontSize: 12, color: '#dc2626', margin: '6px 0 0' }}>Please make a selection</p>}
+              {prefsErrors.practiceAreas && <p style={{ fontSize: 12, color: '#C65454', margin: '6px 0 0' }}>Please make a selection</p>}
             </div>
 
             {/* Firm Size */}
@@ -371,7 +371,7 @@ export default function ProfilePage() {
                   );
                 })}
               </div>
-              {prefsErrors.firmSize && <p style={{ fontSize: 12, color: '#dc2626', margin: '6px 0 0' }}>Please make a selection</p>}
+              {prefsErrors.firmSize && <p style={{ fontSize: 12, color: '#C65454', margin: '6px 0 0' }}>Please make a selection</p>}
             </div>
 
             {/* Primary Goal */}
@@ -398,7 +398,7 @@ export default function ProfilePage() {
                   );
                 })}
               </div>
-              {prefsErrors.primaryGoal && <p style={{ fontSize: 12, color: '#dc2626', margin: '6px 0 0' }}>Please make a selection</p>}
+              {prefsErrors.primaryGoal && <p style={{ fontSize: 12, color: '#C65454', margin: '6px 0 0' }}>Please make a selection</p>}
             </div>
 
             {/* Primary State */}
@@ -474,7 +474,7 @@ export default function ProfilePage() {
                   </div>
                 )}
               </div>
-              {prefsErrors.primaryState && <p style={{ fontSize: 12, color: '#dc2626', margin: '6px 0 0' }}>Please make a selection</p>}
+              {prefsErrors.primaryState && <p style={{ fontSize: 12, color: '#C65454', margin: '6px 0 0' }}>Please make a selection</p>}
             </div>
 
             {/* Additional States */}

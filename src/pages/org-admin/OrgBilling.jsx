@@ -71,7 +71,7 @@ export default function OrgBilling() {
                     <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{pct}%</span>
                   </div>
                   <div style={{ height: 6, backgroundColor: 'var(--ice)', borderRadius: 3, overflow: 'hidden', marginBottom: 8 }}>
-                    <div style={{ height: '100%', width: `${pct}%`, backgroundColor: pct > 80 ? '#DC2626' : 'var(--navy)', borderRadius: 3 }} />
+                    <div style={{ height: '100%', width: `${pct}%`, backgroundColor: pct > 80 ? '#C65454' : 'var(--navy)', borderRadius: 3 }} />
                   </div>
                   <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{val.used} / {val.limit.toLocaleString()}</span>
                 </div>
@@ -107,7 +107,7 @@ export default function OrgBilling() {
                 <div className="flex flex-col gap-2">
                   {plan.features.map((f, i) => (
                     <div key={i} className="flex items-center gap-2">
-                      <Check size={12} style={{ color: '#166534' }} />
+                      <Check size={12} style={{ color: '#5CA868' }} />
                       <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{f}</span>
                     </div>
                   ))}

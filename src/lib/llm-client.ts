@@ -118,6 +118,9 @@ export interface ContextLayers {
   knowledgePack?: { name: string; description: string; content?: string } | null;
   intentLabel?: string | null; // User-selected intent label — skips classifier
   crossIntentNudge?: string | null; // Injected when message belongs to a different intent
+  multiDocCount?: number | null; // Number of documents when multiple are uploaded
+  docNames?: string[] | null; // Individual document names for cross-reference
+  multiDocGuidance?: string | null; // Cross-document guardrail instructions
 }
 
 // ─── Direct OpenAI call (client-side fallback) ───
@@ -140,15 +143,40 @@ export async function callLLM(
   const contextSections: string[] = [];
   const availableSources: string[] = [];
 
-  // Tier 1: User's uploaded document
+  // Tier 1: User's uploaded document(s)
   if (context?.uploadedDoc?.content) {
+    const isMultiDoc = (context.multiDocCount || 0) >= 2;
+    const docHeader = isMultiDoc
+      ? `\n--- USER'S UPLOADED DOCUMENTS (${context.multiDocCount} DOCUMENTS — HIGHEST PRIORITY) ---`
+      : `\n--- USER'S UPLOADED DOCUMENT (HIGHEST PRIORITY) ---`;
     contextSections.push(
-      `\n--- USER'S UPLOADED DOCUMENT (HIGHEST PRIORITY) ---`,
+      docHeader,
       `[Document: ${context.uploadedDoc.name}]`,
-      context.uploadedDoc.content.slice(0, 20000),
-      `--- END UPLOADED DOCUMENT ---`
+      // Per-document truncation is applied upstream (ChatView); no merged slice here
+      context.uploadedDoc.content,
+      isMultiDoc ? `--- END UPLOADED DOCUMENTS ---` : `--- END UPLOADED DOCUMENT ---`
     );
     availableSources.push('UPLOADED_DOC');
+
+    // Multi-document guardrail: inject cross-reference instructions
+    if (context.multiDocGuidance) {
+      contextSections.push(
+        `\n--- MULTI-DOCUMENT GUARDRAIL ---`,
+        context.multiDocGuidance,
+        `--- END MULTI-DOCUMENT GUARDRAIL ---`
+      );
+    } else if (isMultiDoc) {
+      // Even without explicit cross-doc query, add basic multi-doc awareness
+      const names = context.docNames || [];
+      const listing = names.map((n, i) => `Document ${i + 1} = "${n}"`).join(', ');
+      contextSections.push(
+        `\n--- MULTI-DOCUMENT AWARENESS ---`,
+        `Multiple documents are loaded: ${listing}.`,
+        `When referring to information, always specify which document it came from by name.`,
+        `If the user references documents by number (e.g. "doc 1"), match to the numbering above.`,
+        `--- END MULTI-DOCUMENT AWARENESS ---`
+      );
+    }
   }
 
   // Tier 2: Knowledge Pack

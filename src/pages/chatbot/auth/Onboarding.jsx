@@ -741,7 +741,7 @@ export default function Onboarding() {
   };
 
   const planIcons = { free: Sparkles, professional: Star, team: Users, enterprise: Shield };
-  const planAccent = { free: '#64748B', professional: '#1D4ED8', team: '#166534', enterprise: '#92400E' };
+  const planAccent = { free: '#6B7885', professional: '#1E3A8A', team: '#5CA868', enterprise: '#E8A33D' };
 
   const renderStep6 = () => (
     <div key="step6" className="w-full" style={{ maxWidth: 900 }}>
@@ -752,7 +752,7 @@ export default function Onboarding() {
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, marginTop: 20 }}>
         <div style={{
           display: 'inline-flex', borderRadius: 24, border: '1.5px solid var(--border)',
-          overflow: 'hidden', background: '#F8FAFC',
+          overflow: 'hidden', background: '#F8F4ED',
         }}>
           {['monthly', 'annually'].map(cycle => (
             <button
@@ -780,7 +780,7 @@ export default function Onboarding() {
         {subscriptionPlans.map((plan) => {
           const isSelected = selectedPlan === plan.id;
           const Icon = planIcons[plan.id] || Sparkles;
-          const accent = planAccent[plan.id] || '#64748B';
+          const accent = planAccent[plan.id] || '#6B7885';
           const features = planFeatures[plan.id] || [];
           const price = billingCycle === 'annually' && plan.price > 0
             ? Math.round(plan.price * 10 / 12)
@@ -866,8 +866,8 @@ export default function Onboarding() {
 
       {paymentComplete ? (
         <div style={{ marginTop: 32, textAlign: 'center' }}>
-          <div style={{ width: 56, height: 56, borderRadius: '50%', background: '#DCFCE7', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
-            <CheckCircle size={28} color="#16A34A" />
+          <div style={{ width: 56, height: 56, borderRadius: '50%', background: '#E7F3E9', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+            <CheckCircle size={28} color="#5CA868" />
           </div>
           <div style={{ fontFamily: "'DM Serif Display', serif", fontSize: 20, color: 'var(--text-primary)', marginBottom: 6 }}>Payment method saved</div>
           <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>Your 14-day free trial starts now. You won't be charged until {(() => { const d = new Date(); d.setDate(d.getDate() + 14); return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); })()}.</div>
@@ -926,9 +926,9 @@ export default function Onboarding() {
           </div>
 
           {/* Security note */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 8, backgroundColor: '#F0FDF4', border: '1px solid #DCFCE7' }}>
-            <Shield size={14} style={{ color: '#166534', flexShrink: 0 }} />
-            <span style={{ fontSize: 12, color: '#166534' }}>256-bit SSL encryption. We never store your full card number.</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 8, backgroundColor: '#E7F3E9', border: '1px solid #E7F3E9' }}>
+            <Shield size={14} style={{ color: '#5CA868', flexShrink: 0 }} />
+            <span style={{ fontSize: 12, color: '#5CA868' }}>256-bit SSL encryption. We never store your full card number.</span>
           </div>
         </div>
       )}

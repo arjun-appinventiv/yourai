@@ -58,9 +58,9 @@ const OVERRIDE_REASONS = ['Sales agreement', 'Trial extension', 'Support excepti
 
 const roleColors = {
   Admin: { bg: 'var(--navy)', color: 'white' },
-  'Internal User': { bg: '#EFF6FF', color: '#1D4ED8' },
-  Client: { bg: '#F0FDF4', color: '#166534' },
-  Invited: { bg: '#FEF3C7', color: '#92400E' },
+  'Internal User': { bg: '#F0F3F6', color: '#1E3A8A' },
+  Client: { bg: '#E7F3E9', color: '#5CA868' },
+  Invited: { bg: '#FBEED5', color: '#E8A33D' },
 };
 
 // Merge mock tenants with localStorage-registered tenants
@@ -308,7 +308,7 @@ export default function TenantManagement() {
   const UsageBar = ({ label, used, limit }) => {
     const isUnlimited = limit >= 99999;
     const pct = isUnlimited ? 25 : Math.min((used / limit) * 100, 100);
-    const color = pct > 80 ? '#991B1B' : pct > 50 ? '#92400E' : '#166534';
+    const color = pct > 80 ? '#C65454' : pct > 50 ? '#E8A33D' : '#5CA868';
     return (
       <div className="mb-4">
         <div className="flex justify-between mb-1">
@@ -357,7 +357,7 @@ export default function TenantManagement() {
         <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} style={inputStyle}>
           <option>All</option><option>Active</option><option>Suspended</option>
         </select>
-        <button onClick={handleExportCSV} disabled={filtered.length === 0} className="px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 whitespace-nowrap" style={{ border: '1px solid var(--border)', color: filtered.length === 0 ? '#94A3B8' : 'var(--slate)', backgroundColor: 'white', cursor: filtered.length === 0 ? 'not-allowed' : 'pointer', opacity: filtered.length === 0 ? 0.6 : 1 }}>
+        <button onClick={handleExportCSV} disabled={filtered.length === 0} className="px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 whitespace-nowrap" style={{ border: '1px solid var(--border)', color: filtered.length === 0 ? '#9CA3AF' : 'var(--slate)', backgroundColor: 'white', cursor: filtered.length === 0 ? 'not-allowed' : 'pointer', opacity: filtered.length === 0 ? 0.6 : 1 }}>
           <Download size={16} /> Export CSV
         </button>
         <span className="text-sm whitespace-nowrap" style={{ color: 'var(--text-muted)' }}>Showing {filtered.length} organisations</span>
@@ -379,7 +379,7 @@ export default function TenantManagement() {
                 <button className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors" title="View" onClick={() => openOrgDetail(t)}><Eye size={16} style={{ color: 'var(--slate)' }} /></button>
                 <button className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors" title="Edit" onClick={(e) => openEditOrg(t, e)}><Edit3 size={16} style={{ color: 'var(--text-primary)' }} /></button>
                 <button className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors" title={t.status === 'Active' ? 'Suspend' : 'Reactivate'} onClick={() => toggleStatus(t.id)}>
-                  {t.status === 'Active' ? <Ban size={16} style={{ color: '#991B1B' }} /> : <CheckCircle size={16} style={{ color: '#166534' }} />}
+                  {t.status === 'Active' ? <Ban size={16} style={{ color: '#C65454' }} /> : <CheckCircle size={16} style={{ color: '#5CA868' }} />}
                 </button>
               </div>
             </td>
@@ -418,7 +418,7 @@ export default function TenantManagement() {
           {/* Save name */}
           <div className="flex justify-end gap-3">
             <button onClick={() => setEditingOrg(null)} className="px-4 py-2 rounded-lg text-sm font-medium" style={{ border: '1px solid var(--border)', color: 'var(--slate)', backgroundColor: 'white' }}>Cancel</button>
-            <button onClick={handleSaveEdit} disabled={!editForm.name.trim() || editForm.name === editingOrg?.name} className="px-4 py-2 rounded-lg text-sm font-medium text-white flex items-center gap-1.5" style={{ backgroundColor: (!editForm.name.trim() || editForm.name === editingOrg?.name) ? '#94A3B8' : 'var(--navy)', cursor: (!editForm.name.trim() || editForm.name === editingOrg?.name) ? 'not-allowed' : 'pointer' }}>
+            <button onClick={handleSaveEdit} disabled={!editForm.name.trim() || editForm.name === editingOrg?.name} className="px-4 py-2 rounded-lg text-sm font-medium text-white flex items-center gap-1.5" style={{ backgroundColor: (!editForm.name.trim() || editForm.name === editingOrg?.name) ? '#9CA3AF' : 'var(--navy)', cursor: (!editForm.name.trim() || editForm.name === editingOrg?.name) ? 'not-allowed' : 'pointer' }}>
               <Save size={14} /> Save Name
             </button>
           </div>
@@ -427,22 +427,22 @@ export default function TenantManagement() {
           <div style={{ height: 1, backgroundColor: 'var(--border)' }} />
 
           {/* Suspend / Reactivate Section */}
-          <div className="p-4 rounded-lg" style={{ border: `1px solid ${editingOrg?.status === 'Active' ? '#FEE2E2' : '#DCFCE7'}`, backgroundColor: editingOrg?.status === 'Active' ? '#FEF2F2' : '#F0FDF4' }}>
-            <div className="text-xs font-semibold uppercase mb-2" style={{ color: editingOrg?.status === 'Active' ? '#991B1B' : '#166534' }}>
+          <div className="p-4 rounded-lg" style={{ border: `1px solid ${editingOrg?.status === 'Active' ? '#F9E7E7' : '#E7F3E9'}`, backgroundColor: editingOrg?.status === 'Active' ? '#F9E7E7' : '#E7F3E9' }}>
+            <div className="text-xs font-semibold uppercase mb-2" style={{ color: editingOrg?.status === 'Active' ? '#C65454' : '#5CA868' }}>
               {editingOrg?.status === 'Active' ? 'Suspend Organisation' : 'Reactivate Organisation'}
             </div>
-            <p className="text-xs mb-3" style={{ color: editingOrg?.status === 'Active' ? '#991B1B' : '#166534' }}>
+            <p className="text-xs mb-3" style={{ color: editingOrg?.status === 'Active' ? '#C65454' : '#5CA868' }}>
               {editingOrg?.status === 'Active'
                 ? 'Suspending this organisation will immediately block all user access. No users from this organisation will be able to log in, access documents, or run workflows until the organisation is reactivated.'
                 : 'Reactivating this organisation will restore access for all users. They will be able to log in and resume using the platform immediately.'}
             </p>
             <div className="flex items-center gap-2">
-              <AlertTriangle size={14} style={{ color: editingOrg?.status === 'Active' ? '#991B1B' : '#166534' }} />
-              <span className="text-xs font-medium" style={{ color: editingOrg?.status === 'Active' ? '#991B1B' : '#166534' }}>
+              <AlertTriangle size={14} style={{ color: editingOrg?.status === 'Active' ? '#C65454' : '#5CA868' }} />
+              <span className="text-xs font-medium" style={{ color: editingOrg?.status === 'Active' ? '#C65454' : '#5CA868' }}>
                 {editingOrg?.status === 'Active' ? `This will affect ${editingOrg?.users || 0} user(s)` : 'All users will regain access'}
               </span>
             </div>
-            <button onClick={handleSuspendFromModal} className="mt-3 px-4 py-2 rounded-lg text-sm font-medium text-white flex items-center gap-1.5" style={{ backgroundColor: editingOrg?.status === 'Active' ? '#991B1B' : '#166534' }}>
+            <button onClick={handleSuspendFromModal} className="mt-3 px-4 py-2 rounded-lg text-sm font-medium text-white flex items-center gap-1.5" style={{ backgroundColor: editingOrg?.status === 'Active' ? '#C65454' : '#5CA868' }}>
               {editingOrg?.status === 'Active' ? <><Ban size={14} /> Suspend &amp; Block Access</> : <><CheckCircle size={14} /> Reactivate &amp; Restore Access</>}
             </button>
           </div>
@@ -545,16 +545,16 @@ export default function TenantManagement() {
                     <div className="text-sm" style={{ color: 'var(--text-muted)' }}>{contact?.email}</div>
                   </div>
 
-                  <div className="p-4 rounded-lg" style={{ border: `1px solid ${selectedOrg.status === 'Active' ? '#FEE2E2' : '#DCFCE7'}`, backgroundColor: selectedOrg.status === 'Active' ? '#FEF2F2' : '#F0FDF4' }}>
-                    <div className="text-xs font-semibold uppercase mb-1" style={{ color: selectedOrg.status === 'Active' ? '#991B1B' : '#166534' }}>
+                  <div className="p-4 rounded-lg" style={{ border: `1px solid ${selectedOrg.status === 'Active' ? '#F9E7E7' : '#E7F3E9'}`, backgroundColor: selectedOrg.status === 'Active' ? '#F9E7E7' : '#E7F3E9' }}>
+                    <div className="text-xs font-semibold uppercase mb-1" style={{ color: selectedOrg.status === 'Active' ? '#C65454' : '#5CA868' }}>
                       {selectedOrg.status === 'Active' ? 'Danger Zone' : 'Reactivate'}
                     </div>
-                    <p className="text-xs mb-3" style={{ color: selectedOrg.status === 'Active' ? '#991B1B' : '#166534' }}>
+                    <p className="text-xs mb-3" style={{ color: selectedOrg.status === 'Active' ? '#C65454' : '#5CA868' }}>
                       {selectedOrg.status === 'Active'
                         ? `Suspending will block all ${selectedOrg.users} user(s) from accessing the platform.`
                         : 'Reactivating will restore access for all users in this organisation.'}
                     </p>
-                    <button onClick={() => { const newStatus = selectedOrg.status === 'Active' ? 'Suspended' : 'Active'; toggleStatus(selectedOrg.id); setSelectedOrg({...selectedOrg, status: newStatus}); showToast(newStatus === 'Suspended' ? `${selectedOrg.name} suspended. All user access blocked.` : `${selectedOrg.name} reactivated. User access restored.`); }} className="px-4 py-2 rounded-lg text-sm font-medium text-white flex items-center gap-1.5" style={{ backgroundColor: selectedOrg.status === 'Active' ? '#991B1B' : '#166534' }}>
+                    <button onClick={() => { const newStatus = selectedOrg.status === 'Active' ? 'Suspended' : 'Active'; toggleStatus(selectedOrg.id); setSelectedOrg({...selectedOrg, status: newStatus}); showToast(newStatus === 'Suspended' ? `${selectedOrg.name} suspended. All user access blocked.` : `${selectedOrg.name} reactivated. User access restored.`); }} className="px-4 py-2 rounded-lg text-sm font-medium text-white flex items-center gap-1.5" style={{ backgroundColor: selectedOrg.status === 'Active' ? '#C65454' : '#5CA868' }}>
                       {selectedOrg.status === 'Active' ? <><Ban size={14} /> Suspend &amp; Block Access</> : <><CheckCircle size={14} /> Reactivate &amp; Restore Access</>}
                     </button>
                   </div>
@@ -590,18 +590,18 @@ export default function TenantManagement() {
                               <div className="text-xs" style={{ color: 'var(--text-muted)' }}>{u.email}</div>
                             </td>
                             <td className="px-3 py-2.5">
-                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium" style={roleColors[u.role] || { bg: '#F3F4F6', color: '#374151' }}>{u.role}</span>
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium" style={roleColors[u.role] || { bg: '#F3F4F6', color: '#6B7885' }}>{u.role}</span>
                               {u.onboardingRole && (
                                 <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontStyle: 'italic', marginTop: '2px' }}>{u.onboardingRole}</div>
                               )}
                             </td>
                             <td className="px-3 py-2.5">
-                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium" style={u.status === 'Active' ? { backgroundColor: '#DCFCE7', color: '#166534' } : u.status === 'Invited' ? { backgroundColor: '#FEF3C7', color: '#92400E' } : { backgroundColor: '#FEE2E2', color: '#991B1B' }}>{u.status}</span>
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium" style={u.status === 'Active' ? { backgroundColor: '#E7F3E9', color: '#5CA868' } : u.status === 'Invited' ? { backgroundColor: '#FBEED5', color: '#E8A33D' } : { backgroundColor: '#F9E7E7', color: '#C65454' }}>{u.status}</span>
                             </td>
                             <td className="px-3 py-2.5">
                               {u.status !== 'Invited' && (
                                 <button className="p-1 rounded hover:bg-gray-100" title={u.status === 'Active' ? 'Block' : 'Unblock'}>
-                                  {u.status === 'Active' ? <Lock size={14} style={{ color: '#991B1B' }} /> : <Unlock size={14} style={{ color: '#166534' }} />}
+                                  {u.status === 'Active' ? <Lock size={14} style={{ color: '#C65454' }} /> : <Unlock size={14} style={{ color: '#5CA868' }} />}
                                 </button>
                               )}
                             </td>
@@ -639,7 +639,7 @@ export default function TenantManagement() {
                           <td className="px-3 py-2.5 text-sm">{w.members}</td>
                           <td className="px-3 py-2.5 text-sm">{w.documents}</td>
                           <td className="px-3 py-2.5 text-sm" style={{ color: 'var(--text-muted)' }}>{w.created}</td>
-                          <td className="px-3 py-2.5"><span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium" style={{ backgroundColor: '#DCFCE7', color: '#166534' }}>{w.status}</span></td>
+                          <td className="px-3 py-2.5"><span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium" style={{ backgroundColor: '#E7F3E9', color: '#5CA868' }}>{w.status}</span></td>
                         </tr>
                       ))}
                     </tbody>
@@ -689,14 +689,14 @@ export default function TenantManagement() {
                     <React.Fragment key={num}>
                       <div className="flex items-center gap-1.5">
                         <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold" style={{
-                          backgroundColor: addStep > num ? '#DCFCE7' : addStep === num ? 'var(--navy)' : 'var(--ice)',
-                          color: addStep > num ? '#166534' : addStep === num ? 'white' : 'var(--text-muted)',
+                          backgroundColor: addStep > num ? '#E7F3E9' : addStep === num ? 'var(--navy)' : 'var(--ice)',
+                          color: addStep > num ? '#5CA868' : addStep === num ? 'white' : 'var(--text-muted)',
                         }}>
                           {addStep > num ? '✓' : num}
                         </div>
                         <span style={{ fontSize: '12px', color: addStep >= num ? 'var(--text-primary)' : 'var(--text-muted)', fontWeight: addStep === num ? 500 : 400 }}>{label}</span>
                       </div>
-                      {i < 2 && <div className="flex-1 h-px" style={{ backgroundColor: addStep > num ? '#DCFCE7' : 'var(--border)' }} />}
+                      {i < 2 && <div className="flex-1 h-px" style={{ backgroundColor: addStep > num ? '#E7F3E9' : 'var(--border)' }} />}
                     </React.Fragment>
                   ))}
                 </div>
@@ -708,8 +708,8 @@ export default function TenantManagement() {
               {/* Step 1: Organisation Details */}
               {addStep === 1 && !inviteSent && (
                 <div className="space-y-5">
-                  <div className="flex items-start gap-3 p-3 rounded-lg" style={{ backgroundColor: '#EFF6FF', borderLeft: '3px solid #3B82F6' }}>
-                    <Info size={15} style={{ color: '#3B82F6', flexShrink: 0, marginTop: 2 }} />
+                  <div className="flex items-start gap-3 p-3 rounded-lg" style={{ backgroundColor: '#F0F3F6', borderLeft: '3px solid #1E3A8A' }}>
+                    <Info size={15} style={{ color: '#1E3A8A', flexShrink: 0, marginTop: 2 }} />
                     <p style={{ fontSize: '12px', color: '#1E3A5F' }}>Each tenant is an independent organisation with its own workspaces, users, documents, and billing.</p>
                   </div>
 
@@ -757,8 +757,8 @@ export default function TenantManagement() {
               {/* Step 2: Admin User */}
               {addStep === 2 && !inviteSent && (
                 <div className="space-y-5">
-                  <div className="flex items-start gap-3 p-3 rounded-lg" style={{ backgroundColor: '#EFF6FF', borderLeft: '3px solid #3B82F6' }}>
-                    <Info size={15} style={{ color: '#3B82F6', flexShrink: 0, marginTop: 2 }} />
+                  <div className="flex items-start gap-3 p-3 rounded-lg" style={{ backgroundColor: '#F0F3F6', borderLeft: '3px solid #1E3A8A' }}>
+                    <Info size={15} style={{ color: '#1E3A8A', flexShrink: 0, marginTop: 2 }} />
                     <p style={{ fontSize: '12px', color: '#1E3A5F' }}>This person will be the Organisation Admin — they can invite other users, create workspaces, and manage billing. They'll receive an email with a link to set their password and access the portal.</p>
                   </div>
 
@@ -777,7 +777,7 @@ export default function TenantManagement() {
                     <label className="block mb-1.5" style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-secondary)' }}>Email Address *</label>
                     <input type="email" value={newAdmin.email} onChange={(e) => setNewAdmin({ ...newAdmin, email: e.target.value })} placeholder="ryan@hartwell.com" style={{ ...inputStyle, width: '100%' }} />
                     {newAdmin.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newAdmin.email) && (
-                      <p className="mt-1" style={{ fontSize: '11px', color: '#EF4444' }}>Please enter a valid email address.</p>
+                      <p className="mt-1" style={{ fontSize: '11px', color: '#C65454' }}>Please enter a valid email address.</p>
                     )}
                     {(!newAdmin.email || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newAdmin.email)) && (
                       <p className="mt-1" style={{ fontSize: '11px', color: 'var(--text-muted)' }}>The invitation email will be sent to this address.</p>
@@ -828,11 +828,11 @@ export default function TenantManagement() {
                     </div>
                   </div>
 
-                  <div className="flex items-start gap-3 p-3 rounded-lg" style={{ backgroundColor: '#FFFBEB', borderLeft: '3px solid #F59E0B' }}>
-                    <AlertTriangle size={15} style={{ color: '#92400E', flexShrink: 0, marginTop: 2 }} />
+                  <div className="flex items-start gap-3 p-3 rounded-lg" style={{ backgroundColor: '#FBEED5', borderLeft: '3px solid #E8A33D' }}>
+                    <AlertTriangle size={15} style={{ color: '#E8A33D', flexShrink: 0, marginTop: 2 }} />
                     <div>
-                      <p style={{ fontSize: '12px', color: '#92400E', fontWeight: 500 }}>Confirm before sending</p>
-                      <p style={{ fontSize: '12px', color: '#92400E', marginTop: 2 }}>An invitation email will be sent to <strong>{newAdmin.email}</strong>. The admin will have full access to create workspaces, invite users, and manage their organisation.</p>
+                      <p style={{ fontSize: '12px', color: '#E8A33D', fontWeight: 500 }}>Confirm before sending</p>
+                      <p style={{ fontSize: '12px', color: '#E8A33D', marginTop: 2 }}>An invitation email will be sent to <strong>{newAdmin.email}</strong>. The admin will have full access to create workspaces, invite users, and manage their organisation.</p>
                     </div>
                   </div>
                 </div>
@@ -842,8 +842,8 @@ export default function TenantManagement() {
               {inviteSent && (
                 <div className="text-center py-8">
                   <div className="flex justify-center mb-4">
-                    <div className="w-16 h-16 rounded-full flex items-center justify-center" style={{ backgroundColor: '#DCFCE7' }}>
-                      <CheckCircle size={32} style={{ color: '#166534' }} />
+                    <div className="w-16 h-16 rounded-full flex items-center justify-center" style={{ backgroundColor: '#E7F3E9' }}>
+                      <CheckCircle size={32} style={{ color: '#5CA868' }} />
                     </div>
                   </div>
                   <h2 style={{ fontFamily: "'DM Serif Display', serif", fontSize: '20px', color: 'var(--text-primary)' }}>Tenant Created Successfully</h2>
@@ -888,7 +888,7 @@ export default function TenantManagement() {
                           onClick={() => setAddStep(addStep + 1)}
                           disabled={isStepDisabled}
                           className="px-5 py-2 rounded-lg text-sm font-medium text-white flex items-center gap-1.5"
-                          style={{ backgroundColor: isStepDisabled ? '#94A3B8' : 'var(--navy)', cursor: isStepDisabled ? 'not-allowed' : 'pointer' }}
+                          style={{ backgroundColor: isStepDisabled ? '#9CA3AF' : 'var(--navy)', cursor: isStepDisabled ? 'not-allowed' : 'pointer' }}
                         >
                           Continue <ChevronRight size={14} />
                         </button>

@@ -848,9 +848,9 @@ export default function GlobalKnowledgeBase() {
                           <span
                             key={pack}
                             className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full"
-                            style={{ backgroundColor: '#F3F4F6', color: '#374151', fontSize: '11px' }}
+                            style={{ backgroundColor: '#F3F4F6', color: '#6B7885', fontSize: '11px' }}
                           >
-                            <FileText size={10} style={{ color: '#6B7280' }} />
+                            <FileText size={10} style={{ color: '#9CA3AF' }} />
                             {pack}
                           </span>
                         ))}
@@ -865,10 +865,10 @@ export default function GlobalKnowledgeBase() {
                         className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
                         style={
                           sp.status === 'Active'
-                            ? { backgroundColor: '#DCFCE7', color: '#166534' }
+                            ? { backgroundColor: '#E7F3E9', color: '#5CA868' }
                             : sp.status === 'Partial'
-                            ? { backgroundColor: '#FEF3C7', color: '#92400E' }
-                            : { backgroundColor: '#F3F4F6', color: '#374151' }
+                            ? { backgroundColor: '#FBEED5', color: '#E8A33D' }
+                            : { backgroundColor: '#F3F4F6', color: '#6B7885' }
                         }
                       >
                         {sp.status}
@@ -916,10 +916,10 @@ export default function GlobalKnowledgeBase() {
                         className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
                         style={
                           manageState.status === 'Active'
-                            ? { backgroundColor: '#DCFCE7', color: '#166534' }
+                            ? { backgroundColor: '#E7F3E9', color: '#5CA868' }
                             : manageState.status === 'Partial'
-                            ? { backgroundColor: '#FEF3C7', color: '#92400E' }
-                            : { backgroundColor: '#F3F4F6', color: '#374151' }
+                            ? { backgroundColor: '#FBEED5', color: '#E8A33D' }
+                            : { backgroundColor: '#F3F4F6', color: '#6B7885' }
                         }
                       >
                         {manageState.status}
@@ -962,7 +962,7 @@ export default function GlobalKnowledgeBase() {
                             <button
                               onClick={() => handleRemovePackFromState(manageState.id, pack)}
                               className="px-2.5 py-1 rounded font-medium transition-colors hover:bg-red-50"
-                              style={{ color: '#991B1B', fontSize: '12px', background: 'none', border: 'none', cursor: 'pointer' }}
+                              style={{ color: '#C65454', fontSize: '12px', background: 'none', border: 'none', cursor: 'pointer' }}
                             >
                               Remove
                             </button>
@@ -989,7 +989,7 @@ export default function GlobalKnowledgeBase() {
                       const selectedCount = Object.values(manageAddDocSelections).filter(Boolean).length;
                       if (availableDocs.length === 0) {
                         return (
-                          <div className="text-center py-4 rounded-lg" style={{ backgroundColor: '#F9FAFB' }}>
+                          <div className="text-center py-4 rounded-lg" style={{ backgroundColor: '#F8F4ED' }}>
                             <p className="text-xs" style={{ color: 'var(--text-muted)' }}>All available documents are already assigned to this library.</p>
                           </div>
                         );
@@ -1148,7 +1148,7 @@ export default function GlobalKnowledgeBase() {
             {/* File upload */}
             <div
               className="rounded-xl p-6 flex flex-col items-center justify-center gap-3 transition-colors cursor-pointer"
-              style={{ border: dragOver ? '2px dashed var(--gold)' : '2px dashed var(--ice)', backgroundColor: dragOver ? '#FFFBEB' : 'white' }}
+              style={{ border: dragOver ? '2px dashed var(--gold)' : '2px dashed var(--ice)', backgroundColor: dragOver ? '#FBEED5' : 'white' }}
               onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
               onDragLeave={() => setDragOver(false)}
               onDrop={(e) => { e.preventDefault(); setDragOver(false); }}
@@ -1219,20 +1219,20 @@ export default function GlobalKnowledgeBase() {
                   <td className="px-4 py-3 text-sm" style={{ color: 'var(--text-muted)' }}>{doc.uploaded}</td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1.5">
-                      {doc.status === 'Processing' && <Loader size={14} className="animate-spin" style={{ color: '#92400E' }} />}
+                      {doc.status === 'Processing' && <Loader size={14} className="animate-spin" style={{ color: '#E8A33D' }} />}
                       <Badge variant={doc.status}>{doc.status}</Badge>
                     </div>
                   </td>
                   <td className="px-4 py-3">
                     {deletingId === doc.id ? (
                       <div className="flex items-center gap-2">
-                        <span className="text-xs" style={{ color: '#991B1B' }}>Are you sure?</span>
-                        <button onClick={() => handleDelete(doc.id)} className="text-xs font-medium px-2 py-1 rounded text-white" style={{ backgroundColor: '#991B1B' }}>Yes</button>
+                        <span className="text-xs" style={{ color: '#C65454' }}>Are you sure?</span>
+                        <button onClick={() => handleDelete(doc.id)} className="text-xs font-medium px-2 py-1 rounded text-white" style={{ backgroundColor: '#C65454' }}>Yes</button>
                         <button onClick={() => setDeletingId(null)} className="text-xs font-medium px-2 py-1 rounded" style={{ border: '1px solid var(--border)', color: 'var(--slate)' }}>Cancel</button>
                       </div>
                     ) : (
                       <button onClick={() => setDeletingId(doc.id)} className="p-1.5 rounded-lg hover:bg-red-50 transition-colors" title="Delete">
-                        <Trash2 size={16} style={{ color: '#991B1B' }} />
+                        <Trash2 size={16} style={{ color: '#C65454' }} />
                       </button>
                     )}
                   </td>
@@ -1294,8 +1294,8 @@ export default function GlobalKnowledgeBase() {
                   <td className="px-4 py-3 text-sm" style={{ color: 'var(--text-muted)' }}>{link.added}</td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1.5">
-                      {link.status === 'Indexing' && <Loader size={14} className="animate-spin" style={{ color: '#92400E' }} />}
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium" style={link.status === 'Indexed' ? { backgroundColor: '#DCFCE7', color: '#166534' } : { backgroundColor: '#FEF3C7', color: '#92400E' }}>
+                      {link.status === 'Indexing' && <Loader size={14} className="animate-spin" style={{ color: '#E8A33D' }} />}
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium" style={link.status === 'Indexed' ? { backgroundColor: '#E7F3E9', color: '#5CA868' } : { backgroundColor: '#FBEED5', color: '#E8A33D' }}>
                         {link.status}
                       </span>
                     </div>
@@ -1303,13 +1303,13 @@ export default function GlobalKnowledgeBase() {
                   <td className="px-4 py-3">
                     {deletingLinkId === link.id ? (
                       <div className="flex items-center gap-2">
-                        <span className="text-xs" style={{ color: '#991B1B' }}>Remove?</span>
-                        <button onClick={() => handleDeleteLink(link.id)} className="text-xs font-medium px-2 py-1 rounded text-white" style={{ backgroundColor: '#991B1B' }}>Yes</button>
+                        <span className="text-xs" style={{ color: '#C65454' }}>Remove?</span>
+                        <button onClick={() => handleDeleteLink(link.id)} className="text-xs font-medium px-2 py-1 rounded text-white" style={{ backgroundColor: '#C65454' }}>Yes</button>
                         <button onClick={() => setDeletingLinkId(null)} className="text-xs font-medium px-2 py-1 rounded" style={{ border: '1px solid var(--border)', color: 'var(--slate)' }}>Cancel</button>
                       </div>
                     ) : (
                       <button onClick={() => setDeletingLinkId(link.id)} className="p-1.5 rounded-lg hover:bg-red-50 transition-colors" title="Remove">
-                        <Trash2 size={16} style={{ color: '#991B1B' }} />
+                        <Trash2 size={16} style={{ color: '#C65454' }} />
                       </button>
                     )}
                   </td>
@@ -1343,7 +1343,7 @@ export default function GlobalKnowledgeBase() {
               <p className="text-xs" style={{ color: 'var(--text-muted)' }}>The URL will be crawled and indexed. Content will be available for AI queries across all organisations.</p>
               <div className="flex justify-end gap-3 pt-2">
                 <button onClick={() => setShowAddLink(false)} className="px-4 py-2 rounded-lg text-sm font-medium" style={{ border: '1px solid var(--border)', color: 'var(--slate)', backgroundColor: 'white' }}>Cancel</button>
-                <button onClick={handleAddLink} disabled={!newLinkName.trim() || !newLinkUrl.trim()} className="px-4 py-2 rounded-lg text-sm font-medium text-white" style={{ backgroundColor: (!newLinkName.trim() || !newLinkUrl.trim()) ? '#94A3B8' : 'var(--navy)', cursor: (!newLinkName.trim() || !newLinkUrl.trim()) ? 'not-allowed' : 'pointer' }}>Add Link</button>
+                <button onClick={handleAddLink} disabled={!newLinkName.trim() || !newLinkUrl.trim()} className="px-4 py-2 rounded-lg text-sm font-medium text-white" style={{ backgroundColor: (!newLinkName.trim() || !newLinkUrl.trim()) ? '#9CA3AF' : 'var(--navy)', cursor: (!newLinkName.trim() || !newLinkUrl.trim()) ? 'not-allowed' : 'pointer' }}>Add Link</button>
               </div>
             </div>
           </Modal>
@@ -1377,11 +1377,11 @@ export default function GlobalKnowledgeBase() {
                 {[
                   { label: 'User Message', bg: '#EDE9FE', color: '#5B21B6' },
                   null,
-                  { label: 'Intent Classifier', bg: '#DBEAFE', color: '#1E40AF' },
+                  { label: 'Intent Classifier', bg: '#F0F3F6', color: '#0F2E59' },
                   null,
-                  { label: 'Known Intent (80%)', bg: '#DCFCE7', color: '#166534' },
+                  { label: 'Known Intent (80%)', bg: '#E7F3E9', color: '#5CA868' },
                   null,
-                  { label: 'Response Filters', bg: '#FEF3C7', color: '#92400E' },
+                  { label: 'Response Filters', bg: '#FBEED5', color: '#E8A33D' },
                   null,
                   { label: 'Streamed to User', bg: '#F0F9FF', color: 'var(--navy)' },
                 ].map((item, idx) => {
@@ -1411,7 +1411,7 @@ export default function GlobalKnowledgeBase() {
                   <div style={{ width: 1, height: 16, backgroundColor: 'var(--border)' }} />
                   <div
                     className="flex items-center justify-center px-4 py-2.5 rounded-lg text-xs font-medium"
-                    style={{ backgroundColor: '#FEE2E2', color: '#991B1B', whiteSpace: 'nowrap' }}
+                    style={{ backgroundColor: '#F9E7E7', color: '#C65454', whiteSpace: 'nowrap' }}
                   >
                     Unknown Intent
                   </div>
@@ -1468,8 +1468,8 @@ export default function GlobalKnowledgeBase() {
                       <span
                         className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
                         style={t.status === 'Active'
-                          ? { backgroundColor: '#DCFCE7', color: '#166534' }
-                          : { backgroundColor: '#FEF3C7', color: '#92400E' }
+                          ? { backgroundColor: '#E7F3E9', color: '#5CA868' }
+                          : { backgroundColor: '#FBEED5', color: '#E8A33D' }
                         }
                       >
                         {t.status}
@@ -1484,7 +1484,7 @@ export default function GlobalKnowledgeBase() {
                     {/* Example queries */}
                     <div className="flex flex-wrap gap-1.5 mb-3">
                       {t.exampleQueries.slice(0, 3).map((q, i) => (
-                        <span key={i} className="inline-flex items-center px-2 py-0.5 rounded text-xs" style={{ backgroundColor: '#F3F4F6', color: '#6B7280' }}>
+                        <span key={i} className="inline-flex items-center px-2 py-0.5 rounded text-xs" style={{ backgroundColor: '#F3F4F6', color: '#9CA3AF' }}>
                           {q}
                         </span>
                       ))}
@@ -1558,7 +1558,7 @@ export default function GlobalKnowledgeBase() {
                   {/* Read-only: Intent ID */}
                   <div>
                     <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>Intent ID</label>
-                    <div className="px-3 py-2 rounded-lg text-sm" style={{ backgroundColor: '#F9FAFB', color: 'var(--text-primary)', fontFamily: 'monospace', fontSize: '12px' }}>
+                    <div className="px-3 py-2 rounded-lg text-sm" style={{ backgroundColor: '#F8F4ED', color: 'var(--text-primary)', fontFamily: 'monospace', fontSize: '12px' }}>
                       {editingTemplate.intent}
                     </div>
                   </div>
@@ -1566,7 +1566,7 @@ export default function GlobalKnowledgeBase() {
                   {/* Read-only: LLM Required */}
                   <div>
                     <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>LLM Required</label>
-                    <div className="px-3 py-2 rounded-lg text-sm" style={{ backgroundColor: '#F9FAFB', color: 'var(--text-primary)' }}>
+                    <div className="px-3 py-2 rounded-lg text-sm" style={{ backgroundColor: '#F8F4ED', color: 'var(--text-primary)' }}>
                       {editingTemplate.llmRequired ? 'Yes — full LLM invocation' : 'No — canned response only'}
                     </div>
                   </div>
@@ -1576,7 +1576,7 @@ export default function GlobalKnowledgeBase() {
                     <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-muted)' }}>Example Queries</label>
                     <div className="flex flex-wrap gap-1.5">
                       {editingTemplate.exampleQueries.map((q, i) => (
-                        <span key={i} className="inline-flex items-center px-2.5 py-1 rounded-full text-xs" style={{ backgroundColor: '#F3F4F6', color: '#6B7280' }}>
+                        <span key={i} className="inline-flex items-center px-2.5 py-1 rounded-full text-xs" style={{ backgroundColor: '#F3F4F6', color: '#9CA3AF' }}>
                           {q}
                         </span>
                       ))}
@@ -1597,9 +1597,9 @@ export default function GlobalKnowledgeBase() {
                       onFocus={(e) => (e.target.style.borderColor = 'var(--navy)')}
                       onBlur={(e) => (e.target.style.borderColor = 'var(--border)')}
                     />
-                    <div className="flex items-start gap-2 mt-2 p-2.5 rounded-lg" style={{ backgroundColor: '#FFFBEB', border: '1px solid #FDE68A' }}>
-                      <Lightbulb size={14} style={{ color: '#92400E', flexShrink: 0, marginTop: 1 }} />
-                      <p className="text-xs" style={{ color: '#92400E', lineHeight: '1.5' }}>
+                    <div className="flex items-start gap-2 mt-2 p-2.5 rounded-lg" style={{ backgroundColor: '#FBEED5', border: '1px solid #FBEED5' }}>
+                      <Lightbulb size={14} style={{ color: '#E8A33D', flexShrink: 0, marginTop: 1 }} />
+                      <p className="text-xs" style={{ color: '#E8A33D', lineHeight: '1.5' }}>
                         Use curly-brace variables like {'{feature_name}'}, {'{steps}'}, {'{analogy}'} etc. These are filled by the LLM at runtime.
                       </p>
                     </div>
@@ -1736,14 +1736,14 @@ export default function GlobalKnowledgeBase() {
                     <div className="flex items-center justify-between">
                       <div className="flex flex-wrap gap-1">
                         {usedBy.length > 0 ? usedBy.map((t) => (
-                          <span key={t.id} className="inline-flex items-center px-1.5 py-0.5 rounded text-xs" style={{ backgroundColor: '#F3F4F6', color: '#6B7280', fontSize: '10px' }}>
+                          <span key={t.id} className="inline-flex items-center px-1.5 py-0.5 rounded text-xs" style={{ backgroundColor: '#F3F4F6', color: '#9CA3AF', fontSize: '10px' }}>
                             {t.label}
                           </span>
                         )) : (
                           <span className="text-xs" style={{ color: 'var(--text-muted)' }}>No intents</span>
                         )}
                       </div>
-                      <span className="text-xs font-medium" style={{ color: '#166534' }}>&lt; 15ms</span>
+                      <span className="text-xs font-medium" style={{ color: '#5CA868' }}>&lt; 15ms</span>
                     </div>
                   </div>
                 );
@@ -1778,9 +1778,9 @@ export default function GlobalKnowledgeBase() {
                   <td className="px-4 py-3 text-sm" style={{ color: 'var(--text-muted)' }}>{row.orgName}</td>
                   <td className="px-4 py-3">
                     {row.escalated ? (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium" style={{ backgroundColor: '#FEE2E2', color: '#991B1B' }}>Escalated</span>
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium" style={{ backgroundColor: '#F9E7E7', color: '#C65454' }}>Escalated</span>
                     ) : (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium" style={{ backgroundColor: '#F3F4F6', color: '#6B7280' }}>No</span>
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium" style={{ backgroundColor: '#F3F4F6', color: '#9CA3AF' }}>No</span>
                     )}
                   </td>
                   <td className="px-4 py-3">
@@ -1802,11 +1802,11 @@ export default function GlobalKnowledgeBase() {
       {activeTab === 'persona' && (
         <>
           {/* Top info banner — explains what this entire tab does */}
-          <div className="flex items-start gap-3 p-4 rounded-lg" style={{ backgroundColor: '#EFF6FF', borderLeft: '4px solid #3B82F6' }}>
-            <Info size={18} style={{ color: '#1D4ED8', flexShrink: 0, marginTop: 2 }} />
+          <div className="flex items-start gap-3 p-4 rounded-lg" style={{ backgroundColor: '#F0F3F6', borderLeft: '4px solid #1E3A8A' }}>
+            <Info size={18} style={{ color: '#1E3A8A', flexShrink: 0, marginTop: 2 }} />
             <div>
-              <p className="text-sm font-medium mb-1" style={{ color: '#1E40AF' }}>What is Bot Persona?</p>
-              <p className="text-xs" style={{ color: '#1E40AF', lineHeight: 1.7 }}>
+              <p className="text-sm font-medium mb-1" style={{ color: '#0F2E59' }}>What is Bot Persona?</p>
+              <p className="text-xs" style={{ color: '#0F2E59', lineHeight: 1.7 }}>
                 Bot Persona controls how the AI assistant "Alex" behaves across the entire platform. You can configure <strong>multiple intent modes</strong> — each with its own system prompt, tone, and format rules — so the bot responds differently for contract reviews vs. legal research vs. general chat. You also set the <strong>fallback message</strong> shown when no answer is found, and manage <strong>global knowledge documents</strong> that serve as the platform-wide backup.
               </p>
             </div>
@@ -1839,19 +1839,19 @@ export default function GlobalKnowledgeBase() {
                 </InfoSection>
               </InfoButton>
               {personaSaved && (
-                <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium" style={{ backgroundColor: '#DCFCE7', color: '#166534' }}>
+                <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium" style={{ backgroundColor: '#E7F3E9', color: '#5CA868' }}>
                   <CheckCircle size={12} /> Active
                 </span>
               )}
               {personaDirty && (
-                <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium" style={{ backgroundColor: '#FEF3C7', color: '#92400E' }}>
+                <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium" style={{ backgroundColor: '#FBEED5', color: '#E8A33D' }}>
                   Unsaved changes
                 </span>
               )}
             </div>
             <div className="flex items-center gap-3">
               <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>v{savedPersona.version} · Last saved {savedPersona.updatedAt} by {savedPersona.updatedBy}</span>
-              <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium" style={{ backgroundColor: '#F1F5F9', color: 'var(--text-muted)', border: '1px solid var(--border)' }}>
+              <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium" style={{ backgroundColor: '#F0F3F6', color: 'var(--text-muted)', border: '1px solid var(--border)' }}>
                 <Lock size={12} /> Read-only — managed by engineering
               </span>
             </div>
@@ -1910,7 +1910,7 @@ export default function GlobalKnowledgeBase() {
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <div className="flex items-center gap-2">
                               <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{op.label}</span>
-                              <span className="px-1.5 py-0.5 rounded text-xs" style={{ backgroundColor: op.enabled ? '#DCFCE7' : '#F1F5F9', color: op.enabled ? '#166534' : 'var(--text-muted)', fontSize: 10, fontWeight: 600 }}>
+                              <span className="px-1.5 py-0.5 rounded text-xs" style={{ backgroundColor: op.enabled ? '#E7F3E9' : '#F0F3F6', color: op.enabled ? '#5CA868' : 'var(--text-muted)', fontSize: 10, fontWeight: 600 }}>
                                 {op.enabled ? 'ON' : 'OFF'}
                               </span>
                               <span className="px-1.5 py-0.5 rounded text-xs truncate" style={{ backgroundColor: 'rgba(10,36,99,0.06)', color: 'var(--navy)', fontSize: 10, maxWidth: 180 }}>
@@ -1923,7 +1923,7 @@ export default function GlobalKnowledgeBase() {
                             <button
                               onClick={(e) => { e.stopPropagation(); toggleOpEnabled(op.id); }}
                               className="px-2.5 py-1 rounded text-xs font-medium"
-                              style={{ border: '1px solid var(--border)', background: 'white', cursor: 'pointer', color: op.enabled ? '#dc2626' : '#166534' }}
+                              style={{ border: '1px solid var(--border)', background: 'white', cursor: 'pointer', color: op.enabled ? '#C65454' : '#5CA868' }}
                             >
                               {op.enabled ? 'Disable' : 'Enable'}
                             </button>
@@ -1938,13 +1938,13 @@ export default function GlobalKnowledgeBase() {
                             <div>
                               <div className="flex items-center gap-1.5 mb-1.5">
                                 <label className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>System Prompt</label>
-                                <span className="flex items-center gap-1 px-1.5 py-0.5 rounded text-xs" style={{ backgroundColor: '#F1F5F9', color: 'var(--text-muted)', fontSize: 9 }}>
+                                <span className="flex items-center gap-1 px-1.5 py-0.5 rounded text-xs" style={{ backgroundColor: '#F0F3F6', color: 'var(--text-muted)', fontSize: 9 }}>
                                   <Lock size={8} /> Read-only
                                 </span>
                               </div>
                               <div
                                 className="p-3 rounded-lg text-xs"
-                                style={{ backgroundColor: '#F8FAFC', border: '1px solid var(--border)', fontSize: 12, fontFamily: "'DM Sans', sans-serif", color: 'var(--text-secondary)', lineHeight: 1.7, whiteSpace: 'pre-wrap', maxHeight: 200, overflowY: 'auto' }}
+                                style={{ backgroundColor: '#F8F4ED', border: '1px solid var(--border)', fontSize: 12, fontFamily: "'DM Sans', sans-serif", color: 'var(--text-secondary)', lineHeight: 1.7, whiteSpace: 'pre-wrap', maxHeight: 200, overflowY: 'auto' }}
                               >{op.systemPrompt}</div>
                             </div>
 
@@ -2033,7 +2033,7 @@ export default function GlobalKnowledgeBase() {
                                         onClick={() => setOpeningBehaviour(op.id, opt.id)}
                                         className="relative rounded-full"
                                         style={{
-                                          width: 40, height: 22, backgroundColor: isActive ? 'var(--navy)' : '#E2E8F0',
+                                          width: 40, height: 22, backgroundColor: isActive ? 'var(--navy)' : '#F0F3F6',
                                           border: 'none', cursor: 'pointer', transition: 'background-color 0.2s', flexShrink: 0,
                                         }}
                                       >
@@ -2074,7 +2074,7 @@ export default function GlobalKnowledgeBase() {
                                 <label className="text-xs font-medium mb-1.5 block" style={{ color: 'var(--text-secondary)' }}>Example Queries</label>
                                 <div className="flex flex-wrap gap-2">
                                   {op.exampleQueries.map((q, i) => (
-                                    <span key={i} className="px-2.5 py-1.5 rounded-lg text-xs" style={{ backgroundColor: '#F1F5F9', color: 'var(--text-secondary)', border: '1px solid var(--border)' }}>
+                                    <span key={i} className="px-2.5 py-1.5 rounded-lg text-xs" style={{ backgroundColor: '#F0F3F6', color: 'var(--text-secondary)', border: '1px solid var(--border)' }}>
                                       "{q}"
                                     </span>
                                   ))}
@@ -2111,7 +2111,7 @@ export default function GlobalKnowledgeBase() {
                 <div
                   className="px-3 py-2.5 rounded-lg text-xs"
                   style={{
-                    width: '100%', border: '1px solid var(--border)', backgroundColor: '#F8FAFC',
+                    width: '100%', border: '1px solid var(--border)', backgroundColor: '#F8F4ED',
                     fontSize: 13, fontFamily: "'DM Sans', sans-serif",
                     color: 'var(--text-secondary)', boxSizing: 'border-box', lineHeight: 1.5,
                   }}
@@ -2159,7 +2159,7 @@ export default function GlobalKnowledgeBase() {
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <div className="flex items-center gap-2">
                               <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{up.label}</span>
-                              <span className="px-1.5 py-0.5 rounded text-xs" style={{ backgroundColor: fmt.enabled ? '#DCFCE7' : '#F1F5F9', color: fmt.enabled ? '#166534' : 'var(--text-muted)', fontSize: 10, fontWeight: 600 }}>
+                              <span className="px-1.5 py-0.5 rounded text-xs" style={{ backgroundColor: fmt.enabled ? '#E7F3E9' : '#F0F3F6', color: fmt.enabled ? '#5CA868' : 'var(--text-muted)', fontSize: 10, fontWeight: 600 }}>
                                 {fmt.enabled ? 'ACTIVE' : 'OFF'}
                               </span>
                               <span className="px-1.5 py-0.5 rounded text-xs" style={{ backgroundColor: 'rgba(10,36,99,0.06)', color: 'var(--navy)', fontSize: 10 }}>
@@ -2168,7 +2168,7 @@ export default function GlobalKnowledgeBase() {
                             </div>
                             <p className="text-xs truncate" style={{ color: 'var(--text-muted)', marginTop: 2 }}>{up.description}</p>
                           </div>
-                          <span className="flex items-center gap-1 px-2 py-1 rounded text-xs" style={{ backgroundColor: '#F1F5F9', color: 'var(--text-muted)', border: '1px solid var(--border)' }}>
+                          <span className="flex items-center gap-1 px-2 py-1 rounded text-xs" style={{ backgroundColor: '#F0F3F6', color: 'var(--text-muted)', border: '1px solid var(--border)' }}>
                             <Lock size={10} /> Read-only
                           </span>
                         </div>
@@ -2249,7 +2249,7 @@ export default function GlobalKnowledgeBase() {
                     onClick={handleAddKbLink}
                     disabled={!kbLinkInput?.trim()}
                     className="flex items-center gap-1.5 px-3 rounded-lg text-xs font-medium"
-                    style={{ backgroundColor: kbLinkInput?.trim() ? 'var(--navy)' : '#F1F5F9', color: kbLinkInput?.trim() ? 'white' : 'var(--text-muted)', border: 'none', cursor: kbLinkInput?.trim() ? 'pointer' : 'default', height: 38, whiteSpace: 'nowrap' }}
+                    style={{ backgroundColor: kbLinkInput?.trim() ? 'var(--navy)' : '#F0F3F6', color: kbLinkInput?.trim() ? 'white' : 'var(--text-muted)', border: 'none', cursor: kbLinkInput?.trim() ? 'pointer' : 'default', height: 38, whiteSpace: 'nowrap' }}
                   >
                     <Plus size={13} />
                     Add Link
@@ -2348,7 +2348,7 @@ export default function GlobalKnowledgeBase() {
                         <button
                           onClick={handleDisconnectCourtListener}
                           className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium"
-                          style={{ backgroundColor: 'white', color: '#dc2626', border: '1px solid #fecaca', cursor: 'pointer' }}
+                          style={{ backgroundColor: 'white', color: '#C65454', border: '1px solid #fecaca', cursor: 'pointer' }}
                         >
                           <Trash2 size={12} />
                           Disconnect
@@ -2383,7 +2383,7 @@ export default function GlobalKnowledgeBase() {
                       <InfoText><strong>⚠ DRAFT — Not confirmed.</strong> This flow has not been signed off by Ryan or the AI team. The confidence threshold ({INTENT_CONFIDENCE_THRESHOLD}) is a placeholder. This is a visual preview only — do not treat as final.</InfoText>
                     </InfoSection>
                   </InfoButton>
-                  <span className="px-1.5 py-0.5 rounded text-xs font-medium" style={{ backgroundColor: '#FEF3C7', color: '#92400E', fontSize: 10 }}>DRAFT</span>
+                  <span className="px-1.5 py-0.5 rounded text-xs font-medium" style={{ backgroundColor: '#FBEED5', color: '#E8A33D', fontSize: 10 }}>DRAFT</span>
                 </div>
                 <p className="text-xs mb-4" style={{ color: 'var(--text-muted)' }}>Visual preview of how the AI routes every message. Not confirmed — for Ryan review.</p>
 
@@ -2394,8 +2394,8 @@ export default function GlobalKnowledgeBase() {
 
                   {[
                     { step: 1, label: 'User Sends Message', desc: 'Text, document upload, or follow-up question', icon: MessageSquare, bg: '#EDE9FE', color: '#5B21B6', borderColor: '#C4B5FD' },
-                    { step: 2, label: 'Intent Classifier', desc: `Analyses message → picks intent (confidence ≥ ${INTENT_CONFIDENCE_THRESHOLD})`, icon: Target, bg: '#DBEAFE', color: '#1E40AF', borderColor: '#93C5FD' },
-                    { step: 3, label: 'Persona Format Applied', desc: 'User role overrides tone + format rules on top of intent prompt', icon: Users, bg: '#F0FDF4', color: '#166534', borderColor: '#86EFAC' },
+                    { step: 2, label: 'Intent Classifier', desc: `Analyses message → picks intent (confidence ≥ ${INTENT_CONFIDENCE_THRESHOLD})`, icon: Target, bg: '#F0F3F6', color: '#0F2E59', borderColor: '#93C5FD' },
+                    { step: 3, label: 'Persona Format Applied', desc: 'User role overrides tone + format rules on top of intent prompt', icon: Users, bg: '#E7F3E9', color: '#5CA868', borderColor: '#86EFAC' },
                     { step: 4, label: 'Source Resolution', desc: 'Search user doc → knowledge pack → global KB → fallback', icon: Database, bg: '#FFF7ED', color: '#9A3412', borderColor: '#FDBA74' },
                     { step: 5, label: 'Response Streamed', desc: 'With source badge: "your document" or "YourAI knowledge base"', icon: Zap, bg: '#F0F9FF', color: 'var(--navy)', borderColor: '#93C5FD' },
                   ].map((s, i) => {
@@ -2421,24 +2421,24 @@ export default function GlobalKnowledgeBase() {
 
                 {/* Branching: Low confidence + No answer */}
                 <div className="mt-4 grid grid-cols-2 gap-3">
-                  <div className="p-3 rounded-lg" style={{ backgroundColor: '#FFFBEB', border: '1px solid #FDE68A' }}>
+                  <div className="p-3 rounded-lg" style={{ backgroundColor: '#FBEED5', border: '1px solid #FBEED5' }}>
                     <div className="flex items-center gap-2 mb-1">
-                      <HelpCircle size={13} style={{ color: '#D97706' }} />
-                      <span className="text-xs font-semibold" style={{ color: '#92400E' }}>Low Confidence</span>
+                      <HelpCircle size={13} style={{ color: '#E8A33D' }} />
+                      <span className="text-xs font-semibold" style={{ color: '#E8A33D' }}>Low Confidence</span>
                     </div>
-                    <p className="text-xs" style={{ color: '#92400E', lineHeight: 1.5 }}>Confidence &lt; {INTENT_CONFIDENCE_THRESHOLD} → AI asks clarifying question before proceeding.</p>
+                    <p className="text-xs" style={{ color: '#E8A33D', lineHeight: 1.5 }}>Confidence &lt; {INTENT_CONFIDENCE_THRESHOLD} → AI asks clarifying question before proceeding.</p>
                   </div>
-                  <div className="p-3 rounded-lg" style={{ backgroundColor: '#FEF2F2', border: '1px solid #FECACA' }}>
+                  <div className="p-3 rounded-lg" style={{ backgroundColor: '#F9E7E7', border: '1px solid #F9E7E7' }}>
                     <div className="flex items-center gap-2 mb-1">
-                      <AlertTriangle size={13} style={{ color: '#DC2626' }} />
-                      <span className="text-xs font-semibold" style={{ color: '#991B1B' }}>No Answer Found</span>
+                      <AlertTriangle size={13} style={{ color: '#C65454' }} />
+                      <span className="text-xs font-semibold" style={{ color: '#C65454' }}>No Answer Found</span>
                     </div>
-                    <p className="text-xs" style={{ color: '#991B1B', lineHeight: 1.5 }}>All sources exhausted → Fallback message shown to user.</p>
+                    <p className="text-xs" style={{ color: '#C65454', lineHeight: 1.5 }}>All sources exhausted → Fallback message shown to user.</p>
                   </div>
                 </div>
 
                 {/* Active intents summary */}
-                <div className="mt-4 p-3 rounded-lg" style={{ backgroundColor: '#F8FAFC', border: '1px solid var(--border)' }}>
+                <div className="mt-4 p-3 rounded-lg" style={{ backgroundColor: '#F8F4ED', border: '1px solid var(--border)' }}>
                   <div className="flex items-center gap-2 mb-2">
                     <Bot size={13} style={{ color: 'var(--navy)' }} />
                     <span className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>Active Intents ({persona.operations.filter(o => o.enabled).length})</span>
@@ -2450,7 +2450,7 @@ export default function GlobalKnowledgeBase() {
                       </span>
                     ))}
                     {persona.operations.filter(o => !o.enabled).map(op => (
-                      <span key={op.id} className="px-2 py-1 rounded text-xs line-through" style={{ backgroundColor: '#F1F5F9', color: 'var(--text-muted)', fontSize: 10 }}>
+                      <span key={op.id} className="px-2 py-1 rounded text-xs line-through" style={{ backgroundColor: '#F0F3F6', color: 'var(--text-muted)', fontSize: 10 }}>
                         {op.label}
                       </span>
                     ))}
@@ -2463,7 +2463,7 @@ export default function GlobalKnowledgeBase() {
                     {USER_PERSONAS.map(up => {
                       const fmt = personaFormats[up.id];
                       return (
-                        <span key={up.id} className="px-2 py-1 rounded text-xs" style={{ backgroundColor: fmt.enabled ? '#F0FDF4' : '#F1F5F9', color: fmt.enabled ? '#166534' : 'var(--text-muted)', border: `1px solid ${fmt.enabled ? '#BBF7D0' : 'var(--border)'}`, fontWeight: 500, textDecoration: fmt.enabled ? 'none' : 'line-through' }}>
+                        <span key={up.id} className="px-2 py-1 rounded text-xs" style={{ backgroundColor: fmt.enabled ? '#E7F3E9' : '#F0F3F6', color: fmt.enabled ? '#5CA868' : 'var(--text-muted)', border: `1px solid ${fmt.enabled ? '#E7F3E9' : 'var(--border)'}`, fontWeight: 500, textDecoration: fmt.enabled ? 'none' : 'line-through' }}>
                           {up.label.split(' / ')[0]}
                         </span>
                       );
@@ -2475,9 +2475,9 @@ export default function GlobalKnowledgeBase() {
           </div>
 
           {/* Warning banner */}
-          <div className="flex items-center gap-3 p-4 rounded-lg" style={{ backgroundColor: '#FFFBEB', border: '1px solid #FEF3C7' }}>
-            <AlertTriangle size={16} style={{ color: '#92400E', flexShrink: 0 }} />
-            <p className="text-sm" style={{ color: '#92400E' }}>
+          <div className="flex items-center gap-3 p-4 rounded-lg" style={{ backgroundColor: '#FBEED5', border: '1px solid #FBEED5' }}>
+            <AlertTriangle size={16} style={{ color: '#E8A33D', flexShrink: 0 }} />
+            <p className="text-sm" style={{ color: '#E8A33D' }}>
               Changes apply from the next session — active conversations will finish with the current persona.
             </p>
           </div>

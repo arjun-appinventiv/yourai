@@ -19,9 +19,9 @@ const initialIntegrations = [
 ];
 
 const statusStyles = {
-  Connected: { bg: '#DCFCE7', color: '#166534', dot: '#22C55E' },
-  Disconnected: { bg: '#F3F4F6', color: '#374151', dot: '#94A3B8' },
-  Error: { bg: '#FEE2E2', color: '#991B1B', dot: '#EF4444' },
+  Connected: { bg: '#E7F3E9', color: '#5CA868', dot: '#5CA868' },
+  Disconnected: { bg: '#F3F4F6', color: '#6B7885', dot: '#9CA3AF' },
+  Error: { bg: '#F9E7E7', color: '#C65454', dot: '#C65454' },
 };
 
 export default function IntegrationManagement() {
@@ -60,7 +60,7 @@ export default function IntegrationManagement() {
       <div className="grid grid-cols-4 gap-4">
         <StatCard icon={Plug} value={integrations.length} label="Total Integrations" />
         <StatCard icon={CheckCircle} value={connected} label="Connected" />
-        <StatCard icon={AlertCircle} value={errorCount} label="Errors" accentColor="#991B1B" />
+        <StatCard icon={AlertCircle} value={errorCount} label="Errors" accentColor="#C65454" />
         <StatCard icon={Zap} value="99.6%" label="Avg Uptime" accentColor="var(--gold)" />
       </div>
 
@@ -104,7 +104,7 @@ export default function IntegrationManagement() {
                 {intg.healthPct > 0 && (
                   <div className="flex items-center gap-1.5">
                     <div className="w-16 h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--ice)' }}>
-                      <div className="h-full rounded-full" style={{ width: `${intg.healthPct}%`, backgroundColor: intg.healthPct > 99 ? '#22C55E' : intg.healthPct > 95 ? 'var(--gold)' : '#EF4444' }} />
+                      <div className="h-full rounded-full" style={{ width: `${intg.healthPct}%`, backgroundColor: intg.healthPct > 99 ? '#5CA868' : intg.healthPct > 95 ? 'var(--gold)' : '#C65454' }} />
                     </div>
                     <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{intg.healthPct}%</span>
                   </div>
@@ -145,7 +145,7 @@ export default function IntegrationManagement() {
                 <button
                   onClick={() => { handleReconnect(selectedInt.id); setSelectedInt(null); }}
                   className="px-4 py-2 rounded-lg text-sm font-medium text-white flex items-center gap-2"
-                  style={{ backgroundColor: '#166534' }}
+                  style={{ backgroundColor: '#5CA868' }}
                 >
                   <RefreshCw size={14} />
                   Reconnect

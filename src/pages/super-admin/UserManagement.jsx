@@ -22,14 +22,14 @@ const initialUsers = [
 
 const roleColors = {
   Admin: { backgroundColor: 'var(--navy)', color: 'white' },
-  'Internal User': { backgroundColor: '#EFF6FF', color: '#1D4ED8' },
-  Client: { backgroundColor: '#F0FDF4', color: '#166534' },
+  'Internal User': { backgroundColor: '#F0F3F6', color: '#1E3A8A' },
+  Client: { backgroundColor: '#E7F3E9', color: '#5CA868' },
 };
 
 const statusColors = {
-  Active: { backgroundColor: '#DCFCE7', color: '#166534' },
-  Blocked: { backgroundColor: '#FEE2E2', color: '#991B1B' },
-  Invited: { backgroundColor: '#FEF3C7', color: '#92400E' },
+  Active: { backgroundColor: '#E7F3E9', color: '#5CA868' },
+  Blocked: { backgroundColor: '#F9E7E7', color: '#C65454' },
+  Invited: { backgroundColor: '#FBEED5', color: '#E8A33D' },
 };
 
 // Merge mock data with localStorage-registered users
@@ -123,7 +123,7 @@ export default function UserManagement() {
       <div className="grid grid-cols-4 gap-4">
         <StatCard icon={Users} value={totalUsers} label="Total Users" />
         <StatCard icon={UserCheck} value={activeUsers} label="Active" />
-        <StatCard icon={UserX} value={blockedUsers} label="Blocked" accentColor="#991B1B" />
+        <StatCard icon={UserX} value={blockedUsers} label="Blocked" accentColor="#C65454" />
         <StatCard icon={Clock} value={invitedUsers} label="Invited" accentColor="var(--gold)" />
       </div>
 
@@ -142,7 +142,7 @@ export default function UserManagement() {
         <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} style={inputStyle}>
           <option>All</option><option>Active</option><option>Blocked</option><option>Invited</option>
         </select>
-        <button onClick={handleExportCSV} disabled={filtered.length === 0} className="px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 whitespace-nowrap" style={{ border: '1px solid var(--border)', color: filtered.length === 0 ? '#94A3B8' : 'var(--slate)', backgroundColor: 'white', cursor: filtered.length === 0 ? 'not-allowed' : 'pointer', opacity: filtered.length === 0 ? 0.6 : 1 }}>
+        <button onClick={handleExportCSV} disabled={filtered.length === 0} className="px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 whitespace-nowrap" style={{ border: '1px solid var(--border)', color: filtered.length === 0 ? '#9CA3AF' : 'var(--slate)', backgroundColor: 'white', cursor: filtered.length === 0 ? 'not-allowed' : 'pointer', opacity: filtered.length === 0 ? 0.6 : 1 }}>
           <Download size={16} /> Export CSV
         </button>
         <span className="text-sm whitespace-nowrap" style={{ color: 'var(--text-muted)' }}>Showing {filtered.length} users</span>
@@ -179,7 +179,7 @@ export default function UserManagement() {
                 <button className="p-1.5 rounded-lg hover:bg-gray-100" title="View" onClick={() => setSelectedUser(u)}><Eye size={16} style={{ color: 'var(--slate)' }} /></button>
                 {u.status !== 'Invited' && (
                   <button className="p-1.5 rounded-lg hover:bg-gray-100" title={u.status === 'Blocked' ? 'Unblock' : 'Block'} onClick={() => toggleBlock(u.id)}>
-                    {u.status === 'Blocked' ? <CheckCircle size={16} style={{ color: '#166534' }} /> : <Ban size={16} style={{ color: '#991B1B' }} />}
+                    {u.status === 'Blocked' ? <CheckCircle size={16} style={{ color: '#5CA868' }} /> : <Ban size={16} style={{ color: '#C65454' }} />}
                   </button>
                 )}
               </div>
@@ -257,7 +257,7 @@ export default function UserManagement() {
                     <div className="flex flex-wrap gap-1.5 mt-1">
                       {selectedUser.onboardingAreas && selectedUser.onboardingAreas.length > 0 ? (
                         selectedUser.onboardingAreas.map((area) => (
-                          <span key={area} className="rounded-full text-xs px-2 py-0.5" style={{ backgroundColor: '#F3F4F6', color: '#374151' }}>{area}</span>
+                          <span key={area} className="rounded-full text-xs px-2 py-0.5" style={{ backgroundColor: '#F3F4F6', color: '#6B7885' }}>{area}</span>
                         ))
                       ) : (
                         <span className="text-sm" style={{ color: 'var(--text-muted)' }}>Not set</span>
@@ -270,7 +270,7 @@ export default function UserManagement() {
 
             <div className="flex justify-end gap-3 pt-2">
               {selectedUser.status !== 'Invited' && (
-                <button onClick={() => { toggleBlock(selectedUser.id); setSelectedUser(null); }} className="px-4 py-2 rounded-lg text-sm font-medium text-white" style={{ backgroundColor: selectedUser.status === 'Blocked' ? '#166534' : '#991B1B' }}>
+                <button onClick={() => { toggleBlock(selectedUser.id); setSelectedUser(null); }} className="px-4 py-2 rounded-lg text-sm font-medium text-white" style={{ backgroundColor: selectedUser.status === 'Blocked' ? '#5CA868' : '#C65454' }}>
                   {selectedUser.status === 'Blocked' ? 'Unblock User' : 'Block User'}
                 </button>
               )}

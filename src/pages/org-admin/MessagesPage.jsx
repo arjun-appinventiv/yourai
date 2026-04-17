@@ -43,7 +43,7 @@ export default function MessagesPage() {
                       <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)' }}>{msg.clientName}</span>
                     </div>
                     {msg.unread > 0 && (
-                      <span className="rounded-full flex items-center justify-center text-white" style={{ width: 18, height: 18, backgroundColor: '#DC2626', fontSize: '9px', fontWeight: 600 }}>
+                      <span className="rounded-full flex items-center justify-center text-white" style={{ width: 18, height: 18, backgroundColor: '#C65454', fontSize: '9px', fontWeight: 600 }}>
                         {msg.unread}
                       </span>
                     )}

@@ -104,7 +104,7 @@ export default function ReportTemplates() {
                   </button>
                   {t.status === 'Archived' && (
                     <button className="p-1.5 rounded-lg hover:bg-red-50 transition-colors" title="Delete">
-                      <Trash2 size={16} style={{ color: '#991B1B' }} />
+                      <Trash2 size={16} style={{ color: '#C65454' }} />
                     </button>
                   )}
                 </div>

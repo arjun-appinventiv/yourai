@@ -31,19 +31,19 @@ const enrichedLog = extendedAuditLog.map((e) => ({
 }));
 
 const severityColors = {
-  Info: { bg: '#EFF6FF', color: '#1D4ED8' },
-  Warning: { bg: '#FEF3C7', color: '#92400E' },
-  Critical: { bg: '#FEE2E2', color: '#991B1B' },
+  Info: { bg: '#F0F3F6', color: '#1E3A8A' },
+  Warning: { bg: '#FBEED5', color: '#E8A33D' },
+  Critical: { bg: '#F9E7E7', color: '#C65454' },
 };
 
 const categoryColors = {
-  Access: { bg: '#F0FDF4', color: '#166534' },
-  Data: { bg: '#EFF6FF', color: '#1D4ED8' },
-  Security: { bg: '#FEE2E2', color: '#991B1B' },
-  Communication: { bg: '#FEF9C3', color: '#92400E' },
-  Billing: { bg: '#F1F5F9', color: '#64748B' },
-  System: { bg: '#F3F4F6', color: '#374151' },
-  General: { bg: '#F3F4F6', color: '#374151' },
+  Access: { bg: '#E7F3E9', color: '#5CA868' },
+  Data: { bg: '#F0F3F6', color: '#1E3A8A' },
+  Security: { bg: '#F9E7E7', color: '#C65454' },
+  Communication: { bg: '#FBEED5', color: '#E8A33D' },
+  Billing: { bg: '#F0F3F6', color: '#6B7885' },
+  System: { bg: '#F3F4F6', color: '#6B7885' },
+  General: { bg: '#F3F4F6', color: '#6B7885' },
 };
 
 export default function ComplianceAudit() {
@@ -84,8 +84,8 @@ export default function ComplianceAudit() {
       {/* Stats */}
       <div className="grid grid-cols-4 gap-4">
         <StatCard icon={Activity} value={totalEntries} label="Total Log Entries" />
-        <StatCard icon={AlertTriangle} value={criticalCount} label="Critical Events" accentColor="#991B1B" />
-        <StatCard icon={Shield} value={warningCount} label="Warnings" accentColor="#92400E" />
+        <StatCard icon={AlertTriangle} value={criticalCount} label="Critical Events" accentColor="#C65454" />
+        <StatCard icon={Shield} value={warningCount} label="Warnings" accentColor="#E8A33D" />
         <StatCard icon={Users} value={operatorCount} label="Unique Operators" />
       </div>
 

@@ -161,7 +161,7 @@ export const deliverables = [
 
 export const subscriptionPlans = [
   {
-    id: "free", name: "Free", price: 0, colour: "#64748B",
+    id: "free", name: "Free", price: 0, colour: "#6B7885",
     docsPerMonth: 50, workflowRuns: 10, knowledgePacks: "1 pack (500 docs)",
     storage: "—", aiModels: "GPT-4o-mini + Gemini Flash only",
     auditLog: "None", sso: false, clientPortal: false, secureMessaging: false,
@@ -169,7 +169,7 @@ export const subscriptionPlans = [
     support: "Community only", badge: null, status: "Active"
   },
   {
-    id: "professional", name: "Professional", price: 149, colour: "#1D4ED8",
+    id: "professional", name: "Professional", price: 149, colour: "#1E3A8A",
     docsPerMonth: 500, workflowRuns: 100, knowledgePacks: "3 packs (2,500 docs each)",
     storage: "5GB", aiModels: "All 3 providers",
     auditLog: "30-day", sso: false, clientPortal: false, secureMessaging: false,
@@ -177,7 +177,7 @@ export const subscriptionPlans = [
     support: "Email support", badge: null, status: "Active"
   },
   {
-    id: "team", name: "Team", price: 299, colour: "#166534",
+    id: "team", name: "Team", price: 299, colour: "#5CA868",
     docsPerMonth: 2000, workflowRuns: 500, knowledgePacks: "10 packs (10,000 docs each)",
     storage: "25GB", aiModels: "All 3 providers + priority",
     auditLog: "90-day", sso: true, clientPortal: true, secureMessaging: true,
@@ -185,7 +185,7 @@ export const subscriptionPlans = [
     support: "Priority support", badge: "Most Popular", status: "Active"
   },
   {
-    id: "enterprise", name: "Enterprise", price: 599, colour: "#92400E",
+    id: "enterprise", name: "Enterprise", price: 599, colour: "#E8A33D",
     docsPerMonth: null, workflowRuns: null, knowledgePacks: "Unlimited",
     storage: "Unlimited", aiModels: "All models + custom fine-tuned",
     auditLog: "7-year immutable + SIEM export", sso: true, clientPortal: true,
@@ -222,10 +222,10 @@ export const dashboardStats = {
     { month: 'Mar', value: 12416 },
   ],
   planDistribution: [
-    { plan: 'Free', count: 2, color: '#64748B' },
-    { plan: 'Professional', count: 3, color: '#1D4ED8' },
-    { plan: 'Team', count: 2, color: '#166534' },
-    { plan: 'Enterprise', count: 1, color: '#92400E' },
+    { plan: 'Free', count: 2, color: '#6B7885' },
+    { plan: 'Professional', count: 3, color: '#1E3A8A' },
+    { plan: 'Team', count: 2, color: '#5CA868' },
+    { plan: 'Enterprise', count: 1, color: '#E8A33D' },
   ],
   dailyActiveUsers: [
     { day: 'Mon', value: 28 },
@@ -237,9 +237,9 @@ export const dashboardStats = {
     { day: 'Sun', value: 9 },
   ],
   aiModelUsage: [
-    { model: 'GPT-4o', pct: 58, color: '#0B1D3A' },
+    { model: 'GPT-4o', pct: 58, color: '#0A2463' },
     { model: 'Claude 3.5', pct: 29, color: '#C9A84C' },
-    { model: 'GPT-4o-mini', pct: 13, color: '#94A3B8' },
+    { model: 'GPT-4o-mini', pct: 13, color: '#9CA3AF' },
   ],
   recentActivity: [
     { id: 1, operator: 'Arjun P', action: 'Impersonated Admin', target: 'Hartwell & Associates', time: 'Today 09:14', type: 'access' },
@@ -280,14 +280,14 @@ export const modelUsageStats = {
   totalTokensThisMonth: 48200,
   totalQueriesThisMonth: 128,
   byModel: [
-    { model:"GPT-4o", queries:58, tokens:21800, cost:1.09, pct:45, color:"#3B82F6" },
-    { model:"Legal-Lens-v2", queries:46, tokens:18400, cost:0.92, pct:38, color:"#0B1D3A" },
+    { model:"GPT-4o", queries:58, tokens:21800, cost:1.09, pct:45, color:"#1E3A8A" },
+    { model:"Legal-Lens-v2", queries:46, tokens:18400, cost:0.92, pct:38, color:"#0A2463" },
     { model:"text-embedding-3-large", queries:24, tokens:8000, cost:0.42, pct:17, color:"#8B5CF6" }
   ],
   byClient: [
-    { client:"Acme Corp", queries:72, cost:1.31, pct:54, color:"#0B1D3A" },
+    { client:"Acme Corp", queries:72, cost:1.31, pct:54, color:"#0A2463" },
     { client:"TechStart Inc", queries:38, cost:0.84, pct:35, color:"#C9A84C" },
-    { client:"Chen Family", queries:18, cost:0.28, pct:11, color:"#3D5A80" }
+    { client:"Chen Family", queries:18, cost:0.28, pct:11, color:"#6B7885" }
   ],
   dailyTrend: [
     { date:"Mar 27", cost:0.28 },{ date:"Mar 28", cost:0.41 },{ date:"Mar 29", cost:0.19 },{ date:"Mar 30", cost:0.55 },

@@ -10,7 +10,7 @@ export default function InfoButton({ title, children }) {
         onClick={() => setOpen(true)}
         className="inline-flex items-center justify-center rounded-full transition-colors"
         style={{ width: 20, height: 20, backgroundColor: 'var(--ice-warm)', color: 'var(--text-muted)', border: '1px solid var(--border)', cursor: 'pointer', flexShrink: 0 }}
-        onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#EFF6FF'; e.currentTarget.style.color = '#1D4ED8'; e.currentTarget.style.borderColor = '#BFDBFE'; }}
+        onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#F0F3F6'; e.currentTarget.style.color = '#1E3A8A'; e.currentTarget.style.borderColor = '#D6DDE4'; }}
         onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'var(--ice-warm)'; e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.borderColor = 'var(--border)'; }}
         title="More info"
       >
@@ -25,10 +25,10 @@ export default function InfoButton({ title, children }) {
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="flex items-center justify-between" style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', backgroundColor: '#EFF6FF' }}>
+            <div className="flex items-center justify-between" style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', backgroundColor: '#F0F3F6' }}>
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#DBEAFE' }}>
-                  <Info size={16} style={{ color: '#1D4ED8' }} />
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#F0F3F6' }}>
+                  <Info size={16} style={{ color: '#1E3A8A' }} />
                 </div>
                 <h3 style={{ fontFamily: "'DM Serif Display', serif", fontSize: '16px', color: 'var(--text-primary)' }}>{title}</h3>
               </div>

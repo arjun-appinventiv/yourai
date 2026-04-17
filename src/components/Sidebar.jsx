@@ -75,7 +75,7 @@ export default function Sidebar() {
             </div>
             <span
               className="inline-block px-2 py-px rounded text-white"
-              style={{ backgroundColor: '#9B2C2C', fontSize: '8px', fontWeight: 600, letterSpacing: '0.06em', marginTop: 3 }}
+              style={{ backgroundColor: '#C65454', fontSize: '8px', fontWeight: 600, letterSpacing: '0.06em', marginTop: 3 }}
             >
               SUPER ADMIN
             </span>
@@ -142,7 +142,7 @@ export default function Sidebar() {
             <p className="text-xs text-white mb-2.5">Sign out of the operator portal?</p>
             <div className="flex gap-2">
               <button onClick={() => setShowLogout(false)} className="flex-1 py-1.5 rounded-md text-xs" style={{ border: '1px solid rgba(255,255,255,0.2)', color: 'rgba(255,255,255,0.7)' }}>Cancel</button>
-              <button onClick={handleLogout} className="flex-1 py-1.5 rounded-md text-xs text-white" style={{ backgroundColor: '#DC2626' }}>Sign Out</button>
+              <button onClick={handleLogout} className="flex-1 py-1.5 rounded-md text-xs text-white" style={{ backgroundColor: '#C65454' }}>Sign Out</button>
             </div>
           </div>
         )}

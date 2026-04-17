@@ -49,13 +49,13 @@ export default function OrgTopBar() {
   return (
     <div
       className="fixed top-0 right-0 flex items-center justify-between px-6 z-30"
-      style={{ left: 240, height: 52, backgroundColor: '#FFFFFF', borderBottom: '1px solid #E8EEF4' }}
+      style={{ left: 240, height: 52, backgroundColor: '#FFFFFF', borderBottom: '1px solid #F0F3F6' }}
     >
       {/* Breadcrumb */}
       <div className="flex items-center gap-2" style={{ fontSize: '13px' }}>
         <span style={{ color: '#8899AB' }}>{currentUser.org}</span>
-        <span style={{ color: '#E8EEF4' }}>›</span>
-        <span style={{ color: '#0B1D3A', fontWeight: 500 }}>{config.title}</span>
+        <span style={{ color: '#F0F3F6' }}>›</span>
+        <span style={{ color: '#0A2463', fontWeight: 500 }}>{config.title}</span>
       </div>
 
       {/* Right side */}
@@ -67,13 +67,13 @@ export default function OrgTopBar() {
             type="text"
             placeholder="Search..."
             className="pl-8 pr-3 rounded-lg"
-            style={{ width: 160, height: 34, border: '1px solid #E8EEF4', backgroundColor: '#F4F6F9', fontSize: '13px', color: '#0B1D3A', outline: 'none' }}
+            style={{ width: 160, height: 34, border: '1px solid #F0F3F6', backgroundColor: '#F8F4ED', fontSize: '13px', color: '#0A2463', outline: 'none' }}
           />
         </div>
 
         {/* Bell */}
         <button className="relative p-1.5 rounded-lg hover:bg-gray-50 transition-colors">
-          <Bell size={18} style={{ color: '#3D5A80' }} />
+          <Bell size={18} style={{ color: '#6B7885' }} />
           <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full flex items-center justify-center text-white" style={{ backgroundColor: '#C44F4F', fontSize: '9px', fontWeight: 600 }}>
             2
           </span>
@@ -84,15 +84,15 @@ export default function OrgTopBar() {
           <button
             onClick={() => setDropdownOpen(!dropdownOpen)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-colors hover:bg-gray-50"
-            style={{ fontSize: '12px', color: '#3D5A80', border: '1px solid #E8EEF4' }}
+            style={{ fontSize: '12px', color: '#6B7885', border: '1px solid #F0F3F6' }}
           >
             {role}
             <ChevronDown size={12} />
           </button>
           {dropdownOpen && (
-            <div className="absolute right-0 top-full mt-1 bg-white rounded-xl overflow-hidden" style={{ border: '1px solid #E8EEF4', boxShadow: '0 8px 24px rgba(11,29,58,0.08)', minWidth: 140, zIndex: 50 }}>
+            <div className="absolute right-0 top-full mt-1 bg-white rounded-xl overflow-hidden" style={{ border: '1px solid #F0F3F6', boxShadow: '0 8px 24px rgba(11,29,58,0.08)', minWidth: 140, zIndex: 50 }}>
               {roles.map((r) => (
-                <button key={r} onClick={() => { setRole(r); setDropdownOpen(false); }} className="flex items-center justify-between w-full px-3 py-2.5 text-left hover:bg-gray-50 transition-colors" style={{ fontSize: '13px', color: '#0B1D3A', border: 'none', cursor: 'pointer', backgroundColor: 'transparent' }}>
+                <button key={r} onClick={() => { setRole(r); setDropdownOpen(false); }} className="flex items-center justify-between w-full px-3 py-2.5 text-left hover:bg-gray-50 transition-colors" style={{ fontSize: '13px', color: '#0A2463', border: 'none', cursor: 'pointer', backgroundColor: 'transparent' }}>
                   {r}
                   {role === r && <Check size={14} style={{ color: '#C9A84C' }} />}
                 </button>
@@ -102,7 +102,7 @@ export default function OrgTopBar() {
         </div>
 
         {/* Avatar */}
-        <div className="rounded-full flex items-center justify-center text-white" style={{ width: 32, height: 32, backgroundColor: '#0B1D3A', fontSize: '11px', fontWeight: 600 }}>
+        <div className="rounded-full flex items-center justify-center text-white" style={{ width: 32, height: 32, backgroundColor: '#0A2463', fontSize: '11px', fontWeight: 600 }}>
           {currentUser.avatar}
         </div>
       </div>

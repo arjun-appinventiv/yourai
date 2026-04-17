@@ -12,16 +12,16 @@ const inputStyle = {
 };
 
 const statusColors = {
-  Completed: { bg: '#DCFCE7', color: '#166534' },
-  Running: { bg: '#EFF6FF', color: '#1D4ED8' },
-  'Pending Review': { bg: '#FEF3C7', color: '#92400E' },
-  Failed: { bg: '#FEE2E2', color: '#991B1B' },
+  Completed: { bg: '#E7F3E9', color: '#5CA868' },
+  Running: { bg: '#F0F3F6', color: '#1E3A8A' },
+  'Pending Review': { bg: '#FBEED5', color: '#E8A33D' },
+  Failed: { bg: '#F9E7E7', color: '#C65454' },
 };
 
 const stepStatusStyles = {
-  Completed: { bg: '#DCFCE7', color: '#166534' },
-  Running: { bg: '#EFF6FF', color: '#1D4ED8' },
-  Pending: { bg: '#F1F5F9', color: '#94A3B8' },
+  Completed: { bg: '#E7F3E9', color: '#5CA868' },
+  Running: { bg: '#F0F3F6', color: '#1E3A8A' },
+  Pending: { bg: '#F0F3F6', color: '#9CA3AF' },
 };
 
 function StatusBadge({ status }) {
@@ -166,12 +166,12 @@ export default function WorkflowsPage() {
                 </div>
                 <div>
                   {run.status === 'Completed' && run.reportGenerated && (
-                    <button className="flex items-center gap-1 px-3 py-1.5 rounded-lg" style={{ fontSize: '12px', color: '#166534', border: '1px solid #DCFCE7', backgroundColor: 'white', cursor: 'pointer', fontWeight: 500 }}>
+                    <button className="flex items-center gap-1 px-3 py-1.5 rounded-lg" style={{ fontSize: '12px', color: '#5CA868', border: '1px solid #E7F3E9', backgroundColor: 'white', cursor: 'pointer', fontWeight: 500 }}>
                       <Eye size={12} /> View Report
                     </button>
                   )}
                   {run.status === 'Pending Review' && (
-                    <button className="flex items-center gap-1 px-3 py-1.5 rounded-lg" style={{ fontSize: '12px', color: '#92400E', backgroundColor: '#FEF3C7', border: 'none', cursor: 'pointer', fontWeight: 500 }}>
+                    <button className="flex items-center gap-1 px-3 py-1.5 rounded-lg" style={{ fontSize: '12px', color: '#E8A33D', backgroundColor: '#FBEED5', border: 'none', cursor: 'pointer', fontWeight: 500 }}>
                       <AlertTriangle size={12} /> Review &amp; Approve
                     </button>
                   )}
@@ -227,19 +227,19 @@ export default function WorkflowsPage() {
               <div style={{ position: 'relative' }}>
                 {selectedRun.steps.map((step, i) => {
                   const isLast = i === selectedRun.steps.length - 1;
-                  const dotColor = step.status === 'Completed' ? '#166534' : step.status === 'Running' ? '#1D4ED8' : '#CBD5E1';
+                  const dotColor = step.status === 'Completed' ? '#5CA868' : step.status === 'Running' ? '#1E3A8A' : '#D6DDE4';
                   const dotBg = step.status === 'Pending' ? 'white' : dotColor;
                   const templateStep = templates.find(t => t.id === selectedRun.templateId)?.steps?.[i];
                   return (
                     <div key={step.id || i} className="flex" style={{ marginBottom: isLast ? 0 : 24, position: 'relative' }}>
                       {/* Timeline line */}
                       {!isLast && (
-                        <div style={{ position: 'absolute', left: 7, top: 18, width: 2, bottom: -24, backgroundColor: step.status === 'Completed' ? '#DCFCE7' : '#E2E8F0' }} />
+                        <div style={{ position: 'absolute', left: 7, top: 18, width: 2, bottom: -24, backgroundColor: step.status === 'Completed' ? '#E7F3E9' : '#F0F3F6' }} />
                       )}
                       {/* Dot */}
                       <div style={{ width: 16, height: 16, borderRadius: '50%', backgroundColor: dotBg, border: step.status === 'Pending' ? `2px solid ${dotColor}` : 'none', flexShrink: 0, marginTop: 2, position: 'relative', zIndex: 1 }}>
                         {step.status === 'Running' && (
-                          <div style={{ position: 'absolute', inset: -3, borderRadius: '50%', border: '2px solid #1D4ED8', animation: 'pulse 1.5s ease-in-out infinite', opacity: 0.5 }} />
+                          <div style={{ position: 'absolute', inset: -3, borderRadius: '50%', border: '2px solid #1E3A8A', animation: 'pulse 1.5s ease-in-out infinite', opacity: 0.5 }} />
                         )}
                       </div>
                       {/* Content */}
@@ -248,7 +248,7 @@ export default function WorkflowsPage() {
                           <div className="flex items-center gap-2">
                             <span style={{ fontSize: '13px', fontWeight: step.status === 'Completed' ? 600 : 400, color: step.status === 'Pending' ? 'var(--text-muted)' : 'var(--text-primary)' }}>{step.name}</span>
                             {templateStep?.parallel && (
-                              <span style={{ fontSize: '10px', color: '#1D4ED8', border: '1px solid #BFDBFE', borderRadius: '10px', padding: '1px 6px', fontWeight: 500 }}>parallel</span>
+                              <span style={{ fontSize: '10px', color: '#1E3A8A', border: '1px solid #D6DDE4', borderRadius: '10px', padding: '1px 6px', fontWeight: 500 }}>parallel</span>
                             )}
                             {(step.async || templateStep?.async) && (
                               <span style={{ fontSize: '10px', color: '#7C3AED', border: '1px solid #DDD6FE', borderRadius: '10px', padding: '1px 6px', fontWeight: 500 }}>async</span>
@@ -259,7 +259,7 @@ export default function WorkflowsPage() {
                         <div className="flex items-center gap-2 mt-1">
                           {templateStep && (
                             <>
-                              <span style={{ fontSize: '10px', backgroundColor: templateStep.agent === 'AG-01' ? 'var(--navy)' : '#475569', color: 'white', padding: '1px 6px', borderRadius: '8px', fontWeight: 500 }}>{templateStep.agent}</span>
+                              <span style={{ fontSize: '10px', backgroundColor: templateStep.agent === 'AG-01' ? 'var(--navy)' : '#6B7885', color: 'white', padding: '1px 6px', borderRadius: '8px', fontWeight: 500 }}>{templateStep.agent}</span>
                               <span style={{ fontSize: '11px', fontFamily: 'monospace', color: 'var(--text-muted)' }}>{templateStep.skill}</span>
                             </>
                           )}
@@ -304,18 +304,18 @@ export default function WorkflowsPage() {
 
               {selectedRun.status === 'Pending Review' && (
                 <div>
-                  <div className="p-4 rounded-lg mb-4" style={{ backgroundColor: '#FFFBEB', border: '1px solid #FDE68A' }}>
+                  <div className="p-4 rounded-lg mb-4" style={{ backgroundColor: '#FBEED5', border: '1px solid #FBEED5' }}>
                     <div className="flex items-center gap-2 mb-1">
-                      <AlertTriangle size={14} style={{ color: '#92400E' }} />
-                      <span style={{ fontSize: '13px', fontWeight: 500, color: '#92400E' }}>Review Required</span>
+                      <AlertTriangle size={14} style={{ color: '#E8A33D' }} />
+                      <span style={{ fontSize: '13px', fontWeight: 500, color: '#E8A33D' }}>Review Required</span>
                     </div>
-                    <p style={{ fontSize: '12px', color: '#92400E', lineHeight: 1.5 }}>This workflow has completed all steps and is awaiting manual review before the report can be filed.</p>
+                    <p style={{ fontSize: '12px', color: '#E8A33D', lineHeight: 1.5 }}>This workflow has completed all steps and is awaiting manual review before the report can be filed.</p>
                   </div>
                   <div className="flex gap-3">
                     <button className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg" style={{ backgroundColor: 'var(--navy)', color: 'white', fontSize: '13px', fontWeight: 500, border: 'none', cursor: 'pointer' }}>
                       <CheckCircle size={14} /> Approve &amp; File
                     </button>
-                    <button className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg" style={{ color: '#991B1B', fontSize: '13px', fontWeight: 500, border: '1px solid #FCA5A5', backgroundColor: 'white', cursor: 'pointer' }}>
+                    <button className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg" style={{ color: '#C65454', fontSize: '13px', fontWeight: 500, border: '1px solid #FCA5A5', backgroundColor: 'white', cursor: 'pointer' }}>
                       <X size={14} /> Reject
                     </button>
                   </div>
@@ -329,12 +329,12 @@ export default function WorkflowsPage() {
                       Step {selectedRun.steps.filter(s => s.status === 'Completed').length + 1} of {selectedRun.steps.length} in progress
                     </span>
                   </div>
-                  <div style={{ width: '100%', height: 6, backgroundColor: '#E2E8F0', borderRadius: 3, overflow: 'hidden' }}>
+                  <div style={{ width: '100%', height: 6, backgroundColor: '#F0F3F6', borderRadius: 3, overflow: 'hidden' }}>
                     <div
                       style={{
                         width: `${(selectedRun.steps.filter(s => s.status === 'Completed').length / selectedRun.steps.length) * 100}%`,
                         height: '100%',
-                        backgroundColor: '#1D4ED8',
+                        backgroundColor: '#1E3A8A',
                         borderRadius: 3,
                         transition: 'width 0.5s ease',
                         animation: 'shimmer 1.5s ease-in-out infinite',
@@ -452,7 +452,7 @@ export default function WorkflowsPage() {
               </div>
               <button
                 onClick={() => { setSelectedPack(null); setModalStep(3); }}
-                style={{ fontSize: '12px', color: '#1D4ED8', marginTop: 8, background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}
+                style={{ fontSize: '12px', color: '#1E3A8A', marginTop: 8, background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}
               >
                 Skip
               </button>
@@ -554,8 +554,8 @@ function TemplateCard({ template: t, onRun }) {
       <div className="flex items-center gap-1 flex-wrap mb-3">
         {previewSteps.map((step, i) => (
           <React.Fragment key={step.id}>
-            <span style={{ fontSize: '11px', color: '#64748B', backgroundColor: '#F1F5F9', padding: '2px 8px', borderRadius: '10px' }}>{step.name}</span>
-            {i < previewSteps.length - 1 && <ChevronRight size={10} style={{ color: '#CBD5E1' }} />}
+            <span style={{ fontSize: '11px', color: '#6B7885', backgroundColor: '#F0F3F6', padding: '2px 8px', borderRadius: '10px' }}>{step.name}</span>
+            {i < previewSteps.length - 1 && <ChevronRight size={10} style={{ color: '#D6DDE4' }} />}
           </React.Fragment>
         ))}
         {remaining > 0 && <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>+{remaining} more</span>}

@@ -3,7 +3,7 @@ import { Link, Navigate, useLocation } from 'react-router-dom';
 import { KeyRound, Lock, Eye, EyeOff, CheckCircle, Circle, Loader } from 'lucide-react';
 import AuthLayout from '../../../components/AuthLayout';
 
-const strengthColors = ['#EF4444', '#F97316', '#C9A84C', '#22C55E'];
+const strengthColors = ['#C65454', '#F97316', '#C9A84C', '#5CA868'];
 const strengthLabels = ['Weak', 'Fair', 'Good', 'Strong'];
 
 export default function ResetPassword() {
@@ -63,7 +63,7 @@ export default function ResetPassword() {
     return (
       <AuthLayout>
         <div className="text-center">
-          <div className="flex justify-center mb-4"><CheckCircle size={40} style={{ color: '#166534' }} /></div>
+          <div className="flex justify-center mb-4"><CheckCircle size={40} style={{ color: '#5CA868' }} /></div>
           <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: '22px', color: 'var(--text-primary)' }}>Password updated</h1>
           <p className="mt-2" style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Your password has been updated successfully.</p>
           <Link to="/super-admin/login" className="mt-5 w-full flex items-center justify-center text-white" style={{ backgroundColor: 'var(--navy)', height: 42, borderRadius: '10px', fontSize: '14px', fontWeight: 500, textDecoration: 'none' }}>
@@ -113,8 +113,8 @@ export default function ResetPassword() {
                   [checks.special, 'Contains special character'],
                 ].map(([ok, label]) => (
                   <div key={label} className="flex items-center gap-1.5">
-                    {ok ? <CheckCircle size={13} style={{ color: '#166534' }} /> : <Circle size={13} style={{ color: 'var(--text-muted)' }} />}
-                    <span style={{ fontSize: '11px', color: ok ? '#166534' : 'var(--text-muted)' }}>{label}</span>
+                    {ok ? <CheckCircle size={13} style={{ color: '#5CA868' }} /> : <Circle size={13} style={{ color: 'var(--text-muted)' }} />}
+                    <span style={{ fontSize: '11px', color: ok ? '#5CA868' : 'var(--text-muted)' }}>{label}</span>
                   </div>
                 ))}
               </div>
@@ -127,17 +127,17 @@ export default function ResetPassword() {
           <label className="block mb-1.5" style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-secondary)' }}>Confirm New Password</label>
           <div className="relative">
             <Lock size={16} style={iconPos} />
-            <input type={showConfirm ? 'text' : 'password'} value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder="Re-enter password" style={{ ...inputStyle, borderColor: mismatch ? '#EF4444' : 'var(--border)' }} />
+            <input type={showConfirm ? 'text' : 'password'} value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder="Re-enter password" style={{ ...inputStyle, borderColor: mismatch ? '#C65454' : 'var(--border)' }} />
             <button type="button" onClick={() => setShowConfirm(!showConfirm)} className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer' }}>
               {showConfirm ? <EyeOff size={16} /> : <Eye size={16} />}
             </button>
           </div>
-          {mismatch && <p className="mt-1" style={{ fontSize: '12px', color: '#EF4444' }}>Passwords do not match</p>}
+          {mismatch && <p className="mt-1" style={{ fontSize: '12px', color: '#C65454' }}>Passwords do not match</p>}
         </div>
 
         {error && (
-          <div style={{ backgroundColor: '#FEF2F2', borderLeft: '3px solid #EF4444', borderRadius: '0 8px 8px 0', padding: '10px 14px' }}>
-            <p style={{ fontSize: '13px', color: '#9B2C2C', margin: 0 }}>{error}</p>
+          <div style={{ backgroundColor: '#F9E7E7', borderLeft: '3px solid #C65454', borderRadius: '0 8px 8px 0', padding: '10px 14px' }}>
+            <p style={{ fontSize: '13px', color: '#C65454', margin: 0 }}>{error}</p>
           </div>
         )}
 
@@ -146,7 +146,7 @@ export default function ResetPassword() {
           disabled={!canSubmit}
           className="w-full flex items-center justify-center gap-2 text-white"
           style={{
-            backgroundColor: canSubmit ? 'var(--navy)' : '#94A3B8',
+            backgroundColor: canSubmit ? 'var(--navy)' : '#9CA3AF',
             height: 42,
             borderRadius: '10px',
             fontSize: '14px',

@@ -404,7 +404,7 @@ export default function BotTester() {
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           {running ? (
-            <button onClick={stopTests} style={{ padding: '8px 20px', borderRadius: 8, border: '1px solid #EF4444', background: 'white', color: '#EF4444', fontSize: 13, fontWeight: 500, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <button onClick={stopTests} style={{ padding: '8px 20px', borderRadius: 8, border: '1px solid #C65454', background: 'white', color: '#C65454', fontSize: 13, fontWeight: 500, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
               <XCircle size={14} /> Stop
             </button>
           ) : (
@@ -422,15 +422,15 @@ export default function BotTester() {
 
       {/* Summary bar */}
       {completed.length > 0 && (
-        <div style={{ display: 'flex', gap: 16, marginBottom: 20, padding: '14px 20px', borderRadius: 12, background: 'var(--ice-warm, #F8FAFC)', border: '1px solid var(--border)' }}>
+        <div style={{ display: 'flex', gap: 16, marginBottom: 20, padding: '14px 20px', borderRadius: 12, background: 'var(--ice-warm, #F8F4ED)', border: '1px solid var(--border)' }}>
           <Stat label="Total" value={totalTests} color="var(--text-primary)" />
-          <Stat label="Passed" value={passed} color="#16A34A" />
-          <Stat label="Failed" value={failed} color="#DC2626" />
-          <Stat label="Errors" value={errors} color="#D97706" />
+          <Stat label="Passed" value={passed} color="#5CA868" />
+          <Stat label="Failed" value={failed} color="#C65454" />
+          <Stat label="Errors" value={errors} color="#E8A33D" />
           <Stat label="Remaining" value={totalTests - completed.length} color="var(--text-muted)" />
           <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div style={{ width: 200, height: 8, borderRadius: 4, background: '#E2E8F0', overflow: 'hidden' }}>
-              <div style={{ height: '100%', width: `${(completed.length / totalTests) * 100}%`, background: failed > 0 || errors > 0 ? '#F59E0B' : '#16A34A', borderRadius: 4, transition: 'width 0.3s' }} />
+            <div style={{ width: 200, height: 8, borderRadius: 4, background: '#F0F3F6', overflow: 'hidden' }}>
+              <div style={{ height: '100%', width: `${(completed.length / totalTests) * 100}%`, background: failed > 0 || errors > 0 ? '#E8A33D' : '#5CA868', borderRadius: 4, transition: 'width 0.3s' }} />
             </div>
             <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)' }}>{Math.round((completed.length / totalTests) * 100)}%</span>
           </div>
@@ -452,13 +452,13 @@ export default function BotTester() {
               {/* Suite header */}
               <div
                 onClick={() => toggleSuite(suite.name)}
-                style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', cursor: 'pointer', background: suiteHasFailure ? '#FEF2F2' : suiteResults.length === suiteTotal && suitePassed === suiteTotal ? '#F0FDF4' : 'white' }}
+                style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', cursor: 'pointer', background: suiteHasFailure ? '#F9E7E7' : suiteResults.length === suiteTotal && suitePassed === suiteTotal ? '#E7F3E9' : 'white' }}
               >
                 {isExpanded ? <ChevronDown size={14} style={{ color: 'var(--text-muted)' }} /> : <ChevronRight size={14} style={{ color: 'var(--text-muted)' }} />}
                 <SuiteIcon size={16} style={{ color: 'var(--navy)' }} />
                 <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', flex: 1 }}>{suite.name}</span>
                 {suiteResults.length > 0 && (
-                  <span style={{ fontSize: 12, fontWeight: 500, color: suiteHasFailure ? '#DC2626' : '#16A34A' }}>
+                  <span style={{ fontSize: 12, fontWeight: 500, color: suiteHasFailure ? '#C65454' : '#5CA868' }}>
                     {suitePassed}/{suiteTotal} passed
                   </span>
                 )}
@@ -494,17 +494,17 @@ export default function BotTester() {
                               {r.checks?.map((c, i) => (
                                 <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
                                   {c.passed
-                                    ? <CheckCircle size={12} style={{ color: '#16A34A', flexShrink: 0 }} />
-                                    : <XCircle size={12} style={{ color: '#DC2626', flexShrink: 0 }} />
+                                    ? <CheckCircle size={12} style={{ color: '#5CA868', flexShrink: 0 }} />
+                                    : <XCircle size={12} style={{ color: '#C65454', flexShrink: 0 }} />
                                   }
-                                  <span style={{ color: c.passed ? '#16A34A' : '#DC2626' }}>{c.desc}</span>
+                                  <span style={{ color: c.passed ? '#5CA868' : '#C65454' }}>{c.desc}</span>
                                 </div>
                               ))}
                             </div>
 
                             {/* Error */}
                             {r.error && (
-                              <div style={{ padding: '6px 10px', borderRadius: 6, background: '#FEF2F2', color: '#991B1B', marginBottom: 8 }}>
+                              <div style={{ padding: '6px 10px', borderRadius: 6, background: '#F9E7E7', color: '#C65454', marginBottom: 8 }}>
                                 Error: {r.error}
                               </div>
                             )}
@@ -518,7 +518,7 @@ export default function BotTester() {
 
                             {/* Response preview */}
                             {r.fullContent && (
-                              <div style={{ padding: '8px 10px', borderRadius: 6, background: '#F8FAFC', border: '1px solid var(--border)', maxHeight: 150, overflowY: 'auto', whiteSpace: 'pre-wrap', lineHeight: 1.5, color: 'var(--text-secondary)' }}>
+                              <div style={{ padding: '8px 10px', borderRadius: 6, background: '#F8F4ED', border: '1px solid var(--border)', maxHeight: 150, overflowY: 'auto', whiteSpace: 'pre-wrap', lineHeight: 1.5, color: 'var(--text-secondary)' }}>
                                 {r.fullContent.slice(0, 500)}{r.fullContent.length > 500 ? '...' : ''}
                               </div>
                             )}
@@ -540,9 +540,9 @@ export default function BotTester() {
       </div>
 
       {/* Info */}
-      <div style={{ marginTop: 20, padding: '12px 16px', borderRadius: 10, background: '#EFF6FF', border: '1px solid #BFDBFE', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-        <Zap size={14} style={{ color: '#1D4ED8', marginTop: 2, flexShrink: 0 }} />
-        <div style={{ fontSize: 12, color: '#1E40AF', lineHeight: 1.6 }}>
+      <div style={{ marginTop: 20, padding: '12px 16px', borderRadius: 10, background: '#F0F3F6', border: '1px solid #D6DDE4', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+        <Zap size={14} style={{ color: '#1E3A8A', marginTop: 2, flexShrink: 0 }} />
+        <div style={{ fontSize: 12, color: '#0F2E59', lineHeight: 1.6 }}>
           <strong>How it works:</strong> Each test sends a real message to the Groq LLM with the configured bot persona and validates the response against expected checks. Tests with document context simulate file uploads.
           Tests run sequentially with a 3s delay to stay within Groq's rate limits. Rate-limited tests auto-retry up to 3 times.
         </div>
@@ -561,10 +561,10 @@ function Stat({ label, value, color }) {
 }
 
 function StatusIcon({ status, isRunning }) {
-  if (isRunning) return <Clock size={14} className="animate-spin" style={{ color: '#2563EB' }} />;
-  if (!status) return <div style={{ width: 14, height: 14, borderRadius: '50%', border: '2px solid #E2E8F0' }} />;
-  if (status === 'pass') return <CheckCircle size={14} style={{ color: '#16A34A' }} />;
-  if (status === 'fail') return <XCircle size={14} style={{ color: '#DC2626' }} />;
-  if (status === 'error') return <AlertTriangle size={14} style={{ color: '#D97706' }} />;
+  if (isRunning) return <Clock size={14} className="animate-spin" style={{ color: '#1E3A8A' }} />;
+  if (!status) return <div style={{ width: 14, height: 14, borderRadius: '50%', border: '2px solid #F0F3F6' }} />;
+  if (status === 'pass') return <CheckCircle size={14} style={{ color: '#5CA868' }} />;
+  if (status === 'fail') return <XCircle size={14} style={{ color: '#C65454' }} />;
+  if (status === 'error') return <AlertTriangle size={14} style={{ color: '#E8A33D' }} />;
   return null;
 }

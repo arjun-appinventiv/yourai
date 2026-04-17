@@ -71,7 +71,7 @@ export default function Login() {
   return (
     <AuthLayout>
       <div className="text-center">
-        <span className="inline-flex items-center" style={{ backgroundColor: 'rgba(220,38,38,0.08)', color: '#DC2626', border: '1px solid rgba(220,38,38,0.2)', borderRadius: '20px', fontSize: '10px', fontWeight: 600, letterSpacing: '0.06em', padding: '3px 10px' }}>
+        <span className="inline-flex items-center" style={{ backgroundColor: 'rgba(220,38,38,0.08)', color: '#C65454', border: '1px solid rgba(220,38,38,0.2)', borderRadius: '20px', fontSize: '10px', fontWeight: 600, letterSpacing: '0.06em', padding: '3px 10px' }}>
           SUPER ADMIN
         </span>
         <h1 className="mt-4" style={{ fontFamily: "'DM Serif Display', serif", fontSize: '26px', color: 'var(--text-primary)' }}>Welcome back</h1>
@@ -102,8 +102,8 @@ export default function Login() {
         </div>
 
         {error && (
-          <div className="flex items-start gap-2" style={{ backgroundColor: '#FEF2F2', borderLeft: '3px solid #EF4444', borderRadius: '0 8px 8px 0', padding: '10px 14px' }}>
-            <p style={{ fontSize: '13px', color: '#9B2C2C', margin: 0 }}>{error}</p>
+          <div className="flex items-start gap-2" style={{ backgroundColor: '#F9E7E7', borderLeft: '3px solid #C65454', borderRadius: '0 8px 8px 0', padding: '10px 14px' }}>
+            <p style={{ fontSize: '13px', color: '#C65454', margin: 0 }}>{error}</p>
           </div>
         )}
 
@@ -112,7 +112,7 @@ export default function Login() {
           disabled={isDisabled}
           className="w-full flex items-center justify-center gap-2 text-white transition-colors"
           style={{
-            backgroundColor: isDisabled ? '#94A3B8' : 'var(--navy)',
+            backgroundColor: isDisabled ? '#9CA3AF' : 'var(--navy)',
             height: 42,
             borderRadius: '10px',
             fontSize: '14px',
@@ -132,25 +132,25 @@ export default function Login() {
           type="button"
           onClick={() => setShowCreds(!showCreds)}
           className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg transition-colors"
-          style={{ backgroundColor: showCreds ? '#EFF6FF' : 'var(--ice-warm)', color: showCreds ? '#1D4ED8' : 'var(--text-muted)', fontSize: '12px', border: '1px solid transparent' }}
+          style={{ backgroundColor: showCreds ? '#F0F3F6' : 'var(--ice-warm)', color: showCreds ? '#1E3A8A' : 'var(--text-muted)', fontSize: '12px', border: '1px solid transparent' }}
         >
           <Info size={14} />
           {showCreds ? 'Hide credentials' : 'Show demo credentials'}
         </button>
         {showCreds && (
-          <div className="mt-2 p-3 rounded-lg" style={{ backgroundColor: '#EFF6FF', border: '1px solid #DBEAFE' }}>
+          <div className="mt-2 p-3 rounded-lg" style={{ backgroundColor: '#F0F3F6', border: '1px solid #F0F3F6' }}>
             <div className="flex items-center justify-between mb-1">
-              <span style={{ fontSize: '11px', color: '#1D4ED8', fontWeight: 600 }}>EMAIL</span>
-              <button type="button" onClick={() => setEmail('arjun@appinventiv.com')} style={{ fontSize: '11px', color: '#1D4ED8', cursor: 'pointer', background: 'none', border: 'none' }}>Copy to field</button>
+              <span style={{ fontSize: '11px', color: '#1E3A8A', fontWeight: 600 }}>EMAIL</span>
+              <button type="button" onClick={() => setEmail('arjun@appinventiv.com')} style={{ fontSize: '11px', color: '#1E3A8A', cursor: 'pointer', background: 'none', border: 'none' }}>Copy to field</button>
             </div>
             <code style={{ fontSize: '12px', color: 'var(--text-primary)' }}>arjun@appinventiv.com</code>
             <div className="flex items-center justify-between mb-1 mt-2">
-              <span style={{ fontSize: '11px', color: '#1D4ED8', fontWeight: 600 }}>PASSWORD</span>
-              <button type="button" onClick={() => setPassword('Admin@123')} style={{ fontSize: '11px', color: '#1D4ED8', cursor: 'pointer', background: 'none', border: 'none' }}>Copy to field</button>
+              <span style={{ fontSize: '11px', color: '#1E3A8A', fontWeight: 600 }}>PASSWORD</span>
+              <button type="button" onClick={() => setPassword('Admin@123')} style={{ fontSize: '11px', color: '#1E3A8A', cursor: 'pointer', background: 'none', border: 'none' }}>Copy to field</button>
             </div>
             <code style={{ fontSize: '12px', color: 'var(--text-primary)' }}>Admin@123</code>
             <div className="mt-2">
-              <span style={{ fontSize: '11px', color: '#1D4ED8', fontWeight: 600 }}>FORGOT PASSWORD OTP</span>
+              <span style={{ fontSize: '11px', color: '#1E3A8A', fontWeight: 600 }}>FORGOT PASSWORD OTP</span>
               <code className="ml-2" style={{ fontSize: '12px', color: 'var(--text-primary)' }}>123456</code>
             </div>
           </div>

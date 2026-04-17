@@ -250,9 +250,9 @@ const renderMarkdown = (str) => {
 const bold = renderMarkdown;
 
 const riskColors = {
-  HIGH: { bg: '#FEE2E2', text: '#991B1B' },
-  MEDIUM: { bg: '#FEF3C7', text: '#92400E' },
-  LOW: { bg: '#EFF6FF', text: '#1D4ED8' },
+  HIGH: { bg: '#F9E7E7', text: '#C65454' },
+  MEDIUM: { bg: '#FBEED5', text: '#E8A33D' },
+  LOW: { bg: '#F0F3F6', text: '#1E3A8A' },
 };
 
 /* ─────────────────── Sidebar ─────────────────── */
@@ -321,7 +321,7 @@ function Sidebar({ onOpenPromptTemplates, onOpenClients, onOpenKnowledgePacks, o
           {item.label}
         </span>
         {item.badge && (
-          <span style={{ fontSize: 10, fontWeight: 600, padding: '1px 7px', borderRadius: 999, background: '#DCFCE7', color: '#166534', flexShrink: 0 }}>
+          <span style={{ fontSize: 10, fontWeight: 600, padding: '1px 7px', borderRadius: 999, background: '#E7F3E9', color: '#5CA868', flexShrink: 0 }}>
             {item.badge}
           </span>
         )}
@@ -380,8 +380,8 @@ function Sidebar({ onOpenPromptTemplates, onOpenClients, onOpenKnowledgePacks, o
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           {/* Green online dot + avatar — desktop */}
           <div className="hidden md:flex" style={{ alignItems: 'center', gap: 6 }}>
-            <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#22C55E', flexShrink: 0 }} />
-            <div style={{ width: 26, height: 26, borderRadius: '50%', background: '#EFF6FF', color: '#1D4ED8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 600 }}>RM</div>
+            <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#5CA868', flexShrink: 0 }} />
+            <div style={{ width: 26, height: 26, borderRadius: '50%', background: '#F0F3F6', color: '#1E3A8A', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 600 }}>RM</div>
           </div>
           {/* Close button — mobile only */}
           <button
@@ -407,7 +407,7 @@ function Sidebar({ onOpenPromptTemplates, onOpenClients, onOpenKnowledgePacks, o
             fontSize: 13, fontWeight: 500, color: 'var(--text-secondary)',
             cursor: 'pointer', transition: 'background 150ms ease',
           }}
-          onMouseEnter={(e) => { e.currentTarget.style.background = '#F8FAFC'; }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = '#F8F4ED'; }}
           onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; }}
         >
           <Plus size={14} />
@@ -537,7 +537,7 @@ function Sidebar({ onOpenPromptTemplates, onOpenClients, onOpenKnowledgePacks, o
       {/* ═══ ZONE 6 — User Profile Footer ═══ */}
       <div style={{ borderTop: '0.5px solid var(--border)', position: 'relative' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px' }}>
-          <div style={{ width: 26, height: 26, borderRadius: '50%', background: '#EFF6FF', color: '#1D4ED8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 600, flexShrink: 0 }}>RM</div>
+          <div style={{ width: 26, height: 26, borderRadius: '50%', background: '#F0F3F6', color: '#1E3A8A', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 600, flexShrink: 0 }}>RM</div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-primary)', lineHeight: 1.3 }}>Ryan Melade</div>
             <div style={{ fontSize: 10, color: 'var(--text-muted)', lineHeight: 1.3 }}>Admin &middot; Team Plan</div>
@@ -572,9 +572,9 @@ function Sidebar({ onOpenPromptTemplates, onOpenClients, onOpenKnowledgePacks, o
                     style={{
                       display: 'flex', alignItems: 'center', gap: 8,
                       padding: '8px 12px', cursor: 'pointer', fontSize: 12,
-                      color: menuItem.danger ? '#DC2626' : 'var(--text-secondary)',
+                      color: menuItem.danger ? '#C65454' : 'var(--text-secondary)',
                     }}
-                    onMouseEnter={(e) => { e.currentTarget.style.background = '#F8FAFC'; }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = '#F8F4ED'; }}
                     onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
                   >
                     <MIcon size={13} />
@@ -652,13 +652,13 @@ function PromptTemplatesPanel({ templates, onUsePrompt, onClose, onCreateNew, on
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div className="flex items-center gap-2">
                       <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{t.title}</span>
-                      <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 999, backgroundColor: '#EFF6FF', color: '#1D4ED8', fontWeight: 500 }}>{t.category}</span>
+                      <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 999, backgroundColor: '#F0F3F6', color: '#1E3A8A', fontWeight: 500 }}>{t.category}</span>
                     </div>
                     <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 6, lineHeight: 1.5, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{t.prompt}</p>
                   </div>
                   <div className="flex items-center gap-1" style={{ marginLeft: 12, flexShrink: 0 }}>
                     <button onClick={(e) => { e.stopPropagation(); onUsePrompt(t.prompt); onClose(); }} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 6, backgroundColor: 'var(--navy)', color: 'white', border: 'none', fontSize: 11, fontWeight: 500, cursor: 'pointer' }} title="Use this prompt"><Copy size={12} /> Use</button>
-                    <button onClick={(e) => { e.stopPropagation(); onDelete(t.id); }} style={{ padding: '5px', borderRadius: 6, background: 'none', border: '1px solid var(--border)', cursor: 'pointer', display: 'flex' }} title="Delete"><Trash2 size={13} style={{ color: '#991B1B' }} /></button>
+                    <button onClick={(e) => { e.stopPropagation(); onDelete(t.id); }} style={{ padding: '5px', borderRadius: 6, background: 'none', border: '1px solid var(--border)', cursor: 'pointer', display: 'flex' }} title="Delete"><Trash2 size={13} style={{ color: '#C65454' }} /></button>
                   </div>
                 </div>
                 <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6 }}>Created {t.createdAt}</div>
@@ -712,7 +712,7 @@ function CreatePromptModal({ onClose, onSave }) {
         </div>
         <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
           <button onClick={onClose} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid var(--border)', background: 'white', fontSize: 13, cursor: 'pointer', color: 'var(--text-muted)' }}>Cancel</button>
-          <button onClick={handleSave} disabled={!title.trim() || !prompt.trim()} style={{ padding: '8px 20px', borderRadius: 8, border: 'none', background: (!title.trim() || !prompt.trim()) ? '#94A3B8' : 'var(--navy)', color: 'white', fontSize: 13, fontWeight: 500, cursor: (!title.trim() || !prompt.trim()) ? 'not-allowed' : 'pointer' }}>Save Template</button>
+          <button onClick={handleSave} disabled={!title.trim() || !prompt.trim()} style={{ padding: '8px 20px', borderRadius: 8, border: 'none', background: (!title.trim() || !prompt.trim()) ? '#9CA3AF' : 'var(--navy)', color: 'white', fontSize: 13, fontWeight: 500, cursor: (!title.trim() || !prompt.trim()) ? 'not-allowed' : 'pointer' }}>Save Template</button>
         </div>
       </div>
     </>
@@ -729,11 +729,11 @@ function ClientsPanel({ clients, onClose, onAddClient, onDeleteClient }) {
   });
 
   const typeColors = {
-    Corporate: { bg: '#EFF6FF', color: '#1D4ED8' },
-    Healthcare: { bg: '#F0FDF4', color: '#166534' },
-    Technology: { bg: '#FFFBEB', color: '#92400E' },
+    Corporate: { bg: '#F0F3F6', color: '#1E3A8A' },
+    Healthcare: { bg: '#E7F3E9', color: '#5CA868' },
+    Technology: { bg: '#FBEED5', color: '#E8A33D' },
     'Real Estate': { bg: '#FDF2F8', color: '#9D174D' },
-    Other: { bg: '#F1F5F9', color: '#475569' },
+    Other: { bg: '#F0F3F6', color: '#6B7885' },
   };
 
   return (
@@ -786,7 +786,7 @@ function ClientsPanel({ clients, onClose, onAddClient, onDeleteClient }) {
                         <div className="flex items-center gap-2">
                           <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{c.name}</span>
                           <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 999, backgroundColor: tc.bg, color: tc.color, fontWeight: 500 }}>{c.type}</span>
-                          <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 999, backgroundColor: c.status === 'Active' ? '#DCFCE7' : '#FEE2E2', color: c.status === 'Active' ? '#166534' : '#991B1B', fontWeight: 500 }}>{c.status}</span>
+                          <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 999, backgroundColor: c.status === 'Active' ? '#E7F3E9' : '#F9E7E7', color: c.status === 'Active' ? '#5CA868' : '#C65454', fontWeight: 500 }}>{c.status}</span>
                         </div>
                         <div className="flex items-center gap-4" style={{ marginTop: 6 }}>
                           <span className="flex items-center gap-1" style={{ fontSize: 12, color: 'var(--text-muted)' }}><Users size={12} /> {c.contactName}</span>
@@ -798,7 +798,7 @@ function ClientsPanel({ clients, onClose, onAddClient, onDeleteClient }) {
                         </div>
                       </div>
                     </div>
-                    <button onClick={() => onDeleteClient(c.id)} style={{ padding: 5, borderRadius: 6, background: 'none', border: '1px solid var(--border)', cursor: 'pointer', display: 'flex' }} title="Remove client"><Trash2 size={13} style={{ color: '#991B1B' }} /></button>
+                    <button onClick={() => onDeleteClient(c.id)} style={{ padding: 5, borderRadius: 6, background: 'none', border: '1px solid var(--border)', cursor: 'pointer', display: 'flex' }} title="Remove client"><Trash2 size={13} style={{ color: '#C65454' }} /></button>
                   </div>
                   <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 8 }}>Added by {c.addedBy} · {c.addedAt}</div>
                 </div>
@@ -866,7 +866,7 @@ function AddClientModal({ onClose, onSave }) {
         </div>
         <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
           <button onClick={onClose} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid var(--border)', background: 'white', fontSize: 13, cursor: 'pointer', color: 'var(--text-muted)' }}>Cancel</button>
-          <button onClick={handleSave} disabled={!name.trim() || !contactName.trim() || !email.trim()} style={{ padding: '8px 20px', borderRadius: 8, border: 'none', background: (!name.trim() || !contactName.trim() || !email.trim()) ? '#94A3B8' : 'var(--navy)', color: 'white', fontSize: 13, fontWeight: 500, cursor: (!name.trim() || !contactName.trim() || !email.trim()) ? 'not-allowed' : 'pointer' }}>Add Client</button>
+          <button onClick={handleSave} disabled={!name.trim() || !contactName.trim() || !email.trim()} style={{ padding: '8px 20px', borderRadius: 8, border: 'none', background: (!name.trim() || !contactName.trim() || !email.trim()) ? '#9CA3AF' : 'var(--navy)', color: 'white', fontSize: 13, fontWeight: 500, cursor: (!name.trim() || !contactName.trim() || !email.trim()) ? 'not-allowed' : 'pointer' }}>Add Client</button>
         </div>
       </div>
     </>
@@ -938,12 +938,12 @@ function KnowledgePacksPanel({ packs, onClose, onCreateNew, onEdit, onDelete, on
                   </div>
                   <div className="flex items-center gap-1" style={{ flexShrink: 0 }}>
                     {onSelect && (
-                      <button onClick={() => onSelect(p)} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 12px', borderRadius: 6, backgroundColor: activePack?.id === p.id ? '#16A34A' : 'var(--navy)', color: 'white', border: 'none', fontSize: 11, fontWeight: 500, cursor: 'pointer' }}>
+                      <button onClick={() => onSelect(p)} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 12px', borderRadius: 6, backgroundColor: activePack?.id === p.id ? '#5CA868' : 'var(--navy)', color: 'white', border: 'none', fontSize: 11, fontWeight: 500, cursor: 'pointer' }}>
                         {activePack?.id === p.id ? <><CheckCircle size={12} /> Active</> : 'Use'}
                       </button>
                     )}
                     <button onClick={() => onEdit(p)} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 6, backgroundColor: onSelect ? 'transparent' : 'var(--navy)', color: onSelect ? 'var(--navy)' : 'white', border: onSelect ? '1px solid var(--border)' : 'none', fontSize: 11, fontWeight: 500, cursor: 'pointer' }}><Edit3 size={12} /> Edit</button>
-                    <button onClick={() => onDelete(p.id)} style={{ padding: 5, borderRadius: 6, background: 'none', border: '1px solid var(--border)', cursor: 'pointer', display: 'flex' }} title="Delete pack"><Trash2 size={13} style={{ color: '#991B1B' }} /></button>
+                    <button onClick={() => onDelete(p.id)} style={{ padding: 5, borderRadius: 6, background: 'none', border: '1px solid var(--border)', cursor: 'pointer', display: 'flex' }} title="Delete pack"><Trash2 size={13} style={{ color: '#C65454' }} /></button>
                   </div>
                 </div>
               </div>
@@ -1052,7 +1052,7 @@ function EditKnowledgePackModal({ pack, onClose, onSave }) {
                 <input value={linkUrl} onChange={e => setLinkUrl(e.target.value)} placeholder="https://..." style={{ ...inputStyle, height: 34, backgroundColor: 'white' }} />
                 <div className="flex items-center justify-end gap-2">
                   <button onClick={() => { setShowAddLink(false); setLinkName(''); setLinkUrl(''); }} style={{ padding: '5px 12px', borderRadius: 6, border: '1px solid var(--border)', background: 'white', fontSize: 11, cursor: 'pointer', color: 'var(--text-muted)' }}>Cancel</button>
-                  <button onClick={handleAddLink} disabled={!linkName.trim() || !linkUrl.trim()} style={{ padding: '5px 12px', borderRadius: 6, border: 'none', background: (!linkName.trim() || !linkUrl.trim()) ? '#94A3B8' : 'var(--navy)', color: 'white', fontSize: 11, fontWeight: 500, cursor: (!linkName.trim() || !linkUrl.trim()) ? 'not-allowed' : 'pointer' }}>Save Link</button>
+                  <button onClick={handleAddLink} disabled={!linkName.trim() || !linkUrl.trim()} style={{ padding: '5px 12px', borderRadius: 6, border: 'none', background: (!linkName.trim() || !linkUrl.trim()) ? '#9CA3AF' : 'var(--navy)', color: 'white', fontSize: 11, fontWeight: 500, cursor: (!linkName.trim() || !linkUrl.trim()) ? 'not-allowed' : 'pointer' }}>Save Link</button>
                 </div>
               </div>
             )}
@@ -1077,7 +1077,7 @@ function EditKnowledgePackModal({ pack, onClose, onSave }) {
 
         <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
           <button onClick={onClose} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid var(--border)', background: 'white', fontSize: 13, cursor: 'pointer', color: 'var(--text-muted)' }}>Cancel</button>
-          <button onClick={handleSave} disabled={!name.trim()} style={{ padding: '8px 20px', borderRadius: 8, border: 'none', background: !name.trim() ? '#94A3B8' : 'var(--navy)', color: 'white', fontSize: 13, fontWeight: 500, cursor: !name.trim() ? 'not-allowed' : 'pointer' }}>{isNew ? 'Create Pack' : 'Save Changes'}</button>
+          <button onClick={handleSave} disabled={!name.trim()} style={{ padding: '8px 20px', borderRadius: 8, border: 'none', background: !name.trim() ? '#9CA3AF' : 'var(--navy)', color: 'white', fontSize: 13, fontWeight: 500, cursor: !name.trim() ? 'not-allowed' : 'pointer' }}>{isNew ? 'Create Pack' : 'Save Changes'}</button>
         </div>
       </div>
     </>
@@ -1147,12 +1147,12 @@ function DocumentVaultPanel({ documents, onClose, onCreateNew, onEdit, onDelete,
                   </div>
                   <div className="flex items-center gap-1" style={{ flexShrink: 0 }}>
                     {onSelect && (
-                      <button onClick={() => onSelect(d)} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 12px', borderRadius: 6, backgroundColor: activeDocument?.id === d.id ? '#16A34A' : 'var(--navy)', color: 'white', border: 'none', fontSize: 11, fontWeight: 500, cursor: 'pointer' }}>
+                      <button onClick={() => onSelect(d)} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 12px', borderRadius: 6, backgroundColor: activeDocument?.id === d.id ? '#5CA868' : 'var(--navy)', color: 'white', border: 'none', fontSize: 11, fontWeight: 500, cursor: 'pointer' }}>
                         {activeDocument?.id === d.id ? <><CheckCircle size={12} /> Active</> : 'Use'}
                       </button>
                     )}
                     <button onClick={() => onEdit(d)} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 6, backgroundColor: onSelect ? 'transparent' : 'var(--navy)', color: onSelect ? 'var(--navy)' : 'white', border: onSelect ? '1px solid var(--border)' : 'none', fontSize: 11, fontWeight: 500, cursor: 'pointer' }}><Edit3 size={12} /> Edit</button>
-                    <button onClick={() => onDelete(d.id)} style={{ padding: 5, borderRadius: 6, background: 'none', border: '1px solid var(--border)', cursor: 'pointer', display: 'flex' }} title="Delete document"><Trash2 size={13} style={{ color: '#991B1B' }} /></button>
+                    <button onClick={() => onDelete(d.id)} style={{ padding: 5, borderRadius: 6, background: 'none', border: '1px solid var(--border)', cursor: 'pointer', display: 'flex' }} title="Delete document"><Trash2 size={13} style={{ color: '#C65454' }} /></button>
                   </div>
                 </div>
               </div>
@@ -1173,15 +1173,25 @@ function EditDocumentModal({ document: docItem, onClose, onSave }) {
   const [fileSize, setFileSize] = useState(docItem?.fileSize || '');
   const fileInputRef = useRef(null);
 
+  const [fileError, setFileError] = useState('');
+  const SUPPORTED_EXTS = ['.doc','.docx','.ppt','.pptx','.xls','.xlsx','.pdf','.csv','.txt','.rtf','.odt','.ods','.odp','.pages','.numbers','.key','.html','.htm','.xml','.json'];
+
   const handlePickFile = () => fileInputRef.current?.click();
   const handleFileChange = (e) => {
     const f = e.target.files?.[0];
     if (!f) return;
+    const ext = f.name.lastIndexOf('.') !== -1 ? f.name.slice(f.name.lastIndexOf('.')).toLowerCase() : '';
+    if (!SUPPORTED_EXTS.includes(ext)) {
+      setFileError('This file is not currently supported right now. Please upload a PDF, Word, PowerPoint, Excel, CSV, TXT, RTF, Open Document, Apple iWork, HTML, XML, or JSON file.');
+      e.target.value = '';
+      return;
+    }
+    setFileError('');
     setFileName(f.name);
     setFileSize(`${(f.size / (1024 * 1024)).toFixed(1)} MB`);
     e.target.value = '';
   };
-  const handleRemoveFile = () => { setFileName(''); setFileSize(''); };
+  const handleRemoveFile = () => { setFileName(''); setFileSize(''); setFileError(''); };
 
   const handleSave = () => {
     if (!name.trim() || !fileName.trim()) return;
@@ -1200,7 +1210,7 @@ function EditDocumentModal({ document: docItem, onClose, onSave }) {
 
   return (
     <>
-      <input ref={fileInputRef} type="file" accept=".pdf,.doc,.docx,.txt,.rtf,.odt,.xls,.xlsx,.csv,.ppt,.pptx" style={{ display: 'none' }} onChange={handleFileChange} />
+      <input ref={fileInputRef} type="file" accept=".pdf,.doc,.docx,.txt,.rtf,.odt,.xls,.xlsx,.csv,.ppt,.pptx,.ods,.odp,.pages,.numbers,.key,.html,.htm,.xml,.json" style={{ display: 'none' }} onChange={handleFileChange} />
       <div onClick={onClose} style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)', zIndex: 70, backdropFilter: 'blur(4px)' }} />
       <div
         className="fixed inset-0 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-[560px] md:max-h-[90vh] md:rounded-2xl"
@@ -1239,12 +1249,17 @@ function EditDocumentModal({ document: docItem, onClose, onSave }) {
                 <Upload size={16} /> Choose a file to upload
               </button>
             )}
+            {fileError && (
+              <div style={{ marginTop: 8, padding: '10px 12px', borderRadius: 8, backgroundColor: '#F9E7E7', border: '1px solid #F9E7E7', fontSize: 12, color: '#C65454', lineHeight: 1.5 }}>
+                {fileError}
+              </div>
+            )}
           </div>
         </div>
 
         <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
           <button onClick={onClose} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid var(--border)', background: 'white', fontSize: 13, cursor: 'pointer', color: 'var(--text-muted)' }}>Cancel</button>
-          <button onClick={handleSave} disabled={!name.trim() || !fileName.trim()} style={{ padding: '8px 20px', borderRadius: 8, border: 'none', background: (!name.trim() || !fileName.trim()) ? '#94A3B8' : 'var(--navy)', color: 'white', fontSize: 13, fontWeight: 500, cursor: (!name.trim() || !fileName.trim()) ? 'not-allowed' : 'pointer' }}>{isNew ? 'Create Document' : 'Save Changes'}</button>
+          <button onClick={handleSave} disabled={!name.trim() || !fileName.trim()} style={{ padding: '8px 20px', borderRadius: 8, border: 'none', background: (!name.trim() || !fileName.trim()) ? '#9CA3AF' : 'var(--navy)', color: 'white', fontSize: 13, fontWeight: 500, cursor: (!name.trim() || !fileName.trim()) ? 'not-allowed' : 'pointer' }}>{isNew ? 'Create Document' : 'Save Changes'}</button>
         </div>
       </div>
     </>
@@ -1265,7 +1280,7 @@ function AttachMenu({ activePack, activeDocument, onClose, onAttachFiles, onOpen
     <div
       onClick={onClick}
       style={{ padding: '12px 16px', cursor: 'pointer', borderBottom: '1px solid var(--border)', backgroundColor: active ? '#EDF3FA' : 'white', display: 'flex', alignItems: 'center', gap: 12 }}
-      onMouseEnter={e => { if (!active) e.currentTarget.style.backgroundColor = '#F8FAFC'; }}
+      onMouseEnter={e => { if (!active) e.currentTarget.style.backgroundColor = '#F8F4ED'; }}
       onMouseLeave={e => { if (!active) e.currentTarget.style.backgroundColor = active ? '#EDF3FA' : 'white'; }}
     >
       <div style={{ width: 36, height: 36, borderRadius: 10, background: active ? 'rgba(10,36,99,0.08)' : 'var(--ice-warm)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -1284,7 +1299,7 @@ function AttachMenu({ activePack, activeDocument, onClose, onAttachFiles, onOpen
 
   return (
     <>
-      <input ref={docInputRef} type="file" accept=".pdf,.doc,.docx,.txt,.rtf,.odt,.xls,.xlsx,.csv,.ppt,.pptx" multiple style={{ display: 'none' }} onChange={(e) => handleFiles(e, 'doc')} />
+      <input ref={docInputRef} type="file" accept=".pdf,.doc,.docx,.txt,.rtf,.odt,.xls,.xlsx,.csv,.ppt,.pptx,.ods,.odp,.pages,.numbers,.key,.html,.htm,.xml,.json" multiple style={{ display: 'none' }} onChange={(e) => handleFiles(e, 'doc')} />
 
       <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 40 }} />
       <div style={{ position: 'absolute', bottom: 'calc(100% + 8px)', left: 0, width: 300, maxWidth: 'calc(100vw - 24px)', backgroundColor: 'white', borderRadius: 12, border: '1px solid var(--border)', boxShadow: '0 12px 32px rgba(0,0,0,0.14)', zIndex: 41, overflow: 'hidden' }}>
@@ -1322,12 +1337,12 @@ function AttachMenu({ activePack, activeDocument, onClose, onAttachFiles, onOpen
 function TopNav({ plan, usage, onOpenSidebar }) {
   const [showUsagePopover, setShowUsagePopover] = useState(false);
   const docPct = usage.docs.limit > 0 ? (usage.docs.used / usage.docs.limit) * 100 : 0;
-  const usageColor = docPct >= 95 ? '#991B1B' : docPct >= 80 ? '#92400E' : 'var(--text-muted)';
-  const usageBorder = docPct >= 95 ? '#FEE2E2' : docPct >= 80 ? '#FEF3C7' : 'var(--border)';
+  const usageColor = docPct >= 95 ? '#C65454' : docPct >= 80 ? '#E8A33D' : 'var(--text-muted)';
+  const usageBorder = docPct >= 95 ? '#F9E7E7' : docPct >= 80 ? '#FBEED5' : 'var(--border)';
 
   const UsageBar = ({ label, used, limit }) => {
     const pct = limit > 0 ? Math.min((used / limit) * 100, 100) : 0;
-    const color = pct >= 95 ? '#991B1B' : pct >= 80 ? '#92400E' : 'var(--navy)';
+    const color = pct >= 95 ? '#C65454' : pct >= 80 ? '#E8A33D' : 'var(--navy)';
     return (
       <div style={{ marginBottom: 10 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
@@ -1388,7 +1403,7 @@ function TopNav({ plan, usage, onOpenSidebar }) {
         <div className="hidden md:block" style={{ position: 'relative' }}>
           <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
           <input readOnly placeholder="Search files, knowledge, or conversatio..." style={{ width: 240, height: 34, borderRadius: 8, border: '1px solid var(--border)', paddingLeft: 30, paddingRight: 40, fontSize: 13, color: 'var(--text-secondary)', background: '#fff', outline: 'none' }} />
-          <span style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', fontSize: 11, color: 'var(--text-muted)', background: '#F1F5F9', padding: '2px 6px', borderRadius: 4, fontWeight: 500 }}>{'\u2318'}K</span>
+          <span style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', fontSize: 11, color: 'var(--text-muted)', background: '#F0F3F6', padding: '2px 6px', borderRadius: 4, fontWeight: 500 }}>{'\u2318'}K</span>
         </div>
         <div style={{ position: 'relative', cursor: 'pointer' }}>
           <Bell size={18} color="var(--text-secondary)" />
@@ -1405,7 +1420,7 @@ function RiskCard({ card }) {
   return (
     <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 16, padding: 20, marginTop: 12 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <Shield size={18} color="#DC2626" />
+        <Shield size={18} color="#C65454" />
         <span style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-primary)' }}>{card.title}</span>
       </div>
       <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>{card.subtitle}</div>
@@ -1435,6 +1450,21 @@ function RiskCard({ card }) {
 /* ─────────────────── Message Bubble ─────────────────── */
 function MessageBubble({ msg }) {
   const isBot = msg.sender === 'bot';
+
+  // System notes render as centered, compact inline badges (e.g. "Switched to Clause Comparison mode")
+  if (msg.isSystemNote) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16, marginTop: -8 }}>
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 14px', borderRadius: 999, background: '#F0F3F6', border: '1px solid #D6DDE4' }}>
+          <Sparkles size={12} style={{ color: '#1E3A8A' }} />
+          <span style={{ fontSize: 12, fontWeight: 500, color: '#1E3A8A' }}>
+            <ReactMarkdown components={{ p: ({children}) => <span>{children}</span>, strong: ({children}) => <strong style={{ fontWeight: 600 }}>{children}</strong> }}>{msg.content}</ReactMarkdown>
+          </span>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={{ display: 'flex', gap: 12, marginBottom: 24 }}>
       {isBot ? (
@@ -1493,9 +1523,9 @@ function MessageBubble({ msg }) {
         {isBot && msg.sourceBadge && (() => {
           const isDoc = msg.sourceBadge.includes('your document');
           const isAI = msg.sourceBadge.includes('AI-generated');
-          const bg = isDoc ? '#EFF6FF' : isAI ? '#F8FAFC' : '#F0FDF4';
-          const border = isDoc ? '#BFDBFE' : isAI ? '#E2E8F0' : '#BBF7D0';
-          const color = isDoc ? '#1D4ED8' : isAI ? '#64748B' : '#16A34A';
+          const bg = isDoc ? '#F0F3F6' : isAI ? '#F8F4ED' : '#E7F3E9';
+          const border = isDoc ? '#D6DDE4' : isAI ? '#F0F3F6' : '#E7F3E9';
+          const color = isDoc ? '#1E3A8A' : isAI ? '#6B7885' : '#5CA868';
           const BadgeIcon = isAI ? Sparkles : Database;
           return (
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 8, padding: '4px 10px', borderRadius: 999, background: bg, border: `1px solid ${border}` }}>
@@ -1546,8 +1576,8 @@ function ModelSelector({ plan, selectedModel, onSelect, onLockedClick }) {
               display: 'flex', alignItems: 'center', gap: 5,
               padding: '4px 10px', borderRadius: 999,
               border: isActive ? 'none' : '1px solid var(--border)',
-              background: isActive ? 'var(--navy)' : m.enterprise ? '#FFFBEB' : 'white',
-              color: isActive ? 'white' : isLocked ? '#94A3B8' : m.enterprise ? '#92400E' : 'var(--slate)',
+              background: isActive ? 'var(--navy)' : m.enterprise ? '#FBEED5' : 'white',
+              color: isActive ? 'white' : isLocked ? '#9CA3AF' : m.enterprise ? '#E8A33D' : 'var(--slate)',
               fontSize: 12, fontWeight: 500, cursor: isLocked ? 'not-allowed' : 'pointer',
               fontFamily: "'DM Sans', sans-serif", transition: 'all 0.15s',
               opacity: isLocked ? 0.6 : 1,
@@ -1630,7 +1660,7 @@ function PlanComparisonModal({ currentPlan, onClose, navigate }) {
                     const isCheck = val === '\u2713';
                     const isDash = val === '\u2014';
                     return (
-                      <td key={p.id} style={{ textAlign: 'center', padding: '8px 6px', fontSize: 12, color: isCheck ? '#16A34A' : isDash ? '#94A3B8' : 'var(--text-primary)', fontWeight: isCheck ? 700 : 400 }}>
+                      <td key={p.id} style={{ textAlign: 'center', padding: '8px 6px', fontSize: 12, color: isCheck ? '#5CA868' : isDash ? '#9CA3AF' : 'var(--text-primary)', fontWeight: isCheck ? 700 : 400 }}>
                         {val}
                       </td>
                     );
@@ -1741,25 +1771,25 @@ function PlanAwarenessBadge({ plan, onViewPlans }) {
   }
   if (plan === 'Professional') {
     return (
-      <div style={{ marginTop: 16, padding: '10px 16px', borderRadius: 10, backgroundColor: 'var(--ice-warm)', borderLeft: '3px solid #1D4ED8', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div style={{ marginTop: 16, padding: '10px 16px', borderRadius: 10, backgroundColor: 'var(--ice-warm)', borderLeft: '3px solid #1E3A8A', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>You're on Professional · Upgrade for Client Portal, Secure Messaging, and SSO.</span>
-        <button onClick={onViewPlans} style={{ fontSize: 12, fontWeight: 500, color: '#1D4ED8', background: 'none', border: 'none', cursor: 'pointer', whiteSpace: 'nowrap' }}>See Team Plan →</button>
+        <button onClick={onViewPlans} style={{ fontSize: 12, fontWeight: 500, color: '#1E3A8A', background: 'none', border: 'none', cursor: 'pointer', whiteSpace: 'nowrap' }}>See Team Plan →</button>
       </div>
     );
   }
   if (plan === 'Team') {
     return (
-      <div style={{ marginTop: 16, display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 12px', borderRadius: 999, backgroundColor: '#DCFCE7' }}>
-        <CheckCircle size={12} color="#166534" />
-        <span style={{ fontSize: 12, fontWeight: 500, color: '#166534' }}>Team Plan · All features active</span>
+      <div style={{ marginTop: 16, display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 12px', borderRadius: 999, backgroundColor: '#E7F3E9' }}>
+        <CheckCircle size={12} color="#5CA868" />
+        <span style={{ fontSize: 12, fontWeight: 500, color: '#5CA868' }}>Team Plan · All features active</span>
       </div>
     );
   }
   if (plan === 'Enterprise') {
     return (
-      <div style={{ marginTop: 16, display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 12px', borderRadius: 999, backgroundColor: '#FFFBEB' }}>
-        <Zap size={12} color="#92400E" />
-        <span style={{ fontSize: 12, fontWeight: 500, color: '#92400E' }}>Enterprise · Priority access active</span>
+      <div style={{ marginTop: 16, display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 12px', borderRadius: 999, backgroundColor: '#FBEED5' }}>
+        <Zap size={12} color="#E8A33D" />
+        <span style={{ fontSize: 12, fontWeight: 500, color: '#E8A33D' }}>Enterprise · Priority access active</span>
       </div>
     );
   }
@@ -2030,6 +2060,30 @@ export default function ChatView() {
     setIsTyping(true);
     setStreamingContent('');
 
+    // ─── Hard Intent Guardrail ───
+    // If the user is in General Chat but their message clearly matches a specific intent,
+    // auto-switch to that intent BEFORE calling the LLM.
+    // This is a hard block — not a soft LLM prompt suggestion.
+    let effectiveIntent = activeIntent;
+    if (activeIntent === 'general_chat' && trimmed.length >= 10) {
+      const detectedMatch = detectIntent(trimmed, 'general_chat');
+      if (detectedMatch) {
+        effectiveIntent = detectedMatch;
+        setActiveIntent(detectedMatch);
+        // Inject a system note so the user sees what happened
+        const switchLabel = getIntentLabel(detectedMatch);
+        const switchNote = {
+          id: Date.now() + 0.5,
+          sender: 'bot',
+          content: `Switched to **${switchLabel}** mode for a more tailored response.`,
+          timestamp: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
+          sourceBadge: null,
+          isSystemNote: true,
+        };
+        setMessages((prev) => [...prev, switchNote]);
+      }
+    }
+
     // Build history for LLM context
     const history = messages.slice(-20).map(m => ({
       role: m.sender === 'user' ? 'user' : 'assistant',
@@ -2102,7 +2156,8 @@ export default function ChatView() {
           // New documents attached to this message — merge and persist for follow-ups
           const docParts = [];
           const docNames = [];
-          docsWithContent.forEach(doc => {
+          const docCount = docsWithContent.length;
+          docsWithContent.forEach((doc, idx) => {
             const rawContent = doc.content || '';
             const printableChars = rawContent.replace(/[^\x20-\x7E\n\r\t\u00A0-\u024F]/g, '');
             const printableRatio = rawContent.length > 0 ? (printableChars.length / rawContent.length) : 1;
@@ -2110,21 +2165,64 @@ export default function ChatView() {
             const garbleCount = garbleMatches ? garbleMatches.reduce((s, m) => s + m.length, 0) : 0;
             const hasGarble = garbleCount > rawContent.length * 0.1;
             const isReadable = rawContent.length < 50 || (printableRatio > 0.7 && !hasGarble);
+            const docLabel = docCount > 1 ? `Document ${idx + 1}: ${doc.name}` : doc.name;
             docNames.push(doc.name);
             if (isReadable) {
-              docParts.push(`--- ${doc.name} ---\n${rawContent}`);
+              // Per-document truncation: 20K chars each (not shared)
+              const truncated = rawContent.length > 20000 ? rawContent.slice(0, 20000) + '\n[... document truncated at 20,000 characters ...]' : rawContent;
+              docParts.push(`--- ${docLabel} ---\n${truncated}`);
             } else {
-              docParts.push(`--- ${doc.name} ---\n[File: ${doc.name}] The text content could not be extracted from this document. It may be a scanned PDF, image-based, or use non-standard encoding.`);
+              docParts.push(`--- ${docLabel} ---\n[File: ${doc.name}] The text content could not be extracted from this document. It may be a scanned PDF, image-based, or use non-standard encoding.`);
             }
           });
           const mergedName = docNames.length === 1 ? docNames[0] : `${docNames.length} documents`;
           const mergedContent = docParts.join('\n\n');
           contextLayers.uploadedDoc = { name: mergedName, content: mergedContent };
+          contextLayers.multiDocCount = docCount;
+          contextLayers.docNames = docNames;
           // Persist doc context for follow-up questions in this session
-          setSessionDocContext({ name: mergedName, content: mergedContent });
+          setSessionDocContext({ name: mergedName, content: mergedContent, docCount, docNames });
+
+          // ─── Multi-Document Cross-Reference Guardrail ───
+          // Detect if user is asking a cross-document question and inject guardrail guidance
+          if (docCount >= 2) {
+            const crossDocPattern = /\b(compare|contrast|difference|differ|versus|vs\.?|cross[\s-]?referenc|between.+(?:doc|document|file)|from.+(?:doc|document|file).+(?:and|&|with)|doc(?:ument)?\s*\d|file\s*\d|first.+(?:doc|document|file).+(?:second|other|next)|both\s+(?:doc|document|file))\b/i;
+            const isCrossDocQuery = crossDocPattern.test(trimmed);
+            if (isCrossDocQuery) {
+              // Build a mapping note so the LLM knows which doc is which
+              const docMapping = docNames.map((name, i) => `Document ${i + 1} = "${name}"`).join(', ');
+              contextLayers.multiDocGuidance = `MULTI-DOCUMENT CROSS-REFERENCE DETECTED.
+The user has uploaded ${docCount} documents and is asking a cross-document question.
+${docMapping}.
+INSTRUCTIONS:
+1. When the user says "doc 1", "document 1", "first document", etc., refer to Document 1 (${docNames[0]}).
+2. When the user says "doc 2", "document 2", "second document", etc., refer to Document 2 (${docNames[1]}).${docCount >= 3 ? `\n3. When the user says "doc 3", "document 3", "third document", etc., refer to Document 3 (${docNames[2]}).` : ''}${docCount >= 4 ? `\n4. Continue this numbering for all ${docCount} documents.` : ''}
+5. Structure your analysis document-by-document FIRST, then provide the comparison or cross-reference.
+6. If any document was truncated, mention that your analysis may be incomplete for that document.
+7. Always name the specific document when citing information — never say "the document says" without specifying which one.`;
+            }
+          }
         } else if (sessionDocContext) {
           // No new attachment — reuse persisted document from earlier in this session
           contextLayers.uploadedDoc = sessionDocContext;
+          // Carry forward multi-doc metadata for follow-up cross-doc queries
+          if (sessionDocContext.docCount && sessionDocContext.docCount >= 2) {
+            contextLayers.multiDocCount = sessionDocContext.docCount;
+            contextLayers.docNames = sessionDocContext.docNames || [];
+            // Check if this follow-up is also a cross-doc query
+            const crossDocPattern = /\b(compare|contrast|difference|differ|versus|vs\.?|cross[\s-]?referenc|between.+(?:doc|document|file)|from.+(?:doc|document|file).+(?:and|&|with)|doc(?:ument)?\s*\d|file\s*\d|first.+(?:doc|document|file).+(?:second|other|next)|both\s+(?:doc|document|file))\b/i;
+            if (crossDocPattern.test(trimmed)) {
+              const dn = sessionDocContext.docNames || [];
+              const docMapping = dn.map((name, i) => `Document ${i + 1} = "${name}"`).join(', ');
+              contextLayers.multiDocGuidance = `MULTI-DOCUMENT CROSS-REFERENCE DETECTED.
+The user has ${sessionDocContext.docCount} documents in this session and is asking a cross-document question.
+${docMapping}.
+INSTRUCTIONS:
+1. Match user references like "doc 1", "first document" to the numbered documents above.
+2. Structure your analysis document-by-document FIRST, then provide the comparison or cross-reference.
+3. Always name the specific document when citing information.`;
+            }
+          }
         } else if (activeVaultDocument) {
           // Vault document selected as context — use its metadata as reference
           contextLayers.uploadedDoc = { name: activeVaultDocument.name, content: activeVaultDocument.description || '' };
@@ -2139,17 +2237,21 @@ export default function ChatView() {
           };
         }
 
-        // Pass user-selected intent (if any) to skip classifier
-        // Removed: auto intent classifier — replaced by user-selected intent pill
+        // Pass the effective intent (may have been auto-switched from General Chat)
         // See: src/lib/intents.ts, src/lib/intentDetector.ts
-        contextLayers.intentLabel = getIntentLabel(activeIntent);
+        contextLayers.intentLabel = getIntentLabel(effectiveIntent);
 
-        // Cross-intent nudge: if message clearly belongs to a different intent,
-        // tell the LLM to give a brief answer and suggest switching
-        const crossIntentMatch = detectIntent(trimmed, activeIntent);
-        if (crossIntentMatch) {
-          const matchLabel = getIntentLabel(crossIntentMatch);
-          contextLayers.crossIntentNudge = `IMPORTANT: The user's message appears to be a "${matchLabel}" task, but they are currently in "${getIntentLabel(activeIntent)}" mode. You should:\n1. Briefly acknowledge what they're asking for.\n2. Provide only a short, high-level response (NOT a full detailed output).\n3. Suggest they switch to the "${matchLabel}" intent for a more thorough, specialised result. Say something like: "For a more detailed and specialised response, try switching to **${matchLabel}** mode using the intent selector below."\nDo NOT produce a full draft, full analysis, or full review — keep it brief and guide them to the right intent.`;
+        // Cross-intent nudge: if the user is in a SPECIFIC intent (not General Chat)
+        // and their message matches a different specific intent, instruct the LLM
+        // to give a brief answer and suggest switching.
+        // NOTE: General Chat auto-switching is handled by the Hard Intent Guardrail above.
+        // This nudge only applies when switching between two specific intents.
+        if (effectiveIntent !== 'general_chat') {
+          const crossIntentMatch = detectIntent(trimmed, effectiveIntent);
+          if (crossIntentMatch) {
+            const matchLabel = getIntentLabel(crossIntentMatch);
+            contextLayers.crossIntentNudge = `HARD CONSTRAINT: The user's message appears to be a "${matchLabel}" task, but they are currently in "${getIntentLabel(effectiveIntent)}" mode.\nYou MUST:\n1. Acknowledge what they're asking for in ONE sentence.\n2. Do NOT perform the task. Do NOT produce any analysis, draft, comparison, review, or output.\n3. Tell them: "To get the best results for this, switch to **${matchLabel}** mode using the intent selector below. I'll be able to give you a much more thorough and specialised response there."\nThis is a HARD BLOCK — do not attempt the task in the wrong mode.`;
+          }
         }
 
         // Tier 3 (Global KB) and Tier 4 (Fallback) are handled inside callLLM via persona
@@ -2206,7 +2308,42 @@ export default function ChatView() {
     }
   }, [isTyping, showEmptyState, messages, activeKnowledgePack, activeVaultDocument, pendingAttachments, activeThreadId, sessionState, activeIntent]);
 
+  const SUPPORTED_FILE_EXTENSIONS = [
+    '.doc', '.docx', '.ppt', '.pptx', '.xls', '.xlsx',
+    '.pdf', '.csv', '.txt', '.rtf',
+    '.odt', '.ods', '.odp',
+    '.pages', '.numbers', '.key',
+    '.html', '.htm', '.xml', '.json',
+  ];
+
   const handleAttachFiles = (files, kind) => {
+    // Validate file types for document uploads
+    if (kind === 'doc') {
+      const rejected = files.filter(f => {
+        const ext = f.name.lastIndexOf('.') !== -1
+          ? f.name.slice(f.name.lastIndexOf('.')).toLowerCase()
+          : '';
+        return !SUPPORTED_FILE_EXTENSIONS.includes(ext);
+      });
+      if (rejected.length > 0) {
+        const names = rejected.map(f => f.name).join(', ');
+        setMessages(prev => [...prev, {
+          id: Date.now(),
+          sender: 'bot',
+          content: `**This file is not currently supported right now.** The file${rejected.length > 1 ? 's' : ''} *${names}* could not be uploaded.\n\nSupported formats: PDF, Word (.doc/.docx), PowerPoint (.ppt/.pptx), Excel (.xls/.xlsx), CSV, TXT, RTF, Open Document (.odt/.ods/.odp), Apple iWork (.pages/.numbers/.key), HTML, XML, and JSON.`,
+          timestamp: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
+        }]);
+        // Filter to only valid files and continue if any are valid
+        files = files.filter(f => {
+          const ext = f.name.lastIndexOf('.') !== -1
+            ? f.name.slice(f.name.lastIndexOf('.')).toLowerCase()
+            : '';
+          return SUPPORTED_FILE_EXTENSIONS.includes(ext);
+        });
+        if (files.length === 0) return;
+      }
+    }
+
     const newAtts = files.map((f, i) => ({
       id: Date.now() + i,
       name: f.name,
@@ -2407,22 +2544,22 @@ export default function ChatView() {
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#FAFBFC', minHeight: 0 }}>
           {/* Document limit banners */}
           {docPct >= 100 && (
-            <div className="px-3 sm:px-6 md:px-10 py-2.5 flex items-center gap-2 sm:gap-3 flex-wrap" style={{ backgroundColor: '#FEE2E2', borderBottom: '1px solid #FECACA' }}>
-              <AlertTriangle size={15} style={{ color: '#991B1B', flexShrink: 0 }} />
-              <span className="text-xs sm:text-sm" style={{ flex: 1, minWidth: 0, color: '#991B1B' }}>
+            <div className="px-3 sm:px-6 md:px-10 py-2.5 flex items-center gap-2 sm:gap-3 flex-wrap" style={{ backgroundColor: '#F9E7E7', borderBottom: '1px solid #F9E7E7' }}>
+              <AlertTriangle size={15} style={{ color: '#C65454', flexShrink: 0 }} />
+              <span className="text-xs sm:text-sm" style={{ flex: 1, minWidth: 0, color: '#C65454' }}>
                 You've reached your document limit for this month. Uploads are paused until May 1, 2026 or you upgrade.
               </span>
               <button onClick={() => setShowPlanModal(true)} style={{ padding: '4px 14px', borderRadius: 8, backgroundColor: '#C9A84C', color: 'white', border: 'none', fontSize: 12, fontWeight: 500, cursor: 'pointer', whiteSpace: 'nowrap' }}>Upgrade Plan</button>
             </div>
           )}
           {docPct >= 80 && docPct < 100 && !docLimitBannerDismissed && (
-            <div className="px-3 sm:px-6 md:px-10 py-2.5 flex items-center gap-2 sm:gap-3 flex-wrap" style={{ backgroundColor: '#FFFBEB', borderBottom: '1px solid #FEF3C7' }}>
-              <AlertTriangle size={15} style={{ color: '#92400E', flexShrink: 0 }} />
-              <span className="text-xs sm:text-sm" style={{ flex: 1, minWidth: 0, color: '#92400E' }}>
+            <div className="px-3 sm:px-6 md:px-10 py-2.5 flex items-center gap-2 sm:gap-3 flex-wrap" style={{ backgroundColor: '#FBEED5', borderBottom: '1px solid #FBEED5' }}>
+              <AlertTriangle size={15} style={{ color: '#E8A33D', flexShrink: 0 }} />
+              <span className="text-xs sm:text-sm" style={{ flex: 1, minWidth: 0, color: '#E8A33D' }}>
                 You've used {Math.round(docPct)}% of your {usage.docs.limit.toLocaleString()} document limit this month. Uploads will stop at {usage.docs.limit.toLocaleString()}.
               </span>
               <button onClick={() => setShowPlanModal(true)} style={{ fontSize: 12, fontWeight: 500, color: '#C9A84C', background: 'none', border: 'none', cursor: 'pointer', whiteSpace: 'nowrap' }}>Upgrade Plan →</button>
-              <button onClick={() => setDocLimitBannerDismissed(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2 }}><X size={14} color="#92400E" /></button>
+              <button onClick={() => setDocLimitBannerDismissed(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2 }}><X size={14} color="#E8A33D" /></button>
             </div>
           )}
 
@@ -2448,12 +2585,12 @@ export default function ChatView() {
               <div style={{
                 display: 'flex', alignItems: 'flex-start', gap: 12,
                 padding: '14px 18px', borderRadius: 12,
-                background: '#FFFBEB', border: '1px solid #F59E0B',
+                background: '#FBEED5', border: '1px solid #E8A33D',
                 boxShadow: '0 1px 3px rgba(245, 158, 11, 0.15)',
               }}>
-                <AlertTriangle size={18} style={{ color: '#D97706', flexShrink: 0, marginTop: 2 }} />
+                <AlertTriangle size={18} style={{ color: '#E8A33D', flexShrink: 0, marginTop: 2 }} />
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: '#92400E', marginBottom: 6 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: '#E8A33D', marginBottom: 6 }}>
                     We recommend starting a new conversation
                   </div>
                   <div style={{ fontSize: 12, color: '#A16207', marginBottom: 10, lineHeight: 1.7 }}>
@@ -2463,7 +2600,7 @@ export default function ChatView() {
                     A fresh conversation gives Alex a clean slate to focus entirely on your new document, so every answer is accurate and based only on what's in front of you.
                   </div>
                   {pendingNewDoc && (
-                    <div style={{ fontSize: 12, fontWeight: 600, color: '#92400E', marginBottom: 14, padding: '8px 12px', background: 'rgba(217, 119, 6, 0.08)', borderRadius: 8, display: 'inline-block' }}>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: '#E8A33D', marginBottom: 14, padding: '8px 12px', background: 'rgba(217, 119, 6, 0.08)', borderRadius: 8, display: 'inline-block' }}>
                       {pendingNewDoc.name}
                     </div>
                   )}
@@ -2472,7 +2609,7 @@ export default function ChatView() {
                       onClick={() => handleDocVersionChoice('new')}
                       style={{
                         padding: '8px 20px', borderRadius: 8, fontSize: 12, fontWeight: 600,
-                        background: '#D97706', color: '#fff', border: 'none', cursor: 'pointer',
+                        background: '#E8A33D', color: '#fff', border: 'none', cursor: 'pointer',
                       }}
                     >
                       Start fresh with new document
@@ -2481,7 +2618,7 @@ export default function ChatView() {
                       onClick={() => handleDocVersionChoice('continue')}
                       style={{
                         padding: '8px 20px', borderRadius: 8, fontSize: 12, fontWeight: 600,
-                        background: '#fff', color: '#92400E', border: '1px solid #F59E0B', cursor: 'pointer',
+                        background: '#fff', color: '#E8A33D', border: '1px solid #E8A33D', cursor: 'pointer',
                       }}
                     >
                       Keep current document
@@ -2766,7 +2903,7 @@ export default function ChatView() {
                 }, 600);
               }} onKeyDown={handleKeyDown} placeholder={inputPlaceholder} rows={1} style={{ flex: 1, border: 'none', outline: 'none', fontSize: 14, color: 'var(--text-primary)', background: 'transparent', resize: 'none', maxHeight: 120, overflowY: 'auto', lineHeight: '1.5', fontFamily: 'inherit' }} onInput={(e) => { e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px'; }} />
               {(() => { const canSend = (input.trim() || pendingAttachments.length > 0) && !isTyping && !showSwitchBanner; return (
-              <div onClick={() => canSend && sendMessage(input)} style={{ width: 32, height: 32, borderRadius: '50%', background: canSend ? 'var(--navy)' : '#94A3B8', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: canSend ? 'pointer' : 'not-allowed', flexShrink: 0, opacity: canSend ? 1 : 0.6, transition: 'background 150ms, opacity 150ms' }}><ArrowUp size={16} color="#fff" /></div>
+              <div onClick={() => canSend && sendMessage(input)} style={{ width: 32, height: 32, borderRadius: '50%', background: canSend ? 'var(--navy)' : '#9CA3AF', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: canSend ? 'pointer' : 'not-allowed', flexShrink: 0, opacity: canSend ? 1 : 0.6, transition: 'background 150ms, opacity 150ms' }}><ArrowUp size={16} color="#fff" /></div>
               ); })()}
             </div>
             <div style={{ textAlign: 'center', fontSize: 12, color: 'var(--text-muted)', marginTop: 8 }}>

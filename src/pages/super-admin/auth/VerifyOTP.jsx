@@ -141,7 +141,7 @@ export default function VerifyOTP() {
             style={{
               width: 48,
               height: 54,
-              border: `2px solid ${error ? '#EF4444' : digit ? 'var(--navy-light)' : 'var(--border)'}`,
+              border: `2px solid ${error ? '#C65454' : digit ? 'var(--navy-light)' : 'var(--border)'}`,
               borderRadius: '10px',
               fontSize: '24px',
               fontWeight: 600,
@@ -150,9 +150,9 @@ export default function VerifyOTP() {
               transition: 'border-color 150ms',
               opacity: isLocked ? 0.5 : 1,
               cursor: isLocked ? 'not-allowed' : 'text',
-              backgroundColor: isLocked ? '#F8FAFC' : 'white',
+              backgroundColor: isLocked ? '#F8F4ED' : 'white',
             }}
-            onFocusCapture={(e) => { if (!isLocked) { e.target.style.borderColor = error ? '#EF4444' : 'var(--navy)'; e.target.style.boxShadow = '0 0 0 3px rgba(11,29,58,0.10)'; } }}
+            onFocusCapture={(e) => { if (!isLocked) { e.target.style.borderColor = error ? '#C65454' : 'var(--navy)'; e.target.style.boxShadow = '0 0 0 3px rgba(11,29,58,0.10)'; } }}
             onBlurCapture={(e) => { e.target.style.borderColor = digit ? 'var(--navy-light)' : 'var(--border)'; e.target.style.boxShadow = 'none'; }}
           />
         ))}
@@ -160,8 +160,8 @@ export default function VerifyOTP() {
 
       {/* Error */}
       {error && (
-        <div className="mt-4" style={{ backgroundColor: '#FEF2F2', borderLeft: '3px solid #EF4444', borderRadius: '0 8px 8px 0', padding: '10px 14px' }}>
-          <p style={{ fontSize: '13px', color: '#9B2C2C' }}>{error}</p>
+        <div className="mt-4" style={{ backgroundColor: '#F9E7E7', borderLeft: '3px solid #C65454', borderRadius: '0 8px 8px 0', padding: '10px 14px' }}>
+          <p style={{ fontSize: '13px', color: '#C65454' }}>{error}</p>
         </div>
       )}
 
@@ -180,7 +180,7 @@ export default function VerifyOTP() {
         disabled={!allFilled || loading || isLocked}
         className="w-full flex items-center justify-center gap-2 text-white mt-5 transition-colors"
         style={{
-          backgroundColor: !allFilled || loading || isLocked ? '#94A3B8' : 'var(--navy)',
+          backgroundColor: !allFilled || loading || isLocked ? '#9CA3AF' : 'var(--navy)',
           height: 42,
           borderRadius: '10px',
           fontSize: '14px',

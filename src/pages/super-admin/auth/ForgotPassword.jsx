@@ -145,7 +145,7 @@ export default function ForgotPassword() {
               disabled={!isEmailValid || emailLoading}
               className="w-full flex items-center justify-center gap-2 text-white"
               style={{
-                backgroundColor: !isEmailValid || emailLoading ? '#94A3B8' : 'var(--navy)',
+                backgroundColor: !isEmailValid || emailLoading ? '#9CA3AF' : 'var(--navy)',
                 height: 42,
                 borderRadius: '10px',
                 fontSize: '14px',
@@ -190,7 +190,7 @@ export default function ForgotPassword() {
                 style={{
                   width: 48,
                   height: 54,
-                  border: `2px solid ${otpError ? '#EF4444' : digit ? 'var(--navy-light)' : 'var(--border)'}`,
+                  border: `2px solid ${otpError ? '#C65454' : digit ? 'var(--navy-light)' : 'var(--border)'}`,
                   borderRadius: '10px',
                   fontSize: '24px',
                   fontWeight: 600,
@@ -198,15 +198,15 @@ export default function ForgotPassword() {
                   outline: 'none',
                   opacity: isLocked ? 0.5 : 1,
                   cursor: isLocked ? 'not-allowed' : 'text',
-                  backgroundColor: isLocked ? '#F8FAFC' : 'white',
+                  backgroundColor: isLocked ? '#F8F4ED' : 'white',
                 }}
               />
             ))}
           </div>
 
           {otpError && (
-            <div className="mt-4" style={{ backgroundColor: '#FEF2F2', borderLeft: '3px solid #EF4444', borderRadius: '0 8px 8px 0', padding: '10px 14px' }}>
-              <p style={{ fontSize: '13px', color: '#9B2C2C', margin: 0 }}>{otpError}</p>
+            <div className="mt-4" style={{ backgroundColor: '#F9E7E7', borderLeft: '3px solid #C65454', borderRadius: '0 8px 8px 0', padding: '10px 14px' }}>
+              <p style={{ fontSize: '13px', color: '#C65454', margin: 0 }}>{otpError}</p>
             </div>
           )}
 
@@ -223,7 +223,7 @@ export default function ForgotPassword() {
             disabled={!allFilled || otpLoading || isLocked}
             className="w-full flex items-center justify-center gap-2 text-white mt-5"
             style={{
-              backgroundColor: !allFilled || otpLoading || isLocked ? '#94A3B8' : 'var(--navy)',
+              backgroundColor: !allFilled || otpLoading || isLocked ? '#9CA3AF' : 'var(--navy)',
               height: 42,
               borderRadius: '10px',
               fontSize: '14px',

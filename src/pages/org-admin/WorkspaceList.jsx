@@ -101,9 +101,9 @@ export default function WorkspaceList() {
             <div className="flex items-start justify-between mb-3">
               <div
                 className="flex items-center justify-center rounded-lg"
-                style={{ width: 36, height: 36, backgroundColor: ws.status === 'Archived' ? '#F1F5F9' : 'var(--ice-warm)' }}
+                style={{ width: 36, height: 36, backgroundColor: ws.status === 'Archived' ? '#F0F3F6' : 'var(--ice-warm)' }}
               >
-                {ws.status === 'Archived' ? <Archive size={16} style={{ color: '#64748B' }} /> : <Briefcase size={16} style={{ color: 'var(--navy)' }} />}
+                {ws.status === 'Archived' ? <Archive size={16} style={{ color: '#6B7885' }} /> : <Briefcase size={16} style={{ color: 'var(--navy)' }} />}
               </div>
               <Badge variant={ws.status}>{ws.status}</Badge>
             </div>

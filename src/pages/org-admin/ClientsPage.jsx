@@ -185,7 +185,7 @@ export default function ClientsPage() {
                 </div>
                 <div className="flex items-center gap-1.5">
                   <MessageSquare size={12} style={{ color: 'var(--text-muted)' }} />
-                  <span style={{ fontSize: '12px', color: client.messages > 0 ? '#DC2626' : 'var(--text-secondary)' }}>
+                  <span style={{ fontSize: '12px', color: client.messages > 0 ? '#C65454' : 'var(--text-secondary)' }}>
                     {client.messages} unread
                   </span>
                 </div>

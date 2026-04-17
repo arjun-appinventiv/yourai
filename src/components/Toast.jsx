@@ -29,7 +29,7 @@ export function ToastProvider({ children }) {
       {toast && (
         <div
           className={`fixed bottom-16 right-6 z-[60] flex items-center gap-2 px-4 py-3 rounded-lg text-white text-sm font-medium ${exiting ? 'toast-exit' : 'toast-enter'}`}
-          style={{ backgroundColor: '#166534', boxShadow: '0 4px 20px rgba(0,0,0,0.15)' }}
+          style={{ backgroundColor: '#5CA868', boxShadow: '0 4px 20px rgba(0,0,0,0.15)' }}
         >
           <CheckCircle size={18} />
           {toast}

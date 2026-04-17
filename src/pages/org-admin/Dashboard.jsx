@@ -32,8 +32,8 @@ export default function Dashboard() {
       <div className="grid grid-cols-4 gap-4 mb-8">
         <StatCard icon={Briefcase} value={activeWorkspaces} label="Active Workspaces" accentColor="var(--navy)" />
         <StatCard icon={FileText} value={totalDocs} label="Total Documents" accentColor="var(--gold)" />
-        <StatCard icon={FileBarChart} value={orgReports.length} label="Reports Generated" accentColor="#166534" />
-        <StatCard icon={Workflow} value={runningWorkflows} label="Workflows Running" accentColor="#1D4ED8" />
+        <StatCard icon={FileBarChart} value={orgReports.length} label="Reports Generated" accentColor="#5CA868" />
+        <StatCard icon={Workflow} value={runningWorkflows} label="Workflows Running" accentColor="#1E3A8A" />
       </div>
 
       {/* Two column layout */}
@@ -62,10 +62,10 @@ export default function Dashboard() {
                     className="flex items-center justify-center rounded-full flex-shrink-0 mt-0.5"
                     style={{
                       width: 28, height: 28,
-                      backgroundColor: item.user === 'System' ? '#EFF6FF' : 'var(--ice-warm)',
+                      backgroundColor: item.user === 'System' ? '#F0F3F6' : 'var(--ice-warm)',
                     }}
                   >
-                    <IconComp size={13} style={{ color: item.user === 'System' ? '#1D4ED8' : 'var(--text-muted)' }} />
+                    <IconComp size={13} style={{ color: item.user === 'System' ? '#1E3A8A' : 'var(--text-muted)' }} />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p style={{ fontSize: '13px', color: 'var(--text-primary)', lineHeight: 1.4 }}>
@@ -94,12 +94,12 @@ export default function Dashboard() {
               style={{
                 border: '1px solid var(--border)',
                 borderRadius: 12,
-                borderLeft: '3px solid #DC2626',
+                borderLeft: '3px solid #C65454',
                 boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
               }}
             >
               <div className="flex items-center gap-2 mb-2">
-                <AlertCircle size={16} style={{ color: '#DC2626' }} />
+                <AlertCircle size={16} style={{ color: '#C65454' }} />
                 <h4 style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>
                   Classification Queue
                 </h4>
@@ -147,7 +147,7 @@ export default function Dashboard() {
                       style={{
                         height: '100%',
                         width: `${pct}%`,
-                        backgroundColor: pct > 80 ? '#DC2626' : pct > 50 ? 'var(--gold)' : 'var(--navy)',
+                        backgroundColor: pct > 80 ? '#C65454' : pct > 50 ? 'var(--gold)' : 'var(--navy)',
                         borderRadius: 3,
                         transition: 'width 300ms',
                       }}

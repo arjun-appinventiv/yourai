@@ -259,7 +259,7 @@ export default function StaticContent() {
       <div className="grid grid-cols-4 gap-4">
         <StatCard icon={BookOpen} value={pages.length} label="Total Pages" />
         <StatCard icon={CheckCircle} value={publishedCount} label="Published" />
-        <StatCard icon={Clock} value={draftCount} label="Drafts" accentColor="#92400E" />
+        <StatCard icon={Clock} value={draftCount} label="Drafts" accentColor="#E8A33D" />
         <StatCard icon={Globe} value="yourai.com" label="Public Site" accentColor="var(--gold)" />
       </div>
 
@@ -305,7 +305,7 @@ export default function StaticContent() {
             <td className="px-4 py-3">
               <span
                 className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
-                style={p.status === 'Published' ? { backgroundColor: '#DCFCE7', color: '#166534' } : { backgroundColor: '#F3F4F6', color: '#374151' }}
+                style={p.status === 'Published' ? { backgroundColor: '#E7F3E9', color: '#5CA868' } : { backgroundColor: '#F3F4F6', color: '#6B7885' }}
               >
                 {p.status}
               </span>

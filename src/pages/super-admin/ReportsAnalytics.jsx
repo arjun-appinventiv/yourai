@@ -25,16 +25,16 @@ const scheduledReports = [
 ];
 
 const typeColors = {
-  Platform: { bg: '#EFF6FF', color: '#1D4ED8' },
-  Financial: { bg: '#F0FDF4', color: '#166534' },
-  Usage: { bg: '#FEF9C3', color: '#92400E' },
-  AI: { bg: '#FEE2E2', color: '#991B1B' },
-  Compliance: { bg: '#F1F5F9', color: '#64748B' },
+  Platform: { bg: '#F0F3F6', color: '#1E3A8A' },
+  Financial: { bg: '#E7F3E9', color: '#5CA868' },
+  Usage: { bg: '#FBEED5', color: '#E8A33D' },
+  AI: { bg: '#F9E7E7', color: '#C65454' },
+  Compliance: { bg: '#F0F3F6', color: '#6B7885' },
 };
 
 const formatColors = {
-  PDF: { bg: '#FEE2E2', color: '#991B1B' },
-  XLSX: { bg: '#DCFCE7', color: '#166534' },
+  PDF: { bg: '#F9E7E7', color: '#C65454' },
+  XLSX: { bg: '#E7F3E9', color: '#5CA868' },
 };
 
 export default function ReportsAnalytics() {
@@ -190,7 +190,7 @@ export default function ReportsAnalytics() {
               <td className="px-4 py-3">
                 <span
                   className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
-                  style={r.enabled ? { backgroundColor: '#DCFCE7', color: '#166534' } : { backgroundColor: '#F3F4F6', color: '#374151' }}
+                  style={r.enabled ? { backgroundColor: '#E7F3E9', color: '#5CA868' } : { backgroundColor: '#F3F4F6', color: '#6B7885' }}
                 >
                   {r.enabled ? 'Active' : 'Paused'}
                 </span>
