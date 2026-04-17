@@ -84,7 +84,6 @@ export default function TenantManagement() {
   const [orgTab, setOrgTab] = useState('overview');
   const [orgUserSearch, setOrgUserSearch] = useState('');
   const [showAddTenant, setShowAddTenant] = useState(false);
-  const [addStep, setAddStep] = useState(1);
   const [newOrg, setNewOrg] = useState({ name: '', plan: 'Professional', industry: 'Legal Services' });
   const [newAdmin, setNewAdmin] = useState({ firstName: '', lastName: '', email: '', phone: '' });
   const [inviteSent, setInviteSent] = useState(false);
@@ -206,11 +205,17 @@ export default function TenantManagement() {
   const openAddTenant = () => {
     setNewOrg({ name: '', plan: 'Professional', industry: 'Legal Services' });
     setNewAdmin({ firstName: '', lastName: '', email: '', phone: '' });
-    setAddStep(1); setInviteSent(false); setShowAddTenant(true);
+    setInviteSent(false); setShowAddTenant(true);
   };
 
   const handleCreateTenant = () => {
-    const fullName = `${newAdmin.firstName} ${newAdmin.lastName}`.trim();
+    // Derive a display name from the email local-part if no first/last provided
+    const emailLocal = (newAdmin.email || '').split('@')[0] || '';
+    const derivedName = emailLocal
+      .replace(/[._-]+/g, ' ')
+      .replace(/\b\w/g, (c) => c.toUpperCase())
+      .trim() || 'Admin';
+    const fullName = (`${newAdmin.firstName} ${newAdmin.lastName}`.trim()) || derivedName;
     const createdDate = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
     const newTenant = {
       id: Date.now(), name: newOrg.name, plan: newOrg.plan, users: 1, workspaces: 0, documents: 0,
@@ -253,7 +258,7 @@ export default function TenantManagement() {
     showToast(`Invitation sent to ${newAdmin.email}. ${newOrg.name} has been onboarded.`);
   };
 
-  const closeAddTenant = () => { setShowAddTenant(false); setAddStep(1); setInviteSent(false); };
+  const closeAddTenant = () => { setShowAddTenant(false); setInviteSent(false); };
 
   const openOrgDetail = (org) => {
     setSelectedOrg(org);
@@ -675,107 +680,23 @@ export default function TenantManagement() {
               </div>
               {!inviteSent && (
                 <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
-                  Onboard a new organisation. The admin will receive an email invitation to set up their account.
+                  Enter the tenant's name and admin email. They'll receive an invitation to set their password and log in.
                 </p>
-              )}
-              {/* Step indicator */}
-              {!inviteSent && (
-                <div className="flex items-center gap-2 mt-4">
-                  {[
-                    { num: 1, label: 'Organisation' },
-                    { num: 2, label: 'Admin User' },
-                    { num: 3, label: 'Review & Invite' },
-                  ].map(({ num, label }, i) => (
-                    <React.Fragment key={num}>
-                      <div className="flex items-center gap-1.5">
-                        <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold" style={{
-                          backgroundColor: addStep > num ? '#E7F3E9' : addStep === num ? 'var(--navy)' : 'var(--ice)',
-                          color: addStep > num ? '#5CA868' : addStep === num ? 'white' : 'var(--text-muted)',
-                        }}>
-                          {addStep > num ? '✓' : num}
-                        </div>
-                        <span style={{ fontSize: '12px', color: addStep >= num ? 'var(--text-primary)' : 'var(--text-muted)', fontWeight: addStep === num ? 500 : 400 }}>{label}</span>
-                      </div>
-                      {i < 2 && <div className="flex-1 h-px" style={{ backgroundColor: addStep > num ? '#E7F3E9' : 'var(--border)' }} />}
-                    </React.Fragment>
-                  ))}
-                </div>
               )}
             </div>
 
             {/* Body */}
             <div className="flex-1" style={{ padding: '24px 28px' }}>
-              {/* Step 1: Organisation Details */}
-              {addStep === 1 && !inviteSent && (
+              {!inviteSent && (
                 <div className="space-y-5">
-                  <div className="flex items-start gap-3 p-3 rounded-lg" style={{ backgroundColor: '#F0F3F6', borderLeft: '3px solid #1E3A8A' }}>
-                    <Info size={15} style={{ color: '#1E3A8A', flexShrink: 0, marginTop: 2 }} />
-                    <p style={{ fontSize: '12px', color: '#1E3A5F' }}>Each tenant is an independent organisation with its own workspaces, users, documents, and billing.</p>
+                  <div>
+                    <label className="block mb-1.5" style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-secondary)' }}>Tenant Name *</label>
+                    <input type="text" value={newOrg.name} onChange={(e) => setNewOrg({ ...newOrg, name: e.target.value })} placeholder="e.g. Hartwell & Associates" style={{ ...inputStyle, width: '100%' }} autoFocus />
                   </div>
 
                   <div>
-                    <label className="block mb-1.5" style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-secondary)' }}>Organisation Name *</label>
-                    <input type="text" value={newOrg.name} onChange={(e) => setNewOrg({ ...newOrg, name: e.target.value })} placeholder="e.g. Hartwell & Associates" style={{ ...inputStyle, width: '100%' }} />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block mb-1.5" style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-secondary)' }}>Subscription Plan</label>
-                      <select value={newOrg.plan} onChange={(e) => setNewOrg({ ...newOrg, plan: e.target.value })} style={{ ...inputStyle, width: '100%' }}>
-                        <option>Free</option>
-                        <option>Professional</option>
-                        <option>Team</option>
-                        <option>Enterprise</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block mb-1.5" style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-secondary)' }}>Industry</label>
-                      <select value={newOrg.industry} onChange={(e) => setNewOrg({ ...newOrg, industry: e.target.value })} style={{ ...inputStyle, width: '100%' }}>
-                        <option>Legal Services</option>
-                        <option>Corporate Legal</option>
-                        <option>Compliance & Risk</option>
-                        <option>Financial Services</option>
-                        <option>Healthcare</option>
-                        <option>Other</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  {/* Plan summary */}
-                  <div className="p-4 rounded-lg" style={{ backgroundColor: 'var(--ice-warm)', border: '1px solid var(--border)' }}>
-                    <div className="text-xs font-semibold uppercase mb-2" style={{ color: 'var(--text-muted)' }}>Plan Includes</div>
-                    <div className="grid grid-cols-2 gap-2">
-                      {newOrg.plan === 'Free' && ['1 user', '50 docs/mo', '10 workflow runs', '1 knowledge pack'].map((f) => <div key={f} className="text-xs" style={{ color: 'var(--text-secondary)' }}>• {f}</div>)}
-                      {newOrg.plan === 'Professional' && ['Up to 3 users', '500 docs/mo', '100 workflow runs', '5 knowledge packs'].map((f) => <div key={f} className="text-xs" style={{ color: 'var(--text-secondary)' }}>• {f}</div>)}
-                      {newOrg.plan === 'Team' && ['Up to 10 users', '2,000 docs/mo', '500 workflow runs', '20 knowledge packs'].map((f) => <div key={f} className="text-xs" style={{ color: 'var(--text-secondary)' }}>• {f}</div>)}
-                      {newOrg.plan === 'Enterprise' && ['Unlimited users', 'Unlimited docs', 'Unlimited workflows', 'Unlimited knowledge packs'].map((f) => <div key={f} className="text-xs" style={{ color: 'var(--text-secondary)' }}>• {f}</div>)}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Step 2: Admin User */}
-              {addStep === 2 && !inviteSent && (
-                <div className="space-y-5">
-                  <div className="flex items-start gap-3 p-3 rounded-lg" style={{ backgroundColor: '#F0F3F6', borderLeft: '3px solid #1E3A8A' }}>
-                    <Info size={15} style={{ color: '#1E3A8A', flexShrink: 0, marginTop: 2 }} />
-                    <p style={{ fontSize: '12px', color: '#1E3A5F' }}>This person will be the Organisation Admin — they can invite other users, create workspaces, and manage billing. They'll receive an email with a link to set their password and access the portal.</p>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block mb-1.5" style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-secondary)' }}>First Name *</label>
-                      <input type="text" value={newAdmin.firstName} onChange={(e) => setNewAdmin({ ...newAdmin, firstName: e.target.value })} placeholder="Ryan" style={{ ...inputStyle, width: '100%' }} />
-                    </div>
-                    <div>
-                      <label className="block mb-1.5" style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-secondary)' }}>Last Name *</label>
-                      <input type="text" value={newAdmin.lastName} onChange={(e) => setNewAdmin({ ...newAdmin, lastName: e.target.value })} placeholder="Melade" style={{ ...inputStyle, width: '100%' }} />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block mb-1.5" style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-secondary)' }}>Email Address *</label>
-                    <input type="email" value={newAdmin.email} onChange={(e) => setNewAdmin({ ...newAdmin, email: e.target.value })} placeholder="ryan@hartwell.com" style={{ ...inputStyle, width: '100%' }} />
+                    <label className="block mb-1.5" style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-secondary)' }}>Admin Email *</label>
+                    <input type="email" value={newAdmin.email} onChange={(e) => setNewAdmin({ ...newAdmin, email: e.target.value })} placeholder="admin@hartwell.com" style={{ ...inputStyle, width: '100%' }} />
                     {newAdmin.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newAdmin.email) && (
                       <p className="mt-1" style={{ fontSize: '11px', color: '#C65454' }}>Please enter a valid email address.</p>
                     )}
@@ -784,55 +705,19 @@ export default function TenantManagement() {
                     )}
                   </div>
 
-                  <div>
-                    <label className="block mb-1.5" style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-secondary)' }}>Phone Number (optional)</label>
-                    <input type="tel" value={newAdmin.phone} onChange={(e) => setNewAdmin({ ...newAdmin, phone: e.target.value })} placeholder="+1 (555) 000-0000" style={{ ...inputStyle, width: '100%' }} />
-                  </div>
-
-                  <div className="p-4 rounded-lg" style={{ border: '1px solid var(--border)' }}>
-                    <div className="text-xs font-semibold uppercase mb-2" style={{ color: 'var(--text-muted)' }}>What happens next?</div>
+                  <div className="p-4 rounded-lg" style={{ border: '1px solid var(--border)', backgroundColor: 'var(--ice-warm)' }}>
+                    <div className="text-xs font-semibold uppercase mb-2" style={{ color: 'var(--text-muted)' }}>What happens next</div>
                     <div className="space-y-2">
                       {[
-                        'Admin receives an email with a secure invitation link',
-                        'They click the link to set their password',
-                        'They log into the Org Admin portal at app.yourai.com',
-                        'They can start creating workspaces and inviting team members',
+                        'Admin receives an email with a secure invitation link.',
+                        'They click the link to set their password.',
+                        'They log into the Org Admin portal and start onboarding their team.',
                       ].map((step, i) => (
                         <div key={i} className="flex items-start gap-2">
                           <span className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5" style={{ backgroundColor: 'var(--ice)', color: 'var(--text-muted)' }}>{i + 1}</span>
                           <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{step}</span>
                         </div>
                       ))}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Step 3: Review & Invite */}
-              {addStep === 3 && !inviteSent && (
-                <div className="space-y-5">
-                  <div className="p-5 rounded-xl" style={{ border: '1px solid var(--border)', backgroundColor: 'var(--ice-warm)' }}>
-                    <div className="text-xs font-semibold uppercase mb-3" style={{ color: 'var(--text-muted)' }}>Organisation</div>
-                    <div className="grid grid-cols-2 gap-3 mb-4">
-                      <div><span className="text-xs" style={{ color: 'var(--text-muted)' }}>Name</span><div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{newOrg.name || '—'}</div></div>
-                      <div><span className="text-xs" style={{ color: 'var(--text-muted)' }}>Plan</span><div className="mt-0.5"><Badge variant={newOrg.plan}>{newOrg.plan}</Badge></div></div>
-                      <div><span className="text-xs" style={{ color: 'var(--text-muted)' }}>Industry</span><div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{newOrg.industry}</div></div>
-                      <div><span className="text-xs" style={{ color: 'var(--text-muted)' }}>MRR</span><div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>${newOrg.plan === 'Free' ? '0' : newOrg.plan === 'Professional' ? '149' : newOrg.plan === 'Team' ? '299' : '599'}/user</div></div>
-                    </div>
-                    <div style={{ height: 1, backgroundColor: 'var(--border)', margin: '0 0 12px' }} />
-                    <div className="text-xs font-semibold uppercase mb-3" style={{ color: 'var(--text-muted)' }}>Admin User</div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div><span className="text-xs" style={{ color: 'var(--text-muted)' }}>Name</span><div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{newAdmin.firstName} {newAdmin.lastName}</div></div>
-                      <div><span className="text-xs" style={{ color: 'var(--text-muted)' }}>Role</span><div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Organisation Admin</div></div>
-                      <div className="col-span-2"><span className="text-xs" style={{ color: 'var(--text-muted)' }}>Email</span><div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{newAdmin.email || '—'}</div></div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-3 p-3 rounded-lg" style={{ backgroundColor: '#FBEED5', borderLeft: '3px solid #E8A33D' }}>
-                    <AlertTriangle size={15} style={{ color: '#E8A33D', flexShrink: 0, marginTop: 2 }} />
-                    <div>
-                      <p style={{ fontSize: '12px', color: '#E8A33D', fontWeight: 500 }}>Confirm before sending</p>
-                      <p style={{ fontSize: '12px', color: '#E8A33D', marginTop: 2 }}>An invitation email will be sent to <strong>{newAdmin.email}</strong>. The admin will have full access to create workspaces, invite users, and manage their organisation.</p>
                     </div>
                   </div>
                 </div>
@@ -846,17 +731,14 @@ export default function TenantManagement() {
                       <CheckCircle size={32} style={{ color: '#5CA868' }} />
                     </div>
                   </div>
-                  <h2 style={{ fontFamily: "'DM Serif Display', serif", fontSize: '20px', color: 'var(--text-primary)' }}>Tenant Created Successfully</h2>
+                  <h2 style={{ fontFamily: "'DM Serif Display', serif", fontSize: '20px', color: 'var(--text-primary)' }}>Invitation Sent</h2>
                   <p className="mt-2 mx-auto" style={{ fontSize: '13px', color: 'var(--text-muted)', maxWidth: 320 }}>
-                    <strong style={{ color: 'var(--text-primary)' }}>{newOrg.name}</strong> has been added to the platform. An invitation has been sent to <strong style={{ color: 'var(--text-primary)' }}>{newAdmin.email}</strong>.
+                    <strong style={{ color: 'var(--text-primary)' }}>{newOrg.name}</strong> has been added. An invitation email has been sent to <strong style={{ color: 'var(--text-primary)' }}>{newAdmin.email}</strong>.
                   </p>
 
                   <div className="mt-6 p-4 rounded-lg text-left" style={{ border: '1px solid var(--border)', backgroundColor: 'var(--ice-warm)' }}>
-                    <div className="text-xs font-semibold uppercase mb-3" style={{ color: 'var(--text-muted)' }}>Invitation Details</div>
                     <div className="space-y-2">
-                      <div className="flex justify-between"><span className="text-xs" style={{ color: 'var(--text-muted)' }}>Organisation</span><span className="text-xs font-medium" style={{ color: 'var(--text-primary)' }}>{newOrg.name}</span></div>
-                      <div className="flex justify-between"><span className="text-xs" style={{ color: 'var(--text-muted)' }}>Plan</span><span className="text-xs"><Badge variant={newOrg.plan}>{newOrg.plan}</Badge></span></div>
-                      <div className="flex justify-between"><span className="text-xs" style={{ color: 'var(--text-muted)' }}>Admin</span><span className="text-xs font-medium" style={{ color: 'var(--text-primary)' }}>{newAdmin.firstName} {newAdmin.lastName}</span></div>
+                      <div className="flex justify-between"><span className="text-xs" style={{ color: 'var(--text-muted)' }}>Tenant</span><span className="text-xs font-medium" style={{ color: 'var(--text-primary)' }}>{newOrg.name}</span></div>
                       <div className="flex justify-between"><span className="text-xs" style={{ color: 'var(--text-muted)' }}>Invite sent to</span><span className="text-xs font-medium" style={{ color: 'var(--text-primary)' }}>{newAdmin.email}</span></div>
                       <div className="flex justify-between"><span className="text-xs" style={{ color: 'var(--text-muted)' }}>Link expires</span><span className="text-xs font-medium" style={{ color: 'var(--text-primary)' }}>7 days</span></div>
                     </div>
@@ -869,38 +751,22 @@ export default function TenantManagement() {
 
             {/* Footer */}
             {!inviteSent && (
-              <div className="sticky bottom-0 bg-white flex items-center justify-between" style={{ padding: '16px 28px', borderTop: '1px solid var(--border)' }}>
-                <div>
-                  {addStep > 1 && (
-                    <button onClick={() => setAddStep(addStep - 1)} style={{ fontSize: '13px', color: 'var(--text-muted)', border: 'none', background: 'none', cursor: 'pointer' }}>← Back</button>
-                  )}
-                </div>
-                <div className="flex gap-3">
-                  <button onClick={closeAddTenant} className="px-4 py-2 rounded-lg text-sm font-medium" style={{ border: '1px solid var(--border)', color: 'var(--text-secondary)' }}>Cancel</button>
-                  {(() => {
-                    if (addStep < 3) {
-                      const step1Invalid = addStep === 1 && !newOrg.name.trim();
-                      const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newAdmin.email);
-                      const step2Invalid = addStep === 2 && (!newAdmin.firstName.trim() || !newAdmin.lastName.trim() || !emailValid);
-                      const isStepDisabled = step1Invalid || step2Invalid;
-                      return (
-                        <button
-                          onClick={() => setAddStep(addStep + 1)}
-                          disabled={isStepDisabled}
-                          className="px-5 py-2 rounded-lg text-sm font-medium text-white flex items-center gap-1.5"
-                          style={{ backgroundColor: isStepDisabled ? '#9CA3AF' : 'var(--navy)', cursor: isStepDisabled ? 'not-allowed' : 'pointer' }}
-                        >
-                          Continue <ChevronRight size={14} />
-                        </button>
-                      );
-                    }
-                    return (
-                      <button onClick={handleCreateTenant} className="px-5 py-2 rounded-lg text-sm font-medium text-white flex items-center gap-1.5" style={{ backgroundColor: 'var(--navy)' }}>
-                        <Send size={14} /> Send Invitation
-                      </button>
-                    );
-                  })()}
-                </div>
+              <div className="sticky bottom-0 bg-white flex items-center justify-end gap-3" style={{ padding: '16px 28px', borderTop: '1px solid var(--border)' }}>
+                <button onClick={closeAddTenant} className="px-4 py-2 rounded-lg text-sm font-medium" style={{ border: '1px solid var(--border)', color: 'var(--text-secondary)' }}>Cancel</button>
+                {(() => {
+                  const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newAdmin.email);
+                  const isDisabled = !newOrg.name.trim() || !emailValid;
+                  return (
+                    <button
+                      onClick={handleCreateTenant}
+                      disabled={isDisabled}
+                      className="px-5 py-2 rounded-lg text-sm font-medium text-white flex items-center gap-1.5"
+                      style={{ backgroundColor: isDisabled ? '#9CA3AF' : 'var(--navy)', cursor: isDisabled ? 'not-allowed' : 'pointer' }}
+                    >
+                      <Send size={14} /> Send Invitation
+                    </button>
+                  );
+                })()}
               </div>
             )}
           </div>
