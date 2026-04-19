@@ -23,6 +23,7 @@ import {
   CheckCircle,
   Star,
   Loader,
+  Info,
 } from 'lucide-react';
 import { subscriptionPlans } from '../../../data/mockData';
 
@@ -871,6 +872,17 @@ export default function Onboarding() {
           </div>
           <div style={{ fontFamily: "'DM Serif Display', serif", fontSize: 20, color: 'var(--text-primary)', marginBottom: 6 }}>Payment method saved</div>
           <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>Your 14-day free trial starts now. You won't be charged until {(() => { const d = new Date(); d.setDate(d.getDate() + 14); return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); })()}.</div>
+
+          {/* One-last-thing: attach-once rule */}
+          <div style={{ marginTop: 24, padding: '14px 18px', borderRadius: 10, background: 'rgba(201, 168, 76, 0.08)', border: '1px solid rgba(201, 168, 76, 0.35)', textAlign: 'left', display: 'flex', alignItems: 'flex-start', gap: 10, maxWidth: 520, marginLeft: 'auto', marginRight: 'auto' }}>
+            <Info size={15} style={{ color: '#C9A84C', flexShrink: 0, marginTop: 2 }} />
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 3 }}>One quick tip before you begin</div>
+              <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                Attach your documents and knowledge packs at the <strong>start</strong> of each chat. Once you send your first message, the context is locked for that conversation. To work with new files, just start a new chat.
+              </div>
+            </div>
+          </div>
         </div>
       ) : (
         <div style={{ marginTop: 24, display: 'flex', flexDirection: 'column', gap: 16 }}>

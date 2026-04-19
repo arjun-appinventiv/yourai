@@ -12,7 +12,7 @@ import {
 import { billingData, subscriptionPlans } from '../../data/mockData';
 import { callLLM, getApiKey } from '../../lib/llm-client';
 import { extractFileText } from '../../lib/file-parser';
-import { trackDocUpload } from '../../lib/auth';
+import { trackDocUpload, isUserBlocked, logout } from '../../lib/auth';
 import { detectIntent, detectAllIntents } from '../../lib/intentDetector';
 import { INTENTS, DEFAULT_INTENT, getIntentLabel } from '../../lib/intents';
 
@@ -1827,6 +1827,20 @@ function EmptyState({ profile, plan, onPromptClick, navigate, onViewPlans }) {
             );
           })}
         </div>
+
+        {/* ─── Attach-once rule hint ─── */}
+        <div style={{ marginTop: 28, padding: '14px 18px', borderRadius: 12, background: 'rgba(201, 168, 76, 0.08)', border: '1px solid rgba(201, 168, 76, 0.35)', textAlign: 'left', display: 'flex', alignItems: 'flex-start', gap: 12, maxWidth: 680, marginLeft: 'auto', marginRight: 'auto' }}>
+          <Info size={16} style={{ color: '#C9A84C', flexShrink: 0, marginTop: 2 }} />
+          <div>
+            <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontWeight: 600, color: 'var(--navy)', marginBottom: 2 }}>
+              Attach everything before you start
+            </div>
+            <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+              Documents and knowledge packs can only be attached at the beginning of a chat. Once you send your first message, the context is locked for that conversation. To work with different documents, just start a new chat.
+            </div>
+          </div>
+        </div>
+
         <button onClick={() => navigate('/app/profile')} style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', marginTop: 20, padding: 0 }}
           onMouseEnter={(e) => { e.currentTarget.style.textDecoration = 'underline'; }}
           onMouseLeave={(e) => { e.currentTarget.style.textDecoration = 'none'; }}
@@ -1901,6 +1915,23 @@ export default function ChatView() {
   const intentDropdownRef = useRef(null);
   const [showDocVersionBanner, setShowDocVersionBanner] = useState(false);
   const [pendingNewDoc, setPendingNewDoc] = useState(null); // holds the new doc until user decides
+  // ─── Blocked User Guard ───
+  const [blocked, setBlocked] = useState(false);
+  useEffect(() => {
+    const checkBlocked = () => {
+      const email = localStorage.getItem('yourai_current_email') || '';
+      if (email && isUserBlocked(email)) {
+        setBlocked(true);
+      }
+    };
+    checkBlocked();
+    // Re-check periodically in case SA blocks while user is active
+    const interval = setInterval(checkBlocked, 30000);
+    // Re-check on tab focus
+    const onFocus = () => checkBlocked();
+    window.addEventListener('focus', onFocus);
+    return () => { clearInterval(interval); window.removeEventListener('focus', onFocus); };
+  }, []);
   const scrollRef = useRef(null);
   const inputRef = useRef(null);
   // Removed: responseIdx — no longer needed with real LLM responses
@@ -2517,6 +2548,39 @@ INSTRUCTIONS:
     setClients(prev => prev.filter(c => c.id !== id));
   };
 
+  // ─── Blocked User Screen ───
+  // Renders when SA has blocked this user or their tenant.
+  if (blocked) {
+    const handleSignOut = async () => {
+      try { await logout(); } catch { /* ignore */ }
+      try {
+        localStorage.removeItem('yourai_current_email');
+        localStorage.removeItem('yourai_user_profile');
+      } catch { /* ignore */ }
+      navigate('/app/login');
+    };
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', padding: 24, background: 'var(--ice-warm)', textAlign: 'center' }}>
+        <div style={{ width: 72, height: 72, borderRadius: '50%', background: '#F9E7E7', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 20 }}>
+          <Lock size={32} style={{ color: '#C65454' }} />
+        </div>
+        <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 28, color: 'var(--navy)', margin: 0 }}>Access Blocked</h1>
+        <p style={{ fontSize: 15, color: 'var(--text-secondary)', maxWidth: 440, marginTop: 12, lineHeight: 1.6 }}>
+          Your account has been blocked by your administrator. You no longer have access to YourAI.
+          If you believe this is a mistake, please reach out to your firm's admin or contact support.
+        </p>
+        <div style={{ display: 'flex', gap: 12, marginTop: 24 }}>
+          <button onClick={handleSignOut} style={{ padding: '10px 20px', borderRadius: 6, background: 'var(--navy)', color: '#fff', border: 'none', fontSize: 14, fontWeight: 500, cursor: 'pointer' }}>
+            Sign out
+          </button>
+          <a href="mailto:support@yourai.com" style={{ padding: '10px 20px', borderRadius: 6, background: 'transparent', color: 'var(--navy)', border: '1px solid var(--navy)', fontSize: 14, fontWeight: 500, textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>
+            Contact support
+          </a>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={{ display: 'flex', height: '100vh', width: '100%', overflowX: 'hidden' }}>
       <Sidebar
@@ -2567,6 +2631,37 @@ INSTRUCTIONS:
             <EmptyState profile={profile} plan={plan} onPromptClick={handlePromptClick} navigate={navigate} onViewPlans={() => setShowPlanModal(true)} />
           ) : (
             <div ref={scrollRef} className="px-3 sm:px-4 md:px-10 py-6" style={{ flex: 1, overflowY: 'auto' }}>
+              {/* ─── Persistent Conversation Context Header ─── */}
+              {/* Shows documents / knowledge packs locked to this conversation.
+                  Context is locked once the first message is sent — no add/remove mid-conversation. */}
+              {(() => {
+                const docNames = sessionDocContext?.docNames || [];
+                const hasCtx = docNames.length > 0 || activeKnowledgePack || activeVaultDocument;
+                if (!hasCtx) return null;
+                return (
+                  <div style={{ marginBottom: 20, padding: '12px 16px', borderRadius: 12, background: 'var(--ice-warm)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                    <Info size={14} style={{ color: 'var(--navy)', flexShrink: 0 }} />
+                    <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--navy)', letterSpacing: '0.02em', textTransform: 'uppercase' }}>Context locked to this chat</span>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                      {docNames.map((name, i) => (
+                        <span key={`d-${i}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '3px 10px', borderRadius: 999, background: 'white', border: '1px solid rgba(10,36,99,0.2)', fontSize: 11, fontWeight: 500, color: 'var(--navy)' }}>
+                          <File size={11} /> {name}
+                        </span>
+                      ))}
+                      {activeKnowledgePack && (
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '3px 10px', borderRadius: 999, background: 'white', border: '1px solid rgba(10,36,99,0.2)', fontSize: 11, fontWeight: 500, color: 'var(--navy)' }}>
+                          <Package size={11} /> {activeKnowledgePack.name}
+                        </span>
+                      )}
+                      {activeVaultDocument && !docNames.includes(activeVaultDocument.name) && (
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '3px 10px', borderRadius: 999, background: 'white', border: '1px solid rgba(10,36,99,0.2)', fontSize: 11, fontWeight: 500, color: 'var(--navy)' }}>
+                          <File size={11} /> {activeVaultDocument.name}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
               {messages.map((msg) => <MessageBubble key={msg.id} msg={msg} />)}
               {/* Streaming response — shows tokens as they arrive */}
               {isTyping && streamingContent && (

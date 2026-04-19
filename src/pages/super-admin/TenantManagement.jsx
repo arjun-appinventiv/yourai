@@ -83,6 +83,29 @@ export default function TenantManagement() {
   const [editForm, setEditForm] = useState({ name: '' });
   const [orgTab, setOrgTab] = useState('overview');
   const [orgUserSearch, setOrgUserSearch] = useState('');
+  const [usersVersion, setUsersVersion] = useState(0);
+
+  // Toggle block/unblock for an individual user within the org
+  const toggleUserBlock = (user) => {
+    if (!user?.email) return;
+    try {
+      const mgmtUsers = JSON.parse(localStorage.getItem('yourai_mgmt_users') || '[]');
+      const idx = mgmtUsers.findIndex(u => u.email === user.email);
+      if (idx >= 0) {
+        const newStatus = mgmtUsers[idx].status === 'Active' ? 'Blocked' : 'Active';
+        mgmtUsers[idx].status = newStatus;
+        localStorage.setItem('yourai_mgmt_users', JSON.stringify(mgmtUsers));
+        setUsersVersion(v => v + 1);
+        showToast(newStatus === 'Blocked'
+          ? `${user.name} has been blocked. Their access is stopped.`
+          : `${user.name} has been unblocked. Access restored.`);
+      } else {
+        showToast(`${user.name} is a mock user and cannot be blocked in this build.`);
+      }
+    } catch {
+      showToast('Could not update user status.');
+    }
+  };
   const [showAddTenant, setShowAddTenant] = useState(false);
   const [newOrg, setNewOrg] = useState({ name: '', plan: 'Professional', industry: 'Legal Services' });
   const [newAdmin, setNewAdmin] = useState({ firstName: '', lastName: '', email: '', phone: '' });
@@ -182,8 +205,8 @@ export default function TenantManagement() {
       setSelectedOrg({ ...selectedOrg, status: newStatus });
     }
     showToast(newStatus === 'Suspended'
-      ? `${editingOrg.name} suspended. All user access has been blocked.`
-      : `${editingOrg.name} reactivated. User access has been restored.`
+      ? `${editingOrg.name} blocked. All user access has been stopped.`
+      : `${editingOrg.name} unblocked. User access has been restored.`
     );
     setEditingOrg(null);
   };
@@ -299,7 +322,7 @@ export default function TenantManagement() {
         .map(u => ({ name: u.name, email: u.email, role: u.role || 'Admin', status: u.status || 'Active', lastActive: u.lastActive || 'Today', onboardingRole: u.onboardingRole || null }));
     } catch {}
     return null;
-  }, [selectedOrg]);
+  }, [selectedOrg, usersVersion]);
 
   const users = selectedOrg ? (orgUsers[selectedOrg.id] || (dynamicUsers && dynamicUsers.length > 0 ? dynamicUsers : [{ name: contact?.admin || 'Admin', email: contact?.email || '—', role: 'Admin', status: 'Active', lastActive: 'Today' }])) : [];
   const workspaces = selectedOrg ? (orgWorkspaces[selectedOrg.id] || [{ name: 'Default Workspace', members: selectedOrg.users, documents: selectedOrg.documents, created: selectedOrg.created, status: 'Active' }]) : [];
@@ -349,7 +372,7 @@ export default function TenantManagement() {
       <div className="grid grid-cols-4 gap-4">
         <StatCard icon={Building2} value={totalOrgs} label="Total Orgs" />
         <StatCard icon={CheckCircle} value={activeOrgs} label="Active" />
-        <StatCard icon={AlertTriangle} value={suspendedOrgs} label="Suspended" />
+        <StatCard icon={AlertTriangle} value={suspendedOrgs} label="Blocked" />
         <StatCard icon={DollarSign} value={`$${totalMRR.toLocaleString()}`} label="MRR" accentColor="var(--gold)" />
       </div>
 
@@ -360,7 +383,7 @@ export default function TenantManagement() {
           <option>All</option><option>Free</option><option>Professional</option><option>Team</option><option>Enterprise</option>
         </select>
         <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} style={inputStyle}>
-          <option>All</option><option>Active</option><option>Suspended</option>
+          <option>All</option><option>Active</option><option value="Suspended">Blocked</option>
         </select>
         <button onClick={handleExportCSV} disabled={filtered.length === 0} className="px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 whitespace-nowrap" style={{ border: '1px solid var(--border)', color: filtered.length === 0 ? '#9CA3AF' : 'var(--slate)', backgroundColor: 'white', cursor: filtered.length === 0 ? 'not-allowed' : 'pointer', opacity: filtered.length === 0 ? 0.6 : 1 }}>
           <Download size={16} /> Export CSV
@@ -377,13 +400,13 @@ export default function TenantManagement() {
             <td className="px-4 py-3 text-sm">{t.users}</td>
             <td className="px-4 py-3 text-sm">{t.workspaces}</td>
             <td className="px-4 py-3 text-sm">{t.documents}</td>
-            <td className="px-4 py-3"><Badge variant={t.status}>{t.status}</Badge></td>
+            <td className="px-4 py-3"><Badge variant={t.status}>{t.status === 'Suspended' ? 'Blocked' : t.status}</Badge></td>
             <td className="px-4 py-3 text-sm" style={{ color: 'var(--text-muted)' }}>{t.created}</td>
             <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
               <div className="flex items-center gap-1">
                 <button className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors" title="View" onClick={() => openOrgDetail(t)}><Eye size={16} style={{ color: 'var(--slate)' }} /></button>
                 <button className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors" title="Edit" onClick={(e) => openEditOrg(t, e)}><Edit3 size={16} style={{ color: 'var(--text-primary)' }} /></button>
-                <button className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors" title={t.status === 'Active' ? 'Suspend' : 'Reactivate'} onClick={() => toggleStatus(t.id)}>
+                <button className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors" title={t.status === 'Active' ? 'Block' : 'Unblock'} onClick={() => toggleStatus(t.id)}>
                   {t.status === 'Active' ? <Ban size={16} style={{ color: '#C65454' }} /> : <CheckCircle size={16} style={{ color: '#5CA868' }} />}
                 </button>
               </div>
@@ -431,15 +454,15 @@ export default function TenantManagement() {
           {/* Divider */}
           <div style={{ height: 1, backgroundColor: 'var(--border)' }} />
 
-          {/* Suspend / Reactivate Section */}
+          {/* Block / Unblock Section */}
           <div className="p-4 rounded-lg" style={{ border: `1px solid ${editingOrg?.status === 'Active' ? '#F9E7E7' : '#E7F3E9'}`, backgroundColor: editingOrg?.status === 'Active' ? '#F9E7E7' : '#E7F3E9' }}>
             <div className="text-xs font-semibold uppercase mb-2" style={{ color: editingOrg?.status === 'Active' ? '#C65454' : '#5CA868' }}>
-              {editingOrg?.status === 'Active' ? 'Suspend Organisation' : 'Reactivate Organisation'}
+              {editingOrg?.status === 'Active' ? 'Block Organisation' : 'Unblock Organisation'}
             </div>
             <p className="text-xs mb-3" style={{ color: editingOrg?.status === 'Active' ? '#C65454' : '#5CA868' }}>
               {editingOrg?.status === 'Active'
-                ? 'Suspending this organisation will immediately block all user access. No users from this organisation will be able to log in, access documents, or run workflows until the organisation is reactivated.'
-                : 'Reactivating this organisation will restore access for all users. They will be able to log in and resume using the platform immediately.'}
+                ? 'Blocking this organisation will immediately stop all user access. No users from this organisation will be able to log in, access documents, or run workflows until the organisation is unblocked.'
+                : 'Unblocking this organisation will restore access for all users. They will be able to log in and resume using the platform immediately.'}
             </p>
             <div className="flex items-center gap-2">
               <AlertTriangle size={14} style={{ color: editingOrg?.status === 'Active' ? '#C65454' : '#5CA868' }} />
@@ -448,7 +471,7 @@ export default function TenantManagement() {
               </span>
             </div>
             <button onClick={handleSuspendFromModal} className="mt-3 px-4 py-2 rounded-lg text-sm font-medium text-white flex items-center gap-1.5" style={{ backgroundColor: editingOrg?.status === 'Active' ? '#C65454' : '#5CA868' }}>
-              {editingOrg?.status === 'Active' ? <><Ban size={14} /> Suspend &amp; Block Access</> : <><CheckCircle size={14} /> Reactivate &amp; Restore Access</>}
+              {editingOrg?.status === 'Active' ? <><Ban size={14} /> Block &amp; Stop Access</> : <><CheckCircle size={14} /> Unblock &amp; Restore Access</>}
             </button>
           </div>
         </div>
@@ -552,15 +575,15 @@ export default function TenantManagement() {
 
                   <div className="p-4 rounded-lg" style={{ border: `1px solid ${selectedOrg.status === 'Active' ? '#F9E7E7' : '#E7F3E9'}`, backgroundColor: selectedOrg.status === 'Active' ? '#F9E7E7' : '#E7F3E9' }}>
                     <div className="text-xs font-semibold uppercase mb-1" style={{ color: selectedOrg.status === 'Active' ? '#C65454' : '#5CA868' }}>
-                      {selectedOrg.status === 'Active' ? 'Danger Zone' : 'Reactivate'}
+                      {selectedOrg.status === 'Active' ? 'Block Access' : 'Unblock Access'}
                     </div>
                     <p className="text-xs mb-3" style={{ color: selectedOrg.status === 'Active' ? '#C65454' : '#5CA868' }}>
                       {selectedOrg.status === 'Active'
-                        ? `Suspending will block all ${selectedOrg.users} user(s) from accessing the platform.`
-                        : 'Reactivating will restore access for all users in this organisation.'}
+                        ? `Blocking will stop all ${selectedOrg.users} user(s) from accessing the platform.`
+                        : 'Unblocking will restore access for all users in this organisation.'}
                     </p>
-                    <button onClick={() => { const newStatus = selectedOrg.status === 'Active' ? 'Suspended' : 'Active'; toggleStatus(selectedOrg.id); setSelectedOrg({...selectedOrg, status: newStatus}); showToast(newStatus === 'Suspended' ? `${selectedOrg.name} suspended. All user access blocked.` : `${selectedOrg.name} reactivated. User access restored.`); }} className="px-4 py-2 rounded-lg text-sm font-medium text-white flex items-center gap-1.5" style={{ backgroundColor: selectedOrg.status === 'Active' ? '#C65454' : '#5CA868' }}>
-                      {selectedOrg.status === 'Active' ? <><Ban size={14} /> Suspend &amp; Block Access</> : <><CheckCircle size={14} /> Reactivate &amp; Restore Access</>}
+                    <button onClick={() => { const newStatus = selectedOrg.status === 'Active' ? 'Suspended' : 'Active'; toggleStatus(selectedOrg.id); setSelectedOrg({...selectedOrg, status: newStatus}); showToast(newStatus === 'Suspended' ? `${selectedOrg.name} blocked. All user access stopped.` : `${selectedOrg.name} unblocked. User access restored.`); }} className="px-4 py-2 rounded-lg text-sm font-medium text-white flex items-center gap-1.5" style={{ backgroundColor: selectedOrg.status === 'Active' ? '#C65454' : '#5CA868' }}>
+                      {selectedOrg.status === 'Active' ? <><Ban size={14} /> Block &amp; Stop Access</> : <><CheckCircle size={14} /> Unblock &amp; Restore Access</>}
                     </button>
                   </div>
                 </div>
@@ -605,7 +628,7 @@ export default function TenantManagement() {
                             </td>
                             <td className="px-3 py-2.5">
                               {u.status !== 'Invited' && (
-                                <button className="p-1 rounded hover:bg-gray-100" title={u.status === 'Active' ? 'Block' : 'Unblock'}>
+                                <button onClick={() => toggleUserBlock(u)} className="p-1 rounded hover:bg-gray-100" title={u.status === 'Active' ? 'Block' : 'Unblock'}>
                                   {u.status === 'Active' ? <Lock size={14} style={{ color: '#C65454' }} /> : <Unlock size={14} style={{ color: '#5CA868' }} />}
                                 </button>
                               )}

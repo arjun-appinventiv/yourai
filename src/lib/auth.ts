@@ -71,6 +71,7 @@ export async function login(
   // Fallback: check demo credentials client-side
   const demo = DEMO_USERS[email];
   if (demo && demo.password === password) {
+    if (isUserBlocked(email)) return blockedResponse();
     return { success: true, requiresOtp: false, user: demo.user };
   }
 
@@ -79,11 +80,40 @@ export async function login(
     const registered = JSON.parse(localStorage.getItem('yourai_registered_users') || '{}');
     const reg = registered[email];
     if (reg && reg.password === password) {
+      if (isUserBlocked(email)) return blockedResponse();
       return { success: true, requiresOtp: false, user: reg.user };
     }
   } catch { /* ignore */ }
 
   return { success: false, error: 'Invalid email or password. Please check your credentials and try again.' };
+}
+
+/**
+ * Check if the user has been blocked by the Super Admin.
+ * Looks at yourai_mgmt_users (where SA toggles status) and the user's
+ * org in yourai_mgmt_tenants (where the org itself may be blocked).
+ */
+export function isUserBlocked(email: string): boolean {
+  try {
+    const mgmtUsers = JSON.parse(localStorage.getItem('yourai_mgmt_users') || '[]');
+    const user = mgmtUsers.find((u: any) => u.email === email);
+    if (user && user.status === 'Blocked') return true;
+
+    // Also check whether the tenant (org) is blocked
+    if (user && user.org) {
+      const mgmtTenants = JSON.parse(localStorage.getItem('yourai_mgmt_tenants') || '[]');
+      const tenant = mgmtTenants.find((t: any) => t.name === user.org);
+      if (tenant && (tenant.status === 'Suspended' || tenant.status === 'Blocked')) return true;
+    }
+  } catch { /* ignore */ }
+  return false;
+}
+
+function blockedResponse(): LoginResponse {
+  return {
+    success: false,
+    error: 'Your account has been blocked. Please contact your administrator to restore access.',
+  };
 }
 
 /**
