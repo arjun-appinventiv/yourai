@@ -1833,10 +1833,10 @@ function EmptyState({ profile, plan, onPromptClick, navigate, onViewPlans }) {
           <Info size={16} style={{ color: '#C9A84C', flexShrink: 0, marginTop: 2 }} />
           <div>
             <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontWeight: 600, color: 'var(--navy)', marginBottom: 2 }}>
-              Attach everything before you start
+              One attachment per chat
             </div>
             <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-              Documents and knowledge packs can only be attached at the beginning of a chat. Once you send your first message, the context is locked for that conversation. To work with different documents, just start a new chat.
+              You can attach a document or knowledge pack at any point in a conversation — but only once. After it's attached, you can't add or swap another in the same chat. To work with different documents, start a new chat.
             </div>
           </div>
         </div>
@@ -2641,7 +2641,7 @@ INSTRUCTIONS:
                 return (
                   <div style={{ marginBottom: 20, padding: '12px 16px', borderRadius: 12, background: 'var(--ice-warm)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                     <Info size={14} style={{ color: 'var(--navy)', flexShrink: 0 }} />
-                    <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--navy)', letterSpacing: '0.02em', textTransform: 'uppercase' }}>Context locked to this chat</span>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--navy)', letterSpacing: '0.02em', textTransform: 'uppercase' }}>Attached to this chat</span>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                       {docNames.map((name, i) => (
                         <span key={`d-${i}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '3px 10px', borderRadius: 999, background: 'white', border: '1px solid rgba(10,36,99,0.2)', fontSize: 11, fontWeight: 500, color: 'var(--navy)' }}>
@@ -2686,13 +2686,13 @@ INSTRUCTIONS:
                 <AlertTriangle size={18} style={{ color: '#E8A33D', flexShrink: 0, marginTop: 2 }} />
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 13, fontWeight: 600, color: '#E8A33D', marginBottom: 6 }}>
-                    We recommend starting a new conversation
+                    Only one attachment per chat
                   </div>
                   <div style={{ fontSize: 12, color: '#A16207', marginBottom: 10, lineHeight: 1.7 }}>
-                    Alex builds context from your conversation history. When you switch documents mid-chat, the earlier Q&amp;A was based on a different file — so Alex may mix up facts, cite the wrong clauses, or carry over assumptions that don't apply to your new document.
+                    You've already attached a document to this conversation, and only one attachment is allowed per chat. This keeps answers accurate — Alex won't mix facts from different files or carry over assumptions that don't apply.
                   </div>
                   <div style={{ fontSize: 12, color: '#A16207', marginBottom: 14, lineHeight: 1.7 }}>
-                    A fresh conversation gives Alex a clean slate to focus entirely on your new document, so every answer is accurate and based only on what's in front of you.
+                    To use your new document, start a fresh chat. Or keep the current document and continue here.
                   </div>
                   {pendingNewDoc && (
                     <div style={{ fontSize: 12, fontWeight: 600, color: '#E8A33D', marginBottom: 14, padding: '8px 12px', background: 'rgba(217, 119, 6, 0.08)', borderRadius: 8, display: 'inline-block' }}>

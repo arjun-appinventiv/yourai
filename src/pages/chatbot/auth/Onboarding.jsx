@@ -879,7 +879,7 @@ export default function Onboarding() {
             <div>
               <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 3 }}>One quick tip before you begin</div>
               <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-                Attach your documents and knowledge packs at the <strong>start</strong> of each chat. Once you send your first message, the context is locked for that conversation. To work with new files, just start a new chat.
+                You can attach a document or knowledge pack at any point in a chat — but only <strong>once</strong>. After it's attached, you can't add or swap another in the same conversation. To work with new files, just start a new chat.
               </div>
             </div>
           </div>
