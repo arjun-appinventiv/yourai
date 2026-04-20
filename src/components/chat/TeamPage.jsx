@@ -55,7 +55,8 @@ export default function TeamPage({ onBack, onCountChange, onToast }) {
   const [members, setMembers] = useState(loadMembers);
   const [search, setSearch]   = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
-  const [inviting, setInviting]     = useState(false);
+  // `view` switches between the member list and the full-page invite flow.
+  const [view, setView]             = useState('list'); // 'list' | 'invite'
   const [editing, setEditing]       = useState(null);
   const [removing, setRemoving]     = useState(null);
 
@@ -95,7 +96,7 @@ export default function TeamPage({ onBack, onCountChange, onToast }) {
       invitedAt: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
     };
     setMembers((prev) => [newMember, ...prev]);
-    setInviting(false);
+    setView('list');
     onToast?.(`Invitation sent to ${newMember.email}`);
   };
 
@@ -110,6 +111,16 @@ export default function TeamPage({ onBack, onCountChange, onToast }) {
     setRemoving(null);
     onToast?.(`${member.name} has been removed.`);
   };
+
+  // ─── Render: invite flow takes over the whole page ─────────────────────
+  if (view === 'invite') {
+    return (
+      <InviteFlow
+        onBack={() => setView('list')}
+        onSubmit={handleInvite}
+      />
+    );
+  }
 
   return (
     <div style={{ flex: 1, minWidth: 0, height: '100vh', overflowY: 'auto', background: '#FBFAF7' }}>
@@ -134,7 +145,7 @@ export default function TeamPage({ onBack, onCountChange, onToast }) {
               </p>
             </div>
             <button
-              onClick={() => setInviting(true)}
+              onClick={() => setView('invite')}
               style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '10px 18px', borderRadius: 10, backgroundColor: 'var(--navy)', color: 'white', border: 'none', fontSize: 13, fontWeight: 500, cursor: 'pointer', boxShadow: '0 1px 2px rgba(10,36,99,0.15)' }}
             >
               <UserPlus size={14} /> Invite Member
@@ -195,8 +206,8 @@ export default function TeamPage({ onBack, onCountChange, onToast }) {
         )}
       </div>
 
-      {/* Sub-flows remain modals */}
-      {inviting && <InviteMemberModal onClose={() => setInviting(false)} onSubmit={handleInvite} />}
+      {/* Edit + remove stay modal — both are quick focused tasks. The invite
+          flow is now a full page (see InviteFlow below). */}
       {editing && (
         <EditMemberModal
           member={editing}
@@ -309,8 +320,11 @@ function MemberRow({ member, onEdit, onRemove }) {
   );
 }
 
-/* ─────────────── Invite Member wizard (modal) ─────────────── */
-function InviteMemberModal({ onClose, onSubmit }) {
+/* ─────────────── Full-page Invite flow ───────────────
+ * Replaces the previous modal wizard. Renders as its own /chat-like page
+ * with sidebar still visible; the TeamPage switches to this via `view`.
+ */
+function InviteFlow({ onBack, onSubmit }) {
   const [step, setStep] = useState(1);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -319,8 +333,10 @@ function InviteMemberModal({ onClose, onSubmit }) {
   const [emailError, setEmailError] = useState('');
 
   const validEmail = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
-
   const togglePerm = (p) => setPermissions((prev) => (prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p]));
+
+  const steps = role === ROLE.EXTERNAL_USER ? [1, 3] : [1, 2, 3];
+  const stepLabels = { 1: 'Details', 2: 'Permissions', 3: 'Review & send' };
 
   const goNext = () => {
     if (step === 1) {
@@ -337,49 +353,100 @@ function InviteMemberModal({ onClose, onSubmit }) {
   };
 
   return (
-    <>
-      <div onClick={onClose} style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 70, backdropFilter: 'blur(4px)' }} />
-      <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 560, maxHeight: '88vh', backgroundColor: 'white', borderRadius: 16, boxShadow: '0 20px 60px rgba(0,0,0,0.25)', zIndex: 71, display: 'flex', flexDirection: 'column' }}>
-        <div className="flex items-center justify-between" style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)' }}>
-          <div>
-            <h3 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 18, color: 'var(--text-primary)', margin: 0 }}>Invite Member</h3>
-            <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>Step {step} of 3 · {step === 1 ? 'Details' : step === 2 ? 'Permissions' : 'Review & send'}</p>
+    <div style={{ flex: 1, minWidth: 0, height: '100vh', overflowY: 'auto', background: '#FBFAF7' }}>
+      {/* Header */}
+      <div style={{ borderBottom: '1px solid var(--border)', background: '#fff' }}>
+        <div style={{ maxWidth: 820, margin: '0 auto', padding: '24px 32px 20px' }}>
+          <button
+            onClick={onBack}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 8px', marginLeft: -8, borderRadius: 6, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 12 }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text-primary)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; }}
+          >
+            <ChevronLeft size={13} /> Back to team
+          </button>
+          <div style={{ marginTop: 10 }}>
+            <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 26, color: 'var(--text-primary)', margin: 0, lineHeight: 1.2 }}>
+              Invite a team member
+            </h1>
+            <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 6, lineHeight: 1.55, maxWidth: 560 }}>
+              Add a colleague or client to your firm. You can tailor their access at every level — from simple read-only client portals to full billing and audit administration.
+            </p>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100"><X size={18} style={{ color: 'var(--text-muted)' }} /></button>
+
+          {/* Stepper */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 24 }}>
+            {steps.map((n, i) => {
+              const isActive = step === n;
+              const isDone = step > n;
+              return (
+                <React.Fragment key={n}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{
+                      width: 26, height: 26, borderRadius: '50%',
+                      background: isDone ? '#5CA868' : isActive ? 'var(--navy)' : '#E5E7EB',
+                      color: isDone || isActive ? '#fff' : 'var(--text-muted)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: 11, fontWeight: 600,
+                    }}>
+                      {isDone ? <Check size={13} strokeWidth={3} /> : n}
+                    </div>
+                    <span style={{ fontSize: 12, fontWeight: isActive ? 600 : 500, color: isActive ? 'var(--text-primary)' : isDone ? '#5CA868' : 'var(--text-muted)' }}>
+                      {stepLabels[n]}
+                    </span>
+                  </div>
+                  {i < steps.length - 1 && (
+                    <div style={{ flex: 1, height: 2, background: step > n ? '#5CA868' : '#E5E7EB', borderRadius: 2, maxWidth: 80 }} />
+                  )}
+                </React.Fragment>
+              );
+            })}
+          </div>
         </div>
-        <div style={{ display: 'flex', gap: 4, padding: '12px 24px 0' }}>
-          {[1, 2, 3].map((n) => (
-            <div key={n} style={{ flex: 1, height: 3, borderRadius: 2, background: n <= step ? 'var(--navy)' : '#E5E7EB' }} />
-          ))}
-        </div>
-        <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
-          {step === 1 && <StepDetails name={name} setName={setName} email={email} setEmail={setEmail} role={role} setRole={setRole} emailError={emailError} />}
-          {step === 2 && <StepPermissions permissions={permissions} togglePerm={togglePerm} />}
-          {step === 3 && <StepReview name={name} email={email} role={role} permissions={permissions} />}
-        </div>
-        <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+      </div>
+
+      {/* Body */}
+      <div style={{ maxWidth: 820, margin: '0 auto', padding: '28px 32px 120px' }}>
+        {step === 1 && (
+          <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 14, padding: '24px 28px' }}>
+            <StepDetails name={name} setName={setName} email={email} setEmail={setEmail} role={role} setRole={setRole} emailError={emailError} />
+          </div>
+        )}
+        {step === 2 && (
+          <StepPermissions permissions={permissions} togglePerm={togglePerm} />
+        )}
+        {step === 3 && (
+          <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 14, padding: '24px 28px' }}>
+            <StepReview name={name} email={email} role={role} permissions={permissions} />
+          </div>
+        )}
+      </div>
+
+      {/* Sticky footer */}
+      <div style={{ position: 'sticky', bottom: 0, borderTop: '1px solid var(--border)', background: '#fff', padding: '14px 32px', display: 'flex', justifyContent: 'space-between', gap: 8, zIndex: 5 }}>
+        <div style={{ maxWidth: 820, width: '100%', margin: '0 auto', display: 'flex', justifyContent: 'space-between', gap: 8 }}>
           <div>
             {step > 1 && (
-              <button onClick={goBack} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '8px 14px', borderRadius: 8, border: '1px solid var(--border)', background: 'white', fontSize: 13, cursor: 'pointer', color: 'var(--text-muted)' }}>
+              <button onClick={goBack} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '9px 16px', borderRadius: 8, border: '1px solid var(--border)', background: 'white', fontSize: 13, cursor: 'pointer', color: 'var(--text-muted)' }}>
                 <ChevronLeft size={14} /> Back
               </button>
             )}
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={onClose} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid var(--border)', background: 'white', fontSize: 13, cursor: 'pointer', color: 'var(--text-muted)' }}>Cancel</button>
+            <button onClick={onBack} style={{ padding: '9px 16px', borderRadius: 8, border: '1px solid var(--border)', background: 'white', fontSize: 13, cursor: 'pointer', color: 'var(--text-muted)' }}>Cancel</button>
             {step < 3 ? (
-              <button onClick={goNext} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '8px 18px', borderRadius: 8, border: 'none', background: 'var(--navy)', color: 'white', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>
-                Next <ChevronRight size={14} />
+              <button onClick={goNext} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '9px 20px', borderRadius: 8, border: 'none', background: 'var(--navy)', color: 'white', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>
+                Continue <ChevronRight size={14} />
               </button>
             ) : (
-              <button onClick={() => onSubmit({ name, email, role, permissions })} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 20px', borderRadius: 8, border: 'none', background: 'var(--navy)', color: 'white', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>
+              <button onClick={() => onSubmit({ name, email, role, permissions })} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 22px', borderRadius: 8, border: 'none', background: 'var(--navy)', color: 'white', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>
                 <Mail size={13} /> Send Invitation
               </button>
             )}
           </div>
         </div>
       </div>
-    </>
+    </div>
   );
 }
 

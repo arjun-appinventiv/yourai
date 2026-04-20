@@ -77,11 +77,22 @@ export const INTERNAL_USER_BASE: Permission[] = [
 
 /** Permissions an Org Admin can *optionally* grant to an Internal User during invite. */
 export const INTERNAL_USER_OPTIONAL: Permission[] = [
+  // Workspaces
   PERMISSIONS.CREATE_WORKSPACE,
+  PERMISSIONS.TRANSFER_WORKSPACE,
+  PERMISSIONS.MANAGE_WORKSPACE_MEMBERS,
+  // Knowledge & AI
   PERMISSIONS.CREATE_GLOBAL_KP,
+  PERMISSIONS.MANAGE_PROMPT_TEMPLATES,
+  PERMISSIONS.MANAGE_DOCUMENT_VAULT,
+  // Clients & Team
+  PERMISSIONS.MANAGE_CLIENTS,
+  // Security & Compliance
   PERMISSIONS.VIEW_AUDIT_LOGS,
-  PERMISSIONS.ACCESS_BILLING,
+  PERMISSIONS.EXPORT_COMPLIANCE_REPORTS,
+  // Analytics & Billing
   PERMISSIONS.VIEW_USAGE_REPORTS,
+  PERMISSIONS.ACCESS_BILLING,
 ];
 
 /** Permissions an External User always has. Nothing else is ever grantable. */
@@ -135,58 +146,93 @@ export type PermissionGroup = {
 
 export const INVITE_PERMISSION_GROUPS: PermissionGroup[] = [
   {
-    section: 'Workspace Management',
+    section: 'Workspaces & Matters',
     items: [
       {
         permission: PERMISSIONS.CREATE_WORKSPACE,
         label: 'Create Workspaces',
         description:
-          'Can create new workspaces and cases. Can delete workspaces they created.',
+          'Spin up new case rooms. The creator automatically becomes the owner and can add colleagues and clients.',
       },
       {
         permission: PERMISSIONS.TRANSFER_WORKSPACE,
         label: 'Transfer Workspace Ownership',
         description:
-          'Can hand over ownership of a workspace they created to another member.',
+          'Hand over ownership of a workspace to another member — useful when a matter moves to a different lead attorney.',
+      },
+      {
+        permission: PERMISSIONS.MANAGE_WORKSPACE_MEMBERS,
+        label: 'Manage Members Across All Workspaces',
+        description:
+          'Add or remove members from any workspace in the org, not just ones they own. Intended for office administrators.',
       },
     ],
   },
   {
-    section: 'AI and Knowledge',
+    section: 'AI & Knowledge',
     items: [
       {
         permission: PERMISSIONS.CREATE_GLOBAL_KP,
-        label: 'Create Global Knowledge Pack',
+        label: 'Create Org-Wide Knowledge Packs',
         description:
-          'Can create knowledge packs and share them org-wide so all members can use them.',
+          'Publish knowledge packs so every Internal User in the firm can attach them to their chats. Private packs remain user-scoped.',
+      },
+      {
+        permission: PERMISSIONS.MANAGE_PROMPT_TEMPLATES,
+        label: 'Manage Prompt Templates',
+        description:
+          'Create and edit prompt templates shared with the whole firm (e.g., standard contract-review prompts).',
+      },
+      {
+        permission: PERMISSIONS.MANAGE_DOCUMENT_VAULT,
+        label: 'Manage Document Vault',
+        description:
+          'Perform bulk operations across the firm-wide Document Vault — rename, version, or remove documents uploaded by others.',
       },
     ],
   },
   {
-    section: 'Security and Reporting',
+    section: 'Clients',
+    items: [
+      {
+        permission: PERMISSIONS.MANAGE_CLIENTS,
+        label: 'Manage Client Directory',
+        description:
+          'Add, edit, or archive clients in the firm directory. Required to onboard a new client or update contact information.',
+      },
+    ],
+  },
+  {
+    section: 'Security & Compliance',
     items: [
       {
         permission: PERMISSIONS.VIEW_AUDIT_LOGS,
         label: 'View Audit Logs',
         description:
-          'Can see the full activity log for compliance and review.',
+          'See the full activity log across the org — logins, document access, permission changes, invitations.',
       },
       {
-        permission: PERMISSIONS.VIEW_USAGE_REPORTS,
-        label: 'View Usage Reports',
+        permission: PERMISSIONS.EXPORT_COMPLIANCE_REPORTS,
+        label: 'Export Compliance Reports',
         description:
-          'Can see AI token usage, document counts, and storage consumption.',
+          'Generate and export PDF compliance summaries for SOC 2, HIPAA, or state bar audits.',
       },
     ],
   },
   {
-    section: 'Billing',
+    section: 'Analytics & Billing',
     items: [
+      {
+        permission: PERMISSIONS.VIEW_USAGE_REPORTS,
+        label: 'View Usage & Cost Reports',
+        description:
+          'See AI token consumption, document counts, and storage use — by user, by workspace, and overall.',
+      },
       {
         permission: PERMISSIONS.ACCESS_BILLING,
         label: 'Access Billing Dashboard',
         description:
-          'Can view invoices, current plan, and payment history.',
+          'View invoices, current plan, and payment history. Changing the plan or payment method remains Org Admin only.',
       },
     ],
   },

@@ -375,10 +375,32 @@ function CreateWorkspaceModal({ currentUserId, currentUserName, currentUserEmail
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100"><X size={18} style={{ color: 'var(--text-muted)' }} /></button>
         </div>
 
-        <div style={{ display: 'flex', gap: 4, padding: '12px 24px 0' }}>
-          {[1, 2, 3].map((n) => (
-            <div key={n} style={{ flex: 1, height: 3, borderRadius: 2, background: n <= step ? 'var(--navy)' : '#E5E7EB' }} />
-          ))}
+        {/* Numbered-circle stepper with green checkmarks for completed steps */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 24px 6px' }}>
+          {[1, 2, 3].map((n, i) => {
+            const isActive = step === n;
+            const isDone = step > n;
+            const labels: Record<number, string> = { 1: 'Details', 2: 'Members', 3: 'Documents' };
+            return (
+              <React.Fragment key={n}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <div style={{
+                    width: 22, height: 22, borderRadius: '50%',
+                    background: isDone ? '#5CA868' : isActive ? 'var(--navy)' : '#E5E7EB',
+                    color: isDone || isActive ? '#fff' : 'var(--text-muted)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 10, fontWeight: 600,
+                  }}>
+                    {isDone ? <Check size={11} strokeWidth={3} /> : n}
+                  </div>
+                  <span style={{ fontSize: 11, fontWeight: isActive ? 600 : 500, color: isActive ? 'var(--text-primary)' : isDone ? '#5CA868' : 'var(--text-muted)' }}>
+                    {labels[n]}
+                  </span>
+                </div>
+                {i < 2 && <div style={{ flex: 1, height: 2, background: step > n ? '#5CA868' : '#E5E7EB', borderRadius: 2 }} />}
+              </React.Fragment>
+            );
+          })}
         </div>
 
         <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
@@ -457,22 +479,33 @@ function CreateWorkspaceModal({ currentUserId, currentUserName, currentUserEmail
 
 /* ─── Step 1: Details ─── */
 function StepDetails({ name, setName, description, setDescription }: { name: string; setName: (v: string) => void; description: string; setDescription: (v: string) => void }) {
+  const [nameError, setNameError] = useState('');
   const inputStyle: React.CSSProperties = { width: '100%', height: 40, border: '1px solid var(--border)', borderRadius: 8, padding: '0 12px', fontSize: 13, outline: 'none', boxSizing: 'border-box', fontFamily: "'DM Sans', sans-serif" };
   const labelStyle: React.CSSProperties = { fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 };
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <div>
-        <label style={labelStyle}>Workspace name *</label>
-        <input value={name} onChange={(e) => setName(e.target.value.slice(0, 100))} placeholder="e.g. Meridian Capital v Apex" style={inputStyle} autoFocus />
-        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4, textAlign: 'right' }}>{name.length}/100</div>
+        <label style={labelStyle}>Workspace name</label>
+        <input
+          value={name}
+          onChange={(e) => { setName(e.target.value.slice(0, 100)); if (nameError) setNameError(''); }}
+          onBlur={() => { if (!name.trim()) setNameError('Workspace name is required.'); }}
+          placeholder="e.g. Meridian Capital v Apex"
+          style={{ ...inputStyle, borderColor: nameError ? '#C65454' : 'var(--border)' }}
+          autoFocus
+        />
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
+          <span style={{ fontSize: 11, color: '#C65454' }}>{nameError}</span>
+          <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{name.length}/100</span>
+        </div>
       </div>
       <div>
-        <label style={labelStyle}>Description (optional)</label>
+        <label style={labelStyle}>Description</label>
         <textarea
           value={description}
           onChange={(e) => setDescription(e.target.value.slice(0, 300))}
           rows={3}
-          placeholder="Brief description of this matter or case..."
+          placeholder="What is this workspace for? e.g. M&A due diligence matter for Meridian Capital"
           style={{ ...inputStyle, height: 'auto', padding: '10px 12px', resize: 'vertical', lineHeight: 1.5 }}
         />
         <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4, textAlign: 'right' }}>{description.length}/300</div>
@@ -500,17 +533,18 @@ function StepMembers({ currentUserId, currentUserName, currentUserEmail, isOrgAd
   const isSelected = (id: string) => members.some((m) => m.userId === id);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      {/* Owner pill */}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       <div>
-        <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>Owner</div>
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 12px', borderRadius: 999, background: 'var(--ice-warm)', border: '1px solid var(--border)' }}>
-          <div style={{ width: 22, height: 22, borderRadius: '50%', background: 'var(--navy)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 600 }}>
-            {initialsOf(currentUserName)}
-          </div>
-          <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-primary)' }}>{currentUserName}</span>
-          <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 999, background: '#C9A84C22', color: '#9A7A22', fontWeight: 600 }}>Owner</span>
+        <h3 style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 15, fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>Add team members</h3>
+        <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>Who is working on this matter?</p>
+      </div>
+
+      {/* Owner pill */}
+      <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 12px', borderRadius: 999, background: 'var(--ice-warm)', border: '1px solid var(--border)', alignSelf: 'flex-start' }}>
+        <div style={{ width: 22, height: 22, borderRadius: '50%', background: 'var(--navy)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 600 }}>
+          {initialsOf(currentUserName)}
         </div>
+        <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-primary)' }}>You (Owner)</span>
       </div>
 
       {/* Selected members */}
@@ -535,7 +569,7 @@ function StepMembers({ currentUserId, currentUserName, currentUserEmail, isOrgAd
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Search team members..."
+            placeholder="Search by name or email..."
             style={{ width: '100%', height: 38, borderRadius: 8, border: '1px solid var(--border)', paddingLeft: 34, fontSize: 13, outline: 'none', boxSizing: 'border-box', fontFamily: "'DM Sans', sans-serif" }}
           />
         </div>
@@ -609,23 +643,43 @@ function StepDocuments({ docs, setDocs, currentUserId, currentUserName }: {
     });
   };
 
+  // File-type visual mapping — keeps docs recognisable at a glance
+  const typeStyle = (ext: string): { bg: string; color: string; label: string } => {
+    switch (ext.toLowerCase()) {
+      case 'pdf':  return { bg: '#F9E7E7', color: '#C65454', label: 'PDF' };
+      case 'docx': return { bg: '#E2ECF9', color: '#1E3A8A', label: 'DOCX' };
+      case 'xlsx': return { bg: '#E7F3E9', color: '#5CA868', label: 'XLSX' };
+      case 'txt':  return { bg: '#F0F3F6', color: '#6B7885', label: 'TXT' };
+      default:     return { bg: '#F0F3F6', color: '#6B7885', label: ext.toUpperCase() };
+    }
+  };
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <div>
+        <h3 style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 15, fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>Upload case documents</h3>
+        <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4, lineHeight: 1.5 }}>
+          These become the workspace knowledge base. The AI searches these documents first when answering questions in this workspace.
+        </p>
+      </div>
+
       <div
         onClick={() => fileInputRef.current?.click()}
         onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
         onDragLeave={() => setDragActive(false)}
         onDrop={(e) => { e.preventDefault(); setDragActive(false); if (e.dataTransfer.files) processFiles(e.dataTransfer.files); }}
         style={{
-          padding: '32px 20px', borderRadius: 14, border: `2px dashed ${dragActive ? 'var(--navy)' : 'var(--border)'}`,
-          background: dragActive ? 'var(--ice-warm)' : '#fff',
+          padding: '36px 20px', borderRadius: 14,
+          border: `2px dashed ${dragActive ? '#C9A84C' : 'var(--border)'}`,
+          background: dragActive ? '#FDF6E3' : '#FBFAF7',
           textAlign: 'center', cursor: 'pointer',
           transition: 'all 120ms',
         }}
       >
-        <UploadCloud size={32} style={{ margin: '0 auto 10px', color: 'var(--navy)', opacity: 0.7 }} />
-        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>Drag case files here or click to browse</div>
-        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6 }}>PDF, DOCX, XLSX, TXT — Max 100 MB per file</div>
+        <UploadCloud size={28} style={{ margin: '0 auto 10px', color: dragActive ? '#C9A84C' : 'var(--navy)', opacity: 0.85 }} />
+        <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>Drag case files here</div>
+        <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>or click to browse</div>
+        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 10 }}>PDF, DOCX, XLSX, TXT — Max 100 MB per file</div>
         <input
           ref={fileInputRef}
           type="file"
@@ -638,18 +692,23 @@ function StepDocuments({ docs, setDocs, currentUserId, currentUserName }: {
 
       {docs.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          {docs.map((d) => (
-            <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 10, background: 'var(--ice-warm)', border: '1px solid var(--border)' }}>
-              <FileText size={14} style={{ color: 'var(--navy)', flexShrink: 0 }} />
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.name}</div>
-                <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>{fileSize(d.size)} · {d.status === 'processing' ? 'Processing...' : 'Ready'}</div>
+          {docs.map((d) => {
+            const t = typeStyle(d.type);
+            return (
+              <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 10, background: '#fff', border: '1px solid var(--border)' }}>
+                <span style={{ fontSize: 9, fontWeight: 700, padding: '3px 7px', borderRadius: 5, background: t.bg, color: t.color, flexShrink: 0, letterSpacing: '0.05em' }}>
+                  {t.label}
+                </span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.name}</div>
+                  <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>{fileSize(d.size)} · Ready to upload</div>
+                </div>
+                <button onClick={() => setDocs((prev) => prev.filter((x) => x.id !== d.id))} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4, display: 'flex' }}>
+                  <X size={14} />
+                </button>
               </div>
-              <button onClick={() => setDocs((prev) => prev.filter((x) => x.id !== d.id))} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4, display: 'flex' }}>
-                <Trash2 size={13} />
-              </button>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

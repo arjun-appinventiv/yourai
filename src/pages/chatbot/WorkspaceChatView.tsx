@@ -19,7 +19,7 @@ import {
   ArrowLeft, ArrowUp, Briefcase, ChevronDown, Clock, FileText,
   Lock, MessageSquare, Plus, Search, Settings as SettingsIcon,
   Sparkles, Trash2, Users as UsersIcon, X, UploadCloud, Database,
-  AlertCircle, Check, Loader,
+  AlertCircle, AlertTriangle, Check, Loader,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useRole } from '../../context/RoleContext';
@@ -193,6 +193,18 @@ export default function WorkspaceChatView() {
     };
     setMessagesByThread((prev) => ({ ...prev, [activeThreadId]: [...(prev[activeThreadId] || []), userMsg] }));
 
+    // If the workspace has no ready docs, drop a subtle inline notice before
+    // the AI response so the user understands we fell back to the global KB.
+    if (!workspace.documents.some((d) => d.status === 'ready')) {
+      const notice: Msg = {
+        id: Date.now() + 0.5,
+        sender: 'bot',
+        content: '__FALLBACK_NOTICE__',
+        ts: '',
+      };
+      setMessagesByThread((prev) => ({ ...prev, [activeThreadId]: [...(prev[activeThreadId] || []), notice] }));
+    }
+
     // Auto-title thread on first message
     const tIdx = threads.findIndex((t) => t.id === activeThreadId);
     if (tIdx !== -1 && threads[tIdx].title === 'New Conversation') {
@@ -228,7 +240,7 @@ export default function WorkspaceChatView() {
       let sourceBadge = 'No source found';
       if (readyDocs.length > 0) {
         sourceType = 'WORKSPACE_KB';
-        sourceBadge = 'Answered from: workspace documents';
+        sourceBadge = `Answered from: ${workspace.name} documents`;
       } else if (result?.sourceType === 'GLOBAL_KB') {
         sourceType = 'GLOBAL_KB';
         sourceBadge = 'Answered from: YourAI knowledge base';
@@ -394,13 +406,38 @@ export default function WorkspaceChatView() {
 
       {/* Main chat area */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, background: '#FAFBFC' }}>
-        {/* Top strip */}
-        <div style={{ padding: '12px 24px', borderBottom: '1px solid var(--border)', background: '#fff', display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Case Room</div>
-            <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{workspace.name}</div>
-          </div>
-        </div>
+        {/* ─── Persistent workspace banner ─── */}
+        {(() => {
+          const readyDocs = workspace.documents.filter((d) => d.status === 'ready').length;
+          return (
+            <div style={{ height: 36, background: '#EEF1FA', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', padding: '0 20px', flexShrink: 0 }}>
+              <div
+                onClick={() => canManage && setShowSettings(true)}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, cursor: canManage ? 'pointer' : 'default' }}
+                title={canManage ? 'Workspace settings' : undefined}
+              >
+                <Briefcase size={14} style={{ color: 'var(--navy)', flexShrink: 0 }} />
+                <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--navy)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 320 }}>{workspace.name}</span>
+                <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>·</span>
+                <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{workspace.members.length} member{workspace.members.length !== 1 ? 's' : ''}</span>
+              </div>
+              <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
+                {readyDocs === 0 ? (
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, color: '#E8A33D', fontWeight: 500 }}>
+                    <AlertTriangle size={12} />
+                    No documents yet — add files to give the AI context
+                  </span>
+                ) : (
+                  <>
+                    <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Case Documents</span>
+                    <FileText size={12} style={{ color: 'var(--text-muted)' }} />
+                    <span style={{ fontSize: 12, color: 'var(--text-primary)', fontWeight: 500 }}>{readyDocs} doc{readyDocs !== 1 ? 's' : ''}</span>
+                  </>
+                )}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Messages / empty state */}
         <div ref={scrollRef} style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
@@ -408,7 +445,9 @@ export default function WorkspaceChatView() {
             <WorkspaceEmptyState
               firstName={firstName}
               workspaceName={workspace.name}
+              hasDocs={workspace.documents.some((d) => d.status === 'ready')}
               onPromptClick={(p) => { setInput(p); inputRef.current?.focus(); }}
+              onAddDocuments={handleUploadClick}
             />
           ) : (
             <div style={{ padding: '24px 24px 8px', maxWidth: 860, margin: '0 auto', width: '100%' }}>
@@ -440,8 +479,10 @@ export default function WorkspaceChatView() {
               <div ref={intentDropdownRef} style={{ position: 'relative' }}>
                 <button
                   onClick={() => setIsIntentOpen((v) => !v)}
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 10px', borderRadius: 999, fontSize: 12, fontWeight: 500, border: '1.5px solid var(--text-primary)', background: '#fff', color: 'var(--text-primary)', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 10px', borderRadius: 999, fontSize: 12, fontWeight: 500, border: '1.5px solid var(--text-primary)', background: '#fff', color: 'var(--text-primary)', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                  title="Workspace context — this chat is scoped to the current case"
                 >
+                  <Briefcase size={11} style={{ color: 'var(--navy)' }} />
                   {getIntentLabel(activeIntent)}
                   <ChevronDown size={12} style={{ transform: isIntentOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 150ms' }} />
                 </button>
@@ -465,7 +506,7 @@ export default function WorkspaceChatView() {
                 value={input}
                 onChange={(e) => handleInputChange(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder={`Ask anything about ${workspace.name}...`}
+                placeholder={`Ask anything about ${workspace.name}…`}
                 rows={1}
                 style={{ flex: 1, border: 'none', outline: 'none', fontSize: 14, color: 'var(--text-primary)', background: 'transparent', resize: 'none', maxHeight: 120, overflowY: 'auto', lineHeight: '1.5', fontFamily: 'inherit' }}
               />
@@ -770,27 +811,49 @@ function DocRow({ doc, canEdit, onRemove }: { doc: WorkspaceDoc; canEdit: boolea
 }
 
 /* ─── Empty state ─── */
-function WorkspaceEmptyState({ firstName, workspaceName, onPromptClick }: { firstName: string; workspaceName: string; onPromptClick: (p: string) => void }) {
+function WorkspaceEmptyState({ firstName, workspaceName, hasDocs, onPromptClick, onAddDocuments }: { firstName: string; workspaceName: string; hasDocs: boolean; onPromptClick: (p: string) => void; onAddDocuments: () => void }) {
   return (
     <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
       <div style={{ maxWidth: 720, width: '100%', textAlign: 'center' }}>
-        <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'var(--ice-warm)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px' }}>
-          <Briefcase size={22} style={{ color: 'var(--navy)' }} />
+        <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'linear-gradient(135deg, #C9A84C 0%, #E8D48B 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 18px', boxShadow: '0 4px 14px rgba(201, 168, 76, 0.3)' }}>
+          <Briefcase size={28} style={{ color: '#fff' }} />
         </div>
-        <h2 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 28, color: 'var(--navy)', margin: '0 0 6px' }}>
+        <h2 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 28, color: 'var(--navy)', margin: '0 0 8px' }}>
           {getGreeting()}, {firstName}
         </h2>
-        <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: '0 0 24px' }}>
-          You are in <strong style={{ color: 'var(--text-primary)' }}>{workspaceName}</strong>. Ask anything about this matter.
+        <p style={{ fontSize: 14, color: 'var(--text-primary)', margin: '0 0 4px' }}>
+          You are in <strong>{workspaceName}</strong>.
         </p>
+        <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: '0 0 24px' }}>
+          The AI will use your case documents to answer questions here.
+        </p>
+
+        {!hasDocs && (
+          <div style={{ maxWidth: 440, margin: '0 auto 22px', padding: '14px 16px', borderRadius: 12, background: '#FBEED5', border: '1px solid #F3E2B1', display: 'flex', alignItems: 'flex-start', gap: 10, textAlign: 'left' }}>
+            <AlertTriangle size={16} style={{ color: '#E8A33D', flexShrink: 0, marginTop: 2 }} />
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: '#6B4E1F' }}>No case documents uploaded yet.</div>
+              <div style={{ fontSize: 12, color: '#6B4E1F', marginTop: 3, lineHeight: 1.5 }}>
+                Add documents from the sidebar so the AI has context for this matter.
+              </div>
+              <button
+                onClick={onAddDocuments}
+                style={{ marginTop: 10, display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 8, background: '#C9A84C', color: '#fff', border: 'none', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}
+              >
+                <UploadCloud size={12} /> Add Documents
+              </button>
+            </div>
+          </div>
+        )}
+
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, justifyContent: 'center' }}>
           {SUGGESTED_PROMPTS.map((p) => (
             <button
               key={p}
               onClick={() => onPromptClick(p)}
-              style={{ padding: '10px 14px', borderRadius: 10, border: '1px solid var(--border)', background: '#fff', fontSize: 12, color: 'var(--text-secondary)', cursor: 'pointer', textAlign: 'left', maxWidth: 220 }}
-              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--navy)'; }}
-              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border)'; }}
+              style={{ padding: '12px 16px', borderRadius: 12, border: '1px solid var(--border)', background: '#fff', fontSize: 12, color: 'var(--text-secondary)', cursor: 'pointer', textAlign: 'left', maxWidth: 220, lineHeight: 1.5 }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--navy)'; (e.currentTarget as HTMLButtonElement).style.background = 'var(--ice-warm)'; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border)'; (e.currentTarget as HTMLButtonElement).style.background = '#fff'; }}
             >
               {p}
             </button>
@@ -803,6 +866,17 @@ function WorkspaceEmptyState({ firstName, workspaceName, onPromptClick }: { firs
 
 /* ─── Message bubble ─── */
 function MessageBubble({ msg, streaming = false }: { msg: any; streaming?: boolean }) {
+  // Special inline fallback notice — rendered as a muted row, not a bubble.
+  if (msg.content === '__FALLBACK_NOTICE__') {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 10 }}>
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--text-muted)', background: 'var(--ice-warm)', border: '1px solid var(--border)', padding: '6px 12px', borderRadius: 999 }}>
+          <AlertCircle size={11} style={{ color: '#E8A33D' }} />
+          <span>No workspace documents found. Answered from YourAI knowledge base.</span>
+        </div>
+      </div>
+    );
+  }
   const isUser = msg.sender === 'user';
   return (
     <div style={{ display: 'flex', justifyContent: isUser ? 'flex-end' : 'flex-start', marginBottom: 14 }}>
