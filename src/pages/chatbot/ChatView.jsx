@@ -3191,14 +3191,14 @@ INSTRUCTIONS:
     <div style={{ display: 'flex', height: '100vh', width: '100%', overflowX: 'hidden' }}>
       {idleWarning}
       <Sidebar
-        onOpenPromptTemplates={() => { setShowPromptPanel(true); setSidebarOpen(false); }}
-        onOpenClients={() => { setShowClientsPanel(true); setSidebarOpen(false); }}
-        onOpenKnowledgePacks={() => { setShowKnowledgePacksPanel(true); setSidebarOpen(false); }}
-        onOpenDocumentVault={() => { setShowDocumentVaultPanel(true); setSidebarOpen(false); }}
-        onOpenInviteTeam={() => { setShowTeamPage(true); setSidebarOpen(false); }}
+        onOpenPromptTemplates={() => { setShowTeamPage(false); setShowWorkspacesPanel(false); setShowPromptPanel(true); setSidebarOpen(false); }}
+        onOpenClients={() => { setShowTeamPage(false); setShowWorkspacesPanel(false); setShowClientsPanel(true); setSidebarOpen(false); }}
+        onOpenKnowledgePacks={() => { setShowTeamPage(false); setShowWorkspacesPanel(false); setShowKnowledgePacksPanel(true); setSidebarOpen(false); }}
+        onOpenDocumentVault={() => { setShowTeamPage(false); setShowWorkspacesPanel(false); setShowDocumentVaultPanel(true); setSidebarOpen(false); }}
+        onOpenInviteTeam={() => { setShowWorkspacesPanel(false); setShowTeamPage(true); setSidebarOpen(false); }}
         onOpenAuditLogs={() => { /* TODO: Part 5+ wires real audit-logs panel */ }}
         onOpenBilling={() => { navigate('/app/billing'); setSidebarOpen(false); }}
-        onOpenWorkspaces={() => { navigate('/chat/workspaces'); setShowWorkspacesPanel(true); setSidebarOpen(false); }}
+        onOpenWorkspaces={() => { setShowTeamPage(false); navigate('/chat/workspaces'); setShowWorkspacesPanel(true); setSidebarOpen(false); }}
         promptCount={promptTemplates.length}
         clientCount={clients.length}
         packCount={knowledgePacks.length}
