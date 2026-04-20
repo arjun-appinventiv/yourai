@@ -80,11 +80,19 @@ const DEFAULT_CLIENTS = [
 ];
 
 /* ─── Default Knowledge Packs ─── */
+// Seed packs include ownerId + ownerName + isGlobal so the panel can
+// render ownership and enforce role-based visibility:
+//   - Org Admin:    sees every pack in the org
+//   - Internal User: own packs + all org-wide packs
+//   - External User: KP hidden entirely (sidebar level)
 const DEFAULT_KNOWLEDGE_PACKS = [
   {
     id: 1,
     name: 'NDA Playbook',
     description: 'Standard NDA clauses, review guidelines, and firm-approved terms.',
+    ownerId: 'user-ryan',
+    ownerName: 'Ryan Melade',
+    isGlobal: true,
     docs: [
       { id: 1, name: 'Standard_NDA_Template.pdf', size: '1.2 MB', uploaded: 'Mar 12, 2026' },
       { id: 2, name: 'NDA_Risk_Checklist.docx', size: '0.4 MB', uploaded: 'Mar 15, 2026' },
@@ -99,6 +107,9 @@ const DEFAULT_KNOWLEDGE_PACKS = [
     id: 2,
     name: 'M&A Due Diligence',
     description: 'Due diligence checklist, templates, and precedent cases for M&A transactions.',
+    ownerId: 'user-ryan',
+    ownerName: 'Ryan Melade',
+    isGlobal: true,
     docs: [
       { id: 1, name: 'DD_Checklist_v3.pdf', size: '2.1 MB', uploaded: 'Mar 20, 2026' },
       { id: 2, name: 'Meridian_Precedent.pdf', size: '5.3 MB', uploaded: 'Mar 22, 2026' },
@@ -114,6 +125,9 @@ const DEFAULT_KNOWLEDGE_PACKS = [
     id: 3,
     name: 'Employment Law — California',
     description: 'California-specific employment and labor regulations, statutes, and precedent.',
+    ownerId: 'm-002',
+    ownerName: 'Priya Shah',
+    isGlobal: false,
     docs: [
       { id: 1, name: 'CA_Labor_Code.pdf', size: '8.2 MB', uploaded: 'Feb 28, 2026' },
       { id: 2, name: 'Non_Compete_Enforcement.docx', size: '0.6 MB', uploaded: 'Mar 2, 2026' },
@@ -122,6 +136,20 @@ const DEFAULT_KNOWLEDGE_PACKS = [
       { id: 1, name: 'CA Department of Industrial Relations', url: 'https://dir.ca.gov' },
     ],
     createdAt: 'Feb 25, 2026',
+  },
+  {
+    id: 4,
+    name: 'Privacy & Data Protection',
+    description: 'GDPR, CCPA, and cross-border transfer notes — maintained by Priya for internal use.',
+    ownerId: 'm-002',
+    ownerName: 'Priya Shah',
+    isGlobal: false,
+    docs: [
+      { id: 1, name: 'GDPR_Summary.pdf', size: '1.8 MB', uploaded: 'Apr 2, 2026' },
+      { id: 2, name: 'CCPA_Redline.docx', size: '0.5 MB', uploaded: 'Apr 5, 2026' },
+    ],
+    links: [],
+    createdAt: 'Apr 1, 2026',
   },
 ];
 
@@ -940,94 +968,221 @@ function AddClientModal({ onClose, onSave }) {
 }
 
 /* ─────────────────── Knowledge Packs Panel ─────────────────── */
-function KnowledgePacksPanel({ packs, onClose, onCreateNew, onEdit, onDelete, onSelect, activePack }) {
+//
+// Visibility model (per FRD):
+//   • Org Admin      — sees every pack in the org, can toggle org-wide on any
+//   • Internal User  — own packs + all org-wide packs
+//   • External User  — KP hidden at the sidebar level (never reaches here)
+//
+// Panel layout is a wide slide-over-ish modal so the list gets more breathing
+// room. Org Admin gets quick scope tabs (All / Org-wide / Personal) to slice
+// the view; everyone else gets a single combined list.
+function KnowledgePacksPanel({ packs, onClose, onCreateNew, onEdit, onDelete, onSelect, onToggleGlobal, activePack, currentUserId, currentUserName, isOrgAdmin }) {
   const [search, setSearch] = useState('');
-  const filtered = packs.filter(p => {
-    if (!search) return true;
+  const [scope, setScope] = useState('all'); // 'all' | 'org' | 'mine' — Org Admin only
+
+  // Role-based visibility — others never see colleagues' personal packs.
+  const visible = useMemo(() => {
+    if (isOrgAdmin) return packs;
+    return packs.filter((p) => p.ownerId === currentUserId || p.isGlobal);
+  }, [packs, isOrgAdmin, currentUserId]);
+
+  const scoped = useMemo(() => {
+    if (!isOrgAdmin || scope === 'all') return visible;
+    if (scope === 'org') return visible.filter((p) => p.isGlobal);
+    return visible.filter((p) => p.ownerId === currentUserId); // 'mine'
+  }, [visible, scope, isOrgAdmin, currentUserId]);
+
+  const filtered = useMemo(() => {
+    if (!search.trim()) return scoped;
     const q = search.toLowerCase();
-    return p.name.toLowerCase().includes(q) || (p.description || '').toLowerCase().includes(q);
-  });
+    return scoped.filter((p) => p.name.toLowerCase().includes(q) || (p.description || '').toLowerCase().includes(q));
+  }, [scoped, search]);
+
+  const counts = useMemo(() => ({
+    total: visible.length,
+    org: visible.filter((p) => p.isGlobal).length,
+    mine: visible.filter((p) => p.ownerId === currentUserId).length,
+  }), [visible, currentUserId]);
 
   return (
     <>
       <div onClick={onClose} style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)', zIndex: 60, backdropFilter: 'blur(4px)' }} />
       <div
-        className="fixed inset-0 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-[620px] md:max-h-[85vh] md:rounded-2xl"
+        className="fixed inset-0 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-[900px] md:max-h-[90vh] md:rounded-2xl"
         style={{ backgroundColor: 'white', boxShadow: '0 20px 60px rgba(0,0,0,0.2)', zIndex: 61, display: 'flex', flexDirection: 'column' }}
       >
         {/* Header */}
-        <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid var(--border)' }}>
+        <div style={{ padding: '22px 28px 18px', borderBottom: '1px solid var(--border)' }}>
           <div className="flex items-center justify-between gap-2">
             <div className="min-w-0">
-              <h3 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 18, color: 'var(--text-primary)', margin: 0 }}>Knowledge Packs</h3>
-              <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>{packs.length} packs · Bundle docs & links to attach to chats</p>
+              <h3 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 22, color: 'var(--text-primary)', margin: 0 }}>Knowledge Packs</h3>
+              <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 5, lineHeight: 1.5 }}>
+                {isOrgAdmin
+                  ? 'Every pack in the firm. Toggle org-wide sharing on any pack to make it available to the whole team.'
+                  : 'Bundles of documents and links you can attach to a chat to focus the AI on a specific topic.'}
+              </p>
             </div>
-            <div className="flex items-center gap-2">
-              <button onClick={onCreateNew} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 14px', borderRadius: 8, backgroundColor: 'var(--navy)', color: 'white', border: 'none', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}><Plus size={14} /> New Pack</button>
-              <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100"><X size={18} style={{ color: 'var(--text-muted)' }} /></button>
+            <div className="flex items-center gap-2" style={{ flexShrink: 0 }}>
+              <button onClick={onCreateNew} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '8px 16px', borderRadius: 8, backgroundColor: 'var(--navy)', color: 'white', border: 'none', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}><Plus size={14} /> New Pack</button>
+              <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100"><X size={20} style={{ color: 'var(--text-muted)' }} /></button>
             </div>
           </div>
-          <div style={{ position: 'relative', marginTop: 12 }}>
-            <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search knowledge packs..." style={{ width: '100%', height: 34, borderRadius: 8, border: '1px solid var(--border)', paddingLeft: 32, fontSize: 13, outline: 'none', boxSizing: 'border-box', fontFamily: "'DM Sans', sans-serif" }} />
+
+          {/* Scope tabs (Org Admin only) */}
+          {isOrgAdmin && (
+            <div className="flex items-center gap-2" style={{ marginTop: 16 }}>
+              <ScopeTab label="All packs" value="all"    count={counts.total} active={scope === 'all'}    onClick={() => setScope('all')} />
+              <ScopeTab label="Org-wide"  value="org"    count={counts.org}   active={scope === 'org'}    onClick={() => setScope('org')} />
+              <ScopeTab label="My packs"  value="mine"   count={counts.mine}  active={scope === 'mine'}   onClick={() => setScope('mine')} />
+            </div>
+          )}
+
+          <div style={{ position: 'relative', marginTop: 14 }}>
+            <Search size={14} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by name or description..." style={{ width: '100%', height: 38, borderRadius: 10, border: '1px solid var(--border)', paddingLeft: 36, fontSize: 13, outline: 'none', boxSizing: 'border-box', fontFamily: "'DM Sans', sans-serif" }} />
           </div>
         </div>
 
         {/* Pack list */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '8px 16px 16px' }}>
+        <div style={{ flex: 1, overflowY: 'auto', padding: '12px 20px 20px' }}>
           {filtered.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-muted)' }}>
-              <Package size={32} style={{ margin: '0 auto 12px', opacity: 0.4 }} />
-              <div style={{ fontSize: 14, fontWeight: 500 }}>No knowledge packs found</div>
-              <div style={{ fontSize: 12, marginTop: 4 }}>Create your first pack to get started</div>
+            <div style={{ textAlign: 'center', padding: '48px 20px', color: 'var(--text-muted)' }}>
+              <Package size={36} style={{ margin: '0 auto 14px', opacity: 0.4 }} />
+              <div style={{ fontSize: 15, fontWeight: 500 }}>
+                {search ? 'No knowledge packs match your search' : isOrgAdmin && scope !== 'all' ? `No ${scope === 'org' ? 'org-wide' : 'personal'} packs yet` : 'No knowledge packs yet'}
+              </div>
+              {!search && (
+                <div style={{ fontSize: 12, marginTop: 6 }}>Create a pack to bundle documents and links for a topic.</div>
+              )}
             </div>
           ) : (
-            filtered.map(p => (
-              <div key={p.id} style={{ padding: '14px 16px', borderRadius: 10, border: '1px solid var(--border)', marginTop: 8, transition: 'all 0.15s' }}
-                onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.06)'; }}
-                onMouseLeave={e => { e.currentTarget.style.boxShadow = 'none'; }}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-start gap-3" style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ width: 38, height: 38, borderRadius: 10, backgroundColor: 'var(--ice-warm)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      <Package size={18} style={{ color: 'var(--navy)' }} />
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{p.name}</span>
-                        {p.isGlobal && (
-                          <span
-                            title="Shared with the whole organisation"
-                            style={{ fontSize: 10, padding: '2px 8px', borderRadius: 999, background: 'rgba(201,168,76,0.18)', color: '#9A7A22', border: '1px solid rgba(201,168,76,0.4)', fontWeight: 600, letterSpacing: '0.02em' }}
-                          >
-                            Org-wide
-                          </span>
-                        )}
-                      </div>
-                      <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4, lineHeight: 1.5 }}>{p.description}</p>
-                      <div className="flex items-center gap-3 flex-wrap" style={{ marginTop: 8 }}>
-                        <span className="flex items-center gap-1" style={{ fontSize: 11, color: 'var(--text-muted)' }}><FileText size={12} /> {p.docs.length} doc{p.docs.length !== 1 ? 's' : ''}</span>
-                        <span className="flex items-center gap-1" style={{ fontSize: 11, color: 'var(--text-muted)' }}><Link2 size={12} /> {p.links.length} link{p.links.length !== 1 ? 's' : ''}</span>
-                        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Created {p.createdAt}</span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1" style={{ flexShrink: 0 }}>
-                    {onSelect && (
-                      <button onClick={() => onSelect(p)} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 12px', borderRadius: 6, backgroundColor: activePack?.id === p.id ? '#5CA868' : 'var(--navy)', color: 'white', border: 'none', fontSize: 11, fontWeight: 500, cursor: 'pointer' }}>
-                        {activePack?.id === p.id ? <><CheckCircle size={12} /> Active</> : 'Use'}
-                      </button>
-                    )}
-                    <button onClick={() => onEdit(p)} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 6, backgroundColor: onSelect ? 'transparent' : 'var(--navy)', color: onSelect ? 'var(--navy)' : 'white', border: onSelect ? '1px solid var(--border)' : 'none', fontSize: 11, fontWeight: 500, cursor: 'pointer' }}><Edit3 size={12} /> Edit</button>
-                    <button onClick={() => onDelete(p.id)} style={{ padding: 5, borderRadius: 6, background: 'none', border: '1px solid var(--border)', cursor: 'pointer', display: 'flex' }} title="Delete pack"><Trash2 size={13} style={{ color: '#C65454' }} /></button>
-                  </div>
-                </div>
-              </div>
+            filtered.map((p) => (
+              <PackRow
+                key={p.id}
+                pack={p}
+                activePack={activePack}
+                currentUserId={currentUserId}
+                isOrgAdmin={isOrgAdmin}
+                onSelect={onSelect}
+                onEdit={onEdit}
+                onDelete={onDelete}
+                onToggleGlobal={onToggleGlobal}
+              />
             ))
           )}
         </div>
       </div>
     </>
+  );
+}
+
+/* ─── Scope tab for Org Admin — All / Org-wide / Mine ─── */
+function ScopeTab({ label, count, active, onClick }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        display: 'inline-flex', alignItems: 'center', gap: 6,
+        padding: '6px 14px', borderRadius: 999,
+        border: '1px solid ' + (active ? 'var(--navy)' : 'var(--border)'),
+        background: active ? 'var(--navy)' : '#fff',
+        color: active ? '#fff' : 'var(--text-secondary)',
+        fontSize: 12, fontWeight: 500, cursor: 'pointer', transition: 'all 120ms',
+      }}
+    >
+      <span>{label}</span>
+      <span style={{ fontSize: 11, fontWeight: 600, padding: '0 6px', borderRadius: 999, background: active ? 'rgba(255,255,255,0.2)' : 'var(--ice-warm)', color: active ? '#fff' : 'var(--text-primary)', minWidth: 20, textAlign: 'center' }}>
+        {count}
+      </span>
+    </button>
+  );
+}
+
+/* ─── Pack row — richer layout with ownership + quick share toggle ─── */
+function PackRow({ pack, activePack, currentUserId, isOrgAdmin, onSelect, onEdit, onDelete, onToggleGlobal }) {
+  const isOwner = pack.ownerId === currentUserId;
+  const canEdit = isOrgAdmin || isOwner;
+  const canToggleGlobal = isOrgAdmin;
+  const isActive = activePack?.id === pack.id;
+
+  // Org-wide = gold; Personal (someone else's) = muted; Personal (mine) = navy tint
+  const ownerPill = pack.isGlobal
+    ? { bg: 'rgba(201,168,76,0.18)', color: '#9A7A22', border: 'rgba(201,168,76,0.45)', label: 'Org-wide' }
+    : isOwner
+      ? { bg: '#F0F3F6', color: '#1E3A8A', border: '#D8DFE9', label: 'Your pack' }
+      : { bg: '#F8F4ED', color: '#6B7885', border: '#E5E0D3', label: `By ${pack.ownerName || 'Member'}` };
+
+  return (
+    <div
+      style={{ padding: '16px 18px', borderRadius: 12, border: '1px solid var(--border)', marginTop: 10, transition: 'all 0.15s', background: '#fff' }}
+      onMouseEnter={(e) => { e.currentTarget.style.boxShadow = '0 3px 14px rgba(10,36,99,0.06)'; e.currentTarget.style.borderColor = 'var(--navy)'; }}
+      onMouseLeave={(e) => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.borderColor = 'var(--border)'; }}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-start gap-3" style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ width: 40, height: 40, borderRadius: 10, backgroundColor: pack.isGlobal ? 'rgba(201,168,76,0.15)' : 'var(--ice-warm)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <Package size={18} style={{ color: pack.isGlobal ? '#9A7A22' : 'var(--navy)' }} />
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{pack.name}</span>
+              <span
+                title={pack.isGlobal ? 'Shared with the whole organisation' : isOwner ? 'Only visible to you' : `Owned by ${pack.ownerName}`}
+                style={{ fontSize: 10, padding: '2px 8px', borderRadius: 999, background: ownerPill.bg, color: ownerPill.color, border: `1px solid ${ownerPill.border}`, fontWeight: 600, letterSpacing: '0.02em' }}
+              >
+                {ownerPill.label}
+              </span>
+            </div>
+            <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4, lineHeight: 1.55 }}>{pack.description}</p>
+            <div className="flex items-center gap-3 flex-wrap" style={{ marginTop: 8 }}>
+              <span className="flex items-center gap-1" style={{ fontSize: 11, color: 'var(--text-muted)' }}><FileText size={12} /> {pack.docs.length} doc{pack.docs.length !== 1 ? 's' : ''}</span>
+              <span className="flex items-center gap-1" style={{ fontSize: 11, color: 'var(--text-muted)' }}><Link2 size={12} /> {pack.links.length} link{pack.links.length !== 1 ? 's' : ''}</span>
+              <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Created {pack.createdAt}</span>
+            </div>
+          </div>
+        </div>
+        <div className="flex flex-col items-end gap-2" style={{ flexShrink: 0 }}>
+          <div className="flex items-center gap-1">
+            {onSelect && (
+              <button
+                onClick={() => onSelect(pack)}
+                style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '6px 14px', borderRadius: 6, backgroundColor: isActive ? '#5CA868' : 'var(--navy)', color: 'white', border: 'none', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}
+              >
+                {isActive ? <><CheckCircle size={12} /> Active</> : 'Use'}
+              </button>
+            )}
+            {canEdit && (
+              <button
+                onClick={() => onEdit(pack)}
+                style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '6px 11px', borderRadius: 6, backgroundColor: onSelect ? 'transparent' : 'var(--navy)', color: onSelect ? 'var(--navy)' : 'white', border: onSelect ? '1px solid var(--border)' : 'none', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}
+              >
+                <Edit3 size={12} /> Edit
+              </button>
+            )}
+            {canEdit && (
+              <button onClick={() => onDelete(pack.id)} style={{ padding: 6, borderRadius: 6, background: 'none', border: '1px solid var(--border)', cursor: 'pointer', display: 'flex' }} title="Delete pack">
+                <Trash2 size={13} style={{ color: '#C65454' }} />
+              </button>
+            )}
+          </div>
+          {canToggleGlobal && (
+            <div
+              onClick={() => onToggleGlobal?.(pack.id, !pack.isGlobal)}
+              title={pack.isGlobal ? 'Turn off — make personal again' : 'Share with entire organisation'}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '3px 4px 3px 10px', borderRadius: 999, background: pack.isGlobal ? 'rgba(201,168,76,0.12)' : 'var(--ice-warm)', border: '1px solid ' + (pack.isGlobal ? 'rgba(201,168,76,0.35)' : 'var(--border)'), cursor: 'pointer', transition: 'all 120ms' }}
+            >
+              <span style={{ fontSize: 10, fontWeight: 600, color: pack.isGlobal ? '#9A7A22' : 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                {pack.isGlobal ? 'Shared org-wide' : 'Share org-wide'}
+              </span>
+              <span style={{ width: 28, height: 16, borderRadius: 999, background: pack.isGlobal ? 'var(--navy)' : '#CBD5E1', position: 'relative', transition: 'background 150ms', flexShrink: 0 }}>
+                <span style={{ position: 'absolute', top: 2, left: pack.isGlobal ? 14 : 2, width: 12, height: 12, borderRadius: '50%', background: '#fff', boxShadow: '0 1px 2px rgba(0,0,0,0.2)', transition: 'left 150ms' }} />
+              </span>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -3579,11 +3734,19 @@ INSTRUCTIONS:
         <KnowledgePacksPanel
           packs={knowledgePacks}
           activePack={activeKnowledgePack}
+          currentUserId={currentUserId}
+          currentUserName={operator?.name || 'You'}
+          isOrgAdmin={isOrgAdmin}
           onClose={() => setShowKnowledgePacksPanel(false)}
           onCreateNew={() => { setShowKnowledgePacksPanel(false); setEditingPack({ isNew: true }); }}
           onEdit={(pack) => { setShowKnowledgePacksPanel(false); setEditingPack(pack); }}
           onDelete={handleDeletePack}
           onSelect={(p) => { handleSelectKnowledgePack(p); setShowKnowledgePacksPanel(false); }}
+          onToggleGlobal={(packId, next) => {
+            setKnowledgePacks((prev) => prev.map((p) => (p.id === packId ? { ...p, isGlobal: next } : p)));
+            setToastMsg(next ? 'Pack now shared with the entire organisation' : 'Pack is personal again');
+            setTimeout(() => setToastMsg(''), 3200);
+          }}
         />
       )}
 
