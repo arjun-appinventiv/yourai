@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Search, Bell, Building2, Users, CreditCard, BarChart3, Shield, BookOpen, FileText, Plug, Database, Workflow, FileBarChart, Settings, BookMarked, KeyRound, LogOut, X, FileCode2 } from 'lucide-react';
+import { LayoutDashboard, Bell, Building2, Users, CreditCard, BarChart3, Shield, BookOpen, FileText, Plug, Database, Workflow, FileBarChart, Settings, BookMarked, KeyRound, LogOut, X, FileCode2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const pageConfig = {
@@ -69,23 +69,6 @@ export default function TopBar() {
 
         {/* Right side */}
         <div className="flex items-center gap-3">
-          <div className="relative">
-            <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }} />
-            <input
-              type="text"
-              placeholder="Search..."
-              className="pl-8 pr-3 rounded-lg"
-              style={{
-                width: 140,
-                height: 32,
-                border: '1px solid var(--border)',
-                backgroundColor: 'var(--ice-warm)',
-                fontSize: '13px',
-                color: 'var(--text-primary)',
-                outline: 'none',
-              }}
-            />
-          </div>
 
           <button className="relative p-1.5 rounded-md hover:bg-gray-50 transition-colors">
             <Bell size={17} style={{ color: 'var(--text-muted)' }} />
