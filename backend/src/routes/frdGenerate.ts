@@ -50,8 +50,9 @@ router.post('/', async (req: Request, res: Response) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-5',
-        max_completion_tokens: 16000,
+        // Keep in sync with api/frd-generate.ts.
+        model: 'gpt-4o',
+        max_tokens: 8000,
         stream: true,
         messages: [
           { role: 'system', content: FRD_SYSTEM_PROMPT },

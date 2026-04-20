@@ -15,22 +15,19 @@ export default function OrgLayout() {
     blockPollMs: 30 * 1000,
   });
 
-  // ─── Blocked / Timed-out / Superseded screens ────────────────────────
-  if (session.state.status === 'blocked' || session.state.status === 'timed-out' || session.state.status === 'superseded') {
+  // ─── Blocked / Timed-out screens ──────────────────────────────────────
+  if (session.state.status === 'blocked' || session.state.status === 'timed-out') {
     const isBlocked = session.state.status === 'blocked';
-    const isSuperseded = session.state.status === 'superseded';
     const reason = isBlocked ? session.state.reason : null;
     const title = isBlocked
       ? (reason === 'tenant' ? 'Organisation Blocked' : 'Access Blocked')
-      : isSuperseded ? 'Signed in on another device' : 'Session expired';
+      : 'Session expired';
     const body = isBlocked
       ? (reason === 'tenant'
           ? 'Your organisation has been blocked by an administrator. All users from your firm have lost access to YourAI. If you believe this is a mistake, please reach out to YourAI support.'
           : 'Your account has been blocked by your administrator. You no longer have access to YourAI. If you believe this is a mistake, please reach out to your firm\'s admin or contact support.')
-      : isSuperseded
-        ? 'Your account was signed in on another device or browser. For security, only one active session is allowed per account. Sign in again here to continue on this device.'
-        : 'You were signed out after 30 minutes of inactivity. This keeps your data secure. Please sign back in to continue.';
-    const handleSignOut = async () => { await session.signOut(); navigate('/app/login'); };
+      : 'You were signed out after 30 minutes of inactivity. This keeps your data secure. Please sign back in to continue.';
+    const handleSignOut = async () => { await session.signOut(); navigate('/chat/login'); };
     return (
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', padding: 24, background: '#F8F4ED', textAlign: 'center' }}>
         <div style={{ width: 72, height: 72, borderRadius: '50%', background: isBlocked ? '#F9E7E7' : '#FBEED5', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 20 }}>
@@ -61,7 +58,7 @@ export default function OrgLayout() {
         <h3 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 20, color: '#0A2463', margin: '0 0 8px' }}>Still there?</h3>
         <p style={{ fontSize: 13, color: '#6B7885', margin: '0 0 20px', lineHeight: 1.6 }}>You've been inactive for a while. For your security, you'll be signed out in about 2 minutes.</p>
         <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
-          <button onClick={async () => { await session.signOut(); navigate('/app/login'); }} style={{ padding: '8px 16px', borderRadius: 6, background: 'transparent', color: '#6B7885', border: '1px solid #D6DDE4', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>Sign out now</button>
+          <button onClick={async () => { await session.signOut(); navigate('/chat/login'); }} style={{ padding: '8px 16px', borderRadius: 6, background: 'transparent', color: '#6B7885', border: '1px solid #D6DDE4', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>Sign out now</button>
           <button onClick={session.stayActive} style={{ padding: '8px 16px', borderRadius: 6, background: '#0A2463', color: '#fff', border: 'none', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>Stay signed in</button>
         </div>
       </div>

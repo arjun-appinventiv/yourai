@@ -220,8 +220,11 @@ export default async function handler(req: Request): Promise<Response> {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-5',
-        max_completion_tokens: 16000,
+        // NOTE: spec originally called for "gpt-5" which OpenAI does not
+        // currently offer as a publicly-available model name. Using gpt-4o
+        // as a stable, available default. Swap here when gpt-5 ships.
+        model: 'gpt-4o',
+        max_tokens: 8000,
         stream: true,
         messages: [
           { role: 'system', content: FRD_SYSTEM_PROMPT },

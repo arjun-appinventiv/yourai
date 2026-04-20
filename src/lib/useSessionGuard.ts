@@ -1,12 +1,17 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
-import { getBlockReason, isSessionCurrent, type BlockReason, logout } from './auth';
+import { getBlockReason, type BlockReason, logout } from './auth';
 
 export type SessionState =
   | { status: 'active' }
   | { status: 'blocked'; reason: Exclude<BlockReason, null> }
   | { status: 'idle-warning' }
-  | { status: 'timed-out' }
-  | { status: 'superseded' };  // Another login replaced this session
+  | { status: 'timed-out' };
+
+// Note: the previous implementation included a 'superseded' state that kicked
+// the user out if the same account was used elsewhere. That was a mistake —
+// one account should work across multiple tabs, portals, and devices without
+// friction. The session-token registry (`claimSession` / `releaseSession` in
+// lib/auth) is still wired for future use but is no longer enforced here.
 
 interface SessionGuardOptions {
   /** Session idle timeout in ms. Default: 30 minutes. Set to 0 to disable. */
@@ -50,12 +55,14 @@ export function useSessionGuard(options: SessionGuardOptions = {}) {
     try { return localStorage.getItem('yourai_current_email') || ''; } catch { return ''; }
   };
 
-  // ─── Block + session-superseded detection ────────────────────────────
+  // ─── Block detection ─────────────────────────────────────────────────
+  // Only checks if the user or their tenant has been blocked by a Super-Admin.
+  // Concurrent sessions (same account on multiple tabs / devices) are intentionally
+  // allowed — see the comment on SessionState above.
   const checkBlock = useCallback(() => {
     const email = getEmail();
     if (!email) return;
 
-    // Priority 1: blocked (by SA or tenant)
     const reason = getBlockReason(email);
     if (reason) {
       setState((prev) => prev.status === 'blocked' ? prev : { status: 'blocked', reason });
@@ -63,26 +70,18 @@ export function useSessionGuard(options: SessionGuardOptions = {}) {
         onBlockedFiredRef.current = true;
         try { onBlocked?.(reason); } catch { /* ignore */ }
       }
-      return;
-    }
-
-    // Priority 2: another login has superseded this tab's session
-    if (!isSessionCurrent(email)) {
-      setState((prev) => prev.status === 'superseded' ? prev : { status: 'superseded' });
     }
   }, [onBlocked]);
 
-  // Poll + focus + cross-tab storage event
+  // Poll + focus + cross-tab storage event (for block detection only)
   useEffect(() => {
     checkBlock();
     const interval = setInterval(checkBlock, blockPollMs);
     const onFocus = () => checkBlock();
     const onStorage = (e: StorageEvent) => {
-      // React to block OR session-registry changes
       if (
         e.key === 'yourai_mgmt_users' ||
         e.key === 'yourai_mgmt_tenants' ||
-        e.key === 'yourai_active_sessions' ||
         e.key === null
       ) {
         checkBlock();
@@ -113,7 +112,7 @@ export function useSessionGuard(options: SessionGuardOptions = {}) {
     const tick = setInterval(() => {
       // Never override blocked state with idle transitions
       setState((prev) => {
-        if (prev.status === 'blocked' || prev.status === 'timed-out' || prev.status === 'superseded') return prev;
+        if (prev.status === 'blocked' || prev.status === 'timed-out') return prev;
         const idleFor = Date.now() - lastActivityRef.current;
         if (idleFor >= idleTimeoutMs) {
           if (!onTimedOutFiredRef.current) {
