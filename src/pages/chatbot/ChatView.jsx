@@ -272,6 +272,27 @@ function Sidebar({ onOpenPromptTemplates, onOpenClients, onOpenKnowledgePacks, o
   // Role + permission gating — every nav item decides visibility via hasPermission
   // rather than by comparing role strings directly. See src/lib/roles.ts.
   const { hasPermission, isOrgAdmin, isExternalUser } = useRole();
+  const { operator } = useAuth();
+
+  // Resolve the signed-in user's name/initials/plan, falling back to
+  // localStorage for the static-demo flow where AuthContext can be empty.
+  const resolvedUser = (() => {
+    if (operator) return operator;
+    try {
+      const email = localStorage.getItem('yourai_current_email');
+      if (!email) return null;
+      const registered = JSON.parse(localStorage.getItem('yourai_registered_users') || '{}');
+      return registered[email]?.user || null;
+    } catch { return null; }
+  })();
+  const displayName = resolvedUser?.name || 'Your Account';
+  const initials = (resolvedUser?.avatar)
+    || displayName.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase()
+    || '?';
+  const planLabel = resolvedUser?.plan
+    ? (resolvedUser.plan === 'FREE' ? 'Free Plan' : resolvedUser.plan === 'PROFESSIONAL' ? 'Professional' : resolvedUser.plan === 'ENTERPRISE' ? 'Enterprise' : 'Team Plan')
+    : 'Free Plan';
+  const roleLabel = isOrgAdmin ? 'Org Admin' : isExternalUser ? 'Client' : 'Team Member';
   // Collapse state — persisted to localStorage
   const [workspaceOpen, setWorkspaceOpen] = useState(() => {
     try { const v = localStorage.getItem('yourai_sidebar_workspace_open'); return v === null ? true : v === 'true'; } catch { return true; }
@@ -413,7 +434,7 @@ function Sidebar({ onOpenPromptTemplates, onOpenClients, onOpenKnowledgePacks, o
           {/* Green online dot + avatar — desktop */}
           <div className="hidden md:flex" style={{ alignItems: 'center', gap: 6 }}>
             <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#5CA868', flexShrink: 0 }} />
-            <div style={{ width: 26, height: 26, borderRadius: '50%', background: '#F0F3F6', color: '#1E3A8A', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 600 }}>RM</div>
+            <div style={{ width: 26, height: 26, borderRadius: '50%', background: '#F0F3F6', color: '#1E3A8A', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 600 }}>{initials}</div>
           </div>
           {/* Close button — mobile only */}
           <button
@@ -583,10 +604,10 @@ function Sidebar({ onOpenPromptTemplates, onOpenClients, onOpenKnowledgePacks, o
       {/* ═══ ZONE 6 — User Profile Footer ═══ */}
       <div style={{ borderTop: '0.5px solid var(--border)', position: 'relative' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px' }}>
-          <div style={{ width: 26, height: 26, borderRadius: '50%', background: '#F0F3F6', color: '#1E3A8A', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 600, flexShrink: 0 }}>RM</div>
+          <div style={{ width: 26, height: 26, borderRadius: '50%', background: '#F0F3F6', color: '#1E3A8A', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 600, flexShrink: 0 }}>{initials}</div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-primary)', lineHeight: 1.3 }}>Ryan Melade</div>
-            <div style={{ fontSize: 10, color: 'var(--text-muted)', lineHeight: 1.3 }}>Admin &middot; Team Plan</div>
+            <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-primary)', lineHeight: 1.3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{displayName}</div>
+            <div style={{ fontSize: 10, color: 'var(--text-muted)', lineHeight: 1.3 }}>{roleLabel} &middot; {planLabel}</div>
           </div>
           <button
             onClick={() => setShowProfileMenu(v => !v)}
@@ -1985,7 +2006,14 @@ function PlanAwarenessBadge({ plan, onViewPlans }) {
 }
 
 function EmptyState({ profile, plan, onPromptClick, navigate, onViewPlans }) {
-  const currentUserName = 'Ryan';
+  const currentUserName = (operator?.name || (() => {
+    try {
+      const email = localStorage.getItem('yourai_current_email');
+      if (!email) return '';
+      const registered = JSON.parse(localStorage.getItem('yourai_registered_users') || '{}');
+      return registered[email]?.user?.name || '';
+    } catch { return ''; }
+  })()).split(' ')[0] || 'there';
   const prompts = getSuggestedPrompts(profile);
 
   return (
