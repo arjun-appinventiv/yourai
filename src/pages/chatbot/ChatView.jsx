@@ -355,14 +355,13 @@ function Sidebar({ onOpenPromptTemplates, onOpenClients, onOpenKnowledgePacks, o
 
   // ─── Workspace items ───
   // Visibility rules (see FRD Part 2):
-  //   Dashboard, Clients, Knowledge Graph, Invite Team → ORG_ADMIN only
+  //   Dashboard, Clients, Invite Team → ORG_ADMIN only
   //   Workspaces → visible to all, but the list is scoped by membership downstream
   //   + New chat is rendered separately in Zone 2 (visible to all)
   const workspaceItems = [
     isOrgAdmin && { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard', active: true, rightText: '3 running' },
     { id: 'workspaces', icon: Briefcase, label: 'Workspaces', rightText: String(workspaceCount ?? 0), onClick: onOpenWorkspaces },
     isOrgAdmin && { id: 'clients', icon: Users, label: 'Clients', rightText: String(clientCount), onClick: onOpenClients },
-    isOrgAdmin && { id: 'knowledge-graph', icon: GitBranch, label: 'Knowledge Graph', badge: 'New' },
     isOrgAdmin && { id: 'invite-team', icon: UserPlus, label: 'Invite Team', rightText: memberCount != null ? String(memberCount) : undefined, onClick: onOpenInviteTeam },
   ].filter(Boolean);
 
