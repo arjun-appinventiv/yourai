@@ -55,24 +55,53 @@ function getGreeting(): string {
   return 'Good evening';
 }
 
-// Role-aware prompt suggestions for the workspace empty state.
-// Attorneys/paralegals get drafting-heavy prompts; external clients get
-// plain-English, status-and-next-step prompts.
-const SUGGESTED_PROMPTS_ATTORNEY = [
-  'Summarise the key issues in this case',
-  'What are the main risks in the uploaded documents?',
-  'Draft a research memo on this matter',
-];
-const SUGGESTED_PROMPTS_CLIENT = [
-  'What is the current status of my matter?',
-  'Explain the key terms of my agreement in plain English',
-  'What are the next steps, and what do you need from me?',
-];
-const SUGGESTED_PROMPTS_READONLY = [
-  'Summarise what is in this workspace so far',
-  'What are the key dates and deadlines I should know?',
-  'Give me a one-paragraph overview of this matter',
-];
+// Role- and state-aware prompt suggestions for the workspace empty state.
+//
+//   attorney   — drafting-heavy prompts assuming they are running the matter
+//   client     — plain-English status/next-step questions
+//   readonly   — observer-style overviews for members without KB edit access
+//
+// Each bucket has a `withDocs` and `noDocs` variant so we don't suggest
+// "What are the main risks in the uploaded documents?" in a workspace
+// that has no documents yet.
+const PROMPT_SETS = {
+  attorney: {
+    withDocs: [
+      'Summarise the key issues in this case',
+      'What are the main risks in the uploaded documents?',
+      'Draft a research memo on this matter',
+    ],
+    noDocs: [
+      'Outline a research plan for this matter',
+      'What are typical first steps for a case like this?',
+      'Draft a client engagement letter for this matter',
+    ],
+  },
+  client: {
+    withDocs: [
+      'What is the current status of my matter?',
+      'Explain the key terms of my agreement in plain English',
+      'What are the next steps, and what do you need from me?',
+    ],
+    noDocs: [
+      'What is this matter about?',
+      'What are the typical next steps I should expect?',
+      'How long does a matter like this usually take?',
+    ],
+  },
+  readonly: {
+    withDocs: [
+      'Summarise what is in this workspace so far',
+      'What are the key dates and deadlines I should know?',
+      'Give me a one-paragraph overview of this matter',
+    ],
+    noDocs: [
+      'Give me a quick overview of this matter',
+      'What should I expect to happen next in this workspace?',
+      'Who is working on this matter?',
+    ],
+  },
+};
 
 export default function WorkspaceChatView() {
   const { id } = useParams<{ id: string }>();
@@ -866,11 +895,14 @@ function DocRow({ doc, canEdit, onRemove }: { doc: WorkspaceDoc; canEdit: boolea
 function WorkspaceEmptyState({ firstName, workspaceName, hasDocs, canEditKB, role, onPromptClick, onAddDocuments }: { firstName: string; workspaceName: string; hasDocs: boolean; canEditKB: boolean; role: string; onPromptClick: (p: string) => void; onAddDocuments: () => void }) {
   // External Users are always clients. Members who can't edit the KB get
   // read-only prompts (observer-style). Everyone else gets attorney prompts.
-  const prompts = role === 'EXTERNAL_USER'
-    ? SUGGESTED_PROMPTS_CLIENT
+  // And within each bucket, the prompt text changes based on whether the
+  // workspace actually has indexed documents yet.
+  const bucket = role === 'EXTERNAL_USER'
+    ? 'client'
     : canEditKB
-      ? SUGGESTED_PROMPTS_ATTORNEY
-      : SUGGESTED_PROMPTS_READONLY;
+      ? 'attorney'
+      : 'readonly';
+  const prompts = hasDocs ? PROMPT_SETS[bucket].withDocs : PROMPT_SETS[bucket].noDocs;
   return (
     <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
       <div style={{ maxWidth: 720, width: '100%', textAlign: 'center' }}>
