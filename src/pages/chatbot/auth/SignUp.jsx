@@ -48,6 +48,51 @@ export default function SignUp() {
     return () => clearInterval(id);
   }, [resendTimer]);
 
+  // ─── Abandoned-signup guard ─────────────────────────────────────────
+  // If the user has typed meaningful data and hasn't finished, warn them
+  // before they lose it. The browser decides the exact wording; we just
+  // trigger the dialog by returning a truthy value from beforeunload.
+  // We never persist partial data across reload — password fields must
+  // never survive a refresh for security reasons.
+  const hasMeaningfulProgress = Boolean(
+    !loading &&
+    (
+      (fullName.trim() && !ssoProvider) ||
+      (email.trim() && !ssoProvider) ||
+      firmName.trim() ||
+      password ||
+      confirmPassword ||
+      verifyStep !== 'idle'
+    )
+  );
+  useEffect(() => {
+    if (!hasMeaningfulProgress) return undefined;
+    const handler = (e) => {
+      // Setting returnValue is what triggers the browser's native
+      // "Leave site? Changes you made may not be saved." dialog.
+      e.preventDefault();
+      e.returnValue = '';
+      return '';
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [hasMeaningfulProgress]);
+
+  // Read optional ?email=... from the URL so marketing links can pre-fill
+  // the field. Sanitise to prevent anything other than a plausible email
+  // string from landing in state.
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const prefill = (params.get('email') || '').trim();
+      if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(prefill) && prefill.length <= 254) {
+        setEmail(prefill);
+      }
+    } catch { /* ignore */ }
+    // Runs once on mount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Simulates the OAuth callback — in production the provider would return
   // these fields to our /api/auth/callback/:provider endpoint.
   const handleSsoContinue = (provider) => {
