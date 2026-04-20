@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
-import { Mail, Lock, Eye, EyeOff, Loader, ShieldCheck, ArrowLeft, RefreshCw, Info } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, Loader, ShieldCheck, ArrowLeft, RefreshCw, Info, X } from 'lucide-react';
 import ChatAuthLayout from '../../../components/ChatAuthLayout';
 import { verifyOtp as apiVerifyOtp, resendOtp as apiResendOtp, trackLogin, claimSession } from '../../../lib/auth';
 import { useAuth } from '../../../context/AuthContext';
