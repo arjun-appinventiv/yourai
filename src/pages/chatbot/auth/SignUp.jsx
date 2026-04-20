@@ -1,6 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { User, Mail, Building2, Lock, Eye, EyeOff, Loader, Check, Circle, AlertTriangle, XCircle } from 'lucide-react';
+import { User, Mail, Building2, Lock, Eye, EyeOff, Loader, Check, Circle, AlertTriangle, XCircle, ShieldCheck } from 'lucide-react';
 import ChatAuthLayout from '../../../components/ChatAuthLayout';
 import { signUp as apiSignUp, claimSession } from '../../../lib/auth';
 
@@ -25,6 +25,29 @@ export default function SignUp() {
   const [ssoProvider, setSsoProvider] = useState(null); // 'google' | 'microsoft' | null
   const navigate = useNavigate();
 
+  // ─── Email OTP verification ───
+  // Verify the user's email address before letting them fill in the rest of
+  // the signup form. State machine:
+  //   'idle'      — user is typing/about to type the email
+  //   'otp'       — we've sent a code; OTP input is visible
+  //   'verified'  — email is confirmed; rest of form unlocks
+  // SSO auto-sets this to 'verified' because the provider already did the
+  // email verification for us.
+  const [verifyStep, setVerifyStep] = useState('idle'); // idle | otp | verified
+  const [sendingCode, setSendingCode] = useState(false);
+  const [otp, setOtp] = useState(Array(6).fill(''));
+  const [otpError, setOtpError] = useState('');
+  const [otpVerifying, setOtpVerifying] = useState(false);
+  const [resendTimer, setResendTimer] = useState(0);
+  const otpRefs = useRef([]);
+
+  // Resend countdown
+  useEffect(() => {
+    if (resendTimer <= 0) return;
+    const id = setInterval(() => setResendTimer((t) => t - 1), 1000);
+    return () => clearInterval(id);
+  }, [resendTimer]);
+
   // Simulates the OAuth callback — in production the provider would return
   // these fields to our /api/auth/callback/:provider endpoint.
   const handleSsoContinue = (provider) => {
@@ -34,6 +57,8 @@ export default function SignUp() {
     setSsoProvider(provider);
     setFullName(demo.name);
     setEmail(demo.email);
+    // SSO already verifies the email — skip the OTP gate entirely.
+    setVerifyStep('verified');
     setError('');
   };
 
@@ -41,7 +66,86 @@ export default function SignUp() {
     setSsoProvider(null);
     setFullName('');
     setEmail('');
+    setVerifyStep('idle');
+    setOtp(Array(6).fill(''));
+    setOtpError('');
   };
+
+  const isEmailFormatValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+
+  // Request a verification code for the entered email.
+  // The prototype accepts any 6-digit code; in production this hits a backend
+  // endpoint that sends a real one-time code to the user's inbox.
+  const handleSendCode = async () => {
+    if (!isEmailFormatValid || sendingCode) return;
+    setError('');
+    setOtpError('');
+    setSendingCode(true);
+    await new Promise((r) => setTimeout(r, 700));
+    setSendingCode(false);
+    setVerifyStep('otp');
+    setResendTimer(30);
+    setOtp(Array(6).fill(''));
+    setTimeout(() => otpRefs.current[0]?.focus(), 80);
+  };
+
+  // Verify the entered OTP. For the prototype we accept any 6-digit code.
+  const verifyOtp = async (code) => {
+    if (otpVerifying) return;
+    setOtpError('');
+    setOtpVerifying(true);
+    await new Promise((r) => setTimeout(r, 500));
+    setOtpVerifying(false);
+    if (/^\d{6}$/.test(code)) {
+      setVerifyStep('verified');
+    } else {
+      setOtpError('Enter the 6-digit code from your email.');
+      setOtp(Array(6).fill(''));
+      otpRefs.current[0]?.focus();
+    }
+  };
+
+  const handleOtpChange = (i, raw) => {
+    const cleaned = raw.replace(/\D/g, '');
+    if (!cleaned && raw) return; // typed non-numeric
+    const next = [...otp];
+    if (cleaned.length > 1) {
+      // Paste: fill from left
+      const digits = cleaned.slice(0, 6).split('');
+      for (let j = 0; j < 6; j++) next[j] = digits[j] || '';
+      setOtp(next);
+      const last = Math.min(digits.length, 6) - 1;
+      otpRefs.current[last]?.focus();
+      if (digits.length === 6) setTimeout(() => verifyOtp(next.join('')), 200);
+      return;
+    }
+    next[i] = cleaned;
+    setOtp(next);
+    if (cleaned && i < 5) otpRefs.current[i + 1]?.focus();
+    if (next.every((d) => d !== '')) setTimeout(() => verifyOtp(next.join('')), 200);
+  };
+
+  const handleOtpKeyDown = (i, e) => {
+    if (e.key === 'Backspace' && !otp[i] && i > 0) otpRefs.current[i - 1]?.focus();
+  };
+
+  const handleResendCode = () => {
+    if (resendTimer > 0) return;
+    setResendTimer(30);
+    setOtpError('');
+    setOtp(Array(6).fill(''));
+    otpRefs.current[0]?.focus();
+  };
+
+  const handleEditEmail = () => {
+    // User wants to change the address — revert to idle state.
+    setVerifyStep('idle');
+    setOtp(Array(6).fill(''));
+    setOtpError('');
+    setResendTimer(0);
+  };
+
+  const emailVerified = verifyStep === 'verified';
 
   // Domain mismatch detection
   const domainMismatch = useMemo(() => {
@@ -66,6 +170,11 @@ export default function SignUp() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+
+    if (!emailVerified) {
+      setError('Please verify your email before creating your account.');
+      return;
+    }
 
     if (password !== confirmPassword) {
       setError('Passwords do not match');
@@ -209,25 +318,154 @@ export default function SignUp() {
           </div>
         </div>
 
-        {/* Work Email */}
+        {/* Work Email + verification gate */}
         <div>
-          <label className="block mb-1.5" style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-secondary)' }}>
-            Work Email {ssoProvider && <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>· verified by {ssoProvider === 'google' ? 'Google' : 'Microsoft'}</span>}
+          <label className="block mb-1.5 flex items-center gap-2" style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-secondary)' }}>
+            <span>
+              Work Email
+              {ssoProvider && <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}> · verified by {ssoProvider === 'google' ? 'Google' : 'Microsoft'}</span>}
+            </span>
+            {emailVerified && !ssoProvider && (
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 999, background: '#E7F3E9', color: '#5CA868', fontWeight: 600, fontSize: 11 }}>
+                <Check size={11} /> Verified
+              </span>
+            )}
           </label>
           <div className={inputWrap}>
             <Mail size={16} style={iconStyle} />
             <input
               type="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                // Editing the email after verification invalidates it.
+                if (emailVerified && !ssoProvider) setVerifyStep('idle');
+              }}
               placeholder="you@yourfirm.com"
               required
-              disabled={!!ssoProvider}
-              style={{ ...inputStyle, background: ssoProvider ? 'var(--ice-warm)' : inputStyle.background, color: ssoProvider ? 'var(--text-secondary)' : inputStyle.color, cursor: ssoProvider ? 'not-allowed' : 'text' }}
+              // Email is editable only while idle (and never in SSO flow)
+              disabled={!!ssoProvider || verifyStep === 'otp' || verifyStep === 'verified'}
+              style={{
+                ...inputStyle,
+                background: (ssoProvider || verifyStep !== 'idle') ? 'var(--ice-warm)' : inputStyle.background,
+                color: (ssoProvider || verifyStep !== 'idle') ? 'var(--text-secondary)' : inputStyle.color,
+                cursor: (ssoProvider || verifyStep !== 'idle') ? 'not-allowed' : 'text',
+                paddingRight: (!ssoProvider && verifyStep === 'idle') ? 120 : undefined,
+              }}
             />
+            {/* Inline "Verify email" button shown when idle */}
+            {!ssoProvider && verifyStep === 'idle' && (
+              <button
+                type="button"
+                onClick={handleSendCode}
+                disabled={!isEmailFormatValid || sendingCode}
+                className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1"
+                style={{
+                  padding: '6px 10px',
+                  borderRadius: 8,
+                  fontSize: 11,
+                  fontWeight: 600,
+                  border: 'none',
+                  background: (!isEmailFormatValid || sendingCode) ? 'var(--ice)' : 'var(--navy)',
+                  color: (!isEmailFormatValid || sendingCode) ? 'var(--text-muted)' : '#fff',
+                  cursor: (!isEmailFormatValid || sendingCode) ? 'not-allowed' : 'pointer',
+                }}
+              >
+                {sendingCode ? (<><Loader size={11} className="animate-spin" /> Sending…</>) : 'Verify email'}
+              </button>
+            )}
+            {/* "Edit email" link shown when verified */}
+            {!ssoProvider && verifyStep === 'verified' && (
+              <button
+                type="button"
+                onClick={handleEditEmail}
+                className="absolute right-3 top-1/2 -translate-y-1/2"
+                style={{ fontSize: 11, color: 'var(--navy)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 500, textDecoration: 'underline' }}
+              >
+                Edit
+              </button>
+            )}
           </div>
-          {!ssoProvider && (
-            <p className="mt-1" style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Use your firm email so we can connect to the right workspace.</p>
+          {!ssoProvider && verifyStep === 'idle' && (
+            <p className="mt-1" style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+              We'll send a 6-digit code to this address to confirm it's yours.
+            </p>
+          )}
+
+          {/* OTP entry block — visible while verifying */}
+          {!ssoProvider && verifyStep === 'otp' && (
+            <div className="mt-3 p-4" style={{ background: 'var(--ice-warm)', border: '1px solid var(--border)', borderRadius: 10 }}>
+              <div className="flex items-start gap-3 mb-3">
+                <ShieldCheck size={18} style={{ color: 'var(--navy)', flexShrink: 0, marginTop: 2 }} />
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>Check your email for a code</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
+                    We sent a 6-digit code to <strong style={{ color: 'var(--text-primary)' }}>{email}</strong>. Enter it below to verify.
+                  </div>
+                </div>
+              </div>
+
+              {/* 6-digit input row */}
+              <div className="flex justify-center gap-1.5 my-3">
+                {otp.map((digit, i) => (
+                  <input
+                    key={i}
+                    ref={(el) => (otpRefs.current[i] = el)}
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={6}
+                    value={digit}
+                    disabled={otpVerifying}
+                    onChange={(e) => handleOtpChange(i, e.target.value)}
+                    onKeyDown={(e) => handleOtpKeyDown(i, e)}
+                    onFocus={(e) => e.target.select()}
+                    className="text-center"
+                    style={{
+                      width: 40,
+                      height: 46,
+                      border: `1.5px solid ${otpError ? '#C65454' : digit ? 'var(--navy)' : 'var(--border-mid)'}`,
+                      borderRadius: 8,
+                      fontSize: 18,
+                      fontWeight: 600,
+                      color: 'var(--text-primary)',
+                      outline: 'none',
+                      background: 'white',
+                    }}
+                  />
+                ))}
+              </div>
+
+              {otpError && (
+                <p className="text-center" style={{ fontSize: 11, color: '#C65454', marginTop: 4 }}>{otpError}</p>
+              )}
+
+              <div className="flex items-center justify-between mt-3">
+                <button
+                  type="button"
+                  onClick={handleEditEmail}
+                  style={{ fontSize: 11, color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer' }}
+                >
+                  ← Use a different email
+                </button>
+                {resendTimer > 0 ? (
+                  <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Resend code in 0:{resendTimer.toString().padStart(2, '0')}</span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleResendCode}
+                    style={{ fontSize: 11, color: 'var(--navy)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}
+                  >
+                    Resend code
+                  </button>
+                )}
+              </div>
+
+              {otpVerifying && (
+                <div className="flex items-center justify-center gap-2 mt-3" style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                  <Loader size={12} className="animate-spin" /> Verifying…
+                </div>
+              )}
+            </div>
           )}
         </div>
 
@@ -355,7 +593,7 @@ export default function SignUp() {
         {/* Submit button */}
         {(() => {
           const allMet = passwordChecks.every((c) => c.met);
-          const canSubmit = fullName.trim() && email.trim() && firmName.trim() && password && confirmPassword && password === confirmPassword && allMet && agreed && !loading;
+          const canSubmit = emailVerified && fullName.trim() && email.trim() && firmName.trim() && password && confirmPassword && password === confirmPassword && allMet && agreed && !loading;
           return (
         <button
           type="submit"
