@@ -67,17 +67,13 @@ export async function login(
       body: JSON.stringify({ email, password }),
     });
 
-    // If backend returned a valid JSON response, use it
     const contentType = res.headers.get('content-type') || '';
-    if (contentType.includes('application/json')) {
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: 'Invalid credentials' }));
-        return { success: false, error: err.error || 'Invalid credentials' };
-      }
+    if (contentType.includes('application/json') && res.ok) {
+      // Backend accepted — return its response verbatim.
       return res.json();
     }
-
-    // Non-JSON response (e.g. Vercel 404 HTML page) — fall through to demo
+    // Any other case — 4xx/5xx JSON error, non-JSON body, or no backend —
+    // fall through to the demo fallback so seeded demo creds still work.
   } catch {
     // Network error — backend unreachable, fall through to demo
   }
