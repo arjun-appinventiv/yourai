@@ -94,14 +94,17 @@ export default function UserManagement() {
   };
 
   const handleExportCSV = () => {
+    // Export the currently-filtered list so search, org, role, and status
+    // filters are reflected in the downloaded file.
     const header = 'Name,Email,Organisation,Role,Status,Last Active';
-    const rows = users.map((u) => `"${u.name}","${u.email}","${u.org}",${u.role},${u.status},"${u.lastActive}"`);
+    const rows = filtered.map((u) => `"${u.name}","${u.email}","${u.org}",${u.role},${u.status},"${u.lastActive}"`);
     const blob = new Blob([[header, ...rows].join('\n')], { type: 'text/csv' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = 'platform_users_export.csv';
+    const hasFilter = search.trim() || orgFilter !== 'All' || roleFilter !== 'All' || statusFilter !== 'All';
+    a.download = hasFilter ? 'platform_users_export_filtered.csv' : 'platform_users_export.csv';
     a.click();
-    showToast('Users CSV exported');
+    showToast(`Exported ${filtered.length} ${filtered.length === 1 ? 'user' : 'users'}${hasFilter ? ' (filtered)' : ''}.`);
   };
 
   const inputStyle = {

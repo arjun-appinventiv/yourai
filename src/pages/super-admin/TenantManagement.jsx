@@ -212,17 +212,20 @@ export default function TenantManagement() {
   };
 
   const handleExportCSV = () => {
+    // Export the currently-filtered list so search, plan, and status filters
+    // are reflected in the downloaded file.
     const header = 'Organisation,Plan,Users,Workspaces,Documents,Status,Created,MRR';
-    const rows = tenantList.map((t) => `"${t.name}",${t.plan},${t.users},${t.workspaces},${t.documents},${t.status},"${t.created}",${t.mrr}`);
+    const rows = filtered.map((t) => `"${t.name}",${t.plan},${t.users},${t.workspaces},${t.documents},${t.status},"${t.created}",${t.mrr}`);
     const csv = [header, ...rows].join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'tenants_export.csv';
+    const hasFilter = search.trim() || planFilter !== 'All' || statusFilter !== 'All';
+    a.download = hasFilter ? 'tenants_export_filtered.csv' : 'tenants_export.csv';
     a.click();
     URL.revokeObjectURL(url);
-    showToast('CSV exported successfully');
+    showToast(`Exported ${filtered.length} ${filtered.length === 1 ? 'organisation' : 'organisations'}${hasFilter ? ' (filtered)' : ''}.`);
   };
 
   const openAddTenant = () => {
