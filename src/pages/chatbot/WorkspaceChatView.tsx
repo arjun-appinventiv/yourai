@@ -230,14 +230,19 @@ export default function WorkspaceChatView() {
         content: m.content,
       }));
 
-      // Determine the source: workspace docs (if any ready) → global KB → fallback
+      // Determine the source: workspace docs (if any ready) → global KB → fallback.
+      // callLLM expects a ContextLayers object (not array). We shape the
+      // workspace's attached docs as an "uploadedDoc" so the backend RAG
+      // treats them as the primary source.
       const readyDocs = workspace.documents.filter((d) => d.status === 'ready');
-      const workspaceContext = readyDocs.length > 0
-        ? `WORKSPACE CONTEXT — the following documents are attached to this case room and should be prioritised as sources when relevant:\n` +
-          readyDocs.map((d) => `- ${d.name} (${d.type})`).join('\n')
-        : null;
-
-      const contextLayers = workspaceContext ? [{ label: 'Workspace KB', content: workspaceContext }] : [];
+      const contextLayers = readyDocs.length > 0
+        ? {
+            uploadedDoc: {
+              name: `${workspace.name} case documents`,
+              content: readyDocs.map((d) => `Document: ${d.name} (${d.type.toUpperCase()})`).join('\n'),
+            },
+          }
+        : undefined;
 
       const result = await callLLM(trimmed, history, (s: string) => setStreaming(s), contextLayers);
 
