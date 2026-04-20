@@ -854,10 +854,9 @@ function ClientsPanel({ clients, onClose, onAddClient, onDeleteClient }) {
           <div className="flex items-center justify-between gap-2">
             <div className="min-w-0">
               <h3 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 18, color: 'var(--text-primary)', margin: 0 }}>Clients</h3>
-              <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>{clients.length} clients · Manage your client directory</p>
+              <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>{clients.length} client{clients.length !== 1 ? 's' : ''} · Added automatically when you invite an External User to a workspace</p>
             </div>
             <div className="flex items-center gap-2">
-              <button onClick={onAddClient} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 14px', borderRadius: 8, backgroundColor: 'var(--navy)', color: 'white', border: 'none', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}><UserPlus size={14} /> Add Client</button>
               <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100"><X size={18} style={{ color: 'var(--text-muted)' }} /></button>
             </div>
           </div>
@@ -2378,7 +2377,9 @@ export default function ChatView({ initialView = 'chat' }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUserId, currentRole, workspaceTick, showWorkspacesPanel]);
   const [toastMsg, setToastMsg] = useState('');
-  const [showAddClient, setShowAddClient] = useState(false);
+  // Add Client standalone flow removed — clients are created via workspace
+  // invites (External User → client record). Kept here as an anchor comment
+  // to remind future edits not to reintroduce the modal.
   const [sidebarOpen, setSidebarOpen] = useState(false);
   // ─── Chat Threads state ───
   const [threads, setThreads] = useState(DEFAULT_THREADS);
@@ -3772,7 +3773,6 @@ INSTRUCTIONS:
         <ClientsPanel
           clients={clients}
           onClose={() => setShowClientsPanel(false)}
-          onAddClient={() => { setShowClientsPanel(false); setShowAddClient(true); }}
           onDeleteClient={handleDeleteClient}
         />
       )}
@@ -3808,13 +3808,8 @@ INSTRUCTIONS:
         </div>
       )}
 
-      {/* Add Client Modal */}
-      {showAddClient && (
-        <AddClientModal
-          onClose={() => setShowAddClient(false)}
-          onSave={handleAddClient}
-        />
-      )}
+      {/* Add Client modal intentionally removed — clients are created only
+          via the workspace invite flow (External User → client record). */}
 
       {/* Knowledge Packs Panel */}
       {showKnowledgePacksPanel && (
