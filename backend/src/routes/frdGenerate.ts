@@ -22,14 +22,20 @@ router.post('/', async (req: Request, res: Response) => {
   const moduleLabel = typeof req.body?.module === 'string' ? req.body.module.trim() : '';
 
   if (!platform || !moduleLabel) {
-    res.status(400).json({ error: GENERIC_ERROR_MESSAGE });
+    res.status(400).json({
+      error: GENERIC_ERROR_MESSAGE,
+      debug: { reason: 'missing-platform-or-module', platform, module: moduleLabel },
+    });
     return;
   }
 
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
     console.error('[frd-generate] OPENAI_API_KEY is not configured');
-    res.status(500).json({ error: GENERIC_ERROR_MESSAGE });
+    res.status(500).json({
+      error: GENERIC_ERROR_MESSAGE,
+      debug: { reason: 'missing-openai-api-key', hint: 'Add OPENAI_API_KEY to backend/.env and restart.' },
+    });
     return;
   }
 
@@ -62,7 +68,10 @@ router.post('/', async (req: Request, res: Response) => {
     });
   } catch (err) {
     console.error('[frd-generate] fetch to OpenAI failed', err);
-    res.status(502).json({ error: GENERIC_ERROR_MESSAGE });
+    res.status(502).json({
+      error: GENERIC_ERROR_MESSAGE,
+      debug: { reason: 'openai-fetch-threw', detail: (err as Error)?.message || String(err) },
+    });
     return;
   }
 
@@ -74,7 +83,10 @@ router.post('/', async (req: Request, res: Response) => {
       /* ignore */
     }
     console.error(`[frd-generate] OpenAI responded ${upstream.status}: ${detail.slice(0, 500)}`);
-    res.status(502).json({ error: GENERIC_ERROR_MESSAGE });
+    res.status(502).json({
+      error: GENERIC_ERROR_MESSAGE,
+      debug: { reason: 'openai-non-2xx', status: upstream.status, body: detail.slice(0, 2000) },
+    });
     return;
   }
 

@@ -66,14 +66,12 @@ export default function FrdGenerator() {
 
       if (!response.ok) {
         setError(GENERIC_ERROR_MESSAGE);
-        // If debug mode is on and the server returned a JSON error with
-        // a `debug` field, surface it to the user.
-        if (debugMode) {
-          try {
-            const errJson = await response.clone().json();
-            if (errJson?.debug) setErrorDebug(errJson.debug);
-          } catch { /* ignore — non-JSON error body */ }
-        }
+        // Always capture debug info if the server returned it — the
+        // toggle below only reveals it when the user clicks.
+        try {
+          const errJson = await response.clone().json();
+          if (errJson?.debug) setErrorDebug(errJson.debug);
+        } catch { /* ignore — non-JSON error body */ }
         setLoading(false);
         return;
       }
@@ -215,8 +213,8 @@ export default function FrdGenerator() {
                 Retry
               </button>
 
-              {/* Debug details — only shown when ?debug=1 AND the server returned a debug payload */}
-              {debugMode && errorDebug && (
+              {/* Debug details — shown whenever the server returned a debug payload */}
+              {errorDebug && (
                 <div style={{ marginTop: 10 }}>
                   <button
                     type="button"

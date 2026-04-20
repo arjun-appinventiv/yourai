@@ -177,30 +177,30 @@ export default async function handler(req: Request): Promise<Response> {
     return jsonError('Method not allowed', 405);
   }
 
-  // Debug mode: if `?debug=1` is present OR the X-Debug header is set,
-  // the server returns verbose upstream error details in the error JSON.
-  // Intended for internal debugging only. Streaming success responses are
-  // unchanged.
-  const url = new URL(req.url);
-  const debug = url.searchParams.get('debug') === '1' || req.headers.get('x-debug') === '1';
+  // NOTE: internal tool only — we always include verbose debug info in
+  // error responses so operators can diagnose quickly. Successful
+  // generations stream back plain text and leak no internals.
 
   let body: { platform?: string; module?: string };
   try {
     body = await req.json();
   } catch {
-    return jsonError(GENERIC_ERROR_MESSAGE, 400, debug ? { reason: 'body-parse-failed' } : undefined);
+    return jsonError(GENERIC_ERROR_MESSAGE, 400, { reason: 'body-parse-failed' });
   }
 
   const platform = typeof body.platform === 'string' ? body.platform.trim() : '';
   const moduleLabel = typeof body.module === 'string' ? body.module.trim() : '';
   if (!platform || !moduleLabel) {
-    return jsonError(GENERIC_ERROR_MESSAGE, 400, debug ? { reason: 'missing-platform-or-module', platform, module: moduleLabel } : undefined);
+    return jsonError(GENERIC_ERROR_MESSAGE, 400, { reason: 'missing-platform-or-module', platform, module: moduleLabel });
   }
 
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
     console.error('[frd-generate] OPENAI_API_KEY is not configured');
-    return jsonError(GENERIC_ERROR_MESSAGE, 500, debug ? { reason: 'missing-openai-api-key' } : undefined);
+    return jsonError(GENERIC_ERROR_MESSAGE, 500, {
+      reason: 'missing-openai-api-key',
+      hint: 'Add OPENAI_API_KEY in Vercel → Settings → Environment Variables (Production), then redeploy.',
+    });
   }
 
   const userMessage =
@@ -234,18 +234,21 @@ export default async function handler(req: Request): Promise<Response> {
     });
   } catch (err) {
     console.error('[frd-generate] fetch to OpenAI failed', err);
-    return jsonError(GENERIC_ERROR_MESSAGE, 502, debug ? { reason: 'openai-fetch-threw', detail: (err as Error)?.message || String(err) } : undefined);
+    return jsonError(GENERIC_ERROR_MESSAGE, 502, {
+      reason: 'openai-fetch-threw',
+      detail: (err as Error)?.message || String(err),
+    });
   }
 
   if (!upstream.ok || !upstream.body) {
     let detail = '';
     try { detail = await upstream.text(); } catch { /* ignore */ }
     console.error(`[frd-generate] OpenAI responded ${upstream.status}: ${detail.slice(0, 500)}`);
-    return jsonError(
-      GENERIC_ERROR_MESSAGE,
-      502,
-      debug ? { reason: 'openai-non-2xx', status: upstream.status, body: detail.slice(0, 2000) } : undefined,
-    );
+    return jsonError(GENERIC_ERROR_MESSAGE, 502, {
+      reason: 'openai-non-2xx',
+      status: upstream.status,
+      body: detail.slice(0, 2000),
+    });
   }
 
   // Parse OpenAI's SSE stream and forward plain text tokens to the browser.
