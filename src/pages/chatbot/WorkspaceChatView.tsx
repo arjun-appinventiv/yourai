@@ -55,10 +55,23 @@ function getGreeting(): string {
   return 'Good evening';
 }
 
-const SUGGESTED_PROMPTS = [
+// Role-aware prompt suggestions for the workspace empty state.
+// Attorneys/paralegals get drafting-heavy prompts; external clients get
+// plain-English, status-and-next-step prompts.
+const SUGGESTED_PROMPTS_ATTORNEY = [
   'Summarise the key issues in this case',
   'What are the main risks in the uploaded documents?',
   'Draft a research memo on this matter',
+];
+const SUGGESTED_PROMPTS_CLIENT = [
+  'What is the current status of my matter?',
+  'Explain the key terms of my agreement in plain English',
+  'What are the next steps, and what do you need from me?',
+];
+const SUGGESTED_PROMPTS_READONLY = [
+  'Summarise what is in this workspace so far',
+  'What are the key dates and deadlines I should know?',
+  'Give me a one-paragraph overview of this matter',
 ];
 
 export default function WorkspaceChatView() {
@@ -68,8 +81,17 @@ export default function WorkspaceChatView() {
   const { currentRole, isOrgAdmin } = useRole();
 
   const currentUserId = operator?.id || 'user-ryan';
-  const currentUserName = operator?.name || 'You';
-  const firstName = (currentUserName.split(' ')[0]) || 'there';
+  // Resolve the user's name from AuthContext, falling back to the localStorage
+  // registered user when operator isn't hydrated (static demo flow).
+  const currentUserName = operator?.name || (() => {
+    try {
+      const email = localStorage.getItem('yourai_current_email');
+      if (!email) return '';
+      const registered = JSON.parse(localStorage.getItem('yourai_registered_users') || '{}');
+      return registered[email]?.user?.name || '';
+    } catch { return ''; }
+  })() || 'there';
+  const firstName = currentUserName.split(' ')[0] || 'there';
 
   const [workspace, setWorkspace] = useState<Workspace | null>(null);
   const [threads, setThreads] = useState<WorkspaceThread[]>([]);
@@ -469,6 +491,8 @@ export default function WorkspaceChatView() {
               firstName={firstName}
               workspaceName={workspace.name}
               hasDocs={workspace.documents.some((d) => d.status === 'ready')}
+              canEditKB={canEditWorkspaceKB(workspace, currentUserId, isOrgAdmin)}
+              role={currentRole}
               onPromptClick={(p) => { setInput(p); inputRef.current?.focus(); }}
               onAddDocuments={handleUploadClick}
             />
@@ -526,12 +550,13 @@ export default function WorkspaceChatView() {
 
               <textarea
                 ref={inputRef}
+                className="no-focus-ring"
                 value={input}
                 onChange={(e) => handleInputChange(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder={`Ask anything about ${workspace.name}…`}
                 rows={1}
-                style={{ flex: 1, border: 'none', outline: 'none', fontSize: 14, color: 'var(--text-primary)', background: 'transparent', resize: 'none', maxHeight: 120, overflowY: 'auto', lineHeight: '1.5', fontFamily: 'inherit' }}
+                style={{ flex: 1, border: 'none', outline: 'none', boxShadow: 'none', fontSize: 14, color: 'var(--text-primary)', background: 'transparent', resize: 'none', maxHeight: 120, overflowY: 'auto', lineHeight: '1.5', fontFamily: 'inherit' }}
               />
 
               {(() => {
@@ -838,7 +863,14 @@ function DocRow({ doc, canEdit, onRemove }: { doc: WorkspaceDoc; canEdit: boolea
 }
 
 /* ─── Empty state ─── */
-function WorkspaceEmptyState({ firstName, workspaceName, hasDocs, onPromptClick, onAddDocuments }: { firstName: string; workspaceName: string; hasDocs: boolean; onPromptClick: (p: string) => void; onAddDocuments: () => void }) {
+function WorkspaceEmptyState({ firstName, workspaceName, hasDocs, canEditKB, role, onPromptClick, onAddDocuments }: { firstName: string; workspaceName: string; hasDocs: boolean; canEditKB: boolean; role: string; onPromptClick: (p: string) => void; onAddDocuments: () => void }) {
+  // External Users are always clients. Members who can't edit the KB get
+  // read-only prompts (observer-style). Everyone else gets attorney prompts.
+  const prompts = role === 'EXTERNAL_USER'
+    ? SUGGESTED_PROMPTS_CLIENT
+    : canEditKB
+      ? SUGGESTED_PROMPTS_ATTORNEY
+      : SUGGESTED_PROMPTS_READONLY;
   return (
     <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
       <div style={{ maxWidth: 720, width: '100%', textAlign: 'center' }}>
@@ -874,7 +906,7 @@ function WorkspaceEmptyState({ firstName, workspaceName, hasDocs, onPromptClick,
         )}
 
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, justifyContent: 'center' }}>
-          {SUGGESTED_PROMPTS.map((p) => (
+          {prompts.map((p) => (
             <button
               key={p}
               onClick={() => onPromptClick(p)}
