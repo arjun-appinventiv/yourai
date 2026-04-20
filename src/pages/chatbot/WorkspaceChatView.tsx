@@ -29,7 +29,8 @@ import {
   getWorkspace, addMember, removeMember, addDocument, updateDocumentStatus,
   removeDocument, updateWorkspace, transferOwnership, deleteWorkspace,
   listThreadsForUser, createThread, updateThread, deleteThread,
-  canEditDoc, canManageWorkspace, isWorkspaceCreator, isWorkspaceMember,
+  canEditDoc, canManageWorkspace, canEditWorkspaceKB, updateMemberAccess,
+  isWorkspaceCreator, isWorkspaceMember,
   seedWorkspacesIfEmpty,
 } from '../../lib/workspace';
 import { MOCK_WORKSPACES } from '../../lib/mockWorkspaces';
@@ -352,6 +353,12 @@ export default function WorkspaceChatView() {
     if (next) setWorkspace(next);
     if (victim) showToast(`${victim.name} removed from workspace`);
   };
+  const handleToggleKB = (userId: string, canEdit: boolean) => {
+    const next = updateMemberAccess(workspace.id, userId, { canEditKB: canEdit });
+    if (next) setWorkspace(next);
+    const who = workspace.members.find((m) => m.userId === userId)?.name || 'Member';
+    showToast(canEdit ? `${who} can now edit the knowledge base` : `${who} is now read-only`);
+  };
 
   /* ─── Settings actions ─── */
   const handleUpdateMeta = (patch: { name?: string; description?: string }) => {
@@ -394,6 +401,7 @@ export default function WorkspaceChatView() {
         activeThreadId={activeThreadId}
         currentUserId={currentUserId}
         isOrgAdmin={isOrgAdmin}
+        canEditKB={canEditWorkspaceKB(workspace, currentUserId, isOrgAdmin)}
         showThreadSearch={showThreadSearch}
         threadSearch={threadSearch}
         showAllDocs={showAllDocs}
@@ -552,6 +560,7 @@ export default function WorkspaceChatView() {
           onClose={() => setShowMembers(false)}
           onAdd={handleAddMember}
           onRemove={handleRemoveMember}
+          onToggleKB={handleToggleKB}
         />
       )}
 
@@ -585,6 +594,7 @@ interface SidebarProps {
   activeThreadId: string | null;
   currentUserId: string;
   isOrgAdmin: boolean;
+  canEditKB: boolean;
   showThreadSearch: boolean;
   threadSearch: string;
   showAllDocs: boolean;
@@ -603,7 +613,7 @@ interface SidebarProps {
 
 function WorkspaceSidebar(props: SidebarProps) {
   const {
-    workspace, threads, activeThreadId, currentUserId, isOrgAdmin,
+    workspace, threads, activeThreadId, currentUserId, isOrgAdmin, canEditKB,
     showThreadSearch, threadSearch, showAllDocs,
     onBackToList, onNewThread, onSwitchThread, onDeleteThread,
     onToggleThreadSearch, onThreadSearchChange, onOpenMembers, onOpenSettings,
@@ -723,7 +733,9 @@ function WorkspaceSidebar(props: SidebarProps) {
         <div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 4px', marginBottom: 6 }}>
             <span style={{ fontSize: 10, fontWeight: 500, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Case Documents {workspace.documents.length}</span>
-            <button onClick={onUploadClick} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, fontSize: 11, color: 'var(--navy)', fontWeight: 500 }}>+ Add</button>
+            {canEditKB && (
+              <button onClick={onUploadClick} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, fontSize: 11, color: 'var(--navy)', fontWeight: 500 }}>+ Add</button>
+            )}
           </div>
           {workspace.documents.length === 0 ? (
             <div style={{ padding: '10px 8px', fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.55 }}>
@@ -932,13 +944,18 @@ function TypingIndicator() {
 }
 
 /* ─── Members Panel ─── */
-function MembersPanel({ workspace, currentUserId, canManage, isOrgAdmin, onClose, onAdd, onRemove }: {
+function MembersPanel({ workspace, currentUserId, canManage, isOrgAdmin, onClose, onAdd, onRemove, onToggleKB }: {
   workspace: Workspace; currentUserId: string; canManage: boolean; isOrgAdmin: boolean;
-  onClose: () => void; onAdd: (m: WorkspaceMember) => void; onRemove: (userId: string) => void;
+  onClose: () => void;
+  onAdd: (m: WorkspaceMember) => void;
+  onRemove: (userId: string) => void;
+  onToggleKB: (userId: string, next: boolean) => void;
 }) {
   const [adding, setAdding] = useState(false);
   const [q, setQ] = useState('');
   const [confirmRemove, setConfirmRemove] = useState<WorkspaceMember | null>(null);
+  const [pendingAdd, setPendingAdd] = useState<WorkspaceMember | null>(null);
+  const [pendingCanEditKB, setPendingCanEditKB] = useState(true);
 
   const candidates = useMemo(() => {
     const all = teamMembersForPicker();
@@ -979,7 +996,7 @@ function MembersPanel({ workspace, currentUserId, canManage, isOrgAdmin, onClose
               {candidates.length === 0 ? (
                 <div style={{ padding: 16, fontSize: 12, color: 'var(--text-muted)', textAlign: 'center' }}>No matching members</div>
               ) : candidates.map((m) => (
-                <div key={m.userId} onClick={() => { onAdd(m); setAdding(false); setQ(''); }} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', cursor: 'pointer', borderRadius: 8 }}
+                <div key={m.userId} onClick={() => { setPendingAdd(m); setPendingCanEditKB(true); }} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', cursor: 'pointer', borderRadius: 8 }}
                   onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.background = 'var(--ice-warm)'; }}
                   onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.background = 'transparent'; }}
                 >
@@ -1001,8 +1018,9 @@ function MembersPanel({ workspace, currentUserId, canManage, isOrgAdmin, onClose
         <div style={{ flex: 1, overflowY: 'auto', padding: '12px 20px 20px' }}>
           {workspace.members.map((m) => {
             const isWsCreator = m.userId === workspace.createdBy;
+            const kbEditable = isWsCreator || m.canEditKB !== false;
             return (
-              <div key={m.userId} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '12px 0', borderBottom: '1px solid var(--border)' }}>
+              <div key={m.userId} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '14px 0', borderBottom: '1px solid var(--border)' }}>
                 <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--navy)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 600, flexShrink: 0 }}>{initialsOf(m.name)}</div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div className="flex items-center gap-2" style={{ flexWrap: 'wrap' }}>
@@ -1014,6 +1032,22 @@ function MembersPanel({ workspace, currentUserId, canManage, isOrgAdmin, onClose
                   </div>
                   <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{m.email}</div>
                   <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>Added by {m.addedBy} · {m.addedAt}</div>
+
+                  {/* KB-access row — creator is always read/write and locked */}
+                  <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px', borderRadius: 8, background: kbEditable ? '#E7F3E9' : '#F0F3F6', border: '1px solid ' + (kbEditable ? 'rgba(92,168,104,0.3)' : 'var(--border)') }}>
+                    <span style={{ fontSize: 10, fontWeight: 600, color: kbEditable ? '#3F7E4A' : '#6B7885' }}>
+                      {kbEditable ? 'Can edit knowledge base' : 'Read-only knowledge base'}
+                    </span>
+                    {canManage && !isWsCreator && (
+                      <button
+                        onClick={() => onToggleKB(m.userId, !kbEditable)}
+                        title={kbEditable ? 'Switch to read-only' : 'Allow editing the workspace KB'}
+                        style={{ marginLeft: 'auto', width: 28, height: 16, borderRadius: 999, border: 'none', cursor: 'pointer', background: kbEditable ? '#5CA868' : '#CBD5E1', position: 'relative', padding: 0, flexShrink: 0 }}
+                      >
+                        <span style={{ position: 'absolute', top: 2, left: kbEditable ? 14 : 2, width: 12, height: 12, borderRadius: '50%', background: '#fff', boxShadow: '0 1px 2px rgba(0,0,0,0.2)', transition: 'left 150ms' }} />
+                      </button>
+                    )}
+                  </div>
                 </div>
                 {canManage && !isWsCreator && (
                   <button onClick={() => setConfirmRemove(m)} style={{ background: 'none', border: '1px solid var(--border)', cursor: 'pointer', padding: 6, borderRadius: 6, display: 'flex' }}>
@@ -1025,6 +1059,21 @@ function MembersPanel({ workspace, currentUserId, canManage, isOrgAdmin, onClose
           })}
         </div>
       </div>
+
+      {pendingAdd && (
+        <AddMemberAccessDialog
+          member={pendingAdd}
+          canEditKB={pendingCanEditKB}
+          onToggle={() => setPendingCanEditKB((v) => !v)}
+          onCancel={() => setPendingAdd(null)}
+          onConfirm={() => {
+            onAdd({ ...pendingAdd, canEditKB: pendingCanEditKB });
+            setPendingAdd(null);
+            setAdding(false);
+            setQ('');
+          }}
+        />
+      )}
 
       {confirmRemove && (
         <ConfirmDialog
@@ -1151,6 +1200,53 @@ function WorkspaceSettingsModal({ workspace, currentUserId, isOrgAdmin, onClose,
           onConfirm={() => { onDelete(); setShowDelete(false); }}
         />
       )}
+    </>
+  );
+}
+
+/* ─── Add-member access dialog — decides KB edit permission at add time ─── */
+function AddMemberAccessDialog({ member, canEditKB, onToggle, onCancel, onConfirm }: { member: WorkspaceMember; canEditKB: boolean; onToggle: () => void; onCancel: () => void; onConfirm: () => void }) {
+  return (
+    <>
+      <div onClick={onCancel} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 80, backdropFilter: 'blur(4px)' }} />
+      <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 460, background: '#fff', borderRadius: 16, boxShadow: '0 20px 60px rgba(0,0,0,0.25)', zIndex: 81 }}>
+        <div style={{ padding: '20px 24px 16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+            <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--ice-warm)', color: 'var(--navy)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 600, flexShrink: 0 }}>
+              {initialsOf(member.name)}
+            </div>
+            <div style={{ minWidth: 0 }}>
+              <h3 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 17, color: 'var(--text-primary)', margin: 0 }}>Add {member.name}?</h3>
+              <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{member.email}</p>
+            </div>
+          </div>
+          <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.55 }}>
+            All members can chat with the AI using the workspace context. Decide whether this member should also be able to upload and remove case documents.
+          </p>
+
+          <div
+            onClick={onToggle}
+            style={{ marginTop: 14, padding: '14px 16px', borderRadius: 12, cursor: 'pointer', border: '1px solid ' + (canEditKB ? '#5CA868' : 'var(--border)'), background: canEditKB ? '#F3FAF5' : '#fff', display: 'flex', alignItems: 'center', gap: 12, transition: 'all 120ms' }}
+          >
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>Can edit the knowledge base</div>
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 3, lineHeight: 1.55 }}>
+                {canEditKB
+                  ? 'Can add and remove case documents. Good for attorneys and paralegals working the matter.'
+                  : 'Can only read the documents and chat with the AI. Good for observers or clients.'}
+              </div>
+            </div>
+            <span style={{ width: 36, height: 20, borderRadius: 999, background: canEditKB ? '#5CA868' : '#CBD5E1', position: 'relative', transition: 'background 150ms', flexShrink: 0 }}>
+              <span style={{ position: 'absolute', top: 2, left: canEditKB ? 18 : 2, width: 16, height: 16, borderRadius: '50%', background: '#fff', boxShadow: '0 1px 2px rgba(0,0,0,0.2)', transition: 'left 150ms' }} />
+            </span>
+          </div>
+        </div>
+
+        <div style={{ padding: '14px 24px 20px', display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+          <button onClick={onCancel} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid var(--border)', background: 'white', fontSize: 13, cursor: 'pointer', color: 'var(--text-muted)' }}>Cancel</button>
+          <button onClick={onConfirm} style={{ padding: '8px 20px', borderRadius: 8, border: 'none', background: 'var(--navy)', color: '#fff', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>Add Member</button>
+        </div>
+      </div>
     </>
   );
 }

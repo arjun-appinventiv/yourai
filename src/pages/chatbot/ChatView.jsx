@@ -180,6 +180,9 @@ const THREAD_MESSAGES = {
   ],
 };
 
+// Vault docs carry the same ownerId / ownerName / isGlobal triple as
+// Knowledge Packs so Org Admin can share firm-wide and non-admins see
+// the right subset.
 const DEFAULT_DOCUMENT_VAULT = [
   {
     id: 1,
@@ -188,6 +191,9 @@ const DEFAULT_DOCUMENT_VAULT = [
     fileName: 'MSA_Acme_Corp_v4.pdf',
     fileSize: '2.4 MB',
     createdAt: 'Mar 14, 2026',
+    ownerId: 'user-ryan',
+    ownerName: 'Ryan Melade',
+    isGlobal: true,
   },
   {
     id: 2,
@@ -196,6 +202,9 @@ const DEFAULT_DOCUMENT_VAULT = [
     fileName: 'Employee_Handbook_2026.pdf',
     fileSize: '3.8 MB',
     createdAt: 'Jan 30, 2026',
+    ownerId: 'user-ryan',
+    ownerName: 'Ryan Melade',
+    isGlobal: true,
   },
   {
     id: 3,
@@ -204,6 +213,9 @@ const DEFAULT_DOCUMENT_VAULT = [
     fileName: 'SeriesB_TermSheet_Signed.pdf',
     fileSize: '0.6 MB',
     createdAt: 'Feb 22, 2026',
+    ownerId: 'm-002',
+    ownerName: 'Priya Shah',
+    isGlobal: false,
   },
 ];
 
@@ -1469,64 +1481,118 @@ function EditKnowledgePackModal({ pack, onClose, onSave }) {
 }
 
 /* ─────────────────── Document Vault Panel ─────────────────── */
-function DocumentVaultPanel({ documents, onClose, onCreateNew, onEdit, onDelete, onSelect, activeDocument }) {
+// Same visibility rules as Knowledge Packs:
+//   Org Admin      — sees every doc; inline Share org-wide toggle on each row
+//   Internal User  — own docs + all org-wide docs
+//   External User  — Vault is still visible but filtered to their own docs only
+function DocumentVaultPanel({ documents, onClose, onCreateNew, onEdit, onDelete, onSelect, onToggleGlobal, activeDocument, currentUserId, isOrgAdmin }) {
   const [search, setSearch] = useState('');
-  const filtered = documents.filter(d => {
-    if (!search) return true;
+  const [scope, setScope] = useState('all'); // Org Admin only
+
+  const visible = useMemo(() => {
+    if (isOrgAdmin) return documents;
+    return documents.filter((d) => d.ownerId === currentUserId || d.isGlobal || !d.ownerId /* legacy */);
+  }, [documents, isOrgAdmin, currentUserId]);
+
+  const scoped = useMemo(() => {
+    if (!isOrgAdmin || scope === 'all') return visible;
+    if (scope === 'org')  return visible.filter((d) => d.isGlobal);
+    return visible.filter((d) => d.ownerId === currentUserId);
+  }, [visible, scope, isOrgAdmin, currentUserId]);
+
+  const filtered = useMemo(() => {
+    if (!search.trim()) return scoped;
     const q = search.toLowerCase();
-    return d.name.toLowerCase().includes(q) || (d.description || '').toLowerCase().includes(q) || (d.fileName || '').toLowerCase().includes(q);
-  });
+    return scoped.filter((d) => d.name.toLowerCase().includes(q) || (d.description || '').toLowerCase().includes(q) || (d.fileName || '').toLowerCase().includes(q));
+  }, [scoped, search]);
+
+  const counts = useMemo(() => ({
+    total: visible.length,
+    org:   visible.filter((d) => d.isGlobal).length,
+    mine:  visible.filter((d) => d.ownerId === currentUserId).length,
+  }), [visible, currentUserId]);
 
   return (
     <>
       <div onClick={onClose} style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)', zIndex: 60, backdropFilter: 'blur(4px)' }} />
       <div
-        className="fixed inset-0 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-[620px] md:max-h-[85vh] md:rounded-2xl"
+        className="fixed inset-0 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-[900px] md:max-h-[90vh] md:rounded-2xl"
         style={{ backgroundColor: 'white', boxShadow: '0 20px 60px rgba(0,0,0,0.2)', zIndex: 61, display: 'flex', flexDirection: 'column' }}
       >
-        <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid var(--border)' }}>
+        <div style={{ padding: '22px 28px 18px', borderBottom: '1px solid var(--border)' }}>
           <div className="flex items-center justify-between gap-2">
             <div className="min-w-0">
-              <h3 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 18, color: 'var(--text-primary)', margin: 0 }}>Document Vault</h3>
-              <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>{documents.length} docs · Attach any single doc to a chat</p>
+              <h3 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 22, color: 'var(--text-primary)', margin: 0 }}>Document Vault</h3>
+              <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 5, lineHeight: 1.5 }}>
+                {isOrgAdmin
+                  ? 'Every document stored in the firm. Toggle org-wide sharing to make any document available to the whole team.'
+                  : 'Documents you can attach to a chat — your own plus firm-wide shared documents.'}
+              </p>
             </div>
-            <div className="flex items-center gap-2">
-              <button onClick={onCreateNew} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 14px', borderRadius: 8, backgroundColor: 'var(--navy)', color: 'white', border: 'none', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}><Plus size={14} /> New Document</button>
-              <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100"><X size={18} style={{ color: 'var(--text-muted)' }} /></button>
+            <div className="flex items-center gap-2" style={{ flexShrink: 0 }}>
+              <button onClick={onCreateNew} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '8px 16px', borderRadius: 8, backgroundColor: 'var(--navy)', color: 'white', border: 'none', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}><Plus size={14} /> New Document</button>
+              <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100"><X size={20} style={{ color: 'var(--text-muted)' }} /></button>
             </div>
           </div>
-          <div style={{ position: 'relative', marginTop: 12 }}>
-            <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search documents..." style={{ width: '100%', height: 34, borderRadius: 8, border: '1px solid var(--border)', paddingLeft: 32, fontSize: 13, outline: 'none', boxSizing: 'border-box', fontFamily: "'DM Sans', sans-serif" }} />
+
+          {isOrgAdmin && (
+            <div className="flex items-center gap-2" style={{ marginTop: 16 }}>
+              <ScopeTab label="All documents" count={counts.total} active={scope === 'all'}  onClick={() => setScope('all')} />
+              <ScopeTab label="Org-wide"      count={counts.org}   active={scope === 'org'}  onClick={() => setScope('org')} />
+              <ScopeTab label="My documents"  count={counts.mine}  active={scope === 'mine'} onClick={() => setScope('mine')} />
+            </div>
+          )}
+
+          <div style={{ position: 'relative', marginTop: 14 }}>
+            <Search size={14} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by name, description, or file..." style={{ width: '100%', height: 38, borderRadius: 10, border: '1px solid var(--border)', paddingLeft: 36, fontSize: 13, outline: 'none', boxSizing: 'border-box', fontFamily: "'DM Sans', sans-serif" }} />
           </div>
         </div>
 
-        <div style={{ flex: 1, overflowY: 'auto', padding: '8px 16px 16px' }}>
+        <div style={{ flex: 1, overflowY: 'auto', padding: '12px 20px 20px' }}>
           {filtered.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-muted)' }}>
-              <FolderOpen size={32} style={{ margin: '0 auto 12px', opacity: 0.4 }} />
-              <div style={{ fontSize: 14, fontWeight: 500 }}>No documents found</div>
-              <div style={{ fontSize: 12, marginTop: 4 }}>Upload your first document to get started</div>
+            <div style={{ textAlign: 'center', padding: '48px 20px', color: 'var(--text-muted)' }}>
+              <FolderOpen size={36} style={{ margin: '0 auto 14px', opacity: 0.4 }} />
+              <div style={{ fontSize: 15, fontWeight: 500 }}>
+                {search ? 'No documents match your search' : 'No documents yet'}
+              </div>
+              {!search && <div style={{ fontSize: 12, marginTop: 6 }}>Upload your first document to get started.</div>}
             </div>
           ) : (
-            filtered.map(d => (
-              <div key={d.id} style={{ padding: '14px 16px', borderRadius: 10, border: '1px solid var(--border)', marginTop: 8, transition: 'all 0.15s' }}
-                onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.06)'; }}
-                onMouseLeave={e => { e.currentTarget.style.boxShadow = 'none'; }}
+            filtered.map(d => {
+              const isOwner = d.ownerId === currentUserId;
+              const canEdit = isOrgAdmin || isOwner || !d.ownerId; // legacy
+              const ownerPill = d.isGlobal
+                ? { bg: 'rgba(201,168,76,0.18)', color: '#9A7A22', border: 'rgba(201,168,76,0.45)', label: 'Org-wide' }
+                : isOwner
+                  ? { bg: '#F0F3F6', color: '#1E3A8A', border: '#D8DFE9', label: 'Your document' }
+                  : { bg: '#F8F4ED', color: '#6B7885', border: '#E5E0D3', label: `By ${d.ownerName || 'Member'}` };
+              return (
+              <div key={d.id} style={{ padding: '16px 18px', borderRadius: 12, border: '1px solid var(--border)', marginTop: 10, transition: 'all 0.15s', background: '#fff' }}
+                onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 3px 14px rgba(10,36,99,0.06)'; e.currentTarget.style.borderColor = 'var(--navy)'; }}
+                onMouseLeave={e => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.borderColor = 'var(--border)'; }}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-start gap-3" style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ width: 38, height: 38, borderRadius: 10, backgroundColor: 'var(--ice-warm)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      <File size={18} style={{ color: 'var(--navy)' }} />
+                    <div style={{ width: 40, height: 40, borderRadius: 10, backgroundColor: d.isGlobal ? 'rgba(201,168,76,0.15)' : 'var(--ice-warm)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <File size={18} style={{ color: d.isGlobal ? '#9A7A22' : 'var(--navy)' }} />
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                         <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{d.name}</span>
+                        {d.ownerId && (
+                          <span
+                            title={d.isGlobal ? 'Shared with the whole organisation' : isOwner ? 'Only visible to you' : `Owned by ${d.ownerName}`}
+                            style={{ fontSize: 10, padding: '2px 8px', borderRadius: 999, background: ownerPill.bg, color: ownerPill.color, border: `1px solid ${ownerPill.border}`, fontWeight: 600, letterSpacing: '0.02em' }}
+                          >
+                            {ownerPill.label}
+                          </span>
+                        )}
                         {d.addedFromChat && (
                           <span style={{ fontSize: 10, fontWeight: 500, padding: '2px 8px', borderRadius: 999, background: 'var(--ice-warm)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}>Added from chat</span>
                         )}
                       </div>
-                      {d.description && <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4, lineHeight: 1.5 }}>{d.description}</p>}
+                      {d.description && <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4, lineHeight: 1.55 }}>{d.description}</p>}
                       <div className="flex items-center gap-3 flex-wrap" style={{ marginTop: 8 }}>
                         <span className="flex items-center gap-1" style={{ fontSize: 11, color: 'var(--text-muted)' }}><FileText size={12} /> {d.fileName}</span>
                         <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{d.fileSize}</span>
@@ -1534,18 +1600,39 @@ function DocumentVaultPanel({ documents, onClose, onCreateNew, onEdit, onDelete,
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-1" style={{ flexShrink: 0 }}>
-                    {onSelect && (
-                      <button onClick={() => onSelect(d)} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 12px', borderRadius: 6, backgroundColor: activeDocument?.id === d.id ? '#5CA868' : 'var(--navy)', color: 'white', border: 'none', fontSize: 11, fontWeight: 500, cursor: 'pointer' }}>
-                        {activeDocument?.id === d.id ? <><CheckCircle size={12} /> Active</> : 'Use'}
-                      </button>
+                  <div className="flex flex-col items-end gap-2" style={{ flexShrink: 0 }}>
+                    <div className="flex items-center gap-1">
+                      {onSelect && (
+                        <button onClick={() => onSelect(d)} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '6px 14px', borderRadius: 6, backgroundColor: activeDocument?.id === d.id ? '#5CA868' : 'var(--navy)', color: 'white', border: 'none', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}>
+                          {activeDocument?.id === d.id ? <><CheckCircle size={12} /> Active</> : 'Use'}
+                        </button>
+                      )}
+                      {canEdit && (
+                        <button onClick={() => onEdit(d)} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '6px 11px', borderRadius: 6, backgroundColor: onSelect ? 'transparent' : 'var(--navy)', color: onSelect ? 'var(--navy)' : 'white', border: onSelect ? '1px solid var(--border)' : 'none', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}><Edit3 size={12} /> Edit</button>
+                      )}
+                      {canEdit && (
+                        <button onClick={() => onDelete(d.id)} style={{ padding: 6, borderRadius: 6, background: 'none', border: '1px solid var(--border)', cursor: 'pointer', display: 'flex' }} title="Delete document"><Trash2 size={13} style={{ color: '#C65454' }} /></button>
+                      )}
+                    </div>
+                    {isOrgAdmin && (
+                      <div
+                        onClick={() => onToggleGlobal?.(d.id, !d.isGlobal)}
+                        title={d.isGlobal ? 'Turn off — make personal again' : 'Share with entire organisation'}
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '3px 4px 3px 10px', borderRadius: 999, background: d.isGlobal ? 'rgba(201,168,76,0.12)' : 'var(--ice-warm)', border: '1px solid ' + (d.isGlobal ? 'rgba(201,168,76,0.35)' : 'var(--border)'), cursor: 'pointer', transition: 'all 120ms' }}
+                      >
+                        <span style={{ fontSize: 10, fontWeight: 600, color: d.isGlobal ? '#9A7A22' : 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                          {d.isGlobal ? 'Shared org-wide' : 'Share org-wide'}
+                        </span>
+                        <span style={{ width: 28, height: 16, borderRadius: 999, background: d.isGlobal ? 'var(--navy)' : '#CBD5E1', position: 'relative', transition: 'background 150ms', flexShrink: 0 }}>
+                          <span style={{ position: 'absolute', top: 2, left: d.isGlobal ? 14 : 2, width: 12, height: 12, borderRadius: '50%', background: '#fff', boxShadow: '0 1px 2px rgba(0,0,0,0.2)', transition: 'left 150ms' }} />
+                        </span>
+                      </div>
                     )}
-                    <button onClick={() => onEdit(d)} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 6, backgroundColor: onSelect ? 'transparent' : 'var(--navy)', color: onSelect ? 'var(--navy)' : 'white', border: onSelect ? '1px solid var(--border)' : 'none', fontSize: 11, fontWeight: 500, cursor: 'pointer' }}><Edit3 size={12} /> Edit</button>
-                    <button onClick={() => onDelete(d.id)} style={{ padding: 5, borderRadius: 6, background: 'none', border: '1px solid var(--border)', cursor: 'pointer', display: 'flex' }} title="Delete document"><Trash2 size={13} style={{ color: '#C65454' }} /></button>
                   </div>
                 </div>
               </div>
-            ))
+              );
+            })
           )}
         </div>
       </div>
@@ -3764,11 +3851,18 @@ INSTRUCTIONS:
         <DocumentVaultPanel
           documents={documentVault}
           activeDocument={activeVaultDocument}
+          currentUserId={currentUserId}
+          isOrgAdmin={isOrgAdmin}
           onClose={() => setShowDocumentVaultPanel(false)}
           onCreateNew={() => { setShowDocumentVaultPanel(false); setEditingDocument({ isNew: true }); }}
           onEdit={(doc) => { setShowDocumentVaultPanel(false); setEditingDocument(doc); }}
           onSelect={(d) => { handleSelectVaultDocument(d); setShowDocumentVaultPanel(false); }}
           onDelete={handleDeleteDocument}
+          onToggleGlobal={(docId, next) => {
+            setDocumentVault((prev) => prev.map((d) => (d.id === docId ? { ...d, isGlobal: next } : d)));
+            setToastMsg(next ? 'Document now shared org-wide' : 'Document is personal again');
+            setTimeout(() => setToastMsg(''), 3200);
+          }}
         />
       )}
 

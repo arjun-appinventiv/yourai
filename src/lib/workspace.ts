@@ -23,6 +23,13 @@ export interface WorkspaceMember {
   role: WorkspaceMemberRole;
   addedAt: string;   // ISO or human-readable ('Apr 4, 2026')
   addedBy: string;   // name (display only)
+  /**
+   * Whether this member can add / remove documents from the workspace
+   * knowledge base. The workspace creator and Org Admin always can,
+   * regardless of this flag. Undefined is treated as `true` for
+   * backward compatibility with members seeded before this field existed.
+   */
+  canEditKB?: boolean;
 }
 
 export interface WorkspaceDoc {
@@ -311,4 +318,30 @@ export function canEditDoc(ws: Workspace, doc: WorkspaceDoc, currentUserId: stri
 
 export function canManageWorkspace(ws: Workspace, currentUserId: string, isOrgAdmin: boolean): boolean {
   return isOrgAdmin || ws.createdBy === currentUserId;
+}
+
+/**
+ * Whether the current user can add new documents to the workspace KB.
+ * Creator and Org Admin always can; other members require canEditKB on
+ * their membership record.
+ */
+export function canEditWorkspaceKB(ws: Workspace, currentUserId: string, isOrgAdmin: boolean): boolean {
+  if (isOrgAdmin) return true;
+  if (ws.createdBy === currentUserId) return true;
+  const me = ws.members.find((m) => m.userId === currentUserId);
+  if (!me) return false;
+  return me.canEditKB !== false; // undefined = legacy = allowed
+}
+
+/** Update an existing member's permission fields in place. */
+export function updateMemberAccess(id: string, userId: string, patch: { canEditKB?: boolean }): Workspace | null {
+  const all = readStore<Workspace[]>(WORKSPACES_KEY, []);
+  const idx = all.findIndex((w) => w.id === id);
+  if (idx === -1) return null;
+  all[idx] = {
+    ...all[idx],
+    members: all[idx].members.map((m) => (m.userId === userId ? { ...m, ...patch } : m)),
+  };
+  writeStore(WORKSPACES_KEY, all);
+  return all[idx];
 }
