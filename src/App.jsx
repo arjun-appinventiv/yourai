@@ -58,6 +58,7 @@ import ChatOnboarding from './pages/chatbot/auth/Onboarding';
 import ChatView from './pages/chatbot/ChatView';
 import WorkspaceChatView from './pages/chatbot/WorkspaceChatView';
 import RouteErrorBoundary from './components/RouteErrorBoundary';
+import RouteTitle from './components/RouteTitle';
 
 import { Clock, Sparkles } from 'lucide-react';
 
@@ -66,6 +67,7 @@ export default function App() {
     <BrowserRouter>
       <AuthProvider>
         <ToastProvider>
+          <RouteTitle />
           <Routes>
             <Route path="/" element={<Navigate to="/super-admin/dashboard" replace />} />
 
