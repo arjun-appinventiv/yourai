@@ -90,6 +90,10 @@ export default function WorkspaceChatView() {
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
   const intentDropdownRef = useRef<HTMLDivElement | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
+  // CRITICAL: file-input ref must be declared BEFORE the early-return guards
+  // below. Declaring it after (where it used to live) changed the hook count
+  // between renders and triggered React #310. See Rules of Hooks.
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Panels
   const [showMembers, setShowMembers] = useState(false);
@@ -286,7 +290,8 @@ export default function WorkspaceChatView() {
   };
 
   /* ─── Document upload ─── */
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  // fileInputRef is declared at the top of the component alongside the other
+  // useRef hooks — must stay above the early-return guards.
   const ACCEPTED = ['pdf', 'docx', 'xlsx', 'txt'];
   const MAX_BYTES = 100 * 1024 * 1024;
 
