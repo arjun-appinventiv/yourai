@@ -10,6 +10,7 @@ import conversationsRoutes from './routes/conversations';
 import usersRoutes from './routes/users';
 import tenantsRoutes from './routes/tenants';
 import botPersonaRoutes from './routes/botPersona';
+import frdGenerateRoutes from './routes/frdGenerate';
 
 const app = express();
 const PORT = process.env.PORT || 8000;
@@ -30,6 +31,7 @@ app.use('/api/conversations', conversationsRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/tenants', tenantsRoutes);
 app.use('/api/bot-persona', botPersonaRoutes);
+app.use('/api/frd-generate', frdGenerateRoutes);
 
 // --------------- Health check ---------------
 app.get('/api/health', (_req, res) => {

@@ -1,46 +1,20 @@
 import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Building2, Users, CreditCard, BarChart3, Shield, BookOpen, FileText, Plug, Database, Workflow, Bell, Settings, LogOut, FileBarChart, BookMarked, FlaskConical } from 'lucide-react';
+import * as Icons from 'lucide-react';
+import { LogOut } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { SUPER_ADMIN_NAV } from '../lib/superAdminNav';
 
-const navSections = [
-  {
-    label: 'MAIN',
-    items: [
-      { label: 'Dashboard', icon: LayoutDashboard, path: '/super-admin/dashboard' },
-      { label: 'Tenant Management', icon: Building2, path: '/super-admin/tenants' },
-      { label: 'User Management', icon: Users, path: '/super-admin/users' },
-      { label: 'Platform Billing', icon: CreditCard, path: '/super-admin/billing' },
-      { label: 'Usage & Analytics', icon: BarChart3, path: '/super-admin/usage' },
-      { label: 'Compliance & Audit', icon: Shield, path: '/super-admin/compliance' },
-    ],
-  },
-  {
-    label: 'CONTENT',
-    items: [
-      { label: 'Static Content', icon: BookOpen, path: '/super-admin/static-content' },
-      // { label: 'Report Templates', icon: FileText, path: '/super-admin/report-templates' }, // Hidden — kept for future
-      { label: 'Workflow Templates', icon: Workflow, path: '/super-admin/workflows' },
-    ],
-  },
-  {
-    label: 'LIBRARY',
-    items: [
-      { label: 'Knowledge Base', icon: Database, path: '/super-admin/knowledge-base' },
-      // { label: 'Integrations', icon: Plug, path: '/super-admin/integrations' }, // Hidden — kept for future
-    ],
-  },
-  {
-    label: 'OPERATIONS',
-    items: [
-      { label: 'Notifications', icon: Bell, path: '/super-admin/notifications' },
-      { label: 'User Stories', icon: BookMarked, path: '/super-admin/user-stories' },
-      // { label: 'Reports', icon: FileBarChart, path: '/super-admin/reports' }, // Hidden — kept for future
-      { label: 'Settings', icon: Settings, path: '/super-admin/settings' },
-      { label: 'Bot Tester', icon: FlaskConical, path: '/super-admin/bot-tester' },
-    ],
-  },
-];
+// Shared nav definition lives in src/lib/superAdminNav.ts so the FRD Generator
+// can populate its Module dropdown from the same source of truth.
+const navSections = SUPER_ADMIN_NAV.map(section => ({
+  label: section.label,
+  items: section.items.map(item => ({
+    label: item.label,
+    icon: Icons[item.iconName] || Icons.Circle,
+    path: item.path,
+  })),
+}));
 
 export default function Sidebar() {
   const [showLogout, setShowLogout] = useState(false);

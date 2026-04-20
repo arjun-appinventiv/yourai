@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Search, Bell, Building2, Users, CreditCard, BarChart3, Shield, BookOpen, FileText, Plug, Database, Workflow, FileBarChart, Settings, BookMarked, KeyRound, LogOut, X } from 'lucide-react';
+import { LayoutDashboard, Search, Bell, Building2, Users, CreditCard, BarChart3, Shield, BookOpen, FileText, Plug, Database, Workflow, FileBarChart, Settings, BookMarked, KeyRound, LogOut, X, FileCode2 } from 'lucide-react';
 import { logout } from '../lib/auth';
 
 const pageConfig = {
@@ -17,6 +17,7 @@ const pageConfig = {
   '/super-admin/notifications': { title: 'Notifications', icon: Bell },
   '/super-admin/settings': { title: 'Platform Settings', icon: Settings },
   '/super-admin/user-stories': { title: 'User Stories', icon: BookMarked },
+  '/super-admin/frd-generator': { title: 'FRD Generator', icon: FileCode2 },
 };
 
 export default function TopBar() {

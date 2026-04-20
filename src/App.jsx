@@ -26,6 +26,7 @@ import BroadcastNotifications from './pages/super-admin/BroadcastNotifications';
 import PlatformSettings from './pages/super-admin/PlatformSettings';
 import UserStories from './pages/super-admin/UserStories';
 import BotTester from './pages/super-admin/BotTester';
+import FrdGenerator from './pages/super-admin/FrdGenerator';
 
 // Org Admin imports
 import { RoleProvider } from './components/org-admin/RoleContext';
@@ -84,6 +85,7 @@ export default function App() {
               <Route path="/super-admin/settings" element={<PlatformSettings />} />
               <Route path="/super-admin/user-stories" element={<UserStories />} />
               <Route path="/super-admin/bot-tester" element={<BotTester />} />
+              <Route path="/super-admin/frd-generator" element={<FrdGenerator />} />
             </Route>
 
             {/* Chatbot routes */}
