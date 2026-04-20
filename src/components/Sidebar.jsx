@@ -26,9 +26,17 @@ export default function Sidebar() {
   const { logout, operator } = useAuth();
   const navigate = useNavigate();
 
-  const handleLogout = () => {
-    logout();
-    navigate('/super-admin/login');
+  const handleLogout = async () => {
+    // Must await: logout() is async and flips the AuthContext's
+    // `isAuthenticated` to false. If we navigate before it resolves,
+    // the Login page's "already signed in" guard bounces us right
+    // back to the dashboard.
+    try { await logout(); } catch { /* ignore */ }
+    try {
+      localStorage.removeItem('yourai_current_email');
+      localStorage.removeItem('yourai_user_profile');
+    } catch { /* ignore */ }
+    navigate('/super-admin/login', { replace: true });
   };
 
   return (

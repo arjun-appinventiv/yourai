@@ -7,8 +7,15 @@ import {
   Search, Bell, ArrowUp, Shield, Sparkles, FileText, Building2, Scale,
   LayoutDashboard, Send, MapPin, FileSearch, Lock, X, AlertTriangle, Info, Zap,
   BookOpen, UserPlus, Trash2, Edit3, Copy, Phone, Mail, Briefcase, Hash, Menu,
-  Package, Link2, File, Upload, Paperclip, Database, GitBranch, Settings, LogOut
+  Package, Link2, File, Upload, Paperclip, Database, GitBranch, Settings, LogOut,
+  CreditCard
 } from 'lucide-react';
+import { useRole } from '../../context/RoleContext';
+import { useAuth } from '../../context/AuthContext';
+import { PERMISSIONS } from '../../lib/roles';
+import InviteTeamPanel from '../../components/chat/InviteTeamPanel';
+import WorkspacesPanel from '../../components/chat/WorkspacesPanel';
+import { loadWorkspaces, filterVisibleWorkspaces } from '../../lib/workspaceAccess';
 import { billingData, subscriptionPlans } from '../../data/mockData';
 import { callLLM, getApiKey } from '../../lib/llm-client';
 import { extractFileText } from '../../lib/file-parser';
@@ -261,7 +268,10 @@ const riskColors = {
    Layout structure confirmed by Arjun. Not signed off by Ryan.
    All existing nav items preserved — reorganised only. */
 
-function Sidebar({ onOpenPromptTemplates, onOpenClients, onOpenKnowledgePacks, onOpenDocumentVault, promptCount, clientCount, packCount, vaultCount, isOpen, onClose, threads, activeThreadId, onSwitchThread, onNewThread, onDeleteThread, threadSearch, onThreadSearchChange, onSignOut }) {
+function Sidebar({ onOpenPromptTemplates, onOpenClients, onOpenKnowledgePacks, onOpenDocumentVault, onOpenInviteTeam, onOpenAuditLogs, onOpenBilling, onOpenWorkspaces, promptCount, clientCount, packCount, vaultCount, memberCount, workspaceCount, isOpen, onClose, threads, activeThreadId, onSwitchThread, onNewThread, onDeleteThread, threadSearch, onThreadSearchChange, onSignOut }) {
+  // Role + permission gating — every nav item decides visibility via hasPermission
+  // rather than by comparing role strings directly. See src/lib/roles.ts.
+  const { hasPermission, isOrgAdmin, isExternalUser } = useRole();
   // Collapse state — persisted to localStorage
   const [workspaceOpen, setWorkspaceOpen] = useState(() => {
     try { const v = localStorage.getItem('yourai_sidebar_workspace_open'); return v === null ? true : v === 'true'; } catch { return true; }
@@ -282,19 +292,40 @@ function Sidebar({ onOpenPromptTemplates, onOpenClients, onOpenKnowledgePacks, o
   };
 
   // ─── Workspace items ───
+  // Visibility rules (see FRD Part 2):
+  //   Dashboard, Clients, Knowledge Graph, Invite Team → ORG_ADMIN only
+  //   Workspaces → visible to all, but the list is scoped by membership downstream
+  //   + New chat is rendered separately in Zone 2 (visible to all)
   const workspaceItems = [
-    { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard', active: true, rightText: '3 running' },
-    { id: 'workspaces', icon: Briefcase, label: 'Workspaces', rightText: '3' },
-    { id: 'clients', icon: Users, label: 'Clients', rightText: String(clientCount), onClick: onOpenClients },
-    { id: 'knowledge-graph', icon: GitBranch, label: 'Knowledge Graph', badge: 'New' },
-  ];
+    isOrgAdmin && { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard', active: true, rightText: '3 running' },
+    { id: 'workspaces', icon: Briefcase, label: 'Workspaces', rightText: String(workspaceCount ?? 0), onClick: onOpenWorkspaces },
+    isOrgAdmin && { id: 'clients', icon: Users, label: 'Clients', rightText: String(clientCount), onClick: onOpenClients },
+    isOrgAdmin && { id: 'knowledge-graph', icon: GitBranch, label: 'Knowledge Graph', badge: 'New' },
+    isOrgAdmin && { id: 'invite-team', icon: UserPlus, label: 'Invite Team', rightText: memberCount != null ? String(memberCount) : undefined, onClick: onOpenInviteTeam },
+  ].filter(Boolean);
 
   // ─── Knowledge items ───
+  // External Users don't see Knowledge Packs or Prompt Templates at all.
+  // Document Vault is visible to everyone (scoping to "own workspace only"
+  // for External Users happens inside DocumentVaultPanel — Part 4).
   const knowledgeItems = [
     { id: 'document-vault', icon: FolderOpen, label: 'Document vault', rightText: String(vaultCount), onClick: onOpenDocumentVault },
-    { id: 'knowledge-packs', icon: Package, label: 'Knowledge packs', rightText: String(packCount), onClick: onOpenKnowledgePacks },
-    { id: 'prompt-templates', icon: FileText, label: 'Prompt templates', rightText: String(promptCount), onClick: onOpenPromptTemplates },
-  ];
+    !isExternalUser && { id: 'knowledge-packs', icon: Package, label: 'Knowledge packs', rightText: String(packCount), onClick: onOpenKnowledgePacks },
+    !isExternalUser && { id: 'prompt-templates', icon: FileText, label: 'Prompt templates', rightText: String(promptCount), onClick: onOpenPromptTemplates },
+  ].filter(Boolean);
+
+  // ─── Admin items (bottom of scroll area) ───
+  // Audit Logs: Org Admin always; Internal User only with view_audit_logs.
+  // Billing:    Org Admin always; Internal User only with access_billing.
+  // External User never sees either.
+  const adminItems = [
+    (isOrgAdmin || hasPermission(PERMISSIONS.VIEW_AUDIT_LOGS)) && !isExternalUser && {
+      id: 'audit-logs', icon: Shield, label: 'Audit Logs', onClick: onOpenAuditLogs,
+    },
+    (isOrgAdmin || hasPermission(PERMISSIONS.ACCESS_BILLING)) && !isExternalUser && {
+      id: 'billing', icon: CreditCard, label: 'Billing', onClick: onOpenBilling,
+    },
+  ].filter(Boolean);
 
   // ─── Shared nav item renderer ───
   const renderNavItem = (item) => {
@@ -446,6 +477,20 @@ function Sidebar({ onOpenPromptTemplates, onOpenClients, onOpenKnowledgePacks, o
             </div>
           </div>
         </div>
+
+        {/* ═══ ZONE 4b — ADMIN Section (Audit Logs / Billing) ═══ */}
+        {adminItems.length > 0 && (
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', padding: '0 8px', marginBottom: 4 }}>
+              <span style={{ fontSize: 10, fontWeight: 500, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Admin
+              </span>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {adminItems.map(renderNavItem)}
+            </div>
+          </div>
+        )}
 
         {/* ═══ ZONE 5 — RECENT CHATS Section ═══ */}
         <div>
@@ -926,7 +971,17 @@ function KnowledgePacksPanel({ packs, onClose, onCreateNew, onEdit, onDelete, on
                       <Package size={18} style={{ color: 'var(--navy)' }} />
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{p.name}</div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{p.name}</span>
+                        {p.isGlobal && (
+                          <span
+                            title="Shared with the whole organisation"
+                            style={{ fontSize: 10, padding: '2px 8px', borderRadius: 999, background: 'rgba(201,168,76,0.18)', color: '#9A7A22', border: '1px solid rgba(201,168,76,0.4)', fontWeight: 600, letterSpacing: '0.02em' }}
+                          >
+                            Org-wide
+                          </span>
+                        )}
+                      </div>
                       <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4, lineHeight: 1.5 }}>{p.description}</p>
                       <div className="flex items-center gap-3 flex-wrap" style={{ marginTop: 8 }}>
                         <span className="flex items-center gap-1" style={{ fontSize: 11, color: 'var(--text-muted)' }}><FileText size={12} /> {p.docs.length} doc{p.docs.length !== 1 ? 's' : ''}</span>
@@ -956,9 +1011,14 @@ function KnowledgePacksPanel({ packs, onClose, onCreateNew, onEdit, onDelete, on
 
 /* ─────────────────── Edit / Create Knowledge Pack Modal ─────────────────── */
 function EditKnowledgePackModal({ pack, onClose, onSave }) {
+  const { hasPermission, isOrgAdmin } = useRole();
+  const canShareGlobally = isOrgAdmin || hasPermission(PERMISSIONS.CREATE_GLOBAL_KP);
   const isNew = !pack;
   const [name, setName] = useState(pack?.name || '');
   const [description, setDescription] = useState(pack?.description || '');
+  // "Share with entire organisation" — off by default; only rendered for users
+  // with create_global_knowledge_pack (Org Admin implicit). Part 6.
+  const [isGlobal, setIsGlobal] = useState(Boolean(pack?.isGlobal));
   // Docs/links carry a "status" field: uploading → processing → ready (or failed)
   // Links carry: fetching → reading → ready (or failed)
   const [docs, setDocs] = useState((pack?.docs || []).map(d => ({ status: 'ready', ...d })));
@@ -1054,7 +1114,16 @@ function EditKnowledgePackModal({ pack, onClose, onSave }) {
     // Don't persist failed items — users should retry them or remove them first
     const cleanDocs = docs.filter(d => d.status === 'ready').map(({ status, error, ...rest }) => rest);
     const cleanLinks = links.filter(l => l.status === 'ready').map(({ status, error, ...rest }) => rest);
-    onSave({ id: pack?.id || Date.now(), name: name.trim(), description: description.trim(), docs: cleanDocs, links: cleanLinks, createdAt: pack?.createdAt || new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) });
+    onSave({
+      id: pack?.id || Date.now(),
+      name: name.trim(),
+      description: description.trim(),
+      docs: cleanDocs,
+      links: cleanLinks,
+      createdAt: pack?.createdAt || new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+      // Preserve existing `isGlobal` if the user can't modify it; otherwise use their toggle.
+      isGlobal: canShareGlobally ? isGlobal : Boolean(pack?.isGlobal),
+    });
     onClose();
   };
 
@@ -1169,6 +1238,43 @@ function EditKnowledgePackModal({ pack, onClose, onSave }) {
               </div>
             )}
           </div>
+
+          {/* ─── Share with entire organisation (Part 6) ───
+              Only rendered for users with create_global_knowledge_pack
+              (Org Admin always). OFF by default. */}
+          {canShareGlobally && (
+            <div style={{ padding: '12px 14px', borderRadius: 10, background: 'var(--ice-warm)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>Share with entire organisation</div>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 3, lineHeight: 1.5 }}>
+                  {isGlobal
+                    ? 'Every Internal User in your org can attach this pack to their chats.'
+                    : 'Pack stays personal — only you can attach it.'}
+                </div>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={isGlobal}
+                onClick={() => setIsGlobal((v) => !v)}
+                style={{
+                  flexShrink: 0,
+                  width: 40, height: 22, borderRadius: 999,
+                  border: 'none', cursor: 'pointer',
+                  background: isGlobal ? 'var(--navy)' : '#CBD5E1',
+                  position: 'relative', transition: 'background 150ms',
+                  padding: 0,
+                }}
+              >
+                <span style={{
+                  position: 'absolute', top: 2, left: isGlobal ? 20 : 2,
+                  width: 18, height: 18, borderRadius: '50%', background: '#fff',
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.2)',
+                  transition: 'left 150ms',
+                }} />
+              </button>
+            </div>
+          )}
         </div>
 
         <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
@@ -1945,6 +2051,26 @@ function EmptyState({ profile, plan, onPromptClick, navigate, onViewPlans }) {
 /* ═══════════════════ ChatView ═══════════════════ */
 export default function ChatView() {
   const navigate = useNavigate();
+  // Role + identity — used for workspace membership filtering in the sidebar
+  // badge and panels below, plus External-User-only chat-mode toggle.
+  const { currentRole, hasPermission, isExternalUser } = useRole();
+  const { operator } = useAuth();
+  const currentUserId = operator?.id || 'user-ryan';
+
+  // ─── External User chat-mode toggle (Part 5) ───
+  //   'case'    → AI uses workspace documents only; badge reflects that.
+  //   'general' → AI uses only the Super-Admin-maintained global KB.
+  // Preference is persisted per browser so it survives reloads.
+  const [externalChatMode, setExternalChatMode] = useState(() => {
+    try {
+      const v = localStorage.getItem('yourai_external_chat_mode');
+      return v === 'general' ? 'general' : 'case';
+    } catch { return 'case'; }
+  });
+  const [modeSwitchNotice, setModeSwitchNotice] = useState(''); // transient inline notice
+  useEffect(() => {
+    try { localStorage.setItem('yourai_external_chat_mode', externalChatMode); } catch {}
+  }, [externalChatMode]);
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
@@ -1967,6 +2093,18 @@ export default function ChatView() {
   const [showCreatePrompt, setShowCreatePrompt] = useState(false);
   const [clients, setClients] = useState(DEFAULT_CLIENTS);
   const [showClientsPanel, setShowClientsPanel] = useState(false);
+  const [showInviteTeamPanel, setShowInviteTeamPanel] = useState(false);
+  const [teamMemberCount, setTeamMemberCount] = useState(null);
+  const [showWorkspacesPanel, setShowWorkspacesPanel] = useState(false);
+  // Visible-workspace count is recomputed from localStorage whenever the
+  // panel closes, so the sidebar badge stays accurate after create/archive.
+  const [workspaceTick, setWorkspaceTick] = useState(0);
+  const visibleWorkspaceCount = useMemo(
+    () => filterVisibleWorkspaces(loadWorkspaces(), currentUserId, currentRole).length,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [currentUserId, currentRole, workspaceTick, showWorkspacesPanel],
+  );
+  const [toastMsg, setToastMsg] = useState('');
   const [showAddClient, setShowAddClient] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   // ─── Chat Threads state ───
@@ -2392,6 +2530,13 @@ INSTRUCTIONS:
           NONE: 'AI-generated response',
         };
         sourceBadge = sourceBadgeMap[result.sourceType] ?? 'AI-generated response';
+        // External-User override — badge reflects the locked source per mode,
+        // not whatever the LLM pipeline reported (Part 5).
+        if (isExternalUser) {
+          sourceBadge = externalChatMode === 'general'
+            ? 'Answered from: YourAI knowledge base'
+            : 'Answered from: your case documents';
+        }
       }
 
       const botMsg = {
@@ -2776,10 +2921,16 @@ INSTRUCTIONS:
         onOpenClients={() => { setShowClientsPanel(true); setSidebarOpen(false); }}
         onOpenKnowledgePacks={() => { setShowKnowledgePacksPanel(true); setSidebarOpen(false); }}
         onOpenDocumentVault={() => { setShowDocumentVaultPanel(true); setSidebarOpen(false); }}
+        onOpenInviteTeam={() => { setShowInviteTeamPanel(true); setSidebarOpen(false); }}
+        onOpenAuditLogs={() => { /* TODO: Part 5+ wires real audit-logs panel */ }}
+        onOpenBilling={() => { navigate('/app/billing'); setSidebarOpen(false); }}
+        onOpenWorkspaces={() => { setShowWorkspacesPanel(true); setSidebarOpen(false); }}
         promptCount={promptTemplates.length}
         clientCount={clients.length}
         packCount={knowledgePacks.length}
         vaultCount={documentVault.length}
+        memberCount={teamMemberCount}
+        workspaceCount={visibleWorkspaceCount}
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
         threads={filteredThreads}
@@ -3119,6 +3270,68 @@ INSTRUCTIONS:
               </div>
             )}
 
+            {/* ─── External User chat-mode toggle (Part 5) ─── */}
+            {isExternalUser && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 6 }}>
+                <div style={{ display: 'inline-flex', alignSelf: 'flex-start', padding: 3, background: 'var(--ice-warm)', border: '1px solid var(--border)', borderRadius: 999 }}>
+                  {[
+                    { id: 'case',    label: 'Case Questions' },
+                    { id: 'general', label: 'General Queries' },
+                  ].map((opt) => {
+                    const active = externalChatMode === opt.id;
+                    return (
+                      <button
+                        key={opt.id}
+                        onClick={() => {
+                          if (active) return;
+                          setExternalChatMode(opt.id);
+                          if (!showEmptyState) {
+                            setModeSwitchNotice(
+                              opt.id === 'general'
+                                ? 'Switched to General Queries mode. Previous context cleared.'
+                                : 'Switched to Case Questions mode. Previous context cleared.',
+                            );
+                            // Clear attached pack/doc so the next message starts fresh
+                            setActiveKnowledgePack(null);
+                            setActiveVaultDocument(null);
+                          }
+                        }}
+                        style={{
+                          padding: '5px 14px', borderRadius: 999,
+                          border: 'none', background: active ? '#fff' : 'transparent',
+                          color: active ? 'var(--text-primary)' : 'var(--text-muted)',
+                          fontSize: 12, fontWeight: active ? 600 : 500,
+                          cursor: active ? 'default' : 'pointer',
+                          boxShadow: active ? '0 1px 3px rgba(10,36,99,0.08)' : 'none',
+                          transition: 'all 150ms',
+                        }}
+                      >
+                        {opt.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                {modeSwitchNotice && (
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', paddingLeft: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <Info size={11} />
+                    <span>{modeSwitchNotice}</span>
+                    <button
+                      onClick={() => setModeSwitchNotice('')}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 2, display: 'flex' }}
+                      aria-label="Dismiss"
+                    >
+                      <X size={11} />
+                    </button>
+                  </div>
+                )}
+                {externalChatMode === 'case' && documentVault.length === 0 && (
+                  <div style={{ padding: '8px 12px', borderRadius: 10, background: '#FBEED5', border: '1px solid #F3E2B1', fontSize: 12, color: '#6B4E1F', lineHeight: 1.5 }}>
+                    No case documents have been uploaded to your workspace yet. Ask your attorney to upload relevant files.
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* ─── Input bar ─── */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, border: '1.5px solid var(--border)', borderRadius: 24, background: '#fff', minHeight: 48, padding: '8px 8px 8px 12px', opacity: showSwitchBanner ? 0.5 : 1, pointerEvents: showSwitchBanner ? 'none' : 'auto' }}>
               {/* STATE 2: Collapsed intent pill (conversation active) */}
@@ -3275,6 +3488,41 @@ INSTRUCTIONS:
           onAddClient={() => { setShowClientsPanel(false); setShowAddClient(true); }}
           onDeleteClient={handleDeleteClient}
         />
+      )}
+
+      {/* Invite Team Panel — Org Admin only (sidebar already gates visibility) */}
+      {showInviteTeamPanel && (
+        <InviteTeamPanel
+          onClose={() => setShowInviteTeamPanel(false)}
+          onCountChange={setTeamMemberCount}
+          onToast={(msg) => {
+            setToastMsg(msg);
+            setTimeout(() => setToastMsg(''), 3200);
+          }}
+        />
+      )}
+
+      {/* Workspaces Panel — role + membership filtered */}
+      {showWorkspacesPanel && (
+        <WorkspacesPanel
+          onClose={() => { setShowWorkspacesPanel(false); setWorkspaceTick((n) => n + 1); }}
+          onToast={(msg) => {
+            setToastMsg(msg);
+            setTimeout(() => setToastMsg(''), 3200);
+          }}
+        />
+      )}
+
+      {/* Transient toast for team actions */}
+      {toastMsg && (
+        <div style={{
+          position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)',
+          zIndex: 100, padding: '10px 18px', borderRadius: 10,
+          background: 'var(--navy)', color: 'white', fontSize: 13, fontWeight: 500,
+          boxShadow: '0 8px 24px rgba(10, 36, 99, 0.25)',
+        }}>
+          {toastMsg}
+        </div>
       )}
 
       {/* Add Client Modal */}

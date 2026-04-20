@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { LayoutDashboard, Search, Bell, Building2, Users, CreditCard, BarChart3, Shield, BookOpen, FileText, Plug, Database, Workflow, FileBarChart, Settings, BookMarked, KeyRound, LogOut, X, FileCode2 } from 'lucide-react';
-import { logout } from '../lib/auth';
+import { useAuth } from '../context/AuthContext';
 
 const pageConfig = {
   '/super-admin/dashboard': { title: 'Dashboard', icon: LayoutDashboard },
@@ -23,6 +23,10 @@ const pageConfig = {
 export default function TopBar() {
   const location = useLocation();
   const navigate = useNavigate();
+  // Use the AuthContext logout, not the raw lib/auth.logout — the context
+  // one also flips `isAuthenticated` to false so ProtectedRoute / Login
+  // don't bounce the user straight back to the dashboard.
+  const { logout } = useAuth();
   const config = pageConfig[location.pathname] || { title: 'Super Admin', icon: Building2 };
   const PageIcon = config.icon;
   const [menuOpen, setMenuOpen] = useState(false);
@@ -44,8 +48,9 @@ export default function TopBar() {
     try { await logout(); } catch { /* ignore */ }
     try {
       localStorage.removeItem('yourai_current_email');
+      localStorage.removeItem('yourai_user_profile');
     } catch { /* ignore */ }
-    navigate('/super-admin/login');
+    navigate('/super-admin/login', { replace: true });
   };
 
   return (

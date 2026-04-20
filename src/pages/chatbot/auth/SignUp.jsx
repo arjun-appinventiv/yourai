@@ -1,6 +1,6 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { User, Mail, Building2, Lock, Eye, EyeOff, Loader, Check, Circle, AlertTriangle, XCircle, ShieldCheck } from 'lucide-react';
+import { User, Mail, Building2, Lock, Eye, EyeOff, Loader, Check, Circle, XCircle, ShieldCheck } from 'lucide-react';
 import ChatAuthLayout from '../../../components/ChatAuthLayout';
 import { signUp as apiSignUp, claimSession } from '../../../lib/auth';
 
@@ -191,15 +191,6 @@ export default function SignUp() {
   };
 
   const emailVerified = verifyStep === 'verified';
-
-  // Domain mismatch detection
-  const domainMismatch = useMemo(() => {
-    if (!email.includes('@') || !firmName.trim()) return false;
-    const domain = email.split('@')[1]?.toLowerCase().replace(/\.(com|org|net|io|co|law|legal)$/, '').replace(/[^a-z]/g, '') || '';
-    const firm = firmName.toLowerCase().replace(/[^a-z]/g, '');
-    if (!domain || !firm) return false;
-    return !firm.includes(domain) && !domain.includes(firm);
-  }, [email, firmName]);
 
   const isAlreadyRegistered = error.toLowerCase().includes('already registered') || error.toLowerCase().includes('already exists');
 
@@ -529,12 +520,6 @@ export default function SignUp() {
             />
           </div>
           <p className="mt-1" style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Solo practitioner? You can use your own name or chambers name.</p>
-          {domainMismatch && (
-            <div className="flex items-start gap-2 mt-2" style={{ backgroundColor: '#FBEED5', borderRadius: 8, padding: '10px 14px', border: '1px solid #FBEED5' }}>
-              <AlertTriangle size={14} style={{ color: '#E8A33D', flexShrink: 0, marginTop: 1 }} />
-              <p style={{ fontSize: '12px', color: '#E8A33D', lineHeight: 1.5 }}>If your work email domain does not match your firm name, we'll ask you to confirm firm affiliation before workspace access is approved.</p>
-            </div>
-          )}
         </div>
 
         {/* Password */}

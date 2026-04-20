@@ -30,6 +30,8 @@ import FrdGenerator from './pages/super-admin/FrdGenerator';
 
 // Org Admin imports
 import { RoleProvider } from './components/org-admin/RoleContext';
+// New tenant role context (used by ChatView sidebar gating)
+import { RoleProvider as ChatRoleProvider } from './context/RoleContext';
 import OrgLayout from './components/org-admin/OrgLayout';
 import Dashboard from './pages/org-admin/Dashboard';
 import WorkspaceList from './pages/org-admin/WorkspaceList';
@@ -96,7 +98,7 @@ export default function App() {
             <Route path="/chat/forgot-password" element={<ChatForgotPassword />} />
             <Route path="/chat/reset-password" element={<ChatResetPassword />} />
             <Route path="/chat/onboarding" element={<ChatOnboarding />} />
-            <Route path="/chat" element={<ChatView />} />
+            <Route path="/chat" element={<ChatRoleProvider><ChatView /></ChatRoleProvider>} />
 
             {/* Org Admin routes */}
             <Route
