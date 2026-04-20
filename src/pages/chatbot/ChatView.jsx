@@ -959,39 +959,130 @@ function EditKnowledgePackModal({ pack, onClose, onSave }) {
   const isNew = !pack;
   const [name, setName] = useState(pack?.name || '');
   const [description, setDescription] = useState(pack?.description || '');
-  const [docs, setDocs] = useState(pack?.docs || []);
-  const [links, setLinks] = useState(pack?.links || []);
+  // Docs/links carry a "status" field: uploading → processing → ready (or failed)
+  // Links carry: fetching → reading → ready (or failed)
+  const [docs, setDocs] = useState((pack?.docs || []).map(d => ({ status: 'ready', ...d })));
+  const [links, setLinks] = useState((pack?.links || []).map(l => ({ status: 'ready', ...l })));
   const [linkName, setLinkName] = useState('');
   const [linkUrl, setLinkUrl] = useState('');
   const [showAddLink, setShowAddLink] = useState(false);
+  const docFileInputRef = useRef(null);
 
-  const MOCK_DOC_NAMES = ['Clause_Library.pdf', 'Compliance_Checklist.docx', 'Risk_Matrix_Template.xlsx', 'Precedent_Case.pdf', 'Standard_Terms.pdf'];
+  const SUPPORTED_KP_EXTS = ['.doc','.docx','.ppt','.pptx','.xls','.xlsx','.pdf','.csv','.txt','.rtf','.odt','.ods','.odp','.pages','.numbers','.key','.html','.htm','.xml','.json'];
+  const MAX_FILE_SIZE_MB = 10;
 
-  const handleAddDoc = () => {
-    const name = MOCK_DOC_NAMES[docs.length % MOCK_DOC_NAMES.length];
-    setDocs(prev => [...prev, { id: Date.now(), name, size: `${(Math.random() * 3 + 0.5).toFixed(1)} MB`, uploaded: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) }]);
+  // Simulate the document pipeline: uploading → processing → ready.
+  // In production this would be backed by real upload + RAG indexing APIs.
+  const simulateDocPipeline = (id) => {
+    // After ~1.2s: flip from uploading to processing
+    setTimeout(() => {
+      setDocs(prev => prev.map(d => d.id === id && d.status === 'uploading' ? { ...d, status: 'processing' } : d));
+      // After another ~2.5s: flip from processing to ready
+      setTimeout(() => {
+        setDocs(prev => prev.map(d => d.id === id && d.status === 'processing' ? { ...d, status: 'ready' } : d));
+      }, 2500);
+    }, 1200);
+  };
+
+  // Simulate the link pipeline: fetching → reading → ready.
+  const simulateLinkPipeline = (id) => {
+    setTimeout(() => {
+      setLinks(prev => prev.map(l => l.id === id && l.status === 'fetching' ? { ...l, status: 'reading' } : l));
+      setTimeout(() => {
+        setLinks(prev => prev.map(l => l.id === id && l.status === 'reading' ? { ...l, status: 'ready' } : l));
+      }, 2200);
+    }, 1500);
+  };
+
+  const handleAddDocClick = () => docFileInputRef.current?.click();
+
+  const handleDocFilesPicked = (e) => {
+    const picked = Array.from(e.target.files || []);
+    e.target.value = '';
+    if (picked.length === 0) return;
+
+    const createdAt = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    const accepted = [];
+    const rejected = [];
+
+    picked.forEach(f => {
+      const ext = f.name.lastIndexOf('.') !== -1 ? f.name.slice(f.name.lastIndexOf('.')).toLowerCase() : '';
+      const tooLarge = f.size > MAX_FILE_SIZE_MB * 1024 * 1024;
+      if (!SUPPORTED_KP_EXTS.includes(ext)) {
+        rejected.push({ id: Date.now() + Math.random(), name: f.name, size: '—', uploaded: createdAt, status: 'failed', error: 'File format not supported.' });
+      } else if (tooLarge) {
+        rejected.push({ id: Date.now() + Math.random(), name: f.name, size: `${(f.size / (1024 * 1024)).toFixed(1)} MB`, uploaded: createdAt, status: 'failed', error: `Files must be under ${MAX_FILE_SIZE_MB} MB.` });
+      } else {
+        const id = Date.now() + Math.random();
+        accepted.push({ id, name: f.name, size: `${(f.size / (1024 * 1024)).toFixed(1)} MB`, uploaded: createdAt, status: 'uploading' });
+      }
+    });
+
+    setDocs(prev => [...prev, ...accepted, ...rejected]);
+    accepted.forEach(d => simulateDocPipeline(d.id));
   };
 
   const handleRemoveDoc = (id) => setDocs(prev => prev.filter(d => d.id !== id));
 
   const handleAddLink = () => {
     if (!linkName.trim() || !linkUrl.trim()) return;
-    setLinks(prev => [...prev, { id: Date.now(), name: linkName.trim(), url: linkUrl.trim() }]);
+    // Basic URL validation
+    const url = linkUrl.trim();
+    const isValidUrl = /^https?:\/\/.+\..+/i.test(url);
+    const id = Date.now();
+    const newLink = {
+      id,
+      name: linkName.trim(),
+      url,
+      status: isValidUrl ? 'fetching' : 'failed',
+      error: isValidUrl ? undefined : "That doesn't look like a valid URL.",
+    };
+    setLinks(prev => [...prev, newLink]);
+    if (isValidUrl) simulateLinkPipeline(id);
     setLinkName(''); setLinkUrl(''); setShowAddLink(false);
   };
 
   const handleRemoveLink = (id) => setLinks(prev => prev.filter(l => l.id !== id));
 
+  // Disable Save while anything is still processing — the pack is not ready until
+  // every file is indexed. Users can cancel and retry individual items.
+  const hasPending = docs.some(d => d.status === 'uploading' || d.status === 'processing')
+    || links.some(l => l.status === 'fetching' || l.status === 'reading');
+
   const handleSave = () => {
-    if (!name.trim()) return;
-    onSave({ id: pack?.id || Date.now(), name: name.trim(), description: description.trim(), docs, links, createdAt: pack?.createdAt || new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) });
+    if (!name.trim() || hasPending) return;
+    // Don't persist failed items — users should retry them or remove them first
+    const cleanDocs = docs.filter(d => d.status === 'ready').map(({ status, error, ...rest }) => rest);
+    const cleanLinks = links.filter(l => l.status === 'ready').map(({ status, error, ...rest }) => rest);
+    onSave({ id: pack?.id || Date.now(), name: name.trim(), description: description.trim(), docs: cleanDocs, links: cleanLinks, createdAt: pack?.createdAt || new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) });
     onClose();
+  };
+
+  // Small helper for status pills — same visual language for both docs and links
+  const StatusPill = ({ status, error }) => {
+    const map = {
+      uploading: { label: 'Uploading…', bg: '#F0F3F6', color: '#6B7885', spin: true },
+      processing: { label: 'Reading your document…', bg: '#FBEED5', color: '#E8A33D', spin: true },
+      fetching: { label: 'Fetching the page…', bg: '#F0F3F6', color: '#6B7885', spin: true },
+      reading: { label: 'Reading the content…', bg: '#FBEED5', color: '#E8A33D', spin: true },
+      ready: { label: 'Ready', bg: '#E7F3E9', color: '#5CA868', spin: false },
+      failed: { label: error || 'Something went wrong', bg: '#F9E7E7', color: '#C65454', spin: false },
+    };
+    const s = map[status];
+    if (!s) return null;
+    return (
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '2px 8px', borderRadius: 999, background: s.bg, color: s.color, fontSize: 10, fontWeight: 500, whiteSpace: 'nowrap' }}>
+        {s.spin && <span className="animate-spin" style={{ width: 9, height: 9, border: `1.5px solid ${s.color}40`, borderTopColor: s.color, borderRadius: '50%', display: 'inline-block' }} />}
+        {s.label}
+      </span>
+    );
   };
 
   const inputStyle = { width: '100%', height: 40, border: '1px solid var(--border)', borderRadius: 8, padding: '0 12px', fontSize: 13, outline: 'none', boxSizing: 'border-box', fontFamily: "'DM Sans', sans-serif" };
 
   return (
     <>
+      <input ref={docFileInputRef} type="file" multiple accept=".pdf,.doc,.docx,.txt,.rtf,.odt,.xls,.xlsx,.csv,.ppt,.pptx,.ods,.odp,.pages,.numbers,.key,.html,.htm,.xml,.json" style={{ display: 'none' }} onChange={handleDocFilesPicked} />
       <div onClick={onClose} style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)', zIndex: 70, backdropFilter: 'blur(4px)' }} />
       <div
         className="fixed inset-0 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-[600px] md:max-h-[90vh] md:rounded-2xl"
@@ -1019,18 +1110,21 @@ function EditKnowledgePackModal({ pack, onClose, onSave }) {
           <div>
             <div className="flex items-center justify-between" style={{ marginBottom: 8 }}>
               <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)' }}>Documents ({docs.length})</label>
-              <button onClick={handleAddDoc} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 10px', borderRadius: 6, border: '1px dashed var(--border)', background: 'white', fontSize: 11, fontWeight: 500, color: 'var(--navy)', cursor: 'pointer' }}><Upload size={12} /> Add Document</button>
+              <button onClick={handleAddDocClick} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 10px', borderRadius: 6, border: '1px dashed var(--border)', background: 'white', fontSize: 11, fontWeight: 500, color: 'var(--navy)', cursor: 'pointer' }}><Upload size={12} /> Add Document</button>
             </div>
             {docs.length === 0 ? (
-              <div style={{ padding: 16, border: '1px dashed var(--border)', borderRadius: 8, textAlign: 'center', fontSize: 12, color: 'var(--text-muted)' }}>No documents yet — click Add Document</div>
+              <div style={{ padding: 16, border: '1px dashed var(--border)', borderRadius: 8, textAlign: 'center', fontSize: 12, color: 'var(--text-muted)' }}>No documents yet — click Add Document. Up to 10 MB per file.</div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {docs.map(d => (
                   <div key={d.id} className="flex items-center gap-2" style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', backgroundColor: 'var(--ice-warm)' }}>
                     <File size={14} style={{ color: 'var(--navy)', flexShrink: 0 }} />
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.name}</div>
-                      <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{d.size} · {d.uploaded}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 280 }}>{d.name}</span>
+                        <StatusPill status={d.status} error={d.error} />
+                      </div>
+                      <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{d.size} · {d.uploaded}</div>
                     </div>
                     <button onClick={() => handleRemoveDoc(d.id)} style={{ padding: 4, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', flexShrink: 0 }}><Trash2 size={13} /></button>
                   </div>
@@ -1063,8 +1157,11 @@ function EditKnowledgePackModal({ pack, onClose, onSave }) {
                   <div key={l.id} className="flex items-center gap-2" style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', backgroundColor: 'var(--ice-warm)' }}>
                     <Link2 size={14} style={{ color: 'var(--navy)', flexShrink: 0 }} />
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{l.name}</div>
-                      <div style={{ fontSize: 11, color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{l.url}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 280 }}>{l.name}</span>
+                        <StatusPill status={l.status} error={l.error} />
+                      </div>
+                      <div style={{ fontSize: 11, color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginTop: 2 }}>{l.url}</div>
                     </div>
                     <button onClick={() => handleRemoveLink(l.id)} style={{ padding: 4, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', flexShrink: 0 }}><Trash2 size={13} /></button>
                   </div>
@@ -1074,9 +1171,14 @@ function EditKnowledgePackModal({ pack, onClose, onSave }) {
           </div>
         </div>
 
-        <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-          <button onClick={onClose} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid var(--border)', background: 'white', fontSize: 13, cursor: 'pointer', color: 'var(--text-muted)' }}>Cancel</button>
-          <button onClick={handleSave} disabled={!name.trim()} style={{ padding: '8px 20px', borderRadius: 8, border: 'none', background: !name.trim() ? '#9CA3AF' : 'var(--navy)', color: 'white', fontSize: 13, fontWeight: 500, cursor: !name.trim() ? 'not-allowed' : 'pointer' }}>{isNew ? 'Create Pack' : 'Save Changes'}</button>
+        <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+          <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+            {hasPending ? 'We\'re still reading your files and links — hang tight.' : ''}
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button onClick={onClose} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid var(--border)', background: 'white', fontSize: 13, cursor: 'pointer', color: 'var(--text-muted)' }}>Cancel</button>
+            <button onClick={handleSave} disabled={!name.trim() || hasPending} style={{ padding: '8px 20px', borderRadius: 8, border: 'none', background: (!name.trim() || hasPending) ? '#9CA3AF' : 'var(--navy)', color: 'white', fontSize: 13, fontWeight: 500, cursor: (!name.trim() || hasPending) ? 'not-allowed' : 'pointer' }}>{isNew ? 'Create Pack' : 'Save Changes'}</button>
+          </div>
         </div>
       </div>
     </>
@@ -1311,7 +1413,7 @@ function AttachMenu({ activePack, activeDocument, onClose, onAttachFiles, onOpen
         <MenuItem
           icon={Upload}
           label="Upload Documents"
-          subtitle="Upload files from your device"
+          subtitle="Up to 5 files · 10 MB each"
           onClick={() => docInputRef.current?.click()}
         />
 
@@ -2338,6 +2440,14 @@ INSTRUCTIONS:
     '.html', '.htm', '.xml', '.json',
   ];
 
+  // Chat attach limits — a knowledge pack is the escape hatch for bigger sets.
+  const MAX_CHAT_ATTACHMENTS = 5;
+  const MAX_FILE_SIZE_MB = 10;
+
+  // Holds files that exceeded MAX_CHAT_ATTACHMENTS so we can offer to
+  // bundle them into a knowledge pack instead.
+  const [attachLimitOverflow, setAttachLimitOverflow] = useState(null);
+
   const handleAttachFiles = (files, kind) => {
     // Validate file types for document uploads
     if (kind === 'doc') {
@@ -2363,6 +2473,30 @@ INSTRUCTIONS:
           return SUPPORTED_FILE_EXTENSIONS.includes(ext);
         });
         if (files.length === 0) return;
+      }
+
+      // ─── Size limit: 10 MB per file ──────────────────────────────────
+      const oversize = files.filter(f => f.size > MAX_FILE_SIZE_MB * 1024 * 1024);
+      if (oversize.length > 0) {
+        const names = oversize.map(f => `${f.name} (${(f.size / (1024 * 1024)).toFixed(1)} MB)`).join(', ');
+        setMessages(prev => [...prev, {
+          id: Date.now(),
+          sender: 'bot',
+          content: `**Some files are too large.** Each file needs to be under ${MAX_FILE_SIZE_MB} MB. Skipped: *${names}*.`,
+          timestamp: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
+        }]);
+        files = files.filter(f => f.size <= MAX_FILE_SIZE_MB * 1024 * 1024);
+        if (files.length === 0) return;
+      }
+
+      // ─── Count limit: 5 files per chat attachment ───────────────────
+      // If the user is trying to attach more than the ceiling, offer them
+      // the knowledge-pack escape hatch instead of silently truncating.
+      const currentCount = pendingAttachments.filter(a => a.kind === 'doc').length;
+      const totalCount = currentCount + files.length;
+      if (totalCount > MAX_CHAT_ATTACHMENTS) {
+        setAttachLimitOverflow({ files, currentCount });
+        return; // Don't add to pending — user has to make a choice
       }
     }
 
@@ -2726,6 +2860,54 @@ INSTRUCTIONS:
                 <MessageBubble msg={{ id: 'streaming', sender: 'bot', content: streamingContent, timestamp: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) }} />
               )}
               {isTyping && !streamingContent && <TypingIndicator />}
+            </div>
+          )}
+
+          {/* ─── Attach limit overflow: too many files for a chat attachment ─── */}
+          {/* A chat can hold up to 5 files. Beyond that, we route the user to a
+              knowledge pack (which has no file-count ceiling). Non-dismissible
+              by X — user must either trim down or bundle into a pack. */}
+          {attachLimitOverflow && (
+            <div className="px-3 sm:px-4 md:px-10" style={{ paddingTop: 8, paddingBottom: 0 }}>
+              <div style={{
+                display: 'flex', alignItems: 'flex-start', gap: 12,
+                padding: '14px 18px', borderRadius: 12,
+                background: '#F0F3F6', border: '1px solid #D6DDE4',
+              }}>
+                <Package size={18} style={{ color: 'var(--navy)', flexShrink: 0, marginTop: 2 }} />
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--navy)', marginBottom: 4 }}>
+                    That's more than a chat can hold
+                  </div>
+                  <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 10, lineHeight: 1.6 }}>
+                    A single chat accepts up to {MAX_CHAT_ATTACHMENTS} files. You're trying to attach{' '}
+                    <strong>{attachLimitOverflow.currentCount + attachLimitOverflow.files.length}</strong>{' '}
+                    ({attachLimitOverflow.currentCount} already attached, {attachLimitOverflow.files.length} new).
+                    For larger sets, bundle everything into a <strong>Knowledge Pack</strong> — packs have no file limit
+                    and you can reuse them across chats.
+                  </div>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    <button
+                      onClick={() => {
+                        // Open the knowledge pack creator — the user will need to re-add
+                        // their files there since File objects can't be passed around.
+                        setEditingPack(null);
+                        setShowKnowledgePacksPanel(true);
+                        setAttachLimitOverflow(null);
+                      }}
+                      style={{ padding: '8px 16px', borderRadius: 8, fontSize: 12, fontWeight: 600, background: 'var(--navy)', color: '#fff', border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                    >
+                      <Package size={13} /> Create a Knowledge Pack
+                    </button>
+                    <button
+                      onClick={() => setAttachLimitOverflow(null)}
+                      style={{ padding: '8px 16px', borderRadius: 8, fontSize: 12, fontWeight: 500, background: '#fff', color: 'var(--text-secondary)', border: '1px solid var(--border)', cursor: 'pointer' }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 
