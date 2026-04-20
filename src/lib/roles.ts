@@ -21,23 +21,45 @@ export const ROLE = {
 };
 
 export const PERMISSIONS = {
+  // Team
   INVITE_TEAM:            'invite_team',
   ASSIGN_ROLES:           'assign_roles',
-  CREATE_WORKSPACE:       'create_workspace',
-  DELETE_WORKSPACE:       'delete_workspace',
-  TRANSFER_WORKSPACE:     'transfer_workspace',
-  ADD_TO_WORKSPACE:       'add_to_workspace',
-  REMOVE_FROM_WORKSPACE:  'remove_from_workspace',
+
+  // Workspaces
+  CREATE_WORKSPACE:           'create_workspace',
+  DELETE_WORKSPACE:           'delete_workspace',
+  TRANSFER_WORKSPACE:         'transfer_workspace',
+  MANAGE_WORKSPACE_MEMBERS:   'manage_workspace_members',
+  ADD_TO_WORKSPACE:           'add_to_workspace',
+  REMOVE_FROM_WORKSPACE:      'remove_from_workspace',
+
+  // Documents
   UPLOAD_DOCUMENTS:       'upload_documents',
-  MANAGE_KNOWLEDGE_PACKS: 'manage_knowledge_packs',
-  CREATE_GLOBAL_KP:       'create_global_knowledge_pack',
-  VIEW_AUDIT_LOGS:        'view_audit_logs',
-  ACCESS_BILLING:         'access_billing',
-  MODIFY_PAYMENT:         'modify_payment',
-  CHANGE_PLAN:            'change_plan',
-  VIEW_USAGE_REPORTS:     'view_usage_reports',
+  MANAGE_DOCUMENT_VAULT:  'manage_document_vault',
+
+  // Knowledge & AI
+  MANAGE_KNOWLEDGE_PACKS:  'manage_knowledge_packs',
+  CREATE_GLOBAL_KP:        'create_global_knowledge_pack',
+  MANAGE_PROMPT_TEMPLATES: 'manage_prompt_templates',
+
+  // Clients
+  MANAGE_CLIENTS:        'manage_clients',
+  CLIENT_PORTAL_MGMT:    'client_portal_management',
+
+  // Security & Compliance
+  VIEW_AUDIT_LOGS:           'view_audit_logs',
+  EXPORT_COMPLIANCE_REPORTS: 'export_compliance_reports',
+
+  // Analytics
+  VIEW_USAGE_REPORTS:    'view_usage_reports',
+
+  // Billing (CHANGE_PLAN + MODIFY_PAYMENT are Org Admin only, never grantable)
+  ACCESS_BILLING:        'access_billing',
+  MODIFY_PAYMENT:        'modify_payment',
+  CHANGE_PLAN:           'change_plan',
+
+  // Matters & Chat
   OPEN_MATTER:            'open_matter',
-  CLIENT_PORTAL_MGMT:     'client_portal_management',
   CHAT_MODE_TOGGLE:       'chat_mode_toggle',
 } as const;
 

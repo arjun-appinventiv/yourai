@@ -14,8 +14,9 @@ import { useRole } from '../../context/RoleContext';
 import { useAuth } from '../../context/AuthContext';
 import { PERMISSIONS } from '../../lib/roles';
 import TeamPage from '../../components/chat/TeamPage';
-import WorkspacesPanel from '../../components/chat/WorkspacesPanel';
-import { loadWorkspaces, filterVisibleWorkspaces } from '../../lib/workspaceAccess';
+import WorkspacesPage from './WorkspacesPage';
+import { listWorkspacesForUser, seedWorkspacesIfEmpty } from '../../lib/workspace';
+import { MOCK_WORKSPACES } from '../../lib/mockWorkspaces';
 import { billingData, subscriptionPlans } from '../../data/mockData';
 import { callLLM, getApiKey } from '../../lib/llm-client';
 import { extractFileText } from '../../lib/file-parser';
@@ -2076,7 +2077,7 @@ function EmptyState({ profile, plan, onPromptClick, navigate, onViewPlans }) {
 }
 
 /* ═══════════════════ ChatView ═══════════════════ */
-export default function ChatView() {
+export default function ChatView({ initialView = 'chat' }) {
   const navigate = useNavigate();
   // Role + identity — used for workspace membership filtering in the sidebar
   // badge and panels below, plus External-User-only chat-mode toggle.
@@ -2122,15 +2123,18 @@ export default function ChatView() {
   const [showClientsPanel, setShowClientsPanel] = useState(false);
   const [showTeamPage, setShowTeamPage] = useState(false);
   const [teamMemberCount, setTeamMemberCount] = useState(null);
-  const [showWorkspacesPanel, setShowWorkspacesPanel] = useState(false);
+  // Sidebar's Workspaces item toggles this; clicking '< Back to chat' inside
+  // the page sets it back to false. The /chat/workspaces route sets it via
+  // the `initialView` prop on mount.
+  const [showWorkspacesPanel, setShowWorkspacesPanel] = useState(initialView === 'workspaces');
   // Visible-workspace count is recomputed from localStorage whenever the
   // panel closes, so the sidebar badge stays accurate after create/archive.
   const [workspaceTick, setWorkspaceTick] = useState(0);
-  const visibleWorkspaceCount = useMemo(
-    () => filterVisibleWorkspaces(loadWorkspaces(), currentUserId, currentRole).length,
+  const visibleWorkspaceCount = useMemo(() => {
+    seedWorkspacesIfEmpty(MOCK_WORKSPACES);
+    return listWorkspacesForUser(currentUserId, currentRole).length;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [currentUserId, currentRole, workspaceTick, showWorkspacesPanel],
-  );
+  }, [currentUserId, currentRole, workspaceTick, showWorkspacesPanel]);
   const [toastMsg, setToastMsg] = useState('');
   const [showAddClient, setShowAddClient] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -2951,7 +2955,7 @@ INSTRUCTIONS:
         onOpenInviteTeam={() => { setShowTeamPage(true); setSidebarOpen(false); }}
         onOpenAuditLogs={() => { /* TODO: Part 5+ wires real audit-logs panel */ }}
         onOpenBilling={() => { navigate('/app/billing'); setSidebarOpen(false); }}
-        onOpenWorkspaces={() => { setShowWorkspacesPanel(true); setSidebarOpen(false); }}
+        onOpenWorkspaces={() => { navigate('/chat/workspaces'); setShowWorkspacesPanel(true); setSidebarOpen(false); }}
         promptCount={promptTemplates.length}
         clientCount={clients.length}
         packCount={knowledgePacks.length}
@@ -2969,9 +2973,9 @@ INSTRUCTIONS:
         onThreadSearchChange={setThreadSearch}
         onSignOut={async () => { await session.signOut(); navigate('/chat/login'); }}
       />
-      {/* Chat main area — hidden when the Team page is active so the sidebar
-          stays visible but the chat UI is replaced by the full-page team view. */}
-      <div style={{ flex: 1, display: showTeamPage ? 'none' : 'flex', flexDirection: 'column', minWidth: 0 }}>
+      {/* Chat main area — hidden when a full-page view (Team or Workspaces)
+          is active so the sidebar stays visible but the chat UI is replaced. */}
+      <div style={{ flex: 1, display: (showTeamPage || showWorkspacesPanel) ? 'none' : 'flex', flexDirection: 'column', minWidth: 0 }}>
         <TopNav plan={plan} usage={usage} onOpenSidebar={() => setSidebarOpen(true)} />
 
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#FAFBFC', minHeight: 0 }}>
@@ -3533,8 +3537,16 @@ INSTRUCTIONS:
 
       {/* Workspaces Panel — role + membership filtered */}
       {showWorkspacesPanel && (
-        <WorkspacesPanel
-          onClose={() => { setShowWorkspacesPanel(false); setWorkspaceTick((n) => n + 1); }}
+        <WorkspacesPage
+          onBack={() => {
+            setShowWorkspacesPanel(false);
+            setWorkspaceTick((n) => n + 1);
+            navigate('/chat');
+          }}
+          onOpenWorkspace={(wsId) => {
+            setShowWorkspacesPanel(false);
+            navigate(`/chat/workspaces/${wsId}`);
+          }}
           onToast={(msg) => {
             setToastMsg(msg);
             setTimeout(() => setToastMsg(''), 3200);
