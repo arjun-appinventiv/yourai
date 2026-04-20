@@ -36,6 +36,19 @@ type AnyUser = {
 } | null | undefined;
 
 /**
+ * Last-resort demo-role registry. Keyed by email. Kept here (not imported
+ * from auth.ts) so even if the auth bundle is stale on a client, the role
+ * resolves correctly — critical for static-hosted demos where a cached
+ * older bundle might lack the DEMO_USERS entry.
+ */
+const DEMO_EMAIL_ROLES: Record<string, { tenantRole?: Role; role?: string; permissions?: Permission[] }> = {
+  'liaison@acmecorp.com': { tenantRole: ROLE.EXTERNAL_USER, permissions: [] },
+  'priya@hartwell.com':   { tenantRole: ROLE.INTERNAL_USER, permissions: ['create_workspace' as Permission, 'view_audit_logs' as Permission] },
+  'ryan@hartwell.com':    { role: 'ADMIN' },
+  'arjun@appinventiv.com':{ role: 'ADMIN' },
+};
+
+/**
  * On the Vercel static demo, sign-up doesn't populate AuthContext — it only
  * writes to localStorage. Fall back to reading the registered user so the
  * freshly-signed-up Org Admin doesn't see an empty sidebar.
@@ -45,7 +58,13 @@ function readLocalRegisteredUser(): AnyUser {
     const email = localStorage.getItem('yourai_current_email');
     if (!email) return null;
     const registered = JSON.parse(localStorage.getItem('yourai_registered_users') || '{}');
-    return registered[email]?.user || null;
+    const fromStorage = registered[email]?.user || null;
+    // If nothing in localStorage, try the demo-email registry so demo
+    // credentials resolve correctly even without a persist step.
+    if (!fromStorage && DEMO_EMAIL_ROLES[email]) {
+      return { email, ...DEMO_EMAIL_ROLES[email] };
+    }
+    return fromStorage;
   } catch {
     return null;
   }
@@ -60,7 +79,15 @@ function deriveRoleFromUser(user: AnyUser): Role {
   // definition the org's first user, so anything else locks them out.
   if (!effective) return ROLE.ORG_ADMIN;
 
+  // Tenant role is the most authoritative source.
   if (effective.tenantRole) return effective.tenantRole;
+
+  // Fallback: recognise known demo emails even if the cached user object
+  // lacks tenantRole (stale bundle, cross-version localStorage, etc.).
+  if (effective.email && DEMO_EMAIL_ROLES[effective.email]) {
+    const demo = DEMO_EMAIL_ROLES[effective.email];
+    if (demo.tenantRole) return demo.tenantRole;
+  }
 
   // The first user to sign up for an org is stored with role: 'ADMIN'
   // in src/lib/auth.ts — treat that as the Org Admin for the tenant view.
@@ -85,8 +112,11 @@ export function RoleProvider({ children }: { children: ReactNode }) {
   const user: AnyUser = auth?.operator;
 
   const value = useMemo<RoleContextValue>(() => {
-    const currentRole = deriveRoleFromUser(user);
-    const granted = Array.isArray(user?.permissions) ? user!.permissions! : [];
+    const effective = user || readLocalRegisteredUser();
+    const currentRole = deriveRoleFromUser(effective);
+    const granted = Array.isArray(effective?.permissions)
+      ? effective!.permissions!
+      : (effective?.email && DEMO_EMAIL_ROLES[effective.email]?.permissions) || [];
     const permissions = resolvePermissions(currentRole, granted);
     const permSet = new Set<Permission>(permissions);
 
