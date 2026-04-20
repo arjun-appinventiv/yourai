@@ -1135,8 +1135,13 @@ function DocumentVaultPanel({ documents, onClose, onCreateNew, onEdit, onDelete,
                       <File size={18} style={{ color: 'var(--navy)' }} />
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{d.name}</div>
-                      <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4, lineHeight: 1.5 }}>{d.description}</p>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{d.name}</span>
+                        {d.addedFromChat && (
+                          <span style={{ fontSize: 10, fontWeight: 500, padding: '2px 8px', borderRadius: 999, background: 'var(--ice-warm)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}>Added from chat</span>
+                        )}
+                      </div>
+                      {d.description && <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4, lineHeight: 1.5 }}>{d.description}</p>}
                       <div className="flex items-center gap-3 flex-wrap" style={{ marginTop: 8 }}>
                         <span className="flex items-center gap-1" style={{ fontSize: 11, color: 'var(--text-muted)' }}><FileText size={12} /> {d.fileName}</span>
                         <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{d.fileSize}</span>
@@ -2381,6 +2386,32 @@ INSTRUCTIONS:
       setSessionState(prev => ({ ...prev, sessionDocId: `doc-${Date.now()}` }));
     }
     setPendingAttachments(prev => [...prev, ...newAtts]);
+
+    // ─── Auto-add to Document Vault ───────────────────────────────────
+    // When a file is attached via chat, persist it to the Document Vault.
+    // The file's own name is used as both the vault entry name and the
+    // fileName (no separate "Description" prompt — that's only asked for
+    // direct vault uploads). Dedupe by fileName so re-attaching the same
+    // file doesn't create duplicate vault entries.
+    if (kind === 'doc') {
+      const createdAt = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      setDocumentVault(prev => {
+        const existingNames = new Set(prev.map(d => d.fileName));
+        const additions = files
+          .filter(f => !existingNames.has(f.name))
+          .map((f, i) => ({
+            id: Date.now() + 1000 + i,
+            name: f.name,
+            description: '',
+            fileName: f.name,
+            fileSize: `${(f.size / (1024 * 1024)).toFixed(1)} MB`,
+            createdAt,
+            addedFromChat: true,
+          }));
+        return additions.length > 0 ? [...additions, ...prev] : prev;
+      });
+    }
+
     // Track document uploads for usage stats
     if (kind === 'doc') {
       const userEmail = localStorage.getItem('yourai_current_email');
@@ -2421,6 +2452,19 @@ INSTRUCTIONS:
         setActiveVaultDocument(pendingNewDoc.vaultDoc);
       } else if (pendingNewDoc) {
         setPendingAttachments([pendingNewDoc]);
+        // Auto-add to Document Vault (dedupe by fileName)
+        setDocumentVault(prev => {
+          if (prev.some(d => d.fileName === pendingNewDoc.name)) return prev;
+          return [{
+            id: Date.now() + 1000,
+            name: pendingNewDoc.name,
+            description: '',
+            fileName: pendingNewDoc.name,
+            fileSize: pendingNewDoc.size ? `${(pendingNewDoc.size / (1024 * 1024)).toFixed(1)} MB` : '—',
+            createdAt: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+            addedFromChat: true,
+          }, ...prev];
+        });
       }
       setActiveKnowledgePack(null);
       if (!pendingNewDoc?.vaultDoc) setActiveVaultDocument(null);
