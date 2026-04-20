@@ -1016,10 +1016,16 @@ function MembersPanel({ workspace, currentUserId, canManage, isOrgAdmin, onClose
   onToggleKB: (userId: string, next: boolean) => void;
 }) {
   const [adding, setAdding] = useState(false);
+  const [addMode, setAddMode] = useState<'existing' | 'invite'>('existing');
   const [q, setQ] = useState('');
   const [confirmRemove, setConfirmRemove] = useState<WorkspaceMember | null>(null);
   const [pendingAdd, setPendingAdd] = useState<WorkspaceMember | null>(null);
   const [pendingCanEditKB, setPendingCanEditKB] = useState(true);
+  // Invite-new-external mini form fields
+  const [newName, setNewName] = useState('');
+  const [newEmail, setNewEmail] = useState('');
+  const [newEmailError, setNewEmailError] = useState('');
+  const validEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
 
   const candidates = useMemo(() => {
     const all = teamMembersForPicker();
@@ -1046,36 +1052,97 @@ function MembersPanel({ workspace, currentUserId, canManage, isOrgAdmin, onClose
 
         {adding && (
           <div style={{ padding: '12px 20px 0' }}>
-            <div style={{ position: 'relative' }}>
-              <Search size={13} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-              <input
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
-                placeholder="Search team members..."
-                autoFocus
-                style={{ width: '100%', height: 36, borderRadius: 8, border: '1px solid var(--border)', paddingLeft: 34, fontSize: 13, outline: 'none', boxSizing: 'border-box' }}
-              />
+            {/* Mode tabs — pick existing or invite brand-new */}
+            <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
+              <button
+                onClick={() => setAddMode('existing')}
+                style={{ flex: 1, padding: '6px 10px', borderRadius: 8, fontSize: 12, fontWeight: 500, cursor: 'pointer', border: '1px solid ' + (addMode === 'existing' ? 'var(--navy)' : 'var(--border)'), background: addMode === 'existing' ? 'var(--navy)' : '#fff', color: addMode === 'existing' ? '#fff' : 'var(--text-secondary)' }}
+              >
+                Existing team
+              </button>
+              <button
+                onClick={() => setAddMode('invite')}
+                style={{ flex: 1, padding: '6px 10px', borderRadius: 8, fontSize: 12, fontWeight: 500, cursor: 'pointer', border: '1px solid ' + (addMode === 'invite' ? 'var(--navy)' : 'var(--border)'), background: addMode === 'invite' ? 'var(--navy)' : '#fff', color: addMode === 'invite' ? '#fff' : 'var(--text-secondary)' }}
+              >
+                Invite new client
+              </button>
             </div>
-            <div style={{ maxHeight: 220, overflowY: 'auto', marginTop: 8 }}>
-              {candidates.length === 0 ? (
-                <div style={{ padding: 16, fontSize: 12, color: 'var(--text-muted)', textAlign: 'center' }}>No matching members</div>
-              ) : candidates.map((m) => (
-                <div key={m.userId} onClick={() => { setPendingAdd(m); setPendingCanEditKB(true); }} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', cursor: 'pointer', borderRadius: 8 }}
-                  onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.background = 'var(--ice-warm)'; }}
-                  onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.background = 'transparent'; }}
-                >
-                  <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#F0F3F6', color: '#1E3A8A', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 600 }}>{initialsOf(m.name)}</div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 13, fontWeight: 500 }}>{m.name}</div>
-                    <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{m.email}</div>
-                  </div>
-                  <span style={{ fontSize: 9, padding: '2px 7px', borderRadius: 999, background: m.role === 'org_admin' ? 'var(--navy)' : m.role === 'external_user' ? '#E7F3E9' : '#F0F3F6', color: m.role === 'org_admin' ? '#fff' : m.role === 'external_user' ? '#5CA868' : '#1E3A8A', fontWeight: 500 }}>
-                    {m.role === 'org_admin' ? 'Org Admin' : m.role === 'external_user' ? 'Client' : 'Internal'}
-                  </span>
+
+            {addMode === 'existing' ? (
+              <>
+                <div style={{ position: 'relative' }}>
+                  <Search size={13} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                  <input
+                    value={q}
+                    onChange={(e) => setQ(e.target.value)}
+                    placeholder="Search team members..."
+                    autoFocus
+                    style={{ width: '100%', height: 36, borderRadius: 8, border: '1px solid var(--border)', paddingLeft: 34, fontSize: 13, outline: 'none', boxSizing: 'border-box' }}
+                  />
                 </div>
-              ))}
-            </div>
-            <button onClick={() => { setAdding(false); setQ(''); }} style={{ marginTop: 8, fontSize: 11, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>Cancel</button>
+                <div style={{ maxHeight: 220, overflowY: 'auto', marginTop: 8 }}>
+                  {candidates.length === 0 ? (
+                    <div style={{ padding: 16, fontSize: 12, color: 'var(--text-muted)', textAlign: 'center' }}>No matching members</div>
+                  ) : candidates.map((m) => (
+                    <div key={m.userId} onClick={() => { setPendingAdd(m); setPendingCanEditKB(true); }} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', cursor: 'pointer', borderRadius: 8 }}
+                      onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.background = 'var(--ice-warm)'; }}
+                      onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.background = 'transparent'; }}
+                    >
+                      <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#F0F3F6', color: '#1E3A8A', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 600 }}>{initialsOf(m.name)}</div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 13, fontWeight: 500 }}>{m.name}</div>
+                        <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{m.email}</div>
+                      </div>
+                      <span style={{ fontSize: 9, padding: '2px 7px', borderRadius: 999, background: m.role === 'org_admin' ? 'var(--navy)' : m.role === 'external_user' ? '#E7F3E9' : '#F0F3F6', color: m.role === 'org_admin' ? '#fff' : m.role === 'external_user' ? '#5CA868' : '#1E3A8A', fontWeight: 500 }}>
+                        {m.role === 'org_admin' ? 'Org Admin' : m.role === 'external_user' ? 'Client' : 'Internal'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : (
+              // Invite-new-external form — only creates External clients.
+              // Internal invites still live on the dedicated Team page.
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: 0, lineHeight: 1.55 }}>
+                  Invite a new external client. They'll get an email and be added straight to this workspace as a read-only member.
+                </p>
+                <div>
+                  <label style={{ fontSize: 11, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 5 }}>Full name</label>
+                  <input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="e.g., Jordan Patel" style={{ width: '100%', height: 34, borderRadius: 8, border: '1px solid var(--border)', padding: '0 12px', fontSize: 13, outline: 'none', boxSizing: 'border-box' }} autoFocus />
+                </div>
+                <div>
+                  <label style={{ fontSize: 11, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 5 }}>Email</label>
+                  <input value={newEmail} onChange={(e) => { setNewEmail(e.target.value); if (newEmailError) setNewEmailError(''); }} placeholder="jordan@client.com" type="email" style={{ width: '100%', height: 34, borderRadius: 8, border: '1px solid ' + (newEmailError ? '#C65454' : 'var(--border)'), padding: '0 12px', fontSize: 13, outline: 'none', boxSizing: 'border-box' }} />
+                  {newEmailError && <div style={{ fontSize: 10, color: '#C65454', marginTop: 3 }}>{newEmailError}</div>}
+                </div>
+                <button
+                  onClick={() => {
+                    if (!newName.trim()) return;
+                    if (!validEmail(newEmail)) { setNewEmailError('Enter a valid email address'); return; }
+                    setNewEmailError('');
+                    // Build a fresh external member record and route it through
+                    // the same access-decision dialog the existing-flow uses.
+                    setPendingAdd({
+                      userId: `client-${Date.now()}`,
+                      name: newName.trim(),
+                      email: newEmail.trim(),
+                      role: 'external_user',
+                      addedAt: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+                      addedBy: 'You',
+                    });
+                    setPendingCanEditKB(false); // clients default to read-only
+                    setNewName(''); setNewEmail('');
+                  }}
+                  disabled={!newName.trim() || !newEmail.trim()}
+                  style={{ marginTop: 4, padding: '8px 14px', borderRadius: 8, border: 'none', background: (!newName.trim() || !newEmail.trim()) ? '#9CA3AF' : 'var(--navy)', color: '#fff', fontSize: 12, fontWeight: 500, cursor: (!newName.trim() || !newEmail.trim()) ? 'not-allowed' : 'pointer' }}
+                >
+                  Continue
+                </button>
+              </div>
+            )}
+
+            <button onClick={() => { setAdding(false); setQ(''); setNewName(''); setNewEmail(''); setNewEmailError(''); }} style={{ marginTop: 10, fontSize: 11, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>Cancel</button>
           </div>
         )}
 

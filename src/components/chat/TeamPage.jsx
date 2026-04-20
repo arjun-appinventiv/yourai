@@ -17,6 +17,8 @@ import {
   PERMISSIONS, ROLE, ROLE_LABEL, INVITE_PERMISSION_GROUPS,
   INVITE_BASE_PERMISSIONS, INTERNAL_USER_BASE, EXTERNAL_USER_BASE,
 } from '../../lib/roles';
+import { listWorkspaces, seedWorkspacesIfEmpty, addMember as addWorkspaceMember } from '../../lib/workspace';
+import { MOCK_WORKSPACES } from '../../lib/mockWorkspaces';
 
 /* Seed + storage ─ shares the same key as the earlier panel so existing
    invited members persist across the UI migration. */
@@ -96,8 +98,31 @@ export default function TeamPage({ onBack, onCountChange, onToast }) {
       invitedAt: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
     };
     setMembers((prev) => [newMember, ...prev]);
+
+    // External Users are tied to the workspaces picked in Step 2 — add them
+    // to each workspace's membership so the invite is meaningful.
+    if (draft.role === ROLE.EXTERNAL_USER && Array.isArray(draft.workspaceIds)) {
+      const today = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      draft.workspaceIds.forEach((wsId) => {
+        addWorkspaceMember(wsId, {
+          userId: newMember.id,
+          name: newMember.name,
+          email: newMember.email,
+          role: 'external_user',
+          addedAt: today,
+          addedBy: 'You',
+          canEditKB: false, // Clients are read-only on the KB by default
+        });
+      });
+    }
+
     setView('list');
-    onToast?.(`Invitation sent to ${newMember.email}`);
+    const wsCount = draft.workspaceIds?.length || 0;
+    onToast?.(
+      draft.role === ROLE.EXTERNAL_USER && wsCount > 0
+        ? `Invitation sent to ${newMember.email} and added to ${wsCount} workspace${wsCount !== 1 ? 's' : ''}`
+        : `Invitation sent to ${newMember.email}`,
+    );
   };
 
   const handleSaveEdit = (updated) => {
@@ -331,26 +356,43 @@ function InviteFlow({ onBack, onSubmit }) {
   const [role, setRole] = useState(ROLE.INTERNAL_USER);
   const [permissions, setPermissions] = useState([]);
   const [emailError, setEmailError] = useState('');
+  // External Users are always tied to at least one workspace — they have no
+  // other access path. Step 2 collects that assignment before the review.
+  const [workspaceIds, setWorkspaceIds] = useState([]);
+  const [workspaceError, setWorkspaceError] = useState('');
 
   const validEmail = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
   const togglePerm = (p) => setPermissions((prev) => (prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p]));
+  const toggleWorkspace = (wsId) => setWorkspaceIds((prev) => (prev.includes(wsId) ? prev.filter((x) => x !== wsId) : [...prev, wsId]));
 
-  const steps = role === ROLE.EXTERNAL_USER ? [1, 3] : [1, 2, 3];
-  const stepLabels = { 1: 'Details', 2: 'Permissions', 3: 'Review & send' };
+  // Step labels change based on role — external uses 'Workspaces', internal uses 'Permissions'
+  const steps = [1, 2, 3];
+  const stepLabels = {
+    1: 'Details',
+    2: role === ROLE.EXTERNAL_USER ? 'Workspaces' : 'Permissions',
+    3: 'Review & send',
+  };
 
   const goNext = () => {
     if (step === 1) {
       if (!name.trim()) return;
       if (!validEmail(email)) { setEmailError('Enter a valid email address'); return; }
       setEmailError('');
-      if (role === ROLE.EXTERNAL_USER) { setPermissions([]); setStep(3); }
-      else setStep(2);
-    } else if (step === 2) setStep(3);
+      // Both roles now have a Step 2 — Internal picks permissions, External
+      // picks workspace assignments.
+      if (role === ROLE.EXTERNAL_USER) setPermissions([]);
+      else setWorkspaceIds([]);
+      setStep(2);
+    } else if (step === 2) {
+      if (role === ROLE.EXTERNAL_USER && workspaceIds.length === 0) {
+        setWorkspaceError('Assign the client to at least one workspace so they can access it.');
+        return;
+      }
+      setWorkspaceError('');
+      setStep(3);
+    }
   };
-  const goBack = () => {
-    if (step === 3 && role === ROLE.EXTERNAL_USER) setStep(1);
-    else if (step > 1) setStep(step - 1);
-  };
+  const goBack = () => { if (step > 1) setStep(step - 1); };
 
   return (
     <div style={{ flex: 1, minWidth: 0, height: '100vh', overflowY: 'auto', background: '#FBFAF7' }}>
@@ -412,12 +454,20 @@ function InviteFlow({ onBack, onSubmit }) {
             <StepDetails name={name} setName={setName} email={email} setEmail={setEmail} role={role} setRole={setRole} emailError={emailError} />
           </div>
         )}
-        {step === 2 && (
+        {step === 2 && role === ROLE.EXTERNAL_USER && (
+          <StepAssignWorkspaces
+            workspaceIds={workspaceIds}
+            toggleWorkspace={toggleWorkspace}
+            error={workspaceError}
+            inviteeName={name}
+          />
+        )}
+        {step === 2 && role !== ROLE.EXTERNAL_USER && (
           <StepPermissions permissions={permissions} togglePerm={togglePerm} />
         )}
         {step === 3 && (
           <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 14, padding: '24px 28px' }}>
-            <StepReview name={name} email={email} role={role} permissions={permissions} />
+            <StepReview name={name} email={email} role={role} permissions={permissions} workspaceIds={workspaceIds} />
           </div>
         )}
       </div>
@@ -439,7 +489,7 @@ function InviteFlow({ onBack, onSubmit }) {
                 Continue <ChevronRight size={14} />
               </button>
             ) : (
-              <button onClick={() => onSubmit({ name, email, role, permissions })} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 22px', borderRadius: 8, border: 'none', background: 'var(--navy)', color: 'white', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>
+              <button onClick={() => onSubmit({ name, email, role, permissions, workspaceIds })} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 22px', borderRadius: 8, border: 'none', background: 'var(--navy)', color: 'white', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>
                 <Mail size={13} /> Send Invitation
               </button>
             )}
@@ -531,9 +581,84 @@ function PermissionCheckbox({ checked, onToggle, label, description }) {
   );
 }
 
-function StepReview({ name, email, role, permissions }) {
+/* ─── Step 2 (External User variant): assign workspaces ─── */
+function StepAssignWorkspaces({ workspaceIds, toggleWorkspace, error, inviteeName }) {
+  // Re-read fresh each render; seed if empty so demo flows work on first load.
+  React.useEffect(() => { seedWorkspacesIfEmpty(MOCK_WORKSPACES); }, []);
+  const workspaces = listWorkspaces();
+
+  if (workspaces.length === 0) {
+    return (
+      <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 14, padding: '28px 28px', textAlign: 'center' }}>
+        <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)' }}>No workspaces yet</div>
+        <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 8, lineHeight: 1.55, maxWidth: 420, margin: '8px auto 0' }}>
+          External clients can only access workspaces. Create your first workspace before inviting a client.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 14, padding: '24px 28px' }}>
+      <h3 style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 15, fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>
+        Assign to workspaces
+      </h3>
+      <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 6, lineHeight: 1.55 }}>
+        {inviteeName ? `${inviteeName} will only be able to access the workspaces you select.` : 'External clients only see workspaces they are assigned to.'} Select one or more.
+      </p>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 16 }}>
+        {workspaces.map((w) => {
+          const checked = workspaceIds.includes(w.id);
+          return (
+            <div
+              key={w.id}
+              onClick={() => toggleWorkspace(w.id)}
+              style={{
+                display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 14px',
+                borderRadius: 10, cursor: 'pointer',
+                border: '1px solid ' + (checked ? 'var(--navy)' : 'var(--border)'),
+                background: checked ? 'var(--ice-warm)' : 'white',
+                transition: 'all 120ms',
+              }}
+            >
+              <div style={{
+                width: 18, height: 18, borderRadius: 5, flexShrink: 0, marginTop: 1,
+                border: '1.5px solid ' + (checked ? 'var(--navy)' : '#CBD5E1'),
+                background: checked ? 'var(--navy)' : 'white',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                {checked && <Check size={12} style={{ color: 'white' }} strokeWidth={3} />}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{w.name}</div>
+                {w.description && (
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 3, lineHeight: 1.55, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                    {w.description}
+                  </div>
+                )}
+                <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 4 }}>
+                  {w.members.length} member{w.members.length !== 1 ? 's' : ''} · {w.documents.length} doc{w.documents.length !== 1 ? 's' : ''}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {error && (
+        <div style={{ marginTop: 12, fontSize: 12, color: '#C65454' }}>{error}</div>
+      )}
+    </div>
+  );
+}
+
+function StepReview({ name, email, role, permissions, workspaceIds = [] }) {
   const pills = permissions.map((p) => PERM_PILL_LABELS[p]).filter(Boolean);
   const baseList = role === ROLE.EXTERNAL_USER ? EXTERNAL_USER_BASE : INTERNAL_USER_BASE;
+  const assignedWorkspaces = role === ROLE.EXTERNAL_USER
+    ? listWorkspaces().filter((w) => workspaceIds.includes(w.id))
+    : [];
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <SummaryRow label="Name" value={name} />
@@ -558,6 +683,22 @@ function StepReview({ name, email, role, permissions }) {
           )}
         </div>
       </div>
+      {role === ROLE.EXTERNAL_USER && (
+        <div>
+          <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>Assigned workspaces</div>
+          {assignedWorkspaces.length === 0 ? (
+            <span style={{ fontSize: 12, color: '#C65454', fontStyle: 'italic' }}>No workspaces selected — client will have no access.</span>
+          ) : (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              {assignedWorkspaces.map((w) => (
+                <span key={w.id} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 999, background: 'var(--ice-warm)', color: 'var(--navy)', fontWeight: 500, border: '1px solid var(--border)' }}>
+                  {w.name}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
       <div style={{ padding: '12px 14px', borderRadius: 10, background: '#FBEED5', border: '1px solid #F3E2B1', display: 'flex', alignItems: 'flex-start', gap: 8 }}>
         <AlertTriangle size={14} style={{ color: '#E8A33D', flexShrink: 0, marginTop: 2 }} />
         <div style={{ fontSize: 12, color: '#6B4E1F', lineHeight: 1.5 }}>
