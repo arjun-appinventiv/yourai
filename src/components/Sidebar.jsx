@@ -7,14 +7,19 @@ import { SUPER_ADMIN_NAV } from '../lib/superAdminNav';
 
 // Shared nav definition lives in src/lib/superAdminNav.ts so the FRD Generator
 // can populate its Module dropdown from the same source of truth.
-const navSections = SUPER_ADMIN_NAV.map(section => ({
-  label: section.label,
-  items: section.items.map(item => ({
-    label: item.label,
-    icon: Icons[item.iconName] || Icons.Circle,
-    path: item.path,
-  })),
-}));
+// Items flagged `hiddenFromNav` stay routable but are not rendered here.
+const navSections = SUPER_ADMIN_NAV
+  .map(section => ({
+    label: section.label,
+    items: section.items
+      .filter(item => !item.hiddenFromNav)
+      .map(item => ({
+        label: item.label,
+        icon: Icons[item.iconName] || Icons.Circle,
+        path: item.path,
+      })),
+  }))
+  .filter(section => section.items.length > 0);
 
 export default function Sidebar() {
   const [showLogout, setShowLogout] = useState(false);

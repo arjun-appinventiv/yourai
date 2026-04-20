@@ -20,6 +20,11 @@ export interface NavItem {
    * Use for the FRD Generator itself so it doesn't list itself.
    */
   excludeFromFrdGenerator?: boolean;
+  /**
+   * When true, the item is hidden from the Super-Admin sidebar but the route
+   * remains registered — deep-links still work for internal use.
+   */
+  hiddenFromNav?: boolean;
 }
 
 export interface NavSection {
@@ -56,10 +61,10 @@ export const SUPER_ADMIN_NAV: NavSection[] = [
     label: 'OPERATIONS',
     items: [
       { label: 'Notifications', iconName: 'Bell', path: '/super-admin/notifications' },
-      { label: 'User Stories', iconName: 'BookMarked', path: '/super-admin/user-stories' },
+      { label: 'User Stories', iconName: 'BookMarked', path: '/super-admin/user-stories', hiddenFromNav: true },
       { label: 'Settings', iconName: 'Settings', path: '/super-admin/settings' },
-      { label: 'Bot Tester', iconName: 'FlaskConical', path: '/super-admin/bot-tester' },
-      { label: 'FRD Generator', iconName: 'FileCode2', path: '/super-admin/frd-generator', excludeFromFrdGenerator: true },
+      { label: 'Bot Tester', iconName: 'FlaskConical', path: '/super-admin/bot-tester', hiddenFromNav: true },
+      { label: 'FRD Generator', iconName: 'FileCode2', path: '/super-admin/frd-generator', excludeFromFrdGenerator: true, hiddenFromNav: true },
     ],
   },
 ];
