@@ -17,6 +17,16 @@ const DEMO_USERS: Record<string, { password: string; user: User }> = {
     password: 'Law@2026',
     user: { id: 'user-ryan', email: 'ryan@hartwell.com', name: 'Ryan Melade', role: 'ADMIN', orgId: 'org-hartwell', orgName: 'Hartwell & Associates', avatar: 'RM', plan: 'PROFESSIONAL' },
   },
+  // Internal User demo — org member with a couple of optional permissions
+  'priya@hartwell.com': {
+    password: 'Internal@123',
+    user: { id: 'm-002', email: 'priya@hartwell.com', name: 'Priya Shah', role: 'MEMBER', orgId: 'org-hartwell', orgName: 'Hartwell & Associates', avatar: 'PS', plan: 'PROFESSIONAL', tenantRole: 'INTERNAL_USER', permissions: ['create_workspace', 'view_audit_logs'] },
+  },
+  // External User demo — end client
+  'liaison@acmecorp.com': {
+    password: 'Client@123',
+    user: { id: 'm-004', email: 'liaison@acmecorp.com', name: 'Acme Corp (Client)', role: 'MEMBER', orgId: 'org-hartwell', orgName: 'Hartwell & Associates', avatar: 'AC', plan: 'PROFESSIONAL', tenantRole: 'EXTERNAL_USER', permissions: [] },
+  },
 };
 
 export interface User {
@@ -28,6 +38,10 @@ export interface User {
   orgName: string;
   avatar?: string;
   plan?: string;
+  /** Tenant role for in-org permissions (ORG_ADMIN / INTERNAL_USER / EXTERNAL_USER). */
+  tenantRole?: 'ORG_ADMIN' | 'INTERNAL_USER' | 'EXTERNAL_USER';
+  /** Optional per-user permission grants (see src/lib/roles.ts). */
+  permissions?: string[];
 }
 
 export interface LoginResponse {
