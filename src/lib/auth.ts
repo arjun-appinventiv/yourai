@@ -71,7 +71,8 @@ export async function login(
   // Fallback: check demo credentials client-side
   const demo = DEMO_USERS[email];
   if (demo && demo.password === password) {
-    if (isUserBlocked(email)) return blockedResponse();
+    const reason = getBlockReason(email);
+    if (reason) return blockedResponse(reason);
     return { success: true, requiresOtp: false, user: demo.user };
   }
 
@@ -80,7 +81,8 @@ export async function login(
     const registered = JSON.parse(localStorage.getItem('yourai_registered_users') || '{}');
     const reg = registered[email];
     if (reg && reg.password === password) {
-      if (isUserBlocked(email)) return blockedResponse();
+      const reason = getBlockReason(email);
+      if (reason) return blockedResponse(reason);
       return { success: true, requiresOtp: false, user: reg.user };
     }
   } catch { /* ignore */ }
@@ -88,31 +90,104 @@ export async function login(
   return { success: false, error: 'Invalid email or password. Please check your credentials and try again.' };
 }
 
+export type BlockReason = null | 'user' | 'tenant';
+
+// ─── Single-Session Enforcement ──────────────────────────────────────────
+// Each successful login issues a unique session token. The "winning" (most
+// recently issued) token for an email is stored under a shared key. A tab's
+// local token is stored under a tab-scoped key. The session guard compares
+// the two and signs out the tab whose token no longer matches.
+const SHARED_SESSION_KEY = 'yourai_active_sessions';    // email -> latest token
+const LOCAL_SESSION_KEY  = 'yourai_my_session_token';   // this tab's token
+
 /**
- * Check if the user has been blocked by the Super Admin.
- * Looks at yourai_mgmt_users (where SA toggles status) and the user's
- * org in yourai_mgmt_tenants (where the org itself may be blocked).
+ * Register a new login for the given email — invalidates any existing session
+ * for that email across all other tabs and devices.
  */
-export function isUserBlocked(email: string): boolean {
+export function claimSession(email: string): string {
+  const token = `sess-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  try {
+    const registry = JSON.parse(localStorage.getItem(SHARED_SESSION_KEY) || '{}');
+    registry[email] = { token, issuedAt: Date.now() };
+    localStorage.setItem(SHARED_SESSION_KEY, JSON.stringify(registry));
+    localStorage.setItem(LOCAL_SESSION_KEY, token);
+  } catch { /* ignore */ }
+  return token;
+}
+
+/**
+ * Returns true if this tab still holds the authoritative session for the
+ * given email. Returns false if another login has superseded it, or if no
+ * session exists at all.
+ */
+export function isSessionCurrent(email: string): boolean {
+  if (!email) return false;
+  try {
+    const localToken = localStorage.getItem(LOCAL_SESSION_KEY);
+    if (!localToken) return false;
+    const registry = JSON.parse(localStorage.getItem(SHARED_SESSION_KEY) || '{}');
+    const entry = registry[email];
+    return entry?.token === localToken;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Clear the session registry entry for the given email and this tab's token.
+ * Called on logout.
+ */
+export function releaseSession(email: string): void {
+  try {
+    const registry = JSON.parse(localStorage.getItem(SHARED_SESSION_KEY) || '{}');
+    delete registry[email];
+    localStorage.setItem(SHARED_SESSION_KEY, JSON.stringify(registry));
+    localStorage.removeItem(LOCAL_SESSION_KEY);
+  } catch { /* ignore */ }
+}
+
+/**
+ * Check if the user has been blocked by the Super Admin and return the reason.
+ * - 'user'   — the user's own account is blocked
+ * - 'tenant' — the user's organisation is blocked (affects all users in it)
+ * - null     — not blocked
+ *
+ * Tenant block wins over user block in the message shown, since the whole org
+ * losing access is the more explanatory context.
+ */
+export function getBlockReason(email: string): BlockReason {
   try {
     const mgmtUsers = JSON.parse(localStorage.getItem('yourai_mgmt_users') || '[]');
     const user = mgmtUsers.find((u: any) => u.email === email);
-    if (user && user.status === 'Blocked') return true;
 
-    // Also check whether the tenant (org) is blocked
+    // Check tenant (org) block first — if the org is blocked, that's the reason
     if (user && user.org) {
       const mgmtTenants = JSON.parse(localStorage.getItem('yourai_mgmt_tenants') || '[]');
       const tenant = mgmtTenants.find((t: any) => t.name === user.org);
-      if (tenant && (tenant.status === 'Suspended' || tenant.status === 'Blocked')) return true;
+      if (tenant && (tenant.status === 'Suspended' || tenant.status === 'Blocked')) {
+        return 'tenant';
+      }
     }
+
+    if (user && user.status === 'Blocked') return 'user';
   } catch { /* ignore */ }
-  return false;
+  return null;
 }
 
-function blockedResponse(): LoginResponse {
+/**
+ * Legacy boolean check — kept for backward compatibility.
+ * @deprecated use getBlockReason instead
+ */
+export function isUserBlocked(email: string): boolean {
+  return getBlockReason(email) !== null;
+}
+
+function blockedResponse(reason: BlockReason = 'user'): LoginResponse {
   return {
     success: false,
-    error: 'Your account has been blocked. Please contact your administrator to restore access.',
+    error: reason === 'tenant'
+      ? 'Your organisation has been blocked. Please contact your administrator to restore access.'
+      : 'Your account has been blocked. Please contact your administrator to restore access.',
   };
 }
 
@@ -203,13 +278,21 @@ export async function getMe(): Promise<User | null> {
 }
 
 /**
- * Logout — clears httpOnly cookie on the backend.
+ * Logout — clears httpOnly cookie on the backend and releases the single-session lock.
  */
 export async function logout(): Promise<void> {
-  await fetch(`${BASE}/api/auth/logout`, {
-    method: 'POST',
-    credentials: 'include',
-  });
+  // Release the session lock for this email so other tabs / future logins can proceed
+  try {
+    const email = localStorage.getItem('yourai_current_email') || '';
+    if (email) releaseSession(email);
+  } catch { /* ignore */ }
+
+  try {
+    await fetch(`${BASE}/api/auth/logout`, {
+      method: 'POST',
+      credentials: 'include',
+    });
+  } catch { /* ignore */ }
 }
 
 /**

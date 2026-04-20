@@ -12,7 +12,8 @@ import {
 import { billingData, subscriptionPlans } from '../../data/mockData';
 import { callLLM, getApiKey } from '../../lib/llm-client';
 import { extractFileText } from '../../lib/file-parser';
-import { trackDocUpload, isUserBlocked, logout } from '../../lib/auth';
+import { trackDocUpload } from '../../lib/auth';
+import { useSessionGuard } from '../../lib/useSessionGuard';
 import { detectIntent, detectAllIntents } from '../../lib/intentDetector';
 import { INTENTS, DEFAULT_INTENT, getIntentLabel } from '../../lib/intents';
 
@@ -260,7 +261,7 @@ const riskColors = {
    Layout structure confirmed by Arjun. Not signed off by Ryan.
    All existing nav items preserved — reorganised only. */
 
-function Sidebar({ onOpenPromptTemplates, onOpenClients, onOpenKnowledgePacks, onOpenDocumentVault, promptCount, clientCount, packCount, vaultCount, isOpen, onClose, threads, activeThreadId, onSwitchThread, onNewThread, onDeleteThread, threadSearch, onThreadSearchChange }) {
+function Sidebar({ onOpenPromptTemplates, onOpenClients, onOpenKnowledgePacks, onOpenDocumentVault, promptCount, clientCount, packCount, vaultCount, isOpen, onClose, threads, activeThreadId, onSwitchThread, onNewThread, onDeleteThread, threadSearch, onThreadSearchChange, onSignOut }) {
   // Collapse state — persisted to localStorage
   const [workspaceOpen, setWorkspaceOpen] = useState(() => {
     try { const v = localStorage.getItem('yourai_sidebar_workspace_open'); return v === null ? true : v === 'true'; } catch { return true; }
@@ -560,9 +561,7 @@ function Sidebar({ onOpenPromptTemplates, onOpenClients, onOpenKnowledgePacks, o
               boxShadow: '0 4px 16px rgba(0,0,0,0.1)', zIndex: 51, overflow: 'hidden',
             }}>
               {[
-                { icon: Download, label: 'Export', onClick: () => { setShowProfileMenu(false); } },
-                { icon: Settings, label: 'Settings', onClick: () => { setShowProfileMenu(false); } },
-                { icon: LogOut, label: 'Sign out', onClick: () => { setShowProfileMenu(false); }, danger: true },
+                { icon: LogOut, label: 'Sign out', onClick: () => { setShowProfileMenu(false); onSignOut?.(); }, danger: true },
               ].map((menuItem, i) => {
                 const MIcon = menuItem.icon;
                 return (
@@ -1896,23 +1895,27 @@ export default function ChatView() {
   const intentDropdownRef = useRef(null);
   const [showDocVersionBanner, setShowDocVersionBanner] = useState(false);
   const [pendingNewDoc, setPendingNewDoc] = useState(null); // holds the new doc until user decides
-  // ─── Blocked User Guard ───
-  const [blocked, setBlocked] = useState(false);
-  useEffect(() => {
-    const checkBlocked = () => {
-      const email = localStorage.getItem('yourai_current_email') || '';
-      if (email && isUserBlocked(email)) {
-        setBlocked(true);
-      }
-    };
-    checkBlocked();
-    // Re-check periodically in case SA blocks while user is active
-    const interval = setInterval(checkBlocked, 30000);
-    // Re-check on tab focus
-    const onFocus = () => checkBlocked();
-    window.addEventListener('focus', onFocus);
-    return () => { clearInterval(interval); window.removeEventListener('focus', onFocus); };
-  }, []);
+  const [streamingContent, setStreamingContent] = useState('');
+  // ─── Abort controller for in-flight streams ───
+  const streamAbortRef = useRef(null);
+  // ─── Session Guard (block detection + idle timeout) ───
+  const session = useSessionGuard({
+    idleTimeoutMs: 30 * 60 * 1000,  // 30 min inactivity
+    warningLeadMs: 2 * 60 * 1000,   // 2 min warning before timeout
+    blockPollMs: 30 * 1000,
+    onBlocked: () => {
+      // Abort any in-flight streaming response immediately
+      try { streamAbortRef.current?.abort(); } catch { /* ignore */ }
+      // Clear sensitive in-memory context and local state
+      setIsTyping(false);
+      setStreamingContent('');
+      setPendingAttachments([]);
+      setSessionDocContext(null);
+    },
+    onTimedOut: () => {
+      try { streamAbortRef.current?.abort(); } catch { /* ignore */ }
+    },
+  });
   const scrollRef = useRef(null);
   const inputRef = useRef(null);
   // Removed: responseIdx — no longer needed with real LLM responses
@@ -1927,8 +1930,6 @@ export default function ChatView() {
       if (raw) setProfile(JSON.parse(raw));
     } catch (_) { /* ignore */ }
   }, []);
-
-  const [streamingContent, setStreamingContent] = useState('');
 
   const scrollToBottom = useCallback(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -2107,10 +2108,16 @@ export default function ChatView() {
       let fullContent = '';
       let sourceBadge = null;
 
+      // Fresh abort controller for this request — onBlocked / onTimedOut aborts it
+      try { streamAbortRef.current?.abort(); } catch { /* ignore */ }
+      const controller = new AbortController();
+      streamAbortRef.current = controller;
+
       try {
         const response = await fetch(`${base}/api/chat`, {
           method: 'POST',
           credentials: 'include',
+          signal: controller.signal,
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             conversationId: activeThreadId,
@@ -2527,41 +2534,68 @@ INSTRUCTIONS:
     setClients(prev => prev.filter(c => c.id !== id));
   };
 
-  // ─── Blocked User Screen ───
-  // Renders when SA has blocked this user or their tenant.
-  if (blocked) {
+  // ─── Session Guard Screens (Blocked / Timed Out / Superseded) ───
+  if (session.state.status === 'blocked' || session.state.status === 'timed-out' || session.state.status === 'superseded') {
+    const isBlocked = session.state.status === 'blocked';
+    const isSuperseded = session.state.status === 'superseded';
+    const reason = isBlocked ? session.state.reason : null;
     const handleSignOut = async () => {
-      try { await logout(); } catch { /* ignore */ }
-      try {
-        localStorage.removeItem('yourai_current_email');
-        localStorage.removeItem('yourai_user_profile');
-      } catch { /* ignore */ }
+      await session.signOut();
       navigate('/app/login');
     };
+    const title = isBlocked
+      ? (reason === 'tenant' ? 'Organisation Blocked' : 'Access Blocked')
+      : isSuperseded ? 'Signed in on another device' : 'Session expired';
+    const body = isBlocked
+      ? (reason === 'tenant'
+          ? 'Your organisation has been blocked by an administrator. All users from your firm have lost access to YourAI. If you believe this is a mistake, please reach out to your firm\'s admin or contact YourAI support.'
+          : 'Your account has been blocked by your administrator. You no longer have access to YourAI. If you believe this is a mistake, please reach out to your firm\'s admin or contact support.')
+      : isSuperseded
+        ? 'Your account was signed in on another device or browser. For security, only one active session is allowed per account. Sign in again here to continue on this device.'
+        : 'You were signed out after 30 minutes of inactivity. This keeps your documents and conversations secure. Please sign back in to continue.';
     return (
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', padding: 24, background: 'var(--ice-warm)', textAlign: 'center' }}>
-        <div style={{ width: 72, height: 72, borderRadius: '50%', background: '#F9E7E7', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 20 }}>
-          <Lock size={32} style={{ color: '#C65454' }} />
+        <div style={{ width: 72, height: 72, borderRadius: '50%', background: isBlocked ? '#F9E7E7' : '#FBEED5', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 20 }}>
+          <Lock size={32} style={{ color: isBlocked ? '#C65454' : '#E8A33D' }} />
         </div>
-        <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 28, color: 'var(--navy)', margin: 0 }}>Access Blocked</h1>
-        <p style={{ fontSize: 15, color: 'var(--text-secondary)', maxWidth: 440, marginTop: 12, lineHeight: 1.6 }}>
-          Your account has been blocked by your administrator. You no longer have access to YourAI.
-          If you believe this is a mistake, please reach out to your firm's admin or contact support.
-        </p>
+        <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 28, color: 'var(--navy)', margin: 0 }}>{title}</h1>
+        <p style={{ fontSize: 15, color: 'var(--text-secondary)', maxWidth: 440, marginTop: 12, lineHeight: 1.6 }}>{body}</p>
         <div style={{ display: 'flex', gap: 12, marginTop: 24 }}>
           <button onClick={handleSignOut} style={{ padding: '10px 20px', borderRadius: 6, background: 'var(--navy)', color: '#fff', border: 'none', fontSize: 14, fontWeight: 500, cursor: 'pointer' }}>
-            Sign out
+            {isBlocked ? 'Sign out' : 'Sign in again'}
           </button>
-          <a href="mailto:support@yourai.com" style={{ padding: '10px 20px', borderRadius: 6, background: 'transparent', color: 'var(--navy)', border: '1px solid var(--navy)', fontSize: 14, fontWeight: 500, textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>
-            Contact support
-          </a>
+          {isBlocked && (
+            <a href="mailto:support@yourai.com" style={{ padding: '10px 20px', borderRadius: 6, background: 'transparent', color: 'var(--navy)', border: '1px solid var(--navy)', fontSize: 14, fontWeight: 500, textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>
+              Contact support
+            </a>
+          )}
         </div>
       </div>
     );
   }
 
+  // ─── Idle warning modal (overlay shown 2 min before timeout) ─────────
+  const idleWarning = session.state.status === 'idle-warning' ? (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(10, 36, 99, 0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, backdropFilter: 'blur(2px)' }}>
+      <div style={{ background: 'white', borderRadius: 12, padding: 28, maxWidth: 400, boxShadow: '0 12px 32px rgba(10, 36, 99, 0.14)', textAlign: 'center' }}>
+        <div style={{ width: 48, height: 48, borderRadius: '50%', background: '#FBEED5', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+          <AlertTriangle size={22} style={{ color: '#E8A33D' }} />
+        </div>
+        <h3 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 20, color: 'var(--navy)', margin: '0 0 8px' }}>Still there?</h3>
+        <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '0 0 20px', lineHeight: 1.6 }}>
+          You've been inactive for a while. For your security, you'll be signed out in about 2 minutes.
+        </p>
+        <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
+          <button onClick={async () => { await session.signOut(); navigate('/app/login'); }} style={{ padding: '8px 16px', borderRadius: 6, background: 'transparent', color: 'var(--text-secondary)', border: '1px solid var(--border-mid)', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>Sign out now</button>
+          <button onClick={session.stayActive} style={{ padding: '8px 16px', borderRadius: 6, background: 'var(--navy)', color: '#fff', border: 'none', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>Stay signed in</button>
+        </div>
+      </div>
+    </div>
+  ) : null;
+
   return (
     <div style={{ display: 'flex', height: '100vh', width: '100%', overflowX: 'hidden' }}>
+      {idleWarning}
       <Sidebar
         onOpenPromptTemplates={() => { setShowPromptPanel(true); setSidebarOpen(false); }}
         onOpenClients={() => { setShowClientsPanel(true); setSidebarOpen(false); }}
@@ -2580,6 +2614,7 @@ INSTRUCTIONS:
         onDeleteThread={handleDeleteThread}
         threadSearch={threadSearch}
         onThreadSearchChange={setThreadSearch}
+        onSignOut={async () => { await session.signOut(); navigate('/app/login'); }}
       />
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
         <TopNav plan={plan} usage={usage} onOpenSidebar={() => setSidebarOpen(true)} />
