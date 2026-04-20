@@ -1716,45 +1716,26 @@ function getGreeting() {
   return 'Good evening';
 }
 
-function getSuggestedPrompts(profile) {
-  if (!profile || !profile.onboardingCompleted) {
-    return [
-      { icon: FileSearch, title: 'Analyze a Contract', prompt: 'Upload a contract and I\'ll identify key risks, unusual clauses, and recommended changes' },
-      { icon: Search, title: 'Legal Research', prompt: 'Ask me any legal question and I\'ll provide cited answers from your documents' },
-      { icon: LayoutDashboard, title: 'Set Up Workspace', prompt: 'Help me organize my first workspace and invite my team members' },
-    ];
-  }
-  const prompts = [];
-  const state = profile.primaryState || '';
-  const areas = profile.practiceAreas || [];
-  const goal = profile.primaryGoal || '';
-  if (state && prompts.length < 3) {
-    prompts.push({ icon: MapPin, title: `${state} Legal Research`, prompt: `What are the current ${state} state laws on ${areas[0] || 'corporate law'}?` });
-  }
-  if (prompts.length < 3) {
-    for (const area of areas) {
-      if (prompts.length >= 3) break;
-      if (area === 'Corporate & M&A') prompts.push({ icon: FileText, title: 'Contract Analysis', prompt: 'Analyze this M&A agreement and flag any unusual indemnification clauses' });
-      else if (area === 'Litigation') prompts.push({ icon: Scale, title: 'Case Research', prompt: `Research recent ${state || 'state'} court decisions on summary judgment standards` });
-      else if (area === 'Employment & Labor') prompts.push({ icon: Users, title: 'Employment Law', prompt: `Summarize ${state || 'state'} employment law requirements for non-compete agreements` });
-      else if (area === 'Real Estate') prompts.push({ icon: Building2, title: 'Real Estate', prompt: `Review this lease agreement for ${state || 'state'} compliance issues` });
-    }
-  }
-  if (prompts.length < 3) {
-    if (goal === 'Analyze a Contract') prompts.push({ icon: FileSearch, title: 'Analyze a Contract', prompt: 'Upload a contract and I\'ll identify key risks, unusual clauses, and recommended changes' });
-    else if (goal === 'Research Legal Questions') prompts.push({ icon: Search, title: 'Legal Research', prompt: 'Ask me any legal question and I\'ll provide cited answers from your documents' });
-    else if (goal === 'Set Up My Workspace') prompts.push({ icon: LayoutDashboard, title: 'Set Up Workspace', prompt: 'Help me organize my first workspace and invite my team members' });
-  }
-  const defaults = [
-    { icon: FileSearch, title: 'Analyze a Contract', prompt: 'Upload a contract and I\'ll identify key risks, unusual clauses, and recommended changes' },
-    { icon: Search, title: 'Legal Research', prompt: 'Ask me any legal question and I\'ll provide cited answers from your documents' },
-    { icon: LayoutDashboard, title: 'Set Up Workspace', prompt: 'Help me organize my first workspace and invite my team members' },
+function getSuggestedPrompts(/* profile */) {
+  // Paste-ready prompts — clicking fills the input with a real, usable prompt.
+  // Covers three common legal workflows: review, summarise, draft.
+  return [
+    {
+      icon: FileSearch,
+      title: 'Review a contract',
+      prompt: 'Review this contract and flag any one-sided provisions, unusual liability caps, or missing standard protections I should push back on. Structure your response as: 1) high-risk issues, 2) medium-risk issues, 3) recommended redlines.',
+    },
+    {
+      icon: FileText,
+      title: 'Summarise a document',
+      prompt: 'Summarise this document in three sections: (1) Key obligations and deadlines, (2) Risk areas and ambiguities, (3) Recommended next steps. Keep each section under 100 words.',
+    },
+    {
+      icon: Scale,
+      title: 'Draft an email to counsel',
+      prompt: 'Draft a professional email to opposing counsel requesting a seven-day extension on the upcoming deadline. Keep the tone courteous but firm, under 120 words, and include a brief reason tied to document review workload.',
+    },
   ];
-  for (const d of defaults) {
-    if (prompts.length >= 3) break;
-    if (!prompts.find((p) => p.title === d.title)) prompts.push(d);
-  }
-  return prompts.slice(0, 3);
 }
 
 function PlanAwarenessBadge({ plan, onViewPlans }) {
@@ -1955,9 +1936,7 @@ export default function ChatView() {
 
   useEffect(() => { scrollToBottom(); }, [messages, isTyping, streamingContent, scrollToBottom]);
 
-  const inputPlaceholder = profile && profile.primaryState
-    ? `Ask anything about ${profile.primaryState} law or your documents...`
-    : 'Ask anything, analyze files, or search the web...';
+  const inputPlaceholder = 'Ask anything, analyze files, or search the web...';
 
   const handlePromptClick = useCallback((promptText) => {
     setInput(promptText);

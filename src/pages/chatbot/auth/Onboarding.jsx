@@ -86,26 +86,7 @@ const FIRM_SIZES = [
   { id: 'large', icon: Building2, title: 'Large Firm', desc: '50+ attorneys' },
 ];
 
-const FIRST_ACTIONS = [
-  {
-    id: 'analyze',
-    icon: FileSearch,
-    title: 'Analyze a Contract',
-    desc: 'Upload a contract and get AI-powered analysis',
-  },
-  {
-    id: 'research',
-    icon: Search,
-    title: 'Research Legal Questions',
-    desc: 'Ask anything and get cited answers',
-  },
-  {
-    id: 'workspace',
-    icon: LayoutDashboard,
-    title: 'Set Up My Workspace',
-    desc: 'Organize matters, invite team members',
-  },
-];
+// FIRST_ACTIONS constant removed — no longer collected in onboarding.
 
 /* ------------------------------------------------------------------ */
 /*  Reusable sub-components                                           */
@@ -259,7 +240,6 @@ export default function Onboarding() {
   const [role, setRole] = useState('');
   const [practiceAreas, setPracticeAreas] = useState([]);
   const [firmSize, setFirmSize] = useState('');
-  const [firstAction, setFirstAction] = useState('');
   const [primaryState, setPrimaryState] = useState('');
   const [additionalStates, setAdditionalStates] = useState([]);
   const [federalPractice, setFederalPractice] = useState(false);
@@ -277,7 +257,9 @@ export default function Onboarding() {
   const [paymentProcessing, setPaymentProcessing] = useState(false);
   const [paymentComplete, setPaymentComplete] = useState(false);
 
-  const TOTAL_STEPS = 7;
+  // Onboarding flow: Role → Practice Areas → Firm Size → Primary State → Plan → Payment
+  // (Removed: "First Action" step — suggested prompts no longer depend on it.)
+  const TOTAL_STEPS = 6;
 
   const canContinue = () => {
     switch (step) {
@@ -285,21 +267,20 @@ export default function Onboarding() {
       case 2: return practiceAreas.length > 0;
       case 3: return !!firmSize;
       case 4: return !!primaryState;
-      case 5: return !!firstAction;
-      case 6: return !!selectedPlan;
-      case 7: return !paymentProcessing && (selectedPlan === 'free' || paymentComplete || (cardNumber.replace(/\s/g, '').length >= 15 && cardExpiry.length >= 4 && cardCvc.length >= 3 && billingName.trim().length > 0));
+      case 5: return !!selectedPlan;
+      case 6: return !paymentProcessing && (selectedPlan === 'free' || paymentComplete || (cardNumber.replace(/\s/g, '').length >= 15 && cardExpiry.length >= 4 && cardCvc.length >= 3 && billingName.trim().length > 0));
       default: return false;
     }
   };
 
   const goNext = () => {
-    // Step 6 → 7: if free plan, skip payment step entirely
-    if (step === 6 && selectedPlan === 'free') {
+    // Step 5 → 6: if free plan, skip payment step entirely
+    if (step === 5 && selectedPlan === 'free') {
       finishOnboarding();
       return;
     }
-    // Step 7: process payment then finish
-    if (step === 7) {
+    // Step 6 (payment): process then finish
+    if (step === 6) {
       if (paymentComplete) {
         finishOnboarding();
         return;
@@ -320,7 +301,6 @@ export default function Onboarding() {
     try {
       const selectedRole = ROLES.find((r) => r.id === role);
       const selectedFirmSize = FIRM_SIZES.find((s) => s.id === firmSize);
-      const selectedAction = FIRST_ACTIONS.find((a) => a.id === firstAction);
       const planData = subscriptionPlans.find((p) => p.id === selectedPlan);
       const planName = planData ? planData.name : 'Free';
       const planPrice = planData ? (planData.price || 0) : 0;
@@ -336,7 +316,6 @@ export default function Onboarding() {
           primaryState: primaryState,
           additionalStates: additionalStates,
           federalPractice: federalPractice,
-          primaryGoal: selectedAction ? selectedAction.title : firstAction,
           plan: planName,
           planId: selectedPlan,
           onboardingCompleted: true,
@@ -715,24 +694,8 @@ export default function Onboarding() {
     </div>
   );
 
-  const renderStep5 = () => (
-    <div key="step5">
-      <h2 style={styles.title}>What would you like to start with?</h2>
-      <p style={styles.subtitle}>You can always change this later</p>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 24 }}>
-        {FIRST_ACTIONS.map((a) => (
-          <SelectableCard
-            key={a.id}
-            icon={a.icon}
-            title={a.title}
-            desc={a.desc}
-            selected={firstAction === a.id}
-            onClick={() => setFirstAction(a.id)}
-          />
-        ))}
-      </div>
-    </div>
-  );
+  // renderStep5 (First Action) removed — prompts on the chat welcome screen
+  // are now generic paste-ready prompts that don't require this answer.
 
   const planFeatures = {
     free: ['50 documents/month', 'GPT-4o-mini + Gemini Flash', '1 knowledge pack', 'Community support'],
@@ -947,7 +910,10 @@ export default function Onboarding() {
     </div>
   );
 
-  const stepRenderers = [renderStep1, renderStep2, renderStep3, renderStep4, renderStep5, renderStep6, renderStep7];
+  // Active flow: Role → Practice Areas → Firm Size → Primary State → Plan → Payment
+  // renderStep5 (First Action) is no longer surfaced — the legal-workflow prompts on
+  // the chat welcome screen don't depend on that answer anymore.
+  const stepRenderers = [renderStep1, renderStep2, renderStep3, renderStep4, renderStep6, renderStep7];
 
   return (
     <div style={styles.wrapper}>
@@ -968,7 +934,7 @@ export default function Onboarding() {
         <div
           style={{
             ...styles.card,
-            maxWidth: step === 6 ? 960 : 560,
+            maxWidth: step === 5 ? 960 : 560,
             animation: `${direction === 'forward' ? 'onb-slide-in-right' : 'onb-slide-in-left'} 0.35s ease`,
           }}
         >
