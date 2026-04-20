@@ -87,6 +87,13 @@ export async function login(
   if (demo && demo.password === password) {
     const reason = getBlockReason(email);
     if (reason) return blockedResponse(reason);
+    // Persist to yourai_registered_users so RoleContext's localStorage
+    // fallback can resolve tenantRole and permissions on reload.
+    try {
+      const registered = JSON.parse(localStorage.getItem('yourai_registered_users') || '{}');
+      registered[email] = { password: demo.password, user: demo.user };
+      localStorage.setItem('yourai_registered_users', JSON.stringify(registered));
+    } catch { /* ignore */ }
     return { success: true, requiresOtp: false, user: demo.user };
   }
 
