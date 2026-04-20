@@ -150,19 +150,19 @@ export const INVITE_PERMISSION_GROUPS: PermissionGroup[] = [
     items: [
       {
         permission: PERMISSIONS.CREATE_WORKSPACE,
-        label: 'Create Workspaces',
+        label: 'Create workspaces',
         description:
           'Spin up new case rooms. The creator automatically becomes the owner and can add colleagues and clients.',
       },
       {
         permission: PERMISSIONS.TRANSFER_WORKSPACE,
-        label: 'Transfer Workspace Ownership',
+        label: 'Transfer ownership',
         description:
-          'Hand over ownership of a workspace to another member — useful when a matter moves to a different lead attorney.',
+          'Hand over a workspace they own to another member — useful when a matter moves to a different lead attorney.',
       },
       {
         permission: PERMISSIONS.MANAGE_WORKSPACE_MEMBERS,
-        label: 'Manage Members Across All Workspaces',
+        label: 'Manage members',
         description:
           'Add or remove members from any workspace in the org, not just ones they own. Intended for office administrators.',
       },
@@ -173,13 +173,13 @@ export const INVITE_PERMISSION_GROUPS: PermissionGroup[] = [
     items: [
       {
         permission: PERMISSIONS.CREATE_GLOBAL_KP,
-        label: 'Create Org-Wide Knowledge Packs',
+        label: 'Share knowledge packs',
         description:
-          'Publish knowledge packs so every Internal User in the firm can attach them to their chats. Private packs remain user-scoped.',
+          'Publish knowledge packs org-wide so every Internal User can attach them to their chats. Private packs remain user-scoped.',
       },
       {
         permission: PERMISSIONS.MANAGE_PROMPT_TEMPLATES,
-        label: 'Manage Prompt Templates',
+        label: 'Manage prompt templates',
         description:
           'Create and edit prompt templates shared with the whole firm (e.g., standard contract-review prompts).',
       },
@@ -196,7 +196,7 @@ export const INVITE_PERMISSION_GROUPS: PermissionGroup[] = [
     items: [
       {
         permission: PERMISSIONS.MANAGE_CLIENTS,
-        label: 'Manage Client Directory',
+        label: 'Manage clients',
         description:
           'Add, edit, or archive clients in the firm directory. Required to onboard a new client or update contact information.',
       },
@@ -207,13 +207,13 @@ export const INVITE_PERMISSION_GROUPS: PermissionGroup[] = [
     items: [
       {
         permission: PERMISSIONS.VIEW_AUDIT_LOGS,
-        label: 'View Audit Logs',
+        label: 'View audit logs',
         description:
           'See the full activity log across the org — logins, document access, permission changes, invitations.',
       },
       {
         permission: PERMISSIONS.EXPORT_COMPLIANCE_REPORTS,
-        label: 'Export Compliance Reports',
+        label: 'Export compliance reports',
         description:
           'Generate and export PDF compliance summaries for SOC 2, HIPAA, or state bar audits.',
       },
@@ -224,15 +224,15 @@ export const INVITE_PERMISSION_GROUPS: PermissionGroup[] = [
     items: [
       {
         permission: PERMISSIONS.VIEW_USAGE_REPORTS,
-        label: 'View Usage & Cost Reports',
+        label: 'View usage & costs',
         description:
           'See AI token consumption, document counts, and storage use — by user, by workspace, and overall.',
       },
       {
         permission: PERMISSIONS.ACCESS_BILLING,
-        label: 'Access Billing Dashboard',
+        label: 'View billing',
         description:
-          'View invoices, current plan, and payment history. Changing the plan or payment method remains Org Admin only.',
+          'See invoices, the current plan, and payment history. Changing the plan or payment method remains Org Admin only.',
       },
     ],
   },

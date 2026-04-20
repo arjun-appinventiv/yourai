@@ -30,7 +30,9 @@ import {
   removeDocument, updateWorkspace, transferOwnership, deleteWorkspace,
   listThreadsForUser, createThread, updateThread, deleteThread,
   canEditDoc, canManageWorkspace, isWorkspaceCreator, isWorkspaceMember,
+  seedWorkspacesIfEmpty,
 } from '../../lib/workspace';
+import { MOCK_WORKSPACES } from '../../lib/mockWorkspaces';
 import { callLLM } from '../../lib/llm-client';
 import { INTENTS, DEFAULT_INTENT, getIntentLabel } from '../../lib/intents';
 import { detectAllIntents } from '../../lib/intentDetector';
@@ -99,6 +101,9 @@ export default function WorkspaceChatView() {
   // Load workspace + threads
   useEffect(() => {
     if (!id) return;
+    // Seed mock workspaces if the user landed here via a deep link before
+    // visiting the list page, so the three seeded demo workspaces resolve.
+    seedWorkspacesIfEmpty(MOCK_WORKSPACES);
     const ws = getWorkspace(id);
     setWorkspace(ws);
     if (ws) {
