@@ -32,15 +32,39 @@ type AnyUser = {
   role?: string;            // legacy SA-portal field ("ADMIN", etc.)
   tenantRole?: Role;        // preferred — set by sign-up / invite
   permissions?: Permission[];
+  email?: string;
 } | null | undefined;
 
-function deriveRoleFromUser(user: AnyUser): Role {
-  if (!user) return ROLE.INTERNAL_USER;
-  if (user.tenantRole) return user.tenantRole;
+/**
+ * On the Vercel static demo, sign-up doesn't populate AuthContext — it only
+ * writes to localStorage. Fall back to reading the registered user so the
+ * freshly-signed-up Org Admin doesn't see an empty sidebar.
+ */
+function readLocalRegisteredUser(): AnyUser {
+  try {
+    const email = localStorage.getItem('yourai_current_email');
+    if (!email) return null;
+    const registered = JSON.parse(localStorage.getItem('yourai_registered_users') || '{}');
+    return registered[email]?.user || null;
+  } catch {
+    return null;
+  }
+}
 
-  // Legacy: the first user to sign up for an org is stored with role: 'ADMIN'
+function deriveRoleFromUser(user: AnyUser): Role {
+  // If AuthContext has no operator (e.g. just-signed-up, session cookie not set),
+  // try the localStorage-registered user so the demo still works.
+  const effective: AnyUser = user || readLocalRegisteredUser();
+
+  // An unknown user on /chat — treat as Org Admin. A fresh sign-up is by
+  // definition the org's first user, so anything else locks them out.
+  if (!effective) return ROLE.ORG_ADMIN;
+
+  if (effective.tenantRole) return effective.tenantRole;
+
+  // The first user to sign up for an org is stored with role: 'ADMIN'
   // in src/lib/auth.ts — treat that as the Org Admin for the tenant view.
-  if (user.role === 'ADMIN') return ROLE.ORG_ADMIN;
+  if (effective.role === 'ADMIN') return ROLE.ORG_ADMIN;
 
   return ROLE.INTERNAL_USER;
 }
