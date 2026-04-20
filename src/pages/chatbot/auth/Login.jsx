@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, Loader, ShieldCheck, ArrowLeft, RefreshCw, Info } from 'lucide-react';
 import ChatAuthLayout from '../../../components/ChatAuthLayout';
 import { login as apiLogin, verifyOtp as apiVerifyOtp, resendOtp as apiResendOtp, trackLogin, claimSession } from '../../../lib/auth';
@@ -32,6 +32,17 @@ export default function Login() {
   const otpRefs = useRef([]);
 
   const navigate = useNavigate();
+  // Deep-link preservation: if the user was sent here after hitting a
+  // protected route, honour `?redirect=/chat/...` on successful sign-in.
+  // Only allow same-origin paths to prevent open-redirect abuse.
+  const [searchParams] = useSearchParams();
+  const getRedirectTarget = () => {
+    const candidate = searchParams.get('redirect') || '';
+    if (!candidate) return '/chat';
+    // Must start with a single slash (same-origin path) and not a protocol-relative //
+    if (!candidate.startsWith('/') || candidate.startsWith('//')) return '/chat';
+    return candidate;
+  };
 
   // Resend countdown timer
   useEffect(() => {
@@ -84,7 +95,7 @@ export default function Login() {
           localStorage.setItem('yourai_current_email', email);
           claimSession(email); // Invalidates any other active session for this email
           setLoadingText('Authenticated! Redirecting...');
-          navigate('/chat', { replace: true });
+          navigate(getRedirectTarget(), { replace: true });
         }
       } else {
         setLoading(false);
@@ -159,7 +170,7 @@ export default function Login() {
         localStorage.setItem('yourai_current_email', email);
         claimSession(email); // Invalidates any other active session for this email
         setLoadingText('Authenticated! Redirecting...');
-        navigate('/chat', { replace: true });
+        navigate(getRedirectTarget(), { replace: true });
       } else {
         setOtpVerifying(false);
         setLoadingText('');
