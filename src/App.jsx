@@ -50,6 +50,8 @@ import PlaceholderPage from './pages/org-admin/PlaceholderPage';
 // Chatbot pages
 import ChatLogin from './pages/chatbot/auth/Login';
 import ChatSignUp from './pages/chatbot/auth/SignUp';
+import ChatForgotPassword from './pages/chatbot/auth/ForgotPassword';
+import ChatResetPassword from './pages/chatbot/auth/ResetPassword';
 import ChatOnboarding from './pages/chatbot/auth/Onboarding';
 import ChatView from './pages/chatbot/ChatView';
 
@@ -91,6 +93,8 @@ export default function App() {
             {/* Chatbot routes */}
             <Route path="/chat/login" element={<ChatLogin />} />
             <Route path="/chat/signup" element={<ChatSignUp />} />
+            <Route path="/chat/forgot-password" element={<ChatForgotPassword />} />
+            <Route path="/chat/reset-password" element={<ChatResetPassword />} />
             <Route path="/chat/onboarding" element={<ChatOnboarding />} />
             <Route path="/chat" element={<ChatView />} />
 

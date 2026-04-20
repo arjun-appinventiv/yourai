@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
-import { FileCode2, Sparkles, Loader, AlertTriangle, Copy, X, Check } from 'lucide-react';
+import { FileCode2, Sparkles, Loader, AlertTriangle, Copy, X, Check, ChevronDown, ChevronUp } from 'lucide-react';
 import { getModuleOptions } from '../../lib/superAdminNav';
 
 const PLATFORMS = ['Chat View', 'Super Admin'];
@@ -9,11 +10,19 @@ const GENERIC_ERROR_MESSAGE = "Couldn't generate the FRD. Please try again.";
 
 /* ═══════════════════ FRD Generator page ═══════════════════ */
 export default function FrdGenerator() {
+  const [searchParams] = useSearchParams();
+  // Debug mode is an internal switch for operators investigating why
+  // generation fails. Enable by adding ?debug=1 to the URL. When on, the
+  // error banner shows the underlying OpenAI status and response snippet.
+  const debugMode = searchParams.get('debug') === '1';
+
   const [platform, setPlatform] = useState('');
   const [moduleLabel, setModuleLabel] = useState('');
   const [loading, setLoading] = useState(false);
   const [markdown, setMarkdown] = useState('');
   const [error, setError] = useState('');
+  const [errorDebug, setErrorDebug] = useState(null);
+  const [showDebug, setShowDebug] = useState(false);
   const abortRef = useRef(null);
 
   const moduleOptions = useMemo(
@@ -31,6 +40,8 @@ export default function FrdGenerator() {
   const handleGenerate = async () => {
     if (!canGenerate) return;
     setError('');
+    setErrorDebug(null);
+    setShowDebug(false);
     setMarkdown('');
     setLoading(true);
 
@@ -41,9 +52,13 @@ export default function FrdGenerator() {
 
     try {
       const base = import.meta.env.VITE_API_URL || '';
-      const response = await fetch(`${base}/api/frd-generate`, {
+      const endpoint = `${base}/api/frd-generate${debugMode ? '?debug=1' : ''}`;
+      const response = await fetch(endpoint, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(debugMode ? { 'X-Debug': '1' } : {}),
+        },
         credentials: 'include',
         signal: controller.signal,
         body: JSON.stringify({ platform, module: moduleLabel }),
@@ -51,6 +66,14 @@ export default function FrdGenerator() {
 
       if (!response.ok) {
         setError(GENERIC_ERROR_MESSAGE);
+        // If debug mode is on and the server returned a JSON error with
+        // a `debug` field, surface it to the user.
+        if (debugMode) {
+          try {
+            const errJson = await response.clone().json();
+            if (errJson?.debug) setErrorDebug(errJson.debug);
+          } catch { /* ignore — non-JSON error body */ }
+        }
         setLoading(false);
         return;
       }
@@ -87,6 +110,9 @@ export default function FrdGenerator() {
         // Silent abort — user navigated away or kicked off another request.
       } else {
         setError(GENERIC_ERROR_MESSAGE);
+        if (debugMode) {
+          setErrorDebug({ reason: 'client-exception', detail: err?.message || String(err) });
+        }
       }
     } finally {
       setLoading(false);
@@ -97,9 +123,16 @@ export default function FrdGenerator() {
     <div style={{ maxWidth: 720 }}>
       {/* Header */}
       <div style={{ marginBottom: 24 }}>
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '4px 10px', borderRadius: 999, background: 'var(--ice-warm)', border: '1px solid var(--border)', fontSize: 11, color: 'var(--text-muted)', fontWeight: 500, marginBottom: 10 }}>
-          <Sparkles size={12} style={{ color: 'var(--gold)' }} />
-          Internal tool
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '4px 10px', borderRadius: 999, background: 'var(--ice-warm)', border: '1px solid var(--border)', fontSize: 11, color: 'var(--text-muted)', fontWeight: 500 }}>
+            <Sparkles size={12} style={{ color: 'var(--gold)' }} />
+            Internal tool
+          </div>
+          {debugMode && (
+            <div title="Add ?debug=1 to surface verbose error details in the banner" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 10px', borderRadius: 999, background: '#FBEED5', border: '1px solid #E8A33D', fontSize: 11, color: '#E8A33D', fontWeight: 600 }}>
+              <AlertTriangle size={11} /> Debug mode
+            </div>
+          )}
         </div>
         <h1 style={{ fontFamily: "'DM Serif Display', serif", color: 'var(--text-primary)', fontSize: 28, margin: 0 }}>
           FRD Generator
@@ -161,7 +194,7 @@ export default function FrdGenerator() {
             style={{ marginTop: 4, display: 'flex', alignItems: 'flex-start', gap: 10, padding: '12px 14px', borderRadius: 10, background: '#F9E7E7', border: '1px solid #C65454' }}
           >
             <AlertTriangle size={16} style={{ color: '#C65454', flexShrink: 0, marginTop: 1 }} />
-            <div style={{ flex: 1 }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 13, color: '#C65454', fontWeight: 500 }}>{error}</div>
               <button
                 type="button"
@@ -181,6 +214,38 @@ export default function FrdGenerator() {
               >
                 Retry
               </button>
+
+              {/* Debug details — only shown when ?debug=1 AND the server returned a debug payload */}
+              {debugMode && errorDebug && (
+                <div style={{ marginTop: 10 }}>
+                  <button
+                    type="button"
+                    onClick={() => setShowDebug(v => !v)}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 8px', borderRadius: 6, border: '1px solid #C65454', background: 'transparent', color: '#C65454', fontSize: 11, fontWeight: 500, cursor: 'pointer' }}
+                  >
+                    {showDebug ? (<><ChevronUp size={12} /> Hide technical details</>) : (<><ChevronDown size={12} /> Show technical details</>)}
+                  </button>
+                  {showDebug && (
+                    <pre
+                      style={{
+                        marginTop: 8,
+                        padding: '10px 12px',
+                        borderRadius: 8,
+                        background: '#2B0E0E',
+                        color: '#F9E7E7',
+                        fontSize: 11,
+                        fontFamily: 'monospace',
+                        overflow: 'auto',
+                        maxHeight: 240,
+                        whiteSpace: 'pre-wrap',
+                        wordBreak: 'break-word',
+                      }}
+                    >
+                      {JSON.stringify(errorDebug, null, 2)}
+                    </pre>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         )}
