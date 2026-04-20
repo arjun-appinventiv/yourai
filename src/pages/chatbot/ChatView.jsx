@@ -2006,14 +2006,18 @@ function PlanAwarenessBadge({ plan, onViewPlans }) {
 }
 
 function EmptyState({ profile, plan, onPromptClick, navigate, onViewPlans }) {
-  const currentUserName = (operator?.name || (() => {
+  // Resolve first name from the signed-up user persisted to localStorage.
+  // EmptyState is a standalone component so we can't destructure AuthContext
+  // without a hook call — the localStorage lookup is enough for the demo.
+  const resolvedFirstName = (() => {
     try {
       const email = localStorage.getItem('yourai_current_email');
       if (!email) return '';
       const registered = JSON.parse(localStorage.getItem('yourai_registered_users') || '{}');
       return registered[email]?.user?.name || '';
     } catch { return ''; }
-  })()).split(' ')[0] || 'there';
+  })().split(' ')[0];
+  const currentUserName = resolvedFirstName || 'there';
   const prompts = getSuggestedPrompts(profile);
 
   return (
