@@ -13,7 +13,7 @@ import {
 import { useRole } from '../../context/RoleContext';
 import { useAuth } from '../../context/AuthContext';
 import { PERMISSIONS } from '../../lib/roles';
-import InviteTeamPanel from '../../components/chat/InviteTeamPanel';
+import TeamPage from '../../components/chat/TeamPage';
 import WorkspacesPanel from '../../components/chat/WorkspacesPanel';
 import { loadWorkspaces, filterVisibleWorkspaces } from '../../lib/workspaceAccess';
 import { billingData, subscriptionPlans } from '../../data/mockData';
@@ -2120,7 +2120,7 @@ export default function ChatView() {
   const [showCreatePrompt, setShowCreatePrompt] = useState(false);
   const [clients, setClients] = useState(DEFAULT_CLIENTS);
   const [showClientsPanel, setShowClientsPanel] = useState(false);
-  const [showInviteTeamPanel, setShowInviteTeamPanel] = useState(false);
+  const [showTeamPage, setShowTeamPage] = useState(false);
   const [teamMemberCount, setTeamMemberCount] = useState(null);
   const [showWorkspacesPanel, setShowWorkspacesPanel] = useState(false);
   // Visible-workspace count is recomputed from localStorage whenever the
@@ -2948,7 +2948,7 @@ INSTRUCTIONS:
         onOpenClients={() => { setShowClientsPanel(true); setSidebarOpen(false); }}
         onOpenKnowledgePacks={() => { setShowKnowledgePacksPanel(true); setSidebarOpen(false); }}
         onOpenDocumentVault={() => { setShowDocumentVaultPanel(true); setSidebarOpen(false); }}
-        onOpenInviteTeam={() => { setShowInviteTeamPanel(true); setSidebarOpen(false); }}
+        onOpenInviteTeam={() => { setShowTeamPage(true); setSidebarOpen(false); }}
         onOpenAuditLogs={() => { /* TODO: Part 5+ wires real audit-logs panel */ }}
         onOpenBilling={() => { navigate('/app/billing'); setSidebarOpen(false); }}
         onOpenWorkspaces={() => { setShowWorkspacesPanel(true); setSidebarOpen(false); }}
@@ -2969,7 +2969,9 @@ INSTRUCTIONS:
         onThreadSearchChange={setThreadSearch}
         onSignOut={async () => { await session.signOut(); navigate('/chat/login'); }}
       />
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+      {/* Chat main area — hidden when the Team page is active so the sidebar
+          stays visible but the chat UI is replaced by the full-page team view. */}
+      <div style={{ flex: 1, display: showTeamPage ? 'none' : 'flex', flexDirection: 'column', minWidth: 0 }}>
         <TopNav plan={plan} usage={usage} onOpenSidebar={() => setSidebarOpen(true)} />
 
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#FAFBFC', minHeight: 0 }}>
@@ -3485,6 +3487,18 @@ INSTRUCTIONS:
         </div>
       </div>
 
+      {/* ─── Team page — full-page replacement for the former Invite Team modal ─── */}
+      {showTeamPage && (
+        <TeamPage
+          onBack={() => setShowTeamPage(false)}
+          onCountChange={setTeamMemberCount}
+          onToast={(msg) => {
+            setToastMsg(msg);
+            setTimeout(() => setToastMsg(''), 3200);
+          }}
+        />
+      )}
+
       {/* Plan Comparison Modal */}
       {showPlanModal && <PlanComparisonModal currentPlan={plan} onClose={() => setShowPlanModal(false)} navigate={navigate} />}
 
@@ -3514,18 +3528,6 @@ INSTRUCTIONS:
           onClose={() => setShowClientsPanel(false)}
           onAddClient={() => { setShowClientsPanel(false); setShowAddClient(true); }}
           onDeleteClient={handleDeleteClient}
-        />
-      )}
-
-      {/* Invite Team Panel — Org Admin only (sidebar already gates visibility) */}
-      {showInviteTeamPanel && (
-        <InviteTeamPanel
-          onClose={() => setShowInviteTeamPanel(false)}
-          onCountChange={setTeamMemberCount}
-          onToast={(msg) => {
-            setToastMsg(msg);
-            setTimeout(() => setToastMsg(''), 3200);
-          }}
         />
       )}
 
