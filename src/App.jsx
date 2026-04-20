@@ -57,6 +57,7 @@ import ChatResetPassword from './pages/chatbot/auth/ResetPassword';
 import ChatOnboarding from './pages/chatbot/auth/Onboarding';
 import ChatView from './pages/chatbot/ChatView';
 import WorkspaceChatView from './pages/chatbot/WorkspaceChatView';
+import RouteErrorBoundary from './components/RouteErrorBoundary';
 
 import { Clock, Sparkles } from 'lucide-react';
 
@@ -101,7 +102,7 @@ export default function App() {
             <Route path="/chat/onboarding" element={<ChatOnboarding />} />
             <Route path="/chat" element={<ChatRoleProvider><ChatView /></ChatRoleProvider>} />
             <Route path="/chat/workspaces" element={<ChatRoleProvider><ChatView initialView="workspaces" /></ChatRoleProvider>} />
-            <Route path="/chat/workspaces/:id" element={<ChatRoleProvider><WorkspaceChatView /></ChatRoleProvider>} />
+            <Route path="/chat/workspaces/:id" element={<RouteErrorBoundary><ChatRoleProvider><WorkspaceChatView /></ChatRoleProvider></RouteErrorBoundary>} />
 
             {/* Org Admin routes */}
             <Route
