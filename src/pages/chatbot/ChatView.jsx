@@ -2236,7 +2236,7 @@ export default function ChatView({ initialView = 'chat' }) {
   const navigate = useNavigate();
   // Role + identity — used for workspace membership filtering in the sidebar
   // badge and panels below, plus External-User-only chat-mode toggle.
-  const { currentRole, hasPermission, isExternalUser } = useRole();
+  const { currentRole, hasPermission, isExternalUser, isOrgAdmin } = useRole();
   const { operator } = useAuth();
   const currentUserId = operator?.id || 'user-ryan';
 
