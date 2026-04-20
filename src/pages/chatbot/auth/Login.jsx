@@ -24,6 +24,7 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [loadingText, setLoadingText] = useState('');
   const [showCreds, setShowCreds] = useState(false);
+  const [showDemoModal, setShowDemoModal] = useState(false);
 
   // OTP state
   const [step, setStep] = useState('credentials'); // 'credentials' | 'otp'
@@ -489,32 +490,29 @@ export default function Login() {
         </button>
       </form>
 
-      {/* Demo credentials panel */}
-      <div className="mt-4 relative">
+      {/* Demo credentials — opens a modal with all three roles */}
+      <div className="mt-4">
         <button
           type="button"
-          onClick={() => setShowCreds(!showCreds)}
+          onClick={() => setShowDemoModal(true)}
           className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg transition-colors"
-          style={{ backgroundColor: showCreds ? '#F0F3F6' : 'var(--ice-warm)', color: showCreds ? '#1E3A8A' : 'var(--text-muted)', fontSize: '12px', border: '1px solid transparent' }}
+          style={{ backgroundColor: 'var(--ice-warm)', color: 'var(--text-muted)', fontSize: '12px', border: '1px solid transparent' }}
         >
           <Info size={14} />
-          {showCreds ? 'Hide credentials' : 'Show demo credentials'}
+          Show demo credentials
         </button>
-        {showCreds && (
-          <div className="mt-2 p-3 rounded-lg" style={{ backgroundColor: '#F0F3F6', border: '1px solid #F0F3F6' }}>
-            <div className="flex items-center justify-between mb-1">
-              <span style={{ fontSize: '11px', color: '#1E3A8A', fontWeight: 600 }}>EMAIL</span>
-              <button type="button" onClick={() => setEmail('ryan@hartwell.com')} style={{ fontSize: '11px', color: '#1E3A8A', cursor: 'pointer', background: 'none', border: 'none' }}>Copy to field</button>
-            </div>
-            <code className="break-all block" style={{ fontSize: '12px', color: 'var(--text-primary)' }}>ryan@hartwell.com</code>
-            <div className="flex items-center justify-between mb-1 mt-2">
-              <span style={{ fontSize: '11px', color: '#1E3A8A', fontWeight: 600 }}>PASSWORD</span>
-              <button type="button" onClick={() => setPassword('Law@2026')} style={{ fontSize: '11px', color: '#1E3A8A', cursor: 'pointer', background: 'none', border: 'none' }}>Copy to field</button>
-            </div>
-            <code className="break-all block" style={{ fontSize: '12px', color: 'var(--text-primary)' }}>Law@2026</code>
-          </div>
-        )}
       </div>
+
+      {showDemoModal && (
+        <DemoCredentialsModal
+          onClose={() => setShowDemoModal(false)}
+          onUse={(creds) => {
+            setEmail(creds.email);
+            setPassword(creds.password);
+            setShowDemoModal(false);
+          }}
+        />
+      )}
 
       <p className="text-center mt-4" style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
         Don't have an account?{' '}
@@ -525,5 +523,119 @@ export default function Login() {
         Private &amp; encrypted. Your data never leaves your firm's environment.
       </p>
     </ChatAuthLayout>
+  );
+}
+
+/* ─── Demo credentials modal — three tenant roles side-by-side ─── */
+const DEMO_ACCOUNTS = [
+  {
+    role: 'Org Admin',
+    email: 'ryan@hartwell.com',
+    password: 'Law@2026',
+    summary: 'Full-access owner of Hartwell & Associates. Sees every workspace, all knowledge packs, and all admin tools.',
+    accent: { bg: '#0A2463', color: '#FFFFFF', tint: 'rgba(10,36,99,0.08)' },
+  },
+  {
+    role: 'Internal User',
+    email: 'priya@hartwell.com',
+    password: 'Internal@123',
+    summary: 'Attorney at the firm with extra create-workspace and view-audit-logs permissions granted by the Org Admin.',
+    accent: { bg: '#1E3A8A', color: '#FFFFFF', tint: '#F0F3F6' },
+  },
+  {
+    role: 'External User',
+    email: 'liaison@acmecorp.com',
+    password: 'Client@123',
+    summary: 'End client for Acme Corp. Limited to their assigned workspace and the case vs general chat-mode toggle.',
+    accent: { bg: '#5CA868', color: '#FFFFFF', tint: '#E7F3E9' },
+  },
+];
+
+function DemoCredentialsModal({ onClose, onUse }) {
+  const [copied, setCopied] = useState('');
+
+  const copy = async (text, label) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(label);
+      setTimeout(() => setCopied(''), 1400);
+    } catch { /* ignore */ }
+  };
+
+  return (
+    <>
+      <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 70, backdropFilter: 'blur(4px)' }} />
+      <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 'min(680px, 92vw)', maxHeight: '86vh', overflowY: 'auto', background: '#fff', borderRadius: 16, boxShadow: '0 20px 60px rgba(0,0,0,0.25)', zIndex: 71 }}>
+        <div style={{ padding: '22px 26px 16px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+          <div>
+            <h3 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 20, color: 'var(--text-primary)', margin: 0 }}>Demo credentials</h3>
+            <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 6, lineHeight: 1.5, maxWidth: 500 }}>
+              Three tenant roles are seeded so you can explore what each user type sees. Pick one and click <strong>Use these</strong> to auto-fill the form.
+            </p>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100" style={{ flexShrink: 0 }}>
+            <X size={20} style={{ color: 'var(--text-muted)' }} />
+          </button>
+        </div>
+
+        <div style={{ padding: '18px 26px 22px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {DEMO_ACCOUNTS.map((acc) => (
+            <div
+              key={acc.email}
+              style={{
+                border: '1px solid var(--border)', borderRadius: 12,
+                padding: '14px 16px', background: '#fff', display: 'flex', flexDirection: 'column', gap: 10,
+                transition: 'border-color 120ms',
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.borderColor = acc.accent.bg; }}
+              onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border)'; }}
+            >
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <span style={{ display: 'inline-block', fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', padding: '3px 10px', borderRadius: 999, background: acc.accent.bg, color: acc.accent.color, textTransform: 'uppercase' }}>
+                    {acc.role}
+                  </span>
+                  <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 8, lineHeight: 1.55 }}>{acc.summary}</p>
+                </div>
+                <button
+                  onClick={() => onUse(acc)}
+                  style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: acc.accent.bg, color: acc.accent.color, fontSize: 12, fontWeight: 500, cursor: 'pointer', flexShrink: 0 }}
+                >
+                  Use these
+                </button>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <div style={{ padding: '10px 12px', borderRadius: 8, background: acc.accent.tint }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                    <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.05em' }}>EMAIL</span>
+                    <button type="button" onClick={() => copy(acc.email, `${acc.email}-email`)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 10, color: 'var(--text-muted)', padding: 0 }}>
+                      {copied === `${acc.email}-email` ? 'Copied ✓' : 'Copy'}
+                    </button>
+                  </div>
+                  <code style={{ fontSize: 12, color: 'var(--text-primary)', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', wordBreak: 'break-all' }}>
+                    {acc.email}
+                  </code>
+                </div>
+                <div style={{ padding: '10px 12px', borderRadius: 8, background: acc.accent.tint }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                    <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.05em' }}>PASSWORD</span>
+                    <button type="button" onClick={() => copy(acc.password, `${acc.email}-pw`)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 10, color: 'var(--text-muted)', padding: 0 }}>
+                      {copied === `${acc.email}-pw` ? 'Copied ✓' : 'Copy'}
+                    </button>
+                  </div>
+                  <code style={{ fontSize: 12, color: 'var(--text-primary)', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}>
+                    {acc.password}
+                  </code>
+                </div>
+              </div>
+            </div>
+          ))}
+          <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4, lineHeight: 1.5 }}>
+            These accounts are local to this demo. They live client-side so you can switch roles without a backend.
+          </p>
+        </div>
+      </div>
+    </>
   );
 }
