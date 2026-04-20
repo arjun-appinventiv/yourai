@@ -1,14 +1,15 @@
-// LLM client — uses environment variable for OpenAI key
-// Key must be set via VITE_OPENAI_API_KEY env var (never hardcoded in source)
-
+// LLM client — talks to the OpenAI API via our server-side proxy at
+// /api/chat so the browser never sees the key. OPENAI_API_KEY lives only
+// in Vercel env vars; no VITE_ prefix, no leakage into the bundle.
+//
+// getApiKey / clearKey remain as no-op exports for backward compatibility
+// with legacy callers; they always return null in prod.
 export function getApiKey(): string | null {
-  // Read from Vite env var (set in .env.local, never committed)
-  const key = import.meta.env.VITE_OPENAI_API_KEY || null;
-  return key;
+  return null;
 }
 
 export function clearKey(): void {
-  _cachedKey = null;
+  // intentionally empty — kept to preserve the old surface area
 }
 
 // ─── Bot Persona from localStorage ───
@@ -130,11 +131,6 @@ export async function callLLM(
   onChunk: (text: string) => void,
   context?: ContextLayers,
 ): Promise<{ fullContent: string; sourceType: string }> {
-  const apiKey = getApiKey();
-  if (!apiKey) {
-    throw new Error('No API key configured');
-  }
-
   const persona = getPersona();
   let systemPrompt = buildSystemPrompt(persona, context?.intentLabel);
 
@@ -262,12 +258,12 @@ ${sourceOptions}
     { role: 'user' as const, content: userMessage },
   ];
 
-  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+  // Hit our server-side proxy at /api/chat. The Edge function forwards
+  // the request to OpenAI using the server-side OPENAI_API_KEY and
+  // streams the response back as SSE. See api/chat.ts for error mapping.
+  const response = await fetch('/api/chat', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`,
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       model: 'gpt-4o',
       messages,
@@ -279,24 +275,7 @@ ${sourceOptions}
 
   if (!response.ok) {
     const err = await response.json().catch(() => ({}));
-    const raw = (err.error?.message || '').toLowerCase();
-    // Sanitize: never expose model names, org IDs, API keys, provider names, or token counts
-    if (/rate.?limit|too many requests|429|tokens per|tpd|quota|exceeded/i.test(raw)) {
-      throw new Error('The AI is busy right now. Please try again in a moment.');
-    }
-    if (/invalid.?api.?key|unauthorized|authentication|401|invalid_api_key/i.test(raw)) {
-      throw new Error('AI service is temporarily unavailable. Please contact your administrator.');
-    }
-    if (/context.?length|maximum context|too long|max_tokens|token limit/i.test(raw)) {
-      throw new Error('This conversation is too long to continue. Please start a new chat.');
-    }
-    if (/model.?not.?found|no such model|deprecated|does not exist|model_not_found/i.test(raw)) {
-      throw new Error('AI service is temporarily unavailable. Please try again.');
-    }
-    if (/timeout|timed out|connection|network/i.test(raw)) {
-      throw new Error('The AI took too long to respond. Please try again.');
-    }
-    throw new Error('Something went wrong. Please try again.');
+    throw new Error(err?.error || 'Something went wrong. Please try again.');
   }
 
   const reader = response.body!.getReader();
