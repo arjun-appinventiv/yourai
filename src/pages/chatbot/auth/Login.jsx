@@ -2,7 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, Loader, ShieldCheck, ArrowLeft, RefreshCw, Info } from 'lucide-react';
 import ChatAuthLayout from '../../../components/ChatAuthLayout';
-import { login as apiLogin, verifyOtp as apiVerifyOtp, resendOtp as apiResendOtp, trackLogin, claimSession } from '../../../lib/auth';
+import { verifyOtp as apiVerifyOtp, resendOtp as apiResendOtp, trackLogin, claimSession } from '../../../lib/auth';
+import { useAuth } from '../../../context/AuthContext';
 
 // Removed: MOCK_EMAIL = 'ryan@hartwell.com' — replaced with real API call
 // Removed: MOCK_PASSWORD = 'Law@2026' — replaced with real API call
@@ -32,6 +33,10 @@ export default function Login() {
   const otpRefs = useRef([]);
 
   const navigate = useNavigate();
+  // Route login through AuthContext so `operator` is populated immediately —
+  // without this, tenantRole lookups on /chat had to go through a
+  // localStorage round-trip and could show the wrong role.
+  const { login: authLogin } = useAuth();
   // Deep-link preservation: if the user was sent here after hitting a
   // protected route, honour `?redirect=/chat/...` on successful sign-in.
   // Only allow same-origin paths to prevent open-redirect abuse.
@@ -81,7 +86,7 @@ export default function Login() {
 
     try {
       // Removed: setTimeout mock delay — real API call
-      const result = await apiLogin(email, password);
+      const result = await authLogin(email, password);
 
       if (result.success) {
         if (result.requiresOtp) {
