@@ -335,7 +335,7 @@ export default function WorkspaceChatView() {
         : useWorkspaceDocs
           ? {
               uploadedDoc: {
-                name: `${workspace.name} case documents`,
+                name: `${workspace.name} workspace documents`,
                 content: readyDocs.map((d) => `Document: ${d.name} (${d.type.toUpperCase()})`).join('\n'),
               },
             }
@@ -351,7 +351,7 @@ export default function WorkspaceChatView() {
       } else if (useWorkspaceDocs) {
         sourceType = 'WORKSPACE_KB';
         sourceBadge = isExternalUser
-          ? 'Answered from: your case documents'
+          ? 'Answered from: your workspace documents'
           : `Answered from: ${workspace.name} documents`;
       } else if (forceGeneral || result?.sourceType === 'GLOBAL_KB') {
         sourceType = 'GLOBAL_KB';
@@ -605,7 +605,7 @@ export default function WorkspaceChatView() {
                   </span>
                 ) : (
                   <>
-                    <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Case Documents</span>
+                    <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Workspace Documents</span>
                     <FileText size={12} style={{ color: 'var(--text-muted)' }} />
                     <span style={{ fontSize: 12, color: 'var(--text-primary)', fontWeight: 500 }}>{readyDocs} doc{readyDocs !== 1 ? 's' : ''}</span>
                   </>
@@ -695,7 +695,7 @@ export default function WorkspaceChatView() {
                 )}
                 {externalChatMode === 'case' && workspace.documents.filter((d) => d.status === 'ready').length === 0 && (
                   <div style={{ padding: '8px 12px', borderRadius: 10, background: '#FBEED5', border: '1px solid #F3E2B1', fontSize: 12, color: '#6B4E1F', lineHeight: 1.5 }}>
-                    No case documents uploaded to this workspace yet. Ask your attorney to upload relevant files, or switch to General Queries.
+                    No workspace documents uploaded yet. Ask your attorney to upload relevant files, or switch to General Queries.
                   </div>
                 )}
               </div>
@@ -986,17 +986,17 @@ function WorkspaceSidebar(props: SidebarProps) {
           </div>
         </div>
 
-        {/* Case Documents */}
+        {/* Workspace Documents */}
         <div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 4px', marginBottom: 6 }}>
-            <span style={{ fontSize: 10, fontWeight: 500, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Case Documents {workspace.documents.length}</span>
+            <span style={{ fontSize: 10, fontWeight: 500, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Workspace Documents {workspace.documents.length}</span>
             {canEditKB && (
               <button onClick={onUploadClick} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, fontSize: 11, color: 'var(--navy)', fontWeight: 500 }}>+ Add</button>
             )}
           </div>
           {workspace.documents.length === 0 ? (
             <div style={{ padding: '10px 8px', fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.55 }}>
-              No case documents yet. Add files to give the AI context for this matter.
+              No workspace documents yet. Add files to give the AI context for this matter.
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -1119,14 +1119,14 @@ function WorkspaceEmptyState({ firstName, workspaceName, hasDocs, canEditKB, rol
           You are in <strong>{workspaceName}</strong>.
         </p>
         <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: '0 0 24px' }}>
-          The AI will use your case documents to answer questions here.
+          The AI will use your workspace documents to answer questions here.
         </p>
 
         {!hasDocs && (
           <div style={{ maxWidth: 440, margin: '0 auto 22px', padding: '14px 16px', borderRadius: 12, background: '#FBEED5', border: '1px solid #F3E2B1', display: 'flex', alignItems: 'flex-start', gap: 10, textAlign: 'left' }}>
             <AlertTriangle size={16} style={{ color: '#E8A33D', flexShrink: 0, marginTop: 2 }} />
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: '#6B4E1F' }}>No case documents uploaded yet.</div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: '#6B4E1F' }}>No workspace documents uploaded yet.</div>
               <div style={{ fontSize: 12, color: '#6B4E1F', marginTop: 3, lineHeight: 1.5 }}>
                 Add documents from the sidebar so the AI has context for this matter.
               </div>
@@ -1578,7 +1578,7 @@ function ChatUploadScopeModal({ upload, isExternalUser, canAddToWorkspace, onCan
           {showTwoChoices ? (
             <>
               <ScopeChoiceRow
-                title="Add to this workspace's case documents"
+                title="Add to this workspace's documents"
                 subtitle="Becomes part of the shared knowledge base. Everyone in the workspace can use it in their chats."
                 primary
                 onClick={onAddToWorkspace}
@@ -1593,8 +1593,8 @@ function ChatUploadScopeModal({ upload, isExternalUser, canAddToWorkspace, onCan
             <>
               {isExternalUser && (
                 <div style={{ padding: '12px 14px', borderRadius: 10, background: '#FBEED5', border: '1px solid #F3E2B1', fontSize: 12, color: '#6B4E1F', lineHeight: 1.55 }}>
-                  <strong style={{ display: 'block', marginBottom: 4 }}>This file won't be added to the workspace's core documents.</strong>
-                  It's available for this chat only. If you need it added to the case file, please send it to your workspace admin separately so they can upload it.
+                  <strong style={{ display: 'block', marginBottom: 4 }}>This file won't be added to the workspace documents.</strong>
+                  It's available for this chat only. If you need it added to the workspace, please send it to your workspace admin separately so they can upload it.
                 </div>
               )}
               <ScopeChoiceRow
@@ -1651,7 +1651,7 @@ function AddMemberAccessDialog({ member, canEditKB, onToggle, onCancel, onConfir
             </div>
           </div>
           <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.55 }}>
-            All members can chat with the AI using the workspace context. Decide whether this member should also be able to upload and remove case documents.
+            All members can chat with the AI using the workspace context. Decide whether this member should also be able to upload and remove workspace documents.
           </p>
 
           <div
@@ -1662,7 +1662,7 @@ function AddMemberAccessDialog({ member, canEditKB, onToggle, onCancel, onConfir
               <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>Can edit the knowledge base</div>
               <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 3, lineHeight: 1.55 }}>
                 {canEditKB
-                  ? 'Can add and remove case documents. Good for attorneys and paralegals working the matter.'
+                  ? 'Can add and remove workspace documents. Good for attorneys and paralegals working the matter.'
                   : 'Can only read the documents and chat with the AI. Good for observers or clients.'}
               </div>
             </div>

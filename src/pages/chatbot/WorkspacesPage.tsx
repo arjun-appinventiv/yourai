@@ -661,7 +661,7 @@ function StepDocuments({ docs, setDocs, currentUserId, currentUserName }: {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       <div>
-        <h3 style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 15, fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>Upload case documents</h3>
+        <h3 style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 15, fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>Upload workspace documents</h3>
         <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4, lineHeight: 1.5 }}>
           These become the workspace knowledge base. The AI searches these documents first when answering questions in this workspace.
         </p>
@@ -681,7 +681,7 @@ function StepDocuments({ docs, setDocs, currentUserId, currentUserName }: {
         }}
       >
         <UploadCloud size={28} style={{ margin: '0 auto 10px', color: dragActive ? '#C9A84C' : 'var(--navy)', opacity: 0.85 }} />
-        <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>Drag case files here</div>
+        <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>Drag workspace files here</div>
         <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>or click to browse</div>
         <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 10 }}>PDF, DOCX, XLSX, TXT — Max 100 MB per file</div>
         <input
