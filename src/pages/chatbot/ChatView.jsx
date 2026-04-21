@@ -2320,25 +2320,20 @@ function EmptyState({ profile, plan, onPromptClick, navigate, onViewPlans }) {
 export default function ChatView({ initialView = 'chat' }) {
   const navigate = useNavigate();
   // Role + identity — used for workspace membership filtering in the sidebar
-  // badge and panels below, plus External-User-only chat-mode toggle.
+  // badge and panels below.
   const { currentRole, hasPermission, isExternalUser, isOrgAdmin } = useRole();
   const { operator } = useAuth();
   const currentUserId = operator?.id || 'user-ryan';
 
-  // ─── External User chat-mode toggle (Part 5) ───
-  //   'case'    → AI uses workspace documents only; badge reflects that.
-  //   'general' → AI uses only the Super-Admin-maintained global KB.
-  // Preference is persisted per browser so it survives reloads.
-  const [externalChatMode, setExternalChatMode] = useState(() => {
-    try {
-      const v = localStorage.getItem('yourai_external_chat_mode');
-      return v === 'general' ? 'general' : 'case';
-    } catch { return 'case'; }
-  });
-  const [modeSwitchNotice, setModeSwitchNotice] = useState(''); // transient inline notice
+  // External Users never use the personal chat — their home is the workspace
+  // list. If they land here (typed URL, stale link, etc.) we redirect them
+  // to /chat/workspaces immediately. The chat-mode toggle now lives inside
+  // WorkspaceChatView where it actually belongs.
   useEffect(() => {
-    try { localStorage.setItem('yourai_external_chat_mode', externalChatMode); } catch {}
-  }, [externalChatMode]);
+    if (isExternalUser && initialView !== 'workspaces') {
+      navigate('/chat/workspaces', { replace: true });
+    }
+  }, [isExternalUser, initialView, navigate]);
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
@@ -2803,13 +2798,6 @@ INSTRUCTIONS:
           NONE: 'AI-generated response',
         };
         sourceBadge = sourceBadgeMap[result.sourceType] ?? 'AI-generated response';
-        // External-User override — badge reflects the locked source per mode,
-        // not whatever the LLM pipeline reported (Part 5).
-        if (isExternalUser) {
-          sourceBadge = externalChatMode === 'general'
-            ? 'Answered from: YourAI knowledge base'
-            : 'Answered from: your case documents';
-        }
       }
 
       const botMsg = {
@@ -3545,67 +3533,9 @@ INSTRUCTIONS:
               </div>
             )}
 
-            {/* ─── External User chat-mode toggle (Part 5) ─── */}
-            {isExternalUser && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 6 }}>
-                <div style={{ display: 'inline-flex', alignSelf: 'flex-start', padding: 3, background: 'var(--ice-warm)', border: '1px solid var(--border)', borderRadius: 999 }}>
-                  {[
-                    { id: 'case',    label: 'Case Questions' },
-                    { id: 'general', label: 'General Queries' },
-                  ].map((opt) => {
-                    const active = externalChatMode === opt.id;
-                    return (
-                      <button
-                        key={opt.id}
-                        onClick={() => {
-                          if (active) return;
-                          setExternalChatMode(opt.id);
-                          if (!showEmptyState) {
-                            setModeSwitchNotice(
-                              opt.id === 'general'
-                                ? 'Switched to General Queries mode. Previous context cleared.'
-                                : 'Switched to Case Questions mode. Previous context cleared.',
-                            );
-                            // Clear attached pack/doc so the next message starts fresh
-                            setActiveKnowledgePack(null);
-                            setActiveVaultDocument(null);
-                          }
-                        }}
-                        style={{
-                          padding: '5px 14px', borderRadius: 999,
-                          border: 'none', background: active ? '#fff' : 'transparent',
-                          color: active ? 'var(--text-primary)' : 'var(--text-muted)',
-                          fontSize: 12, fontWeight: active ? 600 : 500,
-                          cursor: active ? 'default' : 'pointer',
-                          boxShadow: active ? '0 1px 3px rgba(10,36,99,0.08)' : 'none',
-                          transition: 'all 150ms',
-                        }}
-                      >
-                        {opt.label}
-                      </button>
-                    );
-                  })}
-                </div>
-                {modeSwitchNotice && (
-                  <div style={{ fontSize: 11, color: 'var(--text-muted)', paddingLeft: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <Info size={11} />
-                    <span>{modeSwitchNotice}</span>
-                    <button
-                      onClick={() => setModeSwitchNotice('')}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 2, display: 'flex' }}
-                      aria-label="Dismiss"
-                    >
-                      <X size={11} />
-                    </button>
-                  </div>
-                )}
-                {externalChatMode === 'case' && documentVault.length === 0 && (
-                  <div style={{ padding: '8px 12px', borderRadius: 10, background: '#FBEED5', border: '1px solid #F3E2B1', fontSize: 12, color: '#6B4E1F', lineHeight: 1.5 }}>
-                    No case documents have been uploaded to your workspace yet. Ask your attorney to upload relevant files.
-                  </div>
-                )}
-              </div>
-            )}
+            {/* External Users are redirected away from /chat above, so no
+                toggle is needed here. The Case / General toggle lives inside
+                WorkspaceChatView where it belongs. */}
 
             {/* ─── Input bar ─── */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, border: '1.5px solid var(--border)', borderRadius: 24, background: '#fff', minHeight: 48, padding: '8px 8px 8px 12px', opacity: showSwitchBanner ? 0.5 : 1, pointerEvents: showSwitchBanner ? 'none' : 'auto' }}>

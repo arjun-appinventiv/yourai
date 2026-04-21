@@ -42,11 +42,18 @@ export default function Login() {
   // protected route, honour `?redirect=/chat/...` on successful sign-in.
   // Only allow same-origin paths to prevent open-redirect abuse.
   const [searchParams] = useSearchParams();
-  const getRedirectTarget = () => {
+  // External Users don't have access to the personal chat — their home is the
+  // workspace list. Pass the signed-in user through so we can route based on
+  // tenantRole; falls back to '/chat' for everyone else.
+  const getRedirectTarget = (user) => {
     const candidate = searchParams.get('redirect') || '';
-    if (!candidate) return '/chat';
-    // Must start with a single slash (same-origin path) and not a protocol-relative //
-    if (!candidate.startsWith('/') || candidate.startsWith('//')) return '/chat';
+    const isExternal = user?.tenantRole === 'EXTERNAL_USER';
+    const defaultTarget = isExternal ? '/chat/workspaces' : '/chat';
+    if (!candidate) return defaultTarget;
+    if (!candidate.startsWith('/') || candidate.startsWith('//')) return defaultTarget;
+    // Externals can only land on workspace routes via deep link; if they have
+    // a redirect pointing elsewhere, ignore it.
+    if (isExternal && !candidate.startsWith('/chat/workspaces')) return defaultTarget;
     return candidate;
   };
 
@@ -101,7 +108,7 @@ export default function Login() {
           localStorage.setItem('yourai_current_email', email);
           claimSession(email); // Invalidates any other active session for this email
           setLoadingText('Authenticated! Redirecting...');
-          navigate(getRedirectTarget(), { replace: true });
+          navigate(getRedirectTarget(result.user), { replace: true });
         }
       } else {
         setLoading(false);

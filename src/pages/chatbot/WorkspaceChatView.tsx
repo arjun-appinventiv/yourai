@@ -107,7 +107,7 @@ export default function WorkspaceChatView() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { operator } = useAuth();
-  const { currentRole, isOrgAdmin } = useRole();
+  const { currentRole, isOrgAdmin, isExternalUser } = useRole();
 
   const currentUserId = operator?.id || 'user-ryan';
   // Resolve the user's name from AuthContext, falling back to the localStorage
@@ -127,6 +127,22 @@ export default function WorkspaceChatView() {
   const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
   const [threadSearch, setThreadSearch] = useState('');
   const [showThreadSearch, setShowThreadSearch] = useState(false);
+
+  // External-User-only chat mode. Decides whether the AI grounds in this
+  // workspace's case documents or in the org-wide YourAI KB.
+  //   case    → workspace documents only (default)
+  //   general → global KB only
+  // Persisted per-browser so it survives reloads.
+  const [externalChatMode, setExternalChatMode] = useState<'case' | 'general'>(() => {
+    try {
+      const v = localStorage.getItem('yourai_external_chat_mode');
+      return v === 'general' ? 'general' : 'case';
+    } catch { return 'case'; }
+  });
+  const [modeSwitchNotice, setModeSwitchNotice] = useState('');
+  useEffect(() => {
+    try { localStorage.setItem('yourai_external_chat_mode', externalChatMode); } catch { /* ignore */ }
+  }, [externalChatMode]);
 
   // Chat state — per-thread messages kept in-memory (demo-only)
   interface Msg { id: number; sender: 'user' | 'bot'; content: string; ts: string; sourceBadge?: string; sourceType?: 'WORKSPACE_KB' | 'GLOBAL_KB' | 'NONE'; }
@@ -286,12 +302,17 @@ export default function WorkspaceChatView() {
         content: m.content,
       }));
 
-      // Determine the source: workspace docs (if any ready) → global KB → fallback.
-      // callLLM expects a ContextLayers object (not array). We shape the
-      // workspace's attached docs as an "uploadedDoc" so the backend RAG
-      // treats them as the primary source.
+      // Determine the source:
+      //   External User in "general" mode  → force global KB (workspace docs ignored)
+      //   Everyone else (default)          → workspace docs (Tier 1) when present
+      //                                        → global KB when not
+      // The External-User mode toggle takes precedence over any attached docs
+      // so clients get the source they explicitly picked.
       const readyDocs = workspace.documents.filter((d) => d.status === 'ready');
-      const contextLayers = readyDocs.length > 0
+      const forceGeneral = isExternalUser && externalChatMode === 'general';
+      const useWorkspaceDocs = !forceGeneral && readyDocs.length > 0;
+
+      const contextLayers = useWorkspaceDocs
         ? {
             uploadedDoc: {
               name: `${workspace.name} case documents`,
@@ -304,10 +325,12 @@ export default function WorkspaceChatView() {
 
       let sourceType: Msg['sourceType'] = 'NONE';
       let sourceBadge = 'No source found';
-      if (readyDocs.length > 0) {
+      if (useWorkspaceDocs) {
         sourceType = 'WORKSPACE_KB';
-        sourceBadge = `Answered from: ${workspace.name} documents`;
-      } else if (result?.sourceType === 'GLOBAL_KB') {
+        sourceBadge = isExternalUser
+          ? 'Answered from: your case documents'
+          : `Answered from: ${workspace.name} documents`;
+      } else if (forceGeneral || result?.sourceType === 'GLOBAL_KB') {
         sourceType = 'GLOBAL_KB';
         sourceBadge = 'Answered from: YourAI knowledge base';
       }
@@ -539,6 +562,66 @@ export default function WorkspaceChatView() {
         {/* Input area */}
         <div style={{ padding: '12px 24px 20px', borderTop: '1px solid var(--border)', background: '#fff' }}>
           <div style={{ maxWidth: 860, margin: '0 auto' }}>
+            {/* ─── External User chat-mode toggle ─── */}
+            {isExternalUser && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 8 }}>
+                <div style={{ display: 'inline-flex', alignSelf: 'flex-start', padding: 3, background: 'var(--ice-warm)', border: '1px solid var(--border)', borderRadius: 999 }}>
+                  {([
+                    { id: 'case',    label: 'Case Questions' },
+                    { id: 'general', label: 'General Queries' },
+                  ] as Array<{ id: 'case' | 'general'; label: string }>).map((opt) => {
+                    const active = externalChatMode === opt.id;
+                    return (
+                      <button
+                        key={opt.id}
+                        onClick={() => {
+                          if (active) return;
+                          setExternalChatMode(opt.id);
+                          // Only show mid-conversation notice if there are messages already
+                          if (activeMessages.length > 0) {
+                            setModeSwitchNotice(
+                              opt.id === 'general'
+                                ? 'Switched to General Queries mode. Previous context cleared.'
+                                : 'Switched to Case Questions mode. Previous context cleared.',
+                            );
+                          }
+                        }}
+                        style={{
+                          padding: '5px 14px', borderRadius: 999,
+                          border: 'none', background: active ? '#fff' : 'transparent',
+                          color: active ? 'var(--text-primary)' : 'var(--text-muted)',
+                          fontSize: 12, fontWeight: active ? 600 : 500,
+                          cursor: active ? 'default' : 'pointer',
+                          boxShadow: active ? '0 1px 3px rgba(10,36,99,0.08)' : 'none',
+                          transition: 'all 150ms',
+                        }}
+                      >
+                        {opt.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                {modeSwitchNotice && (
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', paddingLeft: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <AlertCircle size={11} />
+                    <span>{modeSwitchNotice}</span>
+                    <button
+                      onClick={() => setModeSwitchNotice('')}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 2, display: 'flex' }}
+                      aria-label="Dismiss"
+                    >
+                      <X size={11} />
+                    </button>
+                  </div>
+                )}
+                {externalChatMode === 'case' && workspace.documents.filter((d) => d.status === 'ready').length === 0 && (
+                  <div style={{ padding: '8px 12px', borderRadius: 10, background: '#FBEED5', border: '1px solid #F3E2B1', fontSize: 12, color: '#6B4E1F', lineHeight: 1.5 }}>
+                    No case documents uploaded to this workspace yet. Ask your attorney to upload relevant files, or switch to General Queries.
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Suggestion banner */}
             {suggestion && (
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '8px 14px', marginBottom: 8, borderRadius: 12, background: 'var(--ice-warm)', border: '1px solid var(--border)', fontSize: 12, color: 'var(--text-secondary)' }}>
