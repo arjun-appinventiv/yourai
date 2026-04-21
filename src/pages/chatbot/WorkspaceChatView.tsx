@@ -35,6 +35,7 @@ import {
 } from '../../lib/workspace';
 import { MOCK_WORKSPACES } from '../../lib/mockWorkspaces';
 import { callLLM } from '../../lib/llm-client';
+import { extractFileText } from '../../lib/file-parser';
 import { INTENTS, DEFAULT_INTENT, getIntentLabel } from '../../lib/intents';
 import { detectAllIntents } from '../../lib/intentDetector';
 import { teamMembersForPicker } from './workspaceTeamSeed';
@@ -168,6 +169,16 @@ export default function WorkspaceChatView() {
   const [showSettings, setShowSettings] = useState(false);
   const [showAllDocs, setShowAllDocs] = useState(false);
   const [toastMsg, setToastMsg] = useState('');
+
+  // Ad-hoc chat-attachment flow ─────────────────────────────────────────────
+  // Org Admin + members with KB edit rights get a two-option modal: save to
+  // workspace case docs or use just for this chat (ephemeral). Externals
+  // only get the ephemeral path, with a notice that it won't land in the
+  // workspace's core documents.
+  interface PendingUpload { name: string; size: number; type: string; content: string; }
+  const [pendingUpload, setPendingUpload] = useState<PendingUpload | null>(null);
+  const [ephemeralAttachment, setEphemeralAttachment] = useState<PendingUpload | null>(null);
+  const chatAttachInputRef = useRef<HTMLInputElement>(null);
   const showToast = (msg: string) => { setToastMsg(msg); setTimeout(() => setToastMsg(''), 3200); };
 
   // Load workspace + threads
@@ -243,6 +254,8 @@ export default function WorkspaceChatView() {
     setActiveThreadId(t.id);
     setInput('');
     setActiveIntent(DEFAULT_INTENT);
+    // Ad-hoc attachment is thread-local — clear on new thread.
+    setEphemeralAttachment(null);
   };
   const handleDeleteThread = (tid: string) => {
     if (threads.length <= 1) return; // cannot delete last
@@ -302,30 +315,40 @@ export default function WorkspaceChatView() {
         content: m.content,
       }));
 
-      // Determine the source:
-      //   External User in "general" mode  → force global KB (workspace docs ignored)
-      //   Everyone else (default)          → workspace docs (Tier 1) when present
-      //                                        → global KB when not
-      // The External-User mode toggle takes precedence over any attached docs
-      // so clients get the source they explicitly picked.
+      // Source-priority hierarchy (top wins):
+      //   1. Ephemeral ad-hoc attachment for this chat (not saved to KB)
+      //   2. External User "general" mode → force global KB
+      //   3. Workspace case documents (default when present)
+      //   4. Global KB (fallback)
       const readyDocs = workspace.documents.filter((d) => d.status === 'ready');
       const forceGeneral = isExternalUser && externalChatMode === 'general';
-      const useWorkspaceDocs = !forceGeneral && readyDocs.length > 0;
+      const useEphemeral = !!ephemeralAttachment;
+      const useWorkspaceDocs = !useEphemeral && !forceGeneral && readyDocs.length > 0;
 
-      const contextLayers = useWorkspaceDocs
+      const contextLayers = useEphemeral
         ? {
             uploadedDoc: {
-              name: `${workspace.name} case documents`,
-              content: readyDocs.map((d) => `Document: ${d.name} (${d.type.toUpperCase()})`).join('\n'),
+              name: ephemeralAttachment!.name,
+              content: ephemeralAttachment!.content || `Document: ${ephemeralAttachment!.name} (${ephemeralAttachment!.type.toUpperCase()})`,
             },
           }
-        : undefined;
+        : useWorkspaceDocs
+          ? {
+              uploadedDoc: {
+                name: `${workspace.name} case documents`,
+                content: readyDocs.map((d) => `Document: ${d.name} (${d.type.toUpperCase()})`).join('\n'),
+              },
+            }
+          : undefined;
 
       const result = await callLLM(trimmed, history, (s: string) => setStreaming(s), contextLayers);
 
       let sourceType: Msg['sourceType'] = 'NONE';
       let sourceBadge = 'No source found';
-      if (useWorkspaceDocs) {
+      if (useEphemeral) {
+        sourceType = 'WORKSPACE_KB';
+        sourceBadge = `Answered from: ${ephemeralAttachment!.name} (this chat only)`;
+      } else if (useWorkspaceDocs) {
         sourceType = 'WORKSPACE_KB';
         sourceBadge = isExternalUser
           ? 'Answered from: your case documents'
@@ -404,6 +427,62 @@ export default function WorkspaceChatView() {
         if (updated) setWorkspace(updated);
       }, 2500);
     });
+  };
+
+  /* ─── Ad-hoc chat-upload handlers ─── */
+  const handleChatAttachClick = () => chatAttachInputRef.current?.click();
+
+  const handleChatFilesPicked = async (files: FileList) => {
+    const f = files[0];
+    if (!f) return;
+    const ext = f.name.lastIndexOf('.') !== -1 ? f.name.slice(f.name.lastIndexOf('.') + 1).toLowerCase() : '';
+    if (!ACCEPTED.includes(ext)) {
+      showToast('That file type is not supported. Please upload PDF, DOCX, XLSX, or TXT.');
+      return;
+    }
+    if (f.size > MAX_BYTES) {
+      showToast('We were not able to upload that file. Please use a file under 100MB.');
+      return;
+    }
+    // Extract text for use as context (best-effort; if it fails we still allow
+    // the scope choice, but AI grounding will be limited).
+    let content = '';
+    try {
+      const res = await extractFileText(f);
+      content = res?.text || '';
+    } catch { /* ignore */ }
+    setPendingUpload({ name: f.name, size: f.size, type: ext, content });
+  };
+
+  const confirmUploadAsWorkspaceDoc = async () => {
+    if (!pendingUpload) return;
+    const today = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    const doc: WorkspaceDoc = {
+      id: `doc-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      name: pendingUpload.name,
+      size: pendingUpload.size,
+      type: pendingUpload.type,
+      uploadedBy: currentUserId,
+      uploadedByName: currentUserName,
+      uploadedAt: today,
+      status: 'processing',
+    };
+    const next = addDocument(workspace.id, doc);
+    if (next) setWorkspace(next);
+    showToast(`${doc.name} added to workspace documents`);
+    setPendingUpload(null);
+    // Simulate ingestion flip
+    setTimeout(() => {
+      const updated = updateDocumentStatus(workspace.id, doc.id, 'ready');
+      if (updated) setWorkspace(updated);
+    }, 2500);
+  };
+
+  const confirmUploadAsEphemeral = () => {
+    if (!pendingUpload) return;
+    setEphemeralAttachment(pendingUpload);
+    setPendingUpload(null);
+    showToast(`${pendingUpload.name} attached to this chat only`);
   };
 
   const handleRemoveDoc = (docId: string) => {
@@ -633,7 +712,36 @@ export default function WorkspaceChatView() {
               </div>
             )}
 
+            {/* Ephemeral attachment chip — in scope only for this chat */}
+            {ephemeralAttachment && (
+              <div style={{ display: 'inline-flex', alignSelf: 'flex-start', alignItems: 'center', gap: 6, padding: '5px 10px', marginBottom: 6, background: 'var(--ice-warm)', border: '1px solid var(--border)', borderRadius: 999, fontSize: 11 }}>
+                <FileText size={11} style={{ color: 'var(--navy)' }} />
+                <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{ephemeralAttachment.name}</span>
+                <span style={{ color: 'var(--text-muted)' }}>· this chat only</span>
+                <button onClick={() => setEphemeralAttachment(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', color: 'var(--text-muted)' }} aria-label="Remove attachment">
+                  <X size={11} />
+                </button>
+              </div>
+            )}
+
+            <input
+              ref={chatAttachInputRef}
+              type="file"
+              accept=".pdf,.docx,.xlsx,.txt"
+              style={{ display: 'none' }}
+              onChange={(e) => { if (e.target.files) handleChatFilesPicked(e.target.files); e.target.value = ''; }}
+            />
+
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, border: '1.5px solid var(--border)', borderRadius: 24, background: '#fff', minHeight: 48, padding: '8px 8px 8px 12px' }}>
+              {/* Attach button — tooltip differs for externals */}
+              <button
+                onClick={handleChatAttachClick}
+                title={isExternalUser ? 'Attach a file just for this chat' : 'Attach a file'}
+                style={{ width: 28, height: 28, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: ephemeralAttachment ? 'var(--navy)' : 'var(--text-muted)', background: ephemeralAttachment ? 'rgba(10,36,99,0.08)' : 'transparent', border: 'none', flexShrink: 0 }}
+              >
+                <Plus size={20} />
+              </button>
+
               {/* Intent selector (collapsed pill when chat has content; expanded pills on empty state is handled below) */}
               <div ref={intentDropdownRef} style={{ position: 'relative' }}>
                 <button
@@ -686,6 +794,18 @@ export default function WorkspaceChatView() {
           </div>
         </div>
       </div>
+
+      {/* Ad-hoc chat upload scope picker */}
+      {pendingUpload && (
+        <ChatUploadScopeModal
+          upload={pendingUpload}
+          isExternalUser={isExternalUser}
+          canAddToWorkspace={canEditWorkspaceKB(workspace, currentUserId, isOrgAdmin)}
+          onCancel={() => setPendingUpload(null)}
+          onUseInChat={confirmUploadAsEphemeral}
+          onAddToWorkspace={confirmUploadAsWorkspaceDoc}
+        />
+      )}
 
       {/* Members panel */}
       {showMembers && (
@@ -1415,6 +1535,102 @@ function WorkspaceSettingsModal({ workspace, currentUserId, isOrgAdmin, onClose,
         />
       )}
     </>
+  );
+}
+
+/* ─── Chat upload scope modal ───────────────────────────────────────────
+ * Decides where an ad-hoc file uploaded inside the workspace chat should
+ * live. Three viewer variants:
+ *   External User          → single action: use in this chat only
+ *                             + notice to contact admin for KB inclusion
+ *   Member without KB edit → same single-action variant as external
+ *   Org Admin / KB editor  → two options: workspace docs vs this chat only
+ */
+function ChatUploadScopeModal({ upload, isExternalUser, canAddToWorkspace, onCancel, onUseInChat, onAddToWorkspace }: {
+  upload: { name: string; size: number; type: string };
+  isExternalUser: boolean;
+  canAddToWorkspace: boolean;
+  onCancel: () => void;
+  onUseInChat: () => void;
+  onAddToWorkspace: () => void;
+}) {
+  const showTwoChoices = !isExternalUser && canAddToWorkspace;
+  const sizeStr = upload.size < 1024 * 1024 ? `${(upload.size / 1024).toFixed(0)} KB` : `${(upload.size / (1024 * 1024)).toFixed(1)} MB`;
+
+  return (
+    <>
+      <div onClick={onCancel} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 80, backdropFilter: 'blur(4px)' }} />
+      <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 500, background: '#fff', borderRadius: 16, boxShadow: '0 20px 60px rgba(0,0,0,0.25)', zIndex: 81 }}>
+        <div style={{ padding: '22px 24px 14px', borderBottom: '1px solid var(--border)' }}>
+          <h3 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 18, color: 'var(--text-primary)', margin: 0 }}>
+            {showTwoChoices ? 'Where should this file live?' : 'Attach file to this chat'}
+          </h3>
+          <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', borderRadius: 8, background: 'var(--ice-warm)' }}>
+            <FileText size={14} style={{ color: 'var(--navy)', flexShrink: 0 }} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{upload.name}</div>
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{upload.type.toUpperCase()} · {sizeStr}</div>
+            </div>
+          </div>
+        </div>
+
+        <div style={{ padding: '18px 24px 10px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {showTwoChoices ? (
+            <>
+              <ScopeChoiceRow
+                title="Add to this workspace's case documents"
+                subtitle="Becomes part of the shared knowledge base. Everyone in the workspace can use it in their chats."
+                primary
+                onClick={onAddToWorkspace}
+              />
+              <ScopeChoiceRow
+                title="Use just for this chat"
+                subtitle="The file is not saved to the workspace. Only this chat can use it as context."
+                onClick={onUseInChat}
+              />
+            </>
+          ) : (
+            <>
+              {isExternalUser && (
+                <div style={{ padding: '12px 14px', borderRadius: 10, background: '#FBEED5', border: '1px solid #F3E2B1', fontSize: 12, color: '#6B4E1F', lineHeight: 1.55 }}>
+                  <strong style={{ display: 'block', marginBottom: 4 }}>This file won't be added to the workspace's core documents.</strong>
+                  It's available for this chat only. If you need it added to the case file, please send it to your workspace admin separately so they can upload it.
+                </div>
+              )}
+              <ScopeChoiceRow
+                title="Use in this chat"
+                subtitle="Attach the file to this conversation only."
+                primary
+                onClick={onUseInChat}
+              />
+            </>
+          )}
+        </div>
+
+        <div style={{ padding: '10px 24px 20px', display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+          <button onClick={onCancel} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid var(--border)', background: '#fff', fontSize: 13, cursor: 'pointer', color: 'var(--text-muted)' }}>Cancel</button>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function ScopeChoiceRow({ title, subtitle, primary, onClick }: { title: string; subtitle: string; primary?: boolean; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        textAlign: 'left', padding: '14px 16px', borderRadius: 12,
+        border: '1px solid ' + (primary ? 'var(--navy)' : 'var(--border)'),
+        background: primary ? 'var(--ice-warm)' : '#fff',
+        cursor: 'pointer', transition: 'all 120ms',
+      }}
+      onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--navy)'; }}
+      onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.borderColor = primary ? 'var(--navy)' : 'var(--border)'; }}
+    >
+      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{title}</div>
+      <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4, lineHeight: 1.55 }}>{subtitle}</div>
+    </button>
   );
 }
 
