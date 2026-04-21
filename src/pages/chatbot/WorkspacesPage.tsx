@@ -61,7 +61,7 @@ export interface WorkspacesPageProps {
 
 export default function WorkspacesPage({ onBack, onOpenWorkspace, onToast }: WorkspacesPageProps) {
   const { operator } = useAuth();
-  const { currentRole, hasPermission, isOrgAdmin } = useRole();
+  const { currentRole, hasPermission, isOrgAdmin, isExternalUser } = useRole();
   const currentUserId = operator?.id || 'user-ryan';
   const currentUserName = operator?.name || 'You';
   const currentUserEmail = operator?.email || 'you@example.com';
@@ -112,14 +112,18 @@ export default function WorkspacesPage({ onBack, onOpenWorkspace, onToast }: Wor
       {/* Page header */}
       <div style={{ borderBottom: '1px solid var(--border)', background: '#fff' }}>
         <div style={{ maxWidth: 1080, margin: '0 auto', padding: '24px 32px 20px' }}>
-          <button
-            onClick={onBack}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 8px', marginLeft: -8, borderRadius: 6, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 12 }}
-            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-primary)'; }}
-            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)'; }}
-          >
-            <ArrowLeft size={13} /> Back to chat
-          </button>
+          {/* 'Back to chat' only makes sense for users who have a personal
+              chat to return to. Externals live entirely inside workspaces. */}
+          {!isExternalUser && (
+            <button
+              onClick={onBack}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 8px', marginLeft: -8, borderRadius: 6, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 12 }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-primary)'; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)'; }}
+            >
+              <ArrowLeft size={13} /> Back to chat
+            </button>
+          )}
           <div className="flex items-end justify-between gap-4 flex-wrap" style={{ marginTop: 10 }}>
             <div style={{ minWidth: 0 }}>
               <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 28, color: 'var(--text-primary)', margin: 0, lineHeight: 1.2 }}>

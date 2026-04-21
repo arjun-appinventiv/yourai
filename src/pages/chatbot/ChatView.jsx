@@ -489,6 +489,10 @@ function Sidebar({ onOpenPromptTemplates, onOpenClients, onOpenKnowledgePacks, o
       </div>
 
       {/* ═══ ZONE 2 — New Chat Button ═══ */}
+      {/* External Users don't have a personal chat — they only use workspace
+          chats, which have their own 'New chat' button inside the workspace
+          sidebar. Hide this CTA for them. */}
+      {!isExternalUser && (
       <div style={{ padding: '12px 12px 0' }}>
         <button
           onClick={onNewThread}
@@ -507,6 +511,7 @@ function Sidebar({ onOpenPromptTemplates, onOpenClients, onOpenKnowledgePacks, o
           <span>New chat</span>
         </button>
       </div>
+      )}
 
       {/* ═══ Scrollable area: sections ═══ */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '12px 12px 0', display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -554,6 +559,8 @@ function Sidebar({ onOpenPromptTemplates, onOpenClients, onOpenKnowledgePacks, o
         )}
 
         {/* ═══ ZONE 5 — RECENT CHATS Section ═══ */}
+        {/* Externals have no personal recent chats — this zone is hidden for them. */}
+        {!isExternalUser && (
         <div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 8px', marginBottom: 4 }}>
             <span style={{ fontSize: 10, fontWeight: 500, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
@@ -639,6 +646,7 @@ function Sidebar({ onOpenPromptTemplates, onOpenClients, onOpenKnowledgePacks, o
             </div>
           )}
         </div>
+        )}
       </div>
 
       {/* ═══ ZONE 6 — User Profile Footer ═══ */}
