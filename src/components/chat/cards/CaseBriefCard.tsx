@@ -50,7 +50,7 @@ export default function CaseBriefCard({ data }: { data: CaseBriefCardData }) {
       {/* Grid table */}
       <div style={{ display: 'grid', gridTemplateColumns: '110px 1fr' }}>
         {rows.length === 0 ? (
-          <div style={{ gridColumn: '1 / 3', padding: '24px', fontSize: 13, color: '#4B5563', fontStyle: 'italic', textAlign: 'center' }}>
+          <div style={{ gridColumn: '1 / 3', padding: '24px', fontSize: 15, color: '#4B5563', fontStyle: 'italic', textAlign: 'center' }}>
             No case details available.
           </div>
         ) : (
@@ -63,7 +63,7 @@ export default function CaseBriefCard({ data }: { data: CaseBriefCardData }) {
                     padding: '16px 20px',
                     borderBottom: isLast ? 'none' : '1px solid #F3F4F6',
                     fontFamily: MONO,
-                    fontSize: 11,
+                    fontSize: 13,
                     letterSpacing: '0.1em',
                     textTransform: 'uppercase',
                     color: '#4B5563',
@@ -82,7 +82,7 @@ export default function CaseBriefCard({ data }: { data: CaseBriefCardData }) {
                     borderBottom: isLast ? 'none' : '1px solid #F3F4F6',
                     ...(row.isHolding
                       ? { fontFamily: SERIF, fontStyle: 'italic', fontSize: 14, color: '#0B1D3A', lineHeight: 1.6 }
-                      : { fontSize: 13, color: '#374151', lineHeight: 1.75 }),
+                      : { fontSize: 15, color: '#374151', lineHeight: 1.75 }),
                   }}
                 >
                   {row.value}
@@ -98,7 +98,7 @@ export default function CaseBriefCard({ data }: { data: CaseBriefCardData }) {
               style={{
                 padding: '16px 20px',
                 fontFamily: MONO,
-                fontSize: 11,
+                fontSize: 13,
                 letterSpacing: '0.1em',
                 textTransform: 'uppercase',
                 color: '#4B5563',
@@ -123,7 +123,7 @@ export default function CaseBriefCard({ data }: { data: CaseBriefCardData }) {
                         style={{
                           display: 'inline-block',
                           fontFamily: MONO,
-                          fontSize: 11,
+                          fontSize: 13,
                           letterSpacing: '0.08em',
                           padding: '3px 10px',
                           borderRadius: 4,
@@ -141,7 +141,7 @@ export default function CaseBriefCard({ data }: { data: CaseBriefCardData }) {
                 </div>
               )}
               {precedence.note && (
-                <div style={{ fontSize: 12, color: '#374151', lineHeight: 1.6, marginTop: 8 }}>
+                <div style={{ fontSize: 14, color: '#374151', lineHeight: 1.6, marginTop: 8 }}>
                   {precedence.note}
                 </div>
               )}
@@ -162,7 +162,7 @@ export default function CaseBriefCard({ data }: { data: CaseBriefCardData }) {
           <div
             style={{
               fontFamily: MONO,
-              fontSize: 11,
+              fontSize: 13,
               letterSpacing: '0.12em',
               textTransform: 'uppercase',
               color: '#0B1D3A',
@@ -171,7 +171,7 @@ export default function CaseBriefCard({ data }: { data: CaseBriefCardData }) {
           >
             Application to Your Matter
           </div>
-          <div style={{ fontSize: 13, color: '#374151', lineHeight: 1.75 }}>{data.application}</div>
+          <div style={{ fontSize: 15, color: '#374151', lineHeight: 1.75 }}>{data.application}</div>
         </div>
       ) : null}
 
