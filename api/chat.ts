@@ -27,8 +27,8 @@ export default async function handler(req: Request): Promise<Response> {
   }
 
   let body: any;
-  try { body = await req.json(); } catch {
-    return new Response('Invalid JSON body', { status: 400 });
+  try { body = await req.json(); } catch (e) {
+    return new Response(`Invalid JSON body: ${(e as Error)?.message || 'parse failed'}`, { status: 400 });
   }
 
   // Build messages[] — accept both legacy `{messages}` and the client's
@@ -46,7 +46,15 @@ export default async function handler(req: Request): Promise<Response> {
       : [];
     messages = [system, ...history, { role: 'user', content: body.message }];
   } else {
-    return new Response('message or messages[] is required', { status: 400 });
+    // Surface exactly what keys arrived so we can diagnose shape mismatches.
+    const keys = body && typeof body === 'object' ? Object.keys(body) : [];
+    const msgType = typeof body?.message;
+    const msgLen  = typeof body?.message === 'string' ? body.message.length : 0;
+    const msgsLen = Array.isArray(body?.messages) ? body.messages.length : 'not-array';
+    return new Response(
+      `Request missing usable content. keys=[${keys.join(',')}] message:${msgType}(len=${msgLen}) messages:${msgsLen}`,
+      { status: 400, headers: { 'Content-Type': 'text/plain' } },
+    );
   }
 
   const model       = body.model       || 'gpt-4o-mini';
