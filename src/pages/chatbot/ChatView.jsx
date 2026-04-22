@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import {
   CheckCircle, MessageSquare, Clock, Share2, Grid3X3, Calendar, Users,
@@ -328,7 +328,7 @@ const riskColors = {
    Layout structure confirmed by Arjun. Not signed off by Ryan.
    All existing nav items preserved — reorganised only. */
 
-function Sidebar({ onOpenPromptTemplates, onOpenClients, onOpenKnowledgePacks, onOpenDocumentVault, onOpenInviteTeam, onOpenAuditLogs, onOpenBilling, onOpenWorkspaces, onOpenWorkflows, promptCount, clientCount, packCount, vaultCount, memberCount, workspaceCount, workflowCount, isOpen, onClose, threads, activeThreadId, onSwitchThread, onNewThread, onDeleteThread, threadSearch, onThreadSearchChange, onSignOut, runningWorkflow }) {
+function Sidebar({ onOpenPromptTemplates, onOpenClients, onOpenKnowledgePacks, onOpenDocumentVault, onOpenInviteTeam, onOpenAuditLogs, onOpenBilling, onOpenWorkspaces, onOpenWorkflows, promptCount, clientCount, packCount, vaultCount, memberCount, workspaceCount, workflowCount, isOpen, onClose, threads, activeThreadId, onSwitchThread, onNewThread, onDeleteThread, threadSearch, onThreadSearchChange, onSignOut, runningWorkflow, onViewRunning }) {
   // Role + permission gating — every nav item decides visibility via hasPermission
   // rather than by comparing role strings directly. See src/lib/roles.ts.
   const { hasPermission, isOrgAdmin, isExternalUser } = useRole();
@@ -668,6 +668,53 @@ function Sidebar({ onOpenPromptTemplates, onOpenClients, onOpenKnowledgePacks, o
         </div>
         )}
       </div>
+
+      {/* ═══ ZONE 5.5 — Running Workflow Strip (Part 8) ═══
+          Visible only while a workflow run is in progress. Clicking "View"
+          jumps to that run's card in the chat thread. The spinner + mini
+          progress bar reflect the live subscription state in the parent. */}
+      {runningWorkflow && (
+        <div
+          onClick={onViewRunning}
+          style={{
+            borderTop: '0.5px solid var(--border)',
+            padding: '10px 12px',
+            background: 'linear-gradient(180deg, #F8F4ED 0%, #FDFBF6 100%)',
+            cursor: onViewRunning ? 'pointer' : 'default',
+            display: 'flex', flexDirection: 'column', gap: 6,
+          }}
+          onMouseEnter={(e) => { if (onViewRunning) e.currentTarget.style.background = '#F3ECDD'; }}
+          onMouseLeave={(e) => { if (onViewRunning) e.currentTarget.style.background = 'linear-gradient(180deg, #F8F4ED 0%, #FDFBF6 100%)'; }}
+          title="Jump to the running workflow"
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            {/* Spinner */}
+            <div style={{
+              width: 12, height: 12, borderRadius: '50%',
+              border: '1.5px solid #C9A84C', borderTopColor: 'transparent',
+              animation: 'spin 0.9s linear infinite', flexShrink: 0,
+            }} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--navy)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {runningWorkflow.templateName || 'Workflow running'}
+              </div>
+              <div style={{ fontSize: 10, color: 'var(--text-muted)', lineHeight: 1.2 }}>
+                Step {Math.min((runningWorkflow.currentStepIndex ?? 0) + 1, runningWorkflow.steps?.length || 1)} of {runningWorkflow.steps?.length || 1}
+                {onViewRunning ? ' · View →' : ''}
+              </div>
+            </div>
+          </div>
+          {/* Progress bar */}
+          <div style={{ height: 3, borderRadius: 2, background: '#E8DCC2', overflow: 'hidden' }}>
+            <div style={{
+              height: '100%',
+              width: `${Math.min(100, Math.round(((runningWorkflow.currentStepIndex ?? 0) / Math.max(1, (runningWorkflow.steps?.length || 1))) * 100))}%`,
+              background: '#C9A84C',
+              transition: 'width 300ms ease',
+            }} />
+          </div>
+        </div>
+      )}
 
       {/* ═══ ZONE 6 — User Profile Footer ═══ */}
       <div style={{ borderTop: '0.5px solid var(--border)', position: 'relative' }}>
@@ -1978,7 +2025,7 @@ function WorkflowThreadEntry({ msg }) {
   }
 
   return (
-    <div style={{ display: 'flex', justifyContent: 'center', margin: '14px 0 24px' }}>
+    <div id={`wf-run-${msg.runId}`} style={{ display: 'flex', justifyContent: 'center', margin: '14px 0 24px', scrollMarginTop: 80 }}>
       <div style={{ maxWidth: 820, width: '100%', display: 'flex', flexDirection: 'column', gap: 14 }}>
         <WorkflowProgressCard runId={msg.runId} workspaceName={run.workspaceId ? null : null} />
         {run.status === 'complete' && run.reportCardData && (
@@ -2525,11 +2572,27 @@ function EmptyState({ profile, plan, onPromptClick, navigate, onViewPlans, workf
 /* ═══════════════════ ChatView ═══════════════════ */
 export default function ChatView({ initialView = 'chat' }) {
   const navigate = useNavigate();
+  const location = useLocation();
   // Role + identity — used for workspace membership filtering in the sidebar
   // badge and panels below.
   const { currentRole, hasPermission, isExternalUser, isOrgAdmin } = useRole();
   const { operator } = useAuth();
   const currentUserId = operator?.id || 'user-ryan';
+
+  // Part 9 — workspace context detection for workflow runs.
+  // If the user triggers a workflow while inside a workspace route, the run
+  // should be scoped to that workspace (workspace KB + vault docs prioritised
+  // over global). Outside a workspace, runs use global KB only.
+  const workspaceContext = useMemo(() => {
+    const m = (location?.pathname || '').match(/^\/chat\/workspaces\/([^/]+)/);
+    if (!m) return { id: null, name: null, hasDocs: false };
+    const wsId = m[1];
+    try {
+      const list = listWorkspacesForUser(currentUserId, currentRole) || [];
+      const ws = list.find((w) => w.id === wsId);
+      return { id: wsId, name: ws?.name || null, hasDocs: Array.isArray(ws?.documents) && ws.documents.length > 0 };
+    } catch { return { id: wsId, name: null, hasDocs: false }; }
+  }, [location?.pathname, currentRole, currentUserId]);
 
   // External Users never use the personal chat — their home is the workspace
   // list. If they land here (typed URL, stale link, etc.) we redirect them
@@ -3488,6 +3551,25 @@ INSTRUCTIONS:
         onOpenWorkflows={() => { setShowTeamPage(false); setShowWorkspacesPanel(false); setShowWorkflowsPanel(true); setSidebarOpen(false); }}
         workflowCount={workflowCount}
         runningWorkflow={runningWorkflow}
+        onViewRunning={() => {
+          // Close overlay panels so the chat thread is visible, then scroll
+          // to the workflow card. The card has id `wf-run-<runId>`.
+          setShowTeamPage(false);
+          setShowWorkspacesPanel(false);
+          setShowWorkflowsPanel(false);
+          setShowPromptPanel(false);
+          setShowClientsPanel(false);
+          setShowKnowledgePacksPanel(false);
+          setShowDocumentVaultPanel(false);
+          setSidebarOpen(false);
+          const runId = runningWorkflow?.id;
+          if (runId) {
+            setTimeout(() => {
+              const el = document.getElementById(`wf-run-${runId}`);
+              if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 60);
+          }
+        }}
         promptCount={promptTemplates.length}
         clientCount={clients.length}
         packCount={knowledgePacks.length}
@@ -4093,9 +4175,9 @@ INSTRUCTIONS:
         return (
           <PreRunModal
             template={runningPrep}
-            workspaceId={null}
-            workspaceName={null}
-            workspaceHasDocs={false}
+            workspaceId={workspaceContext.id}
+            workspaceName={workspaceContext.name}
+            workspaceHasDocs={workspaceContext.hasDocs}
             onCancel={() => setRunningPrep(null)}
             onStarted={(runId) => {
               const tpl = runningPrep;

@@ -236,11 +236,15 @@ export function listTemplatesForUser(
 ): WorkflowTemplate[] {
   if (role === 'EXTERNAL_USER') return [];
   const all = listTemplates();
-  if (role === 'SUPER_ADMIN') return all;
-  return all.filter((t) =>
+  const visibleBase = role === 'SUPER_ADMIN' ? all : all.filter((t) =>
     t.visibility === 'platform' ||
     t.visibility === 'org' ||
     (t.visibility === 'personal' && t.createdBy === userId),
+  );
+  // Drafts are only visible to their creator (or a Super Admin) —
+  // prevents half-finished templates from showing up in picker.
+  return visibleBase.filter((t) =>
+    t.status !== 'draft' || t.createdBy === userId || role === 'SUPER_ADMIN'
   );
 }
 
