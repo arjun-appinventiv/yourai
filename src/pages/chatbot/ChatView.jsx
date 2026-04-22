@@ -22,6 +22,7 @@ import IntentCard, { isCardIntent, tryParseCardData } from '../../components/cha
 import WorkflowsPanel from '../../components/chat/WorkflowsPanel';
 import WorkflowBuilder from '../../components/chat/WorkflowBuilder';
 import PreRunModal from '../../components/chat/PreRunModal';
+import WorkflowRunPanel from '../../components/chat/WorkflowRunPanel';
 import WorkflowProgressCard from '../../components/chat/WorkflowProgressCard';
 import WorkflowReportCard from '../../components/chat/WorkflowReportCard';
 import {
@@ -2068,9 +2069,10 @@ function MessageBubble({ msg }) {
   // Workflow messages render the progress card + (on complete) the report.
   // They're thread-scoped, so scrolling back through history shows the
   // finished report exactly where it was run.
-  if (msg.sender === 'workflow') {
-    return <WorkflowThreadEntry msg={msg} />;
-  }
+  // Legacy: older runs persisted as chat messages. New runs live in the
+  // right-docked Run Panel, not the chat thread. We skip rendering
+  // sender:'workflow' bubbles so old threads don't surface ghost cards.
+  if (msg.sender === 'workflow') return null;
 
   // System notes render as centered, compact inline badges (e.g. "Switched to Clause Comparison mode")
   if (msg.isSystemNote) {
@@ -2656,6 +2658,10 @@ export default function ChatView({ initialView = 'chat' }) {
   const [showWorkflowsPanel, setShowWorkflowsPanel] = useState(false);
   const [editingWorkflow, setEditingWorkflow] = useState(null);
   const [runningPrep, setRunningPrep] = useState(null);
+  // Run Panel — docked to the right of the chat. Holds the ProgressCard
+  // (and Report when done) for the active or most-recently-viewed run.
+  // `null` = panel hidden. The sidebar running-strip reopens it.
+  const [activeRunPanelId, setActiveRunPanelId] = useState(null);
   const [workflowCount, setWorkflowCount] = useState(0);
   const [runningWorkflow, setRunningWorkflow] = useState(null);
 
@@ -3552,8 +3558,8 @@ INSTRUCTIONS:
         workflowCount={workflowCount}
         runningWorkflow={runningWorkflow}
         onViewRunning={() => {
-          // Close overlay panels so the chat thread is visible, then scroll
-          // to the workflow card. The card has id `wf-run-<runId>`.
+          // Close overlay panels so the chat + run panel are visible,
+          // then open the Run Panel for the active run.
           setShowTeamPage(false);
           setShowWorkspacesPanel(false);
           setShowWorkflowsPanel(false);
@@ -3563,12 +3569,7 @@ INSTRUCTIONS:
           setShowDocumentVaultPanel(false);
           setSidebarOpen(false);
           const runId = runningWorkflow?.id;
-          if (runId) {
-            setTimeout(() => {
-              const el = document.getElementById(`wf-run-${runId}`);
-              if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }, 60);
-          }
+          if (runId) setActiveRunPanelId(runId);
         }}
         promptCount={promptTemplates.length}
         clientCount={clients.length}
@@ -4056,6 +4057,19 @@ INSTRUCTIONS:
         </div>
       </div>
 
+      {/* ─── Workflow Run Panel — docked to the right of the chat.
+          Shows progress while a run is active and the report when it
+          completes. Hidden by default; opens automatically when a new
+          run starts and from the sidebar running-strip. Does not
+          overlay — it shrinks the chat area so users can keep chatting
+          while the workflow runs. ─── */}
+      {activeRunPanelId && !showTeamPage && !showWorkspacesPanel && !showWorkflowsPanel && (
+        <WorkflowRunPanel
+          runId={activeRunPanelId}
+          onClose={() => setActiveRunPanelId(null)}
+        />
+      )}
+
       {/* ─── Team page — full-page replacement for the former Invite Team modal ─── */}
       {showTeamPage && (
         <TeamPage
@@ -4180,19 +4194,11 @@ INSTRUCTIONS:
             workspaceHasDocs={workspaceContext.hasDocs}
             onCancel={() => setRunningPrep(null)}
             onStarted={(runId) => {
-              const tpl = runningPrep;
               setRunningPrep(null);
-              // Drop a workflow-run marker into the current thread so the
-              // progress card (and later the report) renders inline in chat.
-              const wfMsg = {
-                id: Date.now() + Math.random(),
-                sender: 'workflow',
-                runId,
-                templateName: tpl.name,
-                timestamp: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
-              };
-              setMessages((prev) => [...prev, wfMsg]);
-              if (showEmptyState) setShowEmptyState(false);
+              // Run lives in the right-docked Run Panel — not in the chat
+              // thread. Chat stays pure conversation; the panel is the
+              // dedicated surface for long-running pipelines.
+              setActiveRunPanelId(runId);
             }}
             onToast={(msg) => { setToastMsg(msg); setTimeout(() => setToastMsg(''), 3200); }}
           />
