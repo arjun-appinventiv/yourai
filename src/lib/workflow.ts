@@ -118,6 +118,40 @@ export interface WorkflowTemplate {
   estimatedTotalSeconds: number;
 }
 
+/* Per-user favourites — stored separately so favouriting a shared
+   platform template doesn't mutate the shared record. */
+const FAVOURITES_KEY = 'yourai_workflow_favourites_v1';
+
+function readFavourites(): Record<string, string[]> {
+  return readStore<Record<string, string[]>>(FAVOURITES_KEY, {});
+}
+function writeFavourites(v: Record<string, string[]>): void {
+  writeStore(FAVOURITES_KEY, v);
+}
+
+export function listFavouriteIds(userId: string): string[] {
+  return readFavourites()[userId] || [];
+}
+export function isFavouriteTemplate(userId: string, templateId: string): boolean {
+  return listFavouriteIds(userId).includes(templateId);
+}
+export function toggleFavouriteTemplate(userId: string, templateId: string): boolean {
+  const all = readFavourites();
+  const mine = new Set(all[userId] || []);
+  const nowFav = !mine.has(templateId);
+  if (nowFav) mine.add(templateId); else mine.delete(templateId);
+  all[userId] = Array.from(mine);
+  writeFavourites(all);
+  return nowFav;
+}
+export function listFavouriteTemplatesForUser(
+  userId: string,
+  role: 'ORG_ADMIN' | 'INTERNAL_USER' | 'EXTERNAL_USER' | 'SUPER_ADMIN' | string,
+): WorkflowTemplate[] {
+  const favIds = new Set(listFavouriteIds(userId));
+  return listTemplatesForUser(userId, role).filter((t) => favIds.has(t.id));
+}
+
 /* ─── Run-time types ─────────────────────────────────────────────────── */
 
 export interface UploadedDoc {
