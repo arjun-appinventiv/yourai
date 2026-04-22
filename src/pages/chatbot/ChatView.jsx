@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import {
   CheckCircle, MessageSquare, Clock, Share2, Grid3X3, Calendar, Users,
@@ -19,6 +19,17 @@ import { listWorkspacesForUser, seedWorkspacesIfEmpty } from '../../lib/workspac
 import { MOCK_WORKSPACES } from '../../lib/mockWorkspaces';
 import { loadVault, saveVault, seedVaultIfEmpty } from '../../lib/documentVaultStore';
 import IntentCard, { isCardIntent, tryParseCardData } from '../../components/chat/cards/IntentCard';
+import WorkflowsPanel from '../../components/chat/WorkflowsPanel';
+import WorkflowBuilder from '../../components/chat/WorkflowBuilder';
+import PreRunModal from '../../components/chat/PreRunModal';
+import WorkflowProgressCard from '../../components/chat/WorkflowProgressCard';
+import WorkflowReportCard from '../../components/chat/WorkflowReportCard';
+import {
+  listTemplatesForUser, seedTemplatesIfEmpty, duplicateTemplate as duplicateWorkflow,
+  deleteTemplate as deleteWorkflow, getActiveRunId, getRun,
+} from '../../lib/workflow';
+import { MOCK_WORKFLOW_TEMPLATES } from '../../lib/mockWorkflows';
+import { subscribeRun } from '../../lib/workflowRunner';
 import {
   MOCK_SUMMARY_CARD,
   MOCK_COMPARISON_CARD,
@@ -317,7 +328,7 @@ const riskColors = {
    Layout structure confirmed by Arjun. Not signed off by Ryan.
    All existing nav items preserved — reorganised only. */
 
-function Sidebar({ onOpenPromptTemplates, onOpenClients, onOpenKnowledgePacks, onOpenDocumentVault, onOpenInviteTeam, onOpenAuditLogs, onOpenBilling, onOpenWorkspaces, promptCount, clientCount, packCount, vaultCount, memberCount, workspaceCount, isOpen, onClose, threads, activeThreadId, onSwitchThread, onNewThread, onDeleteThread, threadSearch, onThreadSearchChange, onSignOut }) {
+function Sidebar({ onOpenPromptTemplates, onOpenClients, onOpenKnowledgePacks, onOpenDocumentVault, onOpenInviteTeam, onOpenAuditLogs, onOpenBilling, onOpenWorkspaces, onOpenWorkflows, promptCount, clientCount, packCount, vaultCount, memberCount, workspaceCount, workflowCount, isOpen, onClose, threads, activeThreadId, onSwitchThread, onNewThread, onDeleteThread, threadSearch, onThreadSearchChange, onSignOut, runningWorkflow, onViewRunning }) {
   // Role + permission gating — every nav item decides visibility via hasPermission
   // rather than by comparing role strings directly. See src/lib/roles.ts.
   const { hasPermission, isOrgAdmin, isExternalUser } = useRole();
@@ -380,6 +391,7 @@ function Sidebar({ onOpenPromptTemplates, onOpenClients, onOpenKnowledgePacks, o
   const knowledgeItems = [
     { id: 'document-vault', icon: FolderOpen, label: 'Document vault', rightText: String(vaultCount), onClick: onOpenDocumentVault },
     !isExternalUser && { id: 'knowledge-packs', icon: Package, label: 'Knowledge packs', rightText: String(packCount), onClick: onOpenKnowledgePacks },
+    !isExternalUser && { id: 'workflow-templates', icon: Zap, label: 'Workflow Templates', rightText: workflowCount != null ? String(workflowCount) : undefined, onClick: onOpenWorkflows },
     !isExternalUser && { id: 'prompt-templates', icon: FileText, label: 'Prompt templates', rightText: String(promptCount), onClick: onOpenPromptTemplates },
   ].filter(Boolean);
 
@@ -656,6 +668,53 @@ function Sidebar({ onOpenPromptTemplates, onOpenClients, onOpenKnowledgePacks, o
         </div>
         )}
       </div>
+
+      {/* ═══ ZONE 5.5 — Running Workflow Strip (Part 8) ═══
+          Visible only while a workflow run is in progress. Clicking "View"
+          jumps to that run's card in the chat thread. The spinner + mini
+          progress bar reflect the live subscription state in the parent. */}
+      {runningWorkflow && (
+        <div
+          onClick={onViewRunning}
+          style={{
+            borderTop: '0.5px solid var(--border)',
+            padding: '10px 12px',
+            background: 'linear-gradient(180deg, #F8F4ED 0%, #FDFBF6 100%)',
+            cursor: onViewRunning ? 'pointer' : 'default',
+            display: 'flex', flexDirection: 'column', gap: 6,
+          }}
+          onMouseEnter={(e) => { if (onViewRunning) e.currentTarget.style.background = '#F3ECDD'; }}
+          onMouseLeave={(e) => { if (onViewRunning) e.currentTarget.style.background = 'linear-gradient(180deg, #F8F4ED 0%, #FDFBF6 100%)'; }}
+          title="Jump to the running workflow"
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            {/* Spinner */}
+            <div style={{
+              width: 12, height: 12, borderRadius: '50%',
+              border: '1.5px solid #C9A84C', borderTopColor: 'transparent',
+              animation: 'spin 0.9s linear infinite', flexShrink: 0,
+            }} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--navy)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {runningWorkflow.templateName || 'Workflow running'}
+              </div>
+              <div style={{ fontSize: 10, color: 'var(--text-muted)', lineHeight: 1.2 }}>
+                Step {Math.min((runningWorkflow.currentStepIndex ?? 0) + 1, runningWorkflow.steps?.length || 1)} of {runningWorkflow.steps?.length || 1}
+                {onViewRunning ? ' · View →' : ''}
+              </div>
+            </div>
+          </div>
+          {/* Progress bar */}
+          <div style={{ height: 3, borderRadius: 2, background: '#E8DCC2', overflow: 'hidden' }}>
+            <div style={{
+              height: '100%',
+              width: `${Math.min(100, Math.round(((runningWorkflow.currentStepIndex ?? 0) / Math.max(1, (runningWorkflow.steps?.length || 1))) * 100))}%`,
+              background: '#C9A84C',
+              transition: 'width 300ms ease',
+            }} />
+          </div>
+        </div>
+      )}
 
       {/* ═══ ZONE 6 — User Profile Footer ═══ */}
       <div style={{ borderTop: '0.5px solid var(--border)', position: 'relative' }}>
@@ -1937,8 +1996,81 @@ function RiskCard({ card }) {
 }
 
 /* ─────────────────── Message Bubble ─────────────────── */
+/**
+ * WorkflowThreadEntry — subscribes to a WorkflowRun by id and renders:
+ *   - WorkflowProgressCard while the run is running / failed / cancelled
+ *   - WorkflowReportCard once the run is complete (keeps the progress
+ *     card collapsed above as the audit trail)
+ *
+ * Decision 6 from Part 4: when the thread containing a running workflow
+ * is currently visible, scroll the card into view on completion. The
+ * parent already drives auto-scroll on message append, so a completion
+ * tick that re-renders will naturally land correctly in the viewport.
+ */
+function WorkflowThreadEntry({ msg }) {
+  const [run, setRun] = useState(() => getRun(msg.runId));
+  useEffect(() => {
+    const initial = getRun(msg.runId);
+    setRun(initial);
+    const unsub = subscribeRun(msg.runId, (r) => setRun({ ...r }));
+    return () => unsub();
+  }, [msg.runId]);
+
+  if (!run) {
+    return (
+      <div style={{ margin: '14px auto', maxWidth: 760, padding: 14, borderRadius: 12, border: '1px solid var(--border)', background: '#F9FAFB', fontSize: 12, color: 'var(--text-muted)' }}>
+        Workflow run is no longer available. Start a new one from the picker.
+      </div>
+    );
+  }
+
+  return (
+    <div id={`wf-run-${msg.runId}`} style={{ display: 'flex', justifyContent: 'center', margin: '14px 0 24px', scrollMarginTop: 80 }}>
+      <div style={{ maxWidth: 820, width: '100%', display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <WorkflowProgressCard runId={msg.runId} workspaceName={run.workspaceId ? null : null} />
+        {run.status === 'complete' && run.reportCardData && (
+          <WorkflowReportCard report={run.reportCardData} userName={msg.templateName ? undefined : undefined} />
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ─── One-at-a-time guard shown when user clicks Run while another run is active ─── */
+function AlreadyRunningAlert({ activeName, currentStep, total, onClose }) {
+  return (
+    <>
+      <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 85, backdropFilter: 'blur(4px)' }} />
+      <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 440, background: '#fff', borderRadius: 16, boxShadow: '0 20px 60px rgba(0,0,0,0.25)', zIndex: 86, padding: '22px 26px 20px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+          <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--ice-warm)', color: 'var(--navy)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <Zap size={16} />
+          </div>
+          <h3 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 17, margin: 0 }}>A workflow is already running</h3>
+        </div>
+        <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, margin: '0 0 4px' }}>
+          <strong>{activeName}</strong> · Step {currentStep} of {total}
+        </p>
+        <p style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.6, marginTop: 6 }}>
+          Please wait for it to complete before starting another.
+        </p>
+        <div style={{ marginTop: 18, display: 'flex', justifyContent: 'flex-end' }}>
+          <button onClick={onClose} style={{ padding: '8px 20px', borderRadius: 8, border: 'none', background: 'var(--navy)', color: '#fff', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>OK</button>
+        </div>
+      </div>
+    </>
+  );
+}
+
 function MessageBubble({ msg }) {
   const isBot = msg.sender === 'bot';
+
+  // Workflow messages render the progress card + (on complete) the report.
+  // They're thread-scoped, so scrolling back through history shows the
+  // finished report exactly where it was run.
+  if (msg.sender === 'workflow') {
+    return <WorkflowThreadEntry msg={msg} />;
+  }
 
   // System notes render as centered, compact inline badges (e.g. "Switched to Clause Comparison mode")
   if (msg.isSystemNote) {
@@ -2281,7 +2413,68 @@ function PlanAwarenessBadge({ plan, onViewPlans }) {
   return null;
 }
 
-function EmptyState({ profile, plan, onPromptClick, navigate, onViewPlans }) {
+/* Tiny card used in the empty-state Workflows row. Gives the user a
+   one-click launch into the pre-run modal without opening the full
+   picker. Operation pills match the picker card so users get a
+   consistent visual of "what this does". */
+function MiniWorkflowCard({ workflow, onRun }) {
+  const pills = workflow.steps.slice(0, 2);
+  return (
+    <div
+      onClick={onRun}
+      style={{
+        background: '#fff', border: '1px solid var(--border)', borderRadius: 12,
+        padding: 14, cursor: 'pointer', transition: 'all 150ms',
+        display: 'flex', flexDirection: 'column', gap: 8,
+      }}
+      onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--navy)'; e.currentTarget.style.boxShadow = '0 3px 12px rgba(10,36,99,0.06)'; }}
+      onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.boxShadow = 'none'; }}
+    >
+      <div className="flex items-center gap-2 flex-wrap">
+        <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontWeight: 600, color: 'var(--navy)' }}>{workflow.name}</span>
+        <span style={{ fontSize: 9, padding: '2px 7px', borderRadius: 999, background: 'var(--ice-warm)', color: 'var(--navy)', border: '1px solid var(--border)', fontWeight: 500 }}>{workflow.practiceArea}</span>
+      </div>
+      <div style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}>
+        {workflow.steps.length} steps · ~{workflow.estimatedTotalSeconds}s
+      </div>
+      <div className="flex items-center gap-1 flex-wrap">
+        {pills.map((s) => {
+          const cfg = (typeof window !== 'undefined' && typeof require !== 'undefined') ? null : null;
+          return <MiniOpPill key={s.id} operation={s.operation} />;
+        })}
+        {workflow.steps.length > 2 && (
+          <span style={{ fontSize: 9, padding: '2px 7px', borderRadius: 999, background: '#F3F4F6', color: '#6B7280', border: '1px solid #E5E7EB' }}>
+            + {workflow.steps.length - 2} more
+          </span>
+        )}
+      </div>
+      <div style={{ textAlign: 'right', marginTop: 2 }}>
+        <span style={{ fontSize: 12, color: 'var(--navy)', fontWeight: 500 }}>Run →</span>
+      </div>
+    </div>
+  );
+}
+
+function MiniOpPill({ operation }) {
+  // Avoid re-importing lucide icons at this depth; just show the label pill.
+  // The picker card shows icons already; the mini card keeps it compact.
+  const labels = {
+    read_documents: { label: 'Read Documents', color: 'bg-blue-50 text-blue-700 border-blue-200' },
+    analyse_clauses: { label: 'Analyse Clauses', color: 'bg-purple-50 text-purple-700 border-purple-200' },
+    compare_against_standard: { label: 'Compare', color: 'bg-amber-50 text-amber-700 border-amber-200' },
+    generate_report: { label: 'Report', color: 'bg-green-50 text-green-700 border-green-200' },
+    research_precedents: { label: 'Precedents', color: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
+    compliance_check: { label: 'Compliance', color: 'bg-red-50 text-red-700 border-red-200' },
+  };
+  const m = labels[operation] || labels.read_documents;
+  return (
+    <span className={m.color} style={{ fontSize: 9, padding: '2px 7px', borderRadius: 999, fontWeight: 500, border: '1px solid' }}>
+      {m.label}
+    </span>
+  );
+}
+
+function EmptyState({ profile, plan, onPromptClick, navigate, onViewPlans, workflows = [], onRunWorkflow, onOpenWorkflowsPanel }) {
   // Resolve first name from the signed-up user persisted to localStorage.
   // EmptyState is a standalone component so we can't destructure AuthContext
   // without a hook call — the localStorage lookup is enough for the demo.
@@ -2324,6 +2517,31 @@ function EmptyState({ profile, plan, onPromptClick, navigate, onViewPlans }) {
           })}
         </div>
 
+        {/* ─── Run a Workflow ─── */}
+        {/* Only renders when the user has at least one active workflow
+            available. Hidden for Externals (their workflow list is empty). */}
+        {workflows.length > 0 && (
+          <div style={{ marginTop: 32, textAlign: 'left', maxWidth: 820, marginLeft: 'auto', marginRight: 'auto' }}>
+            <div className="flex items-center justify-between" style={{ marginBottom: 10 }}>
+              <div className="flex items-center gap-2">
+                <Zap size={14} style={{ color: '#C9A84C' }} />
+                <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>Run a Workflow</span>
+              </div>
+              <button
+                onClick={onOpenWorkflowsPanel}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: 'var(--navy)', fontWeight: 500 }}
+              >
+                View all →
+              </button>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {workflows.slice(0, 3).map((w) => (
+                <MiniWorkflowCard key={w.id} workflow={w} onRun={() => onRunWorkflow(w)} />
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* ─── Attach-once rule hint ─── */}
         <div style={{ marginTop: 28, padding: '14px 18px', borderRadius: 12, background: 'rgba(201, 168, 76, 0.08)', border: '1px solid rgba(201, 168, 76, 0.35)', textAlign: 'left', display: 'flex', alignItems: 'flex-start', gap: 12, maxWidth: 680, marginLeft: 'auto', marginRight: 'auto' }}>
           <Info size={16} style={{ color: '#C9A84C', flexShrink: 0, marginTop: 2 }} />
@@ -2354,11 +2572,27 @@ function EmptyState({ profile, plan, onPromptClick, navigate, onViewPlans }) {
 /* ═══════════════════ ChatView ═══════════════════ */
 export default function ChatView({ initialView = 'chat' }) {
   const navigate = useNavigate();
+  const location = useLocation();
   // Role + identity — used for workspace membership filtering in the sidebar
   // badge and panels below.
   const { currentRole, hasPermission, isExternalUser, isOrgAdmin } = useRole();
   const { operator } = useAuth();
   const currentUserId = operator?.id || 'user-ryan';
+
+  // Part 9 — workspace context detection for workflow runs.
+  // If the user triggers a workflow while inside a workspace route, the run
+  // should be scoped to that workspace (workspace KB + vault docs prioritised
+  // over global). Outside a workspace, runs use global KB only.
+  const workspaceContext = useMemo(() => {
+    const m = (location?.pathname || '').match(/^\/chat\/workspaces\/([^/]+)/);
+    if (!m) return { id: null, name: null, hasDocs: false };
+    const wsId = m[1];
+    try {
+      const list = listWorkspacesForUser(currentUserId, currentRole) || [];
+      const ws = list.find((w) => w.id === wsId);
+      return { id: wsId, name: ws?.name || null, hasDocs: Array.isArray(ws?.documents) && ws.documents.length > 0 };
+    } catch { return { id: wsId, name: null, hasDocs: false }; }
+  }, [location?.pathname, currentRole, currentUserId]);
 
   // External Users never use the personal chat — their home is the workspace
   // list. If they land here (typed URL, stale link, etc.) we redirect them
@@ -2410,6 +2644,44 @@ export default function ChatView({ initialView = 'chat' }) {
   // the page sets it back to false. The /chat/workspaces route sets it via
   // the `initialView` prop on mount.
   const [showWorkspacesPanel, setShowWorkspacesPanel] = useState(initialView === 'workspaces');
+
+  /* ─── Workflows ───
+   *  showWorkflowsPanel   picker open/closed
+   *  editingWorkflow      null | 'new' | WorkflowTemplate (builder)
+   *  runningPrep          null | WorkflowTemplate (pre-run modal)
+   *  workflowCount        badge number in the sidebar
+   *  runningWorkflow      live snapshot of the currently-running run (for
+   *                        the background indicator — Part 8)
+   */
+  const [showWorkflowsPanel, setShowWorkflowsPanel] = useState(false);
+  const [editingWorkflow, setEditingWorkflow] = useState(null);
+  const [runningPrep, setRunningPrep] = useState(null);
+  const [workflowCount, setWorkflowCount] = useState(0);
+  const [runningWorkflow, setRunningWorkflow] = useState(null);
+
+  // Keep the workflow count badge in sync with the visible-to-user list.
+  // Re-runs whenever the panel closes (user may have created / deleted
+  // templates) or the role changes.
+  useEffect(() => {
+    if (isExternalUser) { setWorkflowCount(0); return; }
+    seedTemplatesIfEmpty(MOCK_WORKFLOW_TEMPLATES);
+    setWorkflowCount(listTemplatesForUser(currentUserId, currentRole).length);
+  }, [isExternalUser, currentUserId, currentRole, showWorkflowsPanel, editingWorkflow]);
+
+  // Subscribe to the active run (if any) so the sidebar indicator
+  // updates live. Runs survive component unmount via the singleton
+  // runner in workflowRunner.ts.
+  useEffect(() => {
+    const rid = getActiveRunId();
+    if (!rid) { setRunningWorkflow(null); return; }
+    const initial = getRun(rid);
+    if (initial && initial.status === 'running') setRunningWorkflow(initial);
+    const unsub = subscribeRun(rid, (r) => {
+      setRunningWorkflow(r.status === 'running' ? r : null);
+    });
+    return () => unsub();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [runningPrep]);
   // Visible-workspace count is recomputed from localStorage whenever the
   // panel closes, so the sidebar badge stays accurate after create/archive.
   const [workspaceTick, setWorkspaceTick] = useState(0);
@@ -2713,6 +2985,7 @@ export default function ChatView({ initialView = 'chat' }) {
           body: JSON.stringify({
             conversationId: activeThreadId,
             message: trimmed,
+            history,
             sessionId: sessionState.sessionKbSnapshotId,
             sessionDocId: sessionState.sessionDocId,
           }),
@@ -3275,6 +3548,28 @@ INSTRUCTIONS:
         onOpenAuditLogs={() => { /* TODO: Part 5+ wires real audit-logs panel */ }}
         onOpenBilling={() => { navigate('/app/billing'); setSidebarOpen(false); }}
         onOpenWorkspaces={() => { setShowTeamPage(false); navigate('/chat/workspaces'); setShowWorkspacesPanel(true); setSidebarOpen(false); }}
+        onOpenWorkflows={() => { setShowTeamPage(false); setShowWorkspacesPanel(false); setShowWorkflowsPanel(true); setSidebarOpen(false); }}
+        workflowCount={workflowCount}
+        runningWorkflow={runningWorkflow}
+        onViewRunning={() => {
+          // Close overlay panels so the chat thread is visible, then scroll
+          // to the workflow card. The card has id `wf-run-<runId>`.
+          setShowTeamPage(false);
+          setShowWorkspacesPanel(false);
+          setShowWorkflowsPanel(false);
+          setShowPromptPanel(false);
+          setShowClientsPanel(false);
+          setShowKnowledgePacksPanel(false);
+          setShowDocumentVaultPanel(false);
+          setSidebarOpen(false);
+          const runId = runningWorkflow?.id;
+          if (runId) {
+            setTimeout(() => {
+              const el = document.getElementById(`wf-run-${runId}`);
+              if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 60);
+          }
+        }}
         promptCount={promptTemplates.length}
         clientCount={clients.length}
         packCount={knowledgePacks.length}
@@ -3320,7 +3615,16 @@ INSTRUCTIONS:
           )}
 
           {showEmptyState ? (
-            <EmptyState profile={profile} plan={plan} onPromptClick={handlePromptClick} navigate={navigate} onViewPlans={() => setShowPlanModal(true)} />
+            <EmptyState
+              profile={profile}
+              plan={plan}
+              onPromptClick={handlePromptClick}
+              navigate={navigate}
+              onViewPlans={() => setShowPlanModal(true)}
+              workflows={!isExternalUser ? (listTemplatesForUser(currentUserId, currentRole) || []).filter(t => t.status === 'active').slice(0, 3) : []}
+              onRunWorkflow={(t) => setRunningPrep(t)}
+              onOpenWorkflowsPanel={() => { setShowTeamPage?.(false); setShowWorkspacesPanel?.(false); setShowWorkflowsPanel(true); }}
+            />
           ) : (
             <div ref={scrollRef} className="px-3 sm:px-4 md:px-10 py-6" style={{ flex: 1, overflowY: 'auto' }}>
               {/* ─── Persistent Conversation Context Header ─── */}
@@ -3813,6 +4117,87 @@ INSTRUCTIONS:
           }}
         />
       )}
+
+      {/* ─── Workflow templates picker ─── */}
+      {showWorkflowsPanel && (
+        <WorkflowsPanel
+          onClose={() => setShowWorkflowsPanel(false)}
+          onCreateNew={() => { setShowWorkflowsPanel(false); setEditingWorkflow('new'); }}
+          onRun={(t) => { setShowWorkflowsPanel(false); setRunningPrep(t); }}
+          onEdit={(t) => { setShowWorkflowsPanel(false); setEditingWorkflow(t); }}
+          onDuplicate={(t) => {
+            const copy = duplicateWorkflow(t.id, currentUserId, operator?.name || 'You');
+            if (copy) {
+              setToastMsg(`${copy.name} ready to customise`);
+              setTimeout(() => setToastMsg(''), 3200);
+            }
+          }}
+          onDelete={(id) => {
+            deleteWorkflow(id);
+            setToastMsg('Workflow deleted');
+            setTimeout(() => setToastMsg(''), 3200);
+          }}
+        />
+      )}
+
+      {/* ─── Workflow builder slide-over ─── */}
+      {editingWorkflow && (
+        <WorkflowBuilder
+          template={editingWorkflow === 'new' ? null : editingWorkflow}
+          knowledgePacks={knowledgePacks}
+          onBack={() => { setEditingWorkflow(null); setShowWorkflowsPanel(true); }}
+          onSaved={(saved) => {
+            setEditingWorkflow(null);
+            setShowWorkflowsPanel(true);
+            setToastMsg(`${saved.name} saved`);
+            setTimeout(() => setToastMsg(''), 3200);
+          }}
+          onToast={(msg) => { setToastMsg(msg); setTimeout(() => setToastMsg(''), 3200); }}
+        />
+      )}
+
+      {/* ─── Workflow pre-run modal ─── */}
+      {runningPrep && (() => {
+        // One-at-a-time guard — if there's already an active run,
+        // surface the alert modal (Part 8) instead of a fresh pre-run.
+        const activeRid = getActiveRunId();
+        const active = activeRid ? getRun(activeRid) : null;
+        if (active && active.status === 'running' && active.templateId !== runningPrep.id) {
+          return (
+            <AlreadyRunningAlert
+              activeName={active.templateName}
+              currentStep={active.currentStepIndex + 1}
+              total={active.steps.length}
+              onClose={() => setRunningPrep(null)}
+            />
+          );
+        }
+        return (
+          <PreRunModal
+            template={runningPrep}
+            workspaceId={workspaceContext.id}
+            workspaceName={workspaceContext.name}
+            workspaceHasDocs={workspaceContext.hasDocs}
+            onCancel={() => setRunningPrep(null)}
+            onStarted={(runId) => {
+              const tpl = runningPrep;
+              setRunningPrep(null);
+              // Drop a workflow-run marker into the current thread so the
+              // progress card (and later the report) renders inline in chat.
+              const wfMsg = {
+                id: Date.now() + Math.random(),
+                sender: 'workflow',
+                runId,
+                templateName: tpl.name,
+                timestamp: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
+              };
+              setMessages((prev) => [...prev, wfMsg]);
+              if (showEmptyState) setShowEmptyState(false);
+            }}
+            onToast={(msg) => { setToastMsg(msg); setTimeout(() => setToastMsg(''), 3200); }}
+          />
+        );
+      })()}
 
       {/* Transient toast for team actions */}
       {toastMsg && (
