@@ -41,7 +41,7 @@ export default function CardFooter({ sourceType, sourceName }: CardFooterProps) 
       <span
         style={{
           fontFamily: MONO_FAMILY,
-          fontSize: 11,
+          fontSize: 13,
           letterSpacing: '0.12em',
           textTransform: 'uppercase',
           color: '#4B5563',
@@ -55,7 +55,7 @@ export default function CardFooter({ sourceType, sourceName }: CardFooterProps) 
           alignItems: 'center',
           gap: 8,
           fontFamily: MONO_FAMILY,
-          fontSize: 11,
+          fontSize: 13,
           letterSpacing: '0.04em',
           color: '#374151',
         }}

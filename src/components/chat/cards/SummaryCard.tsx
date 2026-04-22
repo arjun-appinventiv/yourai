@@ -71,7 +71,7 @@ export default function SummaryCard({ data }: { data: SummaryCardData }) {
         <div
           style={{
             fontFamily: MONO,
-            fontSize: 11,
+            fontSize: 13,
             letterSpacing: '0.12em',
             textTransform: 'uppercase',
             color: '#4B5563',
@@ -81,7 +81,7 @@ export default function SummaryCard({ data }: { data: SummaryCardData }) {
           Key Points
         </div>
         {points.length === 0 ? (
-          <div style={{ fontSize: 13, color: '#4B5563', fontStyle: 'italic' }}>No key points identified.</div>
+          <div style={{ fontSize: 15, color: '#4B5563', fontStyle: 'italic' }}>No key points identified.</div>
         ) : (
           <div>
             {points.map((p, i) => (
@@ -98,7 +98,7 @@ export default function SummaryCard({ data }: { data: SummaryCardData }) {
                 <span
                   style={{
                     fontFamily: MONO,
-                    fontSize: 10,
+                    fontSize: 12,
                     color: '#4B5563',
                     width: 18,
                     flexShrink: 0,
@@ -107,7 +107,7 @@ export default function SummaryCard({ data }: { data: SummaryCardData }) {
                 >
                   {String(i + 1).padStart(2, '0')}
                 </span>
-                <span style={{ fontSize: 13, color: '#374151', lineHeight: 1.7 }}>{p}</span>
+                <span style={{ fontSize: 15, color: '#374151', lineHeight: 1.7 }}>{p}</span>
               </div>
             ))}
           </div>
@@ -123,7 +123,7 @@ export default function SummaryCard({ data }: { data: SummaryCardData }) {
               border: '1px solid #FDE68A',
               borderLeft: '3px solid #C9A84C',
               borderRadius: 6,
-              fontSize: 12,
+              fontSize: 14,
               color: '#92400E',
               lineHeight: 1.7,
             }}
@@ -152,7 +152,7 @@ function MetaBlock({ label, value }: { label: string; value?: string }) {
       <div
         style={{
           fontFamily: MONO,
-          fontSize: 11,
+          fontSize: 13,
           letterSpacing: '0.12em',
           textTransform: 'uppercase',
           color: '#C9A84C',
@@ -163,7 +163,7 @@ function MetaBlock({ label, value }: { label: string; value?: string }) {
       </div>
       <div
         style={{
-          fontSize: 12,
+          fontSize: 14,
           fontWeight: 500,
           color: '#0B1D3A',
           lineHeight: 1.65,

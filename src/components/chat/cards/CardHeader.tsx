@@ -44,7 +44,7 @@ export default function CardHeader({ intentLabel, title, subtitle, sourcePill }:
         <div
           style={{
             fontFamily: MONO_FAMILY,
-            fontSize: 11,
+            fontSize: 13,
             letterSpacing: '0.1em',
             textTransform: 'uppercase',
             color: '#4B5563',
@@ -56,7 +56,7 @@ export default function CardHeader({ intentLabel, title, subtitle, sourcePill }:
         <h3
           style={{
             fontFamily: SERIF_FAMILY,
-            fontSize: 18,
+            fontSize: 20,
             lineHeight: 1.3,
             color: '#0B1D3A',
             margin: 0,
@@ -68,7 +68,7 @@ export default function CardHeader({ intentLabel, title, subtitle, sourcePill }:
         <div
           style={{
             fontFamily: MONO_FAMILY,
-            fontSize: 11,
+            fontSize: 13,
             letterSpacing: '0.04em',
             color: '#4B5563',
             marginTop: 6,
@@ -83,7 +83,7 @@ export default function CardHeader({ intentLabel, title, subtitle, sourcePill }:
           style={{
             display: 'inline-block',
             fontFamily: MONO_FAMILY,
-            fontSize: 11,
+            fontSize: 13,
             letterSpacing: '0.08em',
             textTransform: 'uppercase',
             padding: '4px 12px',
