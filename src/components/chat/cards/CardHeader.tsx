@@ -36,7 +36,7 @@ export default function CardHeader({ intentLabel, title, subtitle, sourcePill }:
         alignItems: 'flex-start',
         justifyContent: 'space-between',
         gap: 16,
-        padding: '22px 28px 18px',
+        padding: '18px 22px 14px',
         borderBottom: '1px solid #E4E7EC',
       }}
     >
@@ -45,7 +45,7 @@ export default function CardHeader({ intentLabel, title, subtitle, sourcePill }:
           style={{
             fontFamily: MONO_FAMILY,
             fontSize: 10,
-            letterSpacing: '0.16em',
+            letterSpacing: '0.1em',
             textTransform: 'uppercase',
             color: '#9CA3AF',
             marginBottom: 10,
@@ -83,7 +83,7 @@ export default function CardHeader({ intentLabel, title, subtitle, sourcePill }:
           style={{
             display: 'inline-block',
             fontFamily: MONO_FAMILY,
-            fontSize: 9,
+            fontSize: 11,
             letterSpacing: '0.08em',
             textTransform: 'uppercase',
             padding: '4px 12px',

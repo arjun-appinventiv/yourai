@@ -36,7 +36,7 @@ export default function SummaryCard({ data }: { data: SummaryCardData }) {
         sourcePill={{ label: data?.sourceType === 'kb' ? 'Knowledge Base' : 'Document', type: (data?.sourceType as SourcePillType) || 'doc' }}
       />
 
-      <div style={{ padding: '28px' }}>
+      <div style={{ padding: '20px 22px' }}>
         {/* Executive summary */}
         <p
           style={{
@@ -71,8 +71,8 @@ export default function SummaryCard({ data }: { data: SummaryCardData }) {
         <div
           style={{
             fontFamily: MONO,
-            fontSize: 8,
-            letterSpacing: '0.2em',
+            fontSize: 11,
+            letterSpacing: '0.12em',
             textTransform: 'uppercase',
             color: '#D1D5DB',
             marginBottom: 12,
@@ -152,8 +152,8 @@ function MetaBlock({ label, value }: { label: string; value?: string }) {
       <div
         style={{
           fontFamily: MONO,
-          fontSize: 8,
-          letterSpacing: '0.2em',
+          fontSize: 11,
+          letterSpacing: '0.12em',
           textTransform: 'uppercase',
           color: '#C9A84C',
           marginBottom: 6,

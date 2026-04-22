@@ -68,7 +68,7 @@ export default function ResearchBriefCard({ data }: { data: ResearchBriefCardDat
 
       {/* Collapsible sections */}
       {sections.length === 0 ? (
-        <div style={{ padding: '28px', fontSize: 13, color: '#9CA3AF', fontStyle: 'italic', textAlign: 'center' }}>
+        <div style={{ padding: '20px 22px', fontSize: 13, color: '#9CA3AF', fontStyle: 'italic', textAlign: 'center' }}>
           No research sections available.
         </div>
       ) : (
@@ -86,7 +86,7 @@ export default function ResearchBriefCard({ data }: { data: ResearchBriefCardDat
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
-                  padding: '16px 28px',
+                  padding: '12px 22px',
                   cursor: 'pointer',
                   userSelect: 'none',
                   transition: 'background-color 100ms',
@@ -106,7 +106,7 @@ export default function ResearchBriefCard({ data }: { data: ResearchBriefCardDat
                       alignItems: 'center',
                       justifyContent: 'center',
                       fontFamily: MONO,
-                      fontSize: 9,
+                      fontSize: 11,
                       fontWeight: 500,
                       flexShrink: 0,
                     }}
@@ -139,7 +139,7 @@ export default function ResearchBriefCard({ data }: { data: ResearchBriefCardDat
               {isOpen && (
                 <div
                   style={{
-                    padding: '0 28px 20px 62px',
+                    padding: '0 22px 16px 54px',
                     fontSize: 13,
                     color: '#4B5563',
                     lineHeight: 1.8,
@@ -163,7 +163,7 @@ export default function ResearchBriefCard({ data }: { data: ResearchBriefCardDat
                           key={ci}
                           style={{
                             fontFamily: MONO,
-                            fontSize: 9,
+                            fontSize: 11,
                             letterSpacing: '0.06em',
                             padding: '3px 10px',
                             borderRadius: 4,
@@ -227,8 +227,8 @@ function StatCell({ number, label, last }: { number: string | number; label: str
       <div
         style={{
           fontFamily: MONO,
-          fontSize: 8,
-          letterSpacing: '0.16em',
+          fontSize: 11,
+          letterSpacing: '0.1em',
           textTransform: 'uppercase',
           color: 'rgba(255,255,255,0.3)',
         }}
