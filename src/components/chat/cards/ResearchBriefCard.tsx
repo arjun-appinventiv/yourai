@@ -68,7 +68,7 @@ export default function ResearchBriefCard({ data }: { data: ResearchBriefCardDat
 
       {/* Collapsible sections */}
       {sections.length === 0 ? (
-        <div style={{ padding: '20px 22px', fontSize: 13, color: '#9CA3AF', fontStyle: 'italic', textAlign: 'center' }}>
+        <div style={{ padding: '20px 22px', fontSize: 13, color: '#4B5563', fontStyle: 'italic', textAlign: 'center' }}>
           No research sections available.
         </div>
       ) : (
@@ -129,7 +129,7 @@ export default function ResearchBriefCard({ data }: { data: ResearchBriefCardDat
                 <ChevronDown
                   size={16}
                   style={{
-                    color: isOpen ? '#0B1D3A' : '#D1D5DB',
+                    color: isOpen ? '#0B1D3A' : '#4B5563',
                     transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)',
                     transition: 'transform 200ms, color 200ms',
                   }}
@@ -183,7 +183,7 @@ export default function ResearchBriefCard({ data }: { data: ResearchBriefCardDat
                       style={{
                         marginTop: 12,
                         fontSize: 11,
-                        color: '#9CA3AF',
+                        color: '#4B5563',
                         fontStyle: 'italic',
                         fontFamily: MONO,
                         letterSpacing: '0.03em',

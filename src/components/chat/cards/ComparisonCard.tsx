@@ -32,7 +32,7 @@ const VERDICT_CELL_BG: Record<ComparisonVerdict, string> = {
 const VERDICT_PILL: Record<ComparisonVerdict, { bg: string; color: string; label: string }> = {
   better:  { bg: '#DCFCE7', color: '#166534', label: '↑ More favourable' },
   worse:   { bg: '#FEF9C3', color: '#854D0E', label: '↓ Less favourable' },
-  neutral: { bg: '#F3F4F6', color: '#6B7280', label: '— Absent' },
+  neutral: { bg: '#F3F4F6', color: '#374151', label: '— Absent' },
 };
 
 export default function ComparisonCard({ data }: { data: ComparisonCardData }) {
@@ -64,7 +64,7 @@ export default function ComparisonCard({ data }: { data: ComparisonCardData }) {
 
       {/* Rows */}
       {rows.length === 0 ? (
-        <div style={{ padding: '20px 22px', textAlign: 'center', fontSize: 13, color: '#9CA3AF', fontStyle: 'italic' }}>
+        <div style={{ padding: '20px 22px', textAlign: 'center', fontSize: 13, color: '#4B5563', fontStyle: 'italic' }}>
           No clauses to compare.
         </div>
       ) : (
@@ -87,7 +87,7 @@ export default function ComparisonCard({ data }: { data: ComparisonCardData }) {
                 fontSize: 11,
                 letterSpacing: '0.1em',
                 textTransform: 'uppercase',
-                color: '#6B7280',
+                color: '#374151',
                 lineHeight: 1.6,
                 display: 'flex',
                 alignItems: 'flex-start',
@@ -110,7 +110,7 @@ export default function ComparisonCard({ data }: { data: ComparisonCardData }) {
             background: '#F8FAFC',
             borderTop: '1px solid #E4E7EC',
             fontSize: 12,
-            color: '#6B7280',
+            color: '#374151',
             lineHeight: 1.7,
           }}
         >

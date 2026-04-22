@@ -44,10 +44,10 @@ export default function CardHeader({ intentLabel, title, subtitle, sourcePill }:
         <div
           style={{
             fontFamily: MONO_FAMILY,
-            fontSize: 10,
+            fontSize: 11,
             letterSpacing: '0.1em',
             textTransform: 'uppercase',
-            color: '#9CA3AF',
+            color: '#4B5563',
             marginBottom: 10,
           }}
         >
@@ -68,9 +68,9 @@ export default function CardHeader({ intentLabel, title, subtitle, sourcePill }:
         <div
           style={{
             fontFamily: MONO_FAMILY,
-            fontSize: 10,
+            fontSize: 11,
             letterSpacing: '0.04em',
-            color: '#9CA3AF',
+            color: '#4B5563',
             marginTop: 6,
           }}
         >

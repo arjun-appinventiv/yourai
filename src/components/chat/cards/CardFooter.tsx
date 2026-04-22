@@ -8,7 +8,7 @@ import React from 'react';
  * The coloured dot maps to the source tier:
  *   doc  → blue  (#3B82F6)
  *   kb   → green (#10B981)
- *   none → grey  (#9CA3AF) — rendered but muted
+ *   none → grey  (#4B5563) — rendered but muted
  */
 
 export type CardFooterSource = 'doc' | 'kb' | 'none';
@@ -16,7 +16,7 @@ export type CardFooterSource = 'doc' | 'kb' | 'none';
 const DOT: Record<CardFooterSource, string> = {
   doc: '#3B82F6',
   kb: '#10B981',
-  none: '#9CA3AF',
+  none: '#4B5563',
 };
 
 const MONO_FAMILY = "'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace";
@@ -41,10 +41,10 @@ export default function CardFooter({ sourceType, sourceName }: CardFooterProps) 
       <span
         style={{
           fontFamily: MONO_FAMILY,
-          fontSize: 10,
+          fontSize: 11,
           letterSpacing: '0.12em',
           textTransform: 'uppercase',
-          color: '#D1D5DB',
+          color: '#4B5563',
         }}
       >
         Source
@@ -55,9 +55,9 @@ export default function CardFooter({ sourceType, sourceName }: CardFooterProps) 
           alignItems: 'center',
           gap: 8,
           fontFamily: MONO_FAMILY,
-          fontSize: 10,
+          fontSize: 11,
           letterSpacing: '0.04em',
-          color: '#6B7280',
+          color: '#374151',
         }}
       >
         <span

@@ -74,14 +74,14 @@ export default function SummaryCard({ data }: { data: SummaryCardData }) {
             fontSize: 11,
             letterSpacing: '0.12em',
             textTransform: 'uppercase',
-            color: '#D1D5DB',
+            color: '#4B5563',
             marginBottom: 12,
           }}
         >
           Key Points
         </div>
         {points.length === 0 ? (
-          <div style={{ fontSize: 13, color: '#9CA3AF', fontStyle: 'italic' }}>No key points identified.</div>
+          <div style={{ fontSize: 13, color: '#4B5563', fontStyle: 'italic' }}>No key points identified.</div>
         ) : (
           <div>
             {points.map((p, i) => (
@@ -99,7 +99,7 @@ export default function SummaryCard({ data }: { data: SummaryCardData }) {
                   style={{
                     fontFamily: MONO,
                     fontSize: 10,
-                    color: '#D1D5DB',
+                    color: '#4B5563',
                     width: 18,
                     flexShrink: 0,
                     marginTop: 4,

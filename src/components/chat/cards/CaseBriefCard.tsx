@@ -30,7 +30,7 @@ export interface CaseBriefCardData {
 
 const TAG_STYLE: Record<'blue' | 'grey', { bg: string; color: string; border: string }> = {
   blue: { bg: '#EFF6FF', color: '#1D4ED8', border: '#BFDBFE' },
-  grey: { bg: '#F3F4F6', color: '#6B7280', border: '#E5E7EB' },
+  grey: { bg: '#F3F4F6', color: '#374151', border: '#E5E7EB' },
 };
 
 export default function CaseBriefCard({ data }: { data: CaseBriefCardData }) {
@@ -50,7 +50,7 @@ export default function CaseBriefCard({ data }: { data: CaseBriefCardData }) {
       {/* Grid table */}
       <div style={{ display: 'grid', gridTemplateColumns: '110px 1fr' }}>
         {rows.length === 0 ? (
-          <div style={{ gridColumn: '1 / 3', padding: '24px', fontSize: 13, color: '#9CA3AF', fontStyle: 'italic', textAlign: 'center' }}>
+          <div style={{ gridColumn: '1 / 3', padding: '24px', fontSize: 13, color: '#4B5563', fontStyle: 'italic', textAlign: 'center' }}>
             No case details available.
           </div>
         ) : (
@@ -66,7 +66,7 @@ export default function CaseBriefCard({ data }: { data: CaseBriefCardData }) {
                     fontSize: 11,
                     letterSpacing: '0.1em',
                     textTransform: 'uppercase',
-                    color: '#D1D5DB',
+                    color: '#4B5563',
                     background: '#F9FAFB',
                     borderRight: '1px solid #E4E7EC',
                     display: 'flex',
@@ -101,7 +101,7 @@ export default function CaseBriefCard({ data }: { data: CaseBriefCardData }) {
                 fontSize: 11,
                 letterSpacing: '0.1em',
                 textTransform: 'uppercase',
-                color: '#D1D5DB',
+                color: '#4B5563',
                 background: '#F9FAFB',
                 borderRight: '1px solid #E4E7EC',
                 display: 'flex',
@@ -141,7 +141,7 @@ export default function CaseBriefCard({ data }: { data: CaseBriefCardData }) {
                 </div>
               )}
               {precedence.note && (
-                <div style={{ fontSize: 12, color: '#6B7280', lineHeight: 1.6, marginTop: 8 }}>
+                <div style={{ fontSize: 12, color: '#374151', lineHeight: 1.6, marginTop: 8 }}>
                   {precedence.note}
                 </div>
               )}
