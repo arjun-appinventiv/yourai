@@ -392,7 +392,7 @@ function Sidebar({ onOpenPromptTemplates, onOpenClients, onOpenKnowledgePacks, o
   const knowledgeItems = [
     { id: 'document-vault', icon: FolderOpen, label: 'Document vault', rightText: String(vaultCount), onClick: onOpenDocumentVault },
     !isExternalUser && { id: 'knowledge-packs', icon: Package, label: 'Knowledge packs', rightText: String(packCount), onClick: onOpenKnowledgePacks },
-    !isExternalUser && { id: 'workflow-templates', icon: Zap, label: 'Workflow Templates', rightText: workflowCount != null ? String(workflowCount) : undefined, onClick: onOpenWorkflows },
+    !isExternalUser && { id: 'workflows', icon: Zap, label: 'Workflows', rightText: workflowCount != null ? String(workflowCount) : undefined, onClick: onOpenWorkflows },
     !isExternalUser && { id: 'prompt-templates', icon: FileText, label: 'Prompt templates', rightText: String(promptCount), onClick: onOpenPromptTemplates },
   ].filter(Boolean);
 
@@ -2566,7 +2566,7 @@ function EmptyState({ profile, plan, onPromptClick, navigate, onViewPlans, workf
                     Pin workflows you run often
                   </div>
                   <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2, lineHeight: 1.5 }}>
-                    Open Workflow Templates, click the ⭐ on any workflow, and it'll appear right here for one-click launch.
+                    Open Workflows, click the ⭐ on any workflow, and it'll appear right here for one-click launch.
                   </div>
                 </div>
                 <span style={{ fontSize: 12, color: 'var(--navy)', fontWeight: 500, flexShrink: 0 }}>Open →</span>
@@ -3628,7 +3628,7 @@ INSTRUCTIONS:
       />
       {/* Chat main area — hidden when a full-page view (Team or Workspaces)
           is active so the sidebar stays visible but the chat UI is replaced. */}
-      <div style={{ flex: 1, display: (showTeamPage || showWorkspacesPanel || showWorkflowsPanel) ? 'none' : 'flex', flexDirection: 'column', minWidth: 0 }}>
+      <div style={{ flex: 1, display: (showTeamPage || showWorkspacesPanel || showWorkflowsPanel || editingWorkflow) ? 'none' : 'flex', flexDirection: 'column', minWidth: 0 }}>
         <TopNav plan={plan} usage={usage} onOpenSidebar={() => setSidebarOpen(true)} />
 
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#FAFBFC', minHeight: 0 }}>
