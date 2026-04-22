@@ -17,6 +17,7 @@ import TeamPage from '../../components/chat/TeamPage';
 import WorkspacesPage from './WorkspacesPage';
 import { listWorkspacesForUser, seedWorkspacesIfEmpty } from '../../lib/workspace';
 import { MOCK_WORKSPACES } from '../../lib/mockWorkspaces';
+import { loadVault, saveVault, seedVaultIfEmpty } from '../../lib/documentVaultStore';
 import { billingData, subscriptionPlans } from '../../data/mockData';
 import { callLLM, getApiKey } from '../../lib/llm-client';
 import { extractFileText } from '../../lib/file-parser';
@@ -1491,14 +1492,18 @@ function EditKnowledgePackModal({ pack, onClose, onSave }) {
 //   Org Admin      — sees every doc; inline Share org-wide toggle on each row
 //   Internal User  — own docs + all org-wide docs
 //   External User  — Vault is still visible but filtered to their own docs only
-function DocumentVaultPanel({ documents, onClose, onCreateNew, onEdit, onDelete, onSelect, onToggleGlobal, activeDocument, currentUserId, isOrgAdmin }) {
+function DocumentVaultPanel({ documents, onClose, onCreateNew, onEdit, onDelete, onSelect, onToggleGlobal, activeDocument, currentUserId, isOrgAdmin, isExternalUser }) {
   const [search, setSearch] = useState('');
   const [scope, setScope] = useState('all'); // Org Admin only
 
   const visible = useMemo(() => {
     if (isOrgAdmin) return documents;
-    return documents.filter((d) => d.ownerId === currentUserId || d.isGlobal || !d.ownerId /* legacy */);
-  }, [documents, isOrgAdmin, currentUserId]);
+    // External clients see ONLY their own uploads — never org-wide firm
+    // documents or another member's personal docs.
+    if (isExternalUser) return documents.filter((d) => d.ownerId === currentUserId);
+    // Internal users: own + org-wide (+ legacy no-owner docs)
+    return documents.filter((d) => d.ownerId === currentUserId || d.isGlobal || !d.ownerId);
+  }, [documents, isOrgAdmin, isExternalUser, currentUserId]);
 
   const scoped = useMemo(() => {
     if (!isOrgAdmin || scope === 'all') return visible;
@@ -2354,8 +2359,21 @@ export default function ChatView({ initialView = 'chat' }) {
   const [showPackPicker, setShowPackPicker] = useState(false);
   const [activeKnowledgePack, setActiveKnowledgePack] = useState(null);
   const [pendingAttachments, setPendingAttachments] = useState([]);
-  const [documentVault, setDocumentVault] = useState(DEFAULT_DOCUMENT_VAULT);
+  // Seed localStorage with the default vault on first load; subsequent
+  // reads hit localStorage. Shared with WorkspaceChatView so ad-hoc chat
+  // uploads persist here too.
+  const [documentVault, setDocumentVault] = useState(() => {
+    seedVaultIfEmpty(DEFAULT_DOCUMENT_VAULT);
+    return loadVault() || DEFAULT_DOCUMENT_VAULT;
+  });
+  useEffect(() => { saveVault(documentVault); }, [documentVault]);
   const [showDocumentVaultPanel, setShowDocumentVaultPanel] = useState(false);
+  // Refresh from storage when the panel opens so cross-route uploads show up.
+  useEffect(() => {
+    if (!showDocumentVaultPanel) return;
+    const next = loadVault();
+    if (next) setDocumentVault(next);
+  }, [showDocumentVaultPanel]);
   const [editingDocument, setEditingDocument] = useState(null);
   const [activeVaultDocument, setActiveVaultDocument] = useState(null);
   const [docLimitBannerDismissed, setDocLimitBannerDismissed] = useState(false);
@@ -3785,6 +3803,7 @@ INSTRUCTIONS:
           activeDocument={activeVaultDocument}
           currentUserId={currentUserId}
           isOrgAdmin={isOrgAdmin}
+          isExternalUser={isExternalUser}
           onClose={() => setShowDocumentVaultPanel(false)}
           onCreateNew={() => { setShowDocumentVaultPanel(false); setEditingDocument({ isNew: true }); }}
           onEdit={(doc) => { setShowDocumentVaultPanel(false); setEditingDocument(doc); }}

@@ -36,6 +36,7 @@ import {
 import { MOCK_WORKSPACES } from '../../lib/mockWorkspaces';
 import { callLLM } from '../../lib/llm-client';
 import { extractFileText } from '../../lib/file-parser';
+import { addVaultDoc } from '../../lib/documentVaultStore';
 import { INTENTS, DEFAULT_INTENT, getIntentLabel } from '../../lib/intents';
 import { detectAllIntents } from '../../lib/intentDetector';
 import { teamMembersForPicker } from './workspaceTeamSeed';
@@ -481,8 +482,26 @@ export default function WorkspaceChatView() {
   const confirmUploadAsEphemeral = () => {
     if (!pendingUpload) return;
     setEphemeralAttachment(pendingUpload);
+    // Persist to the uploader's personal Document Vault with an
+    // 'Added from chat' marker. Clients get a durable record of everything
+    // they've uploaded, accessible from the Document Vault panel. Dedupe
+    // is handled inside addVaultDoc (by filename + ownerId).
+    const sizeKB = pendingUpload.size < 1024 * 1024
+      ? `${(pendingUpload.size / 1024).toFixed(0)} KB`
+      : `${(pendingUpload.size / (1024 * 1024)).toFixed(1)} MB`;
+    addVaultDoc({
+      id: `vault-${Date.now()}`,
+      name: pendingUpload.name,
+      fileName: pendingUpload.name,
+      fileSize: sizeKB,
+      createdAt: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+      ownerId: currentUserId,
+      ownerName: currentUserName,
+      isGlobal: false,
+      addedFromChat: true,
+    });
     setPendingUpload(null);
-    showToast(`${pendingUpload.name} attached to this chat only`);
+    showToast(`${pendingUpload.name} attached to this chat · saved to your Vault`);
   };
 
   const handleRemoveDoc = (docId: string) => {
@@ -1594,12 +1613,12 @@ function ChatUploadScopeModal({ upload, isExternalUser, canAddToWorkspace, onCan
               {isExternalUser && (
                 <div style={{ padding: '12px 14px', borderRadius: 10, background: '#FBEED5', border: '1px solid #F3E2B1', fontSize: 12, color: '#6B4E1F', lineHeight: 1.55 }}>
                   <strong style={{ display: 'block', marginBottom: 4 }}>This file won't be added to the workspace documents.</strong>
-                  It's available for this chat only. If you need it added to the workspace, please send it to your workspace admin separately so they can upload it.
+                  It's used in this chat and kept privately in your own Document Vault. If you need it added to the workspace so everyone can reference it, please send it to your workspace admin separately.
                 </div>
               )}
               <ScopeChoiceRow
                 title="Use in this chat"
-                subtitle="Attach the file to this conversation only."
+                subtitle={isExternalUser ? 'Attach the file to this conversation and save it to your personal Document Vault.' : 'Attach the file to this conversation only.'}
                 primary
                 onClick={onUseInChat}
               />
