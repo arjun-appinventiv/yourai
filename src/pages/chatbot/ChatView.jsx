@@ -3533,7 +3533,16 @@ INSTRUCTIONS:
           )}
 
           {showEmptyState ? (
-            <EmptyState profile={profile} plan={plan} onPromptClick={handlePromptClick} navigate={navigate} onViewPlans={() => setShowPlanModal(true)} />
+            <EmptyState
+              profile={profile}
+              plan={plan}
+              onPromptClick={handlePromptClick}
+              navigate={navigate}
+              onViewPlans={() => setShowPlanModal(true)}
+              workflows={!isExternalUser ? (listTemplatesForUser(currentUserId, currentRole) || []).filter(t => t.status === 'active').slice(0, 3) : []}
+              onRunWorkflow={(t) => setRunningPrep(t)}
+              onOpenWorkflowsPanel={() => { setShowTeamPage?.(false); setShowWorkspacesPanel?.(false); setShowWorkflowsPanel(true); }}
+            />
           ) : (
             <div ref={scrollRef} className="px-3 sm:px-4 md:px-10 py-6" style={{ flex: 1, overflowY: 'auto' }}>
               {/* ─── Persistent Conversation Context Header ─── */}
