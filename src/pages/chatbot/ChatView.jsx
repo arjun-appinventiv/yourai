@@ -26,7 +26,7 @@ import WorkflowRunPanel from '../../components/chat/WorkflowRunPanel';
 import WorkflowProgressCard from '../../components/chat/WorkflowProgressCard';
 import WorkflowReportCard from '../../components/chat/WorkflowReportCard';
 import {
-  listTemplatesForUser, seedTemplatesIfEmpty, duplicateTemplate as duplicateWorkflow,
+  listTemplatesForUser, listFavouriteTemplatesForUser, seedTemplatesIfEmpty, duplicateTemplate as duplicateWorkflow,
   deleteTemplate as deleteWorkflow, getActiveRunId, getRun,
 } from '../../lib/workflow';
 import { MOCK_WORKFLOW_TEMPLATES } from '../../lib/mockWorkflows';
@@ -2519,28 +2519,59 @@ function EmptyState({ profile, plan, onPromptClick, navigate, onViewPlans, workf
           })}
         </div>
 
-        {/* ─── Run a Workflow ─── */}
-        {/* Only renders when the user has at least one active workflow
-            available. Hidden for Externals (their workflow list is empty). */}
-        {workflows.length > 0 && (
+        {/* ─── Favourite Workflows ─── */}
+        {/* Populated from per-user favourites. Users pin their go-to
+            workflows via the star on each card in Workflow Templates;
+            they appear here as a quick launcher. Hidden for Externals. */}
+        {onOpenWorkflowsPanel && onRunWorkflow && (
           <div style={{ marginTop: 32, textAlign: 'left', maxWidth: 820, marginLeft: 'auto', marginRight: 'auto' }}>
             <div className="flex items-center justify-between" style={{ marginBottom: 10 }}>
               <div className="flex items-center gap-2">
                 <Zap size={14} style={{ color: '#C9A84C' }} />
-                <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>Run a Workflow</span>
+                <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>
+                  {workflows.length > 0 ? 'Your favourite workflows' : 'Favourite a workflow'}
+                </span>
               </div>
               <button
                 onClick={onOpenWorkflowsPanel}
                 style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: 'var(--navy)', fontWeight: 500 }}
               >
-                View all →
+                Browse all workflows →
               </button>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {workflows.slice(0, 3).map((w) => (
-                <MiniWorkflowCard key={w.id} workflow={w} onRun={() => onRunWorkflow(w)} />
-              ))}
-            </div>
+            {workflows.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {workflows.slice(0, 6).map((w) => (
+                  <MiniWorkflowCard key={w.id} workflow={w} onRun={() => onRunWorkflow(w)} />
+                ))}
+              </div>
+            ) : (
+              <div
+                onClick={onOpenWorkflowsPanel}
+                style={{
+                  padding: '20px 22px', borderRadius: 12,
+                  border: '1px dashed var(--border)',
+                  background: 'rgba(201, 168, 76, 0.04)',
+                  cursor: 'pointer', textAlign: 'left',
+                  display: 'flex', alignItems: 'center', gap: 14,
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#C9A84C'; e.currentTarget.style.background = 'rgba(201, 168, 76, 0.08)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.background = 'rgba(201, 168, 76, 0.04)'; }}
+              >
+                <div style={{ width: 36, height: 36, borderRadius: 10, background: '#FDF7E7', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <Zap size={16} style={{ color: '#C9A84C' }} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>
+                    Pin workflows you run often
+                  </div>
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2, lineHeight: 1.5 }}>
+                    Open Workflow Templates, click the ⭐ on any workflow, and it'll appear right here for one-click launch.
+                  </div>
+                </div>
+                <span style={{ fontSize: 12, color: 'var(--navy)', fontWeight: 500, flexShrink: 0 }}>Open →</span>
+              </div>
+            )}
           </div>
         )}
 
@@ -2658,10 +2689,13 @@ export default function ChatView({ initialView = 'chat' }) {
   const [showWorkflowsPanel, setShowWorkflowsPanel] = useState(false);
   const [editingWorkflow, setEditingWorkflow] = useState(null);
   const [runningPrep, setRunningPrep] = useState(null);
-  // Run Panel — docked to the right of the chat. Holds the ProgressCard
-  // (and Report when done) for the active or most-recently-viewed run.
-  // `null` = panel hidden. The sidebar running-strip reopens it.
-  const [activeRunPanelId, setActiveRunPanelId] = useState(null);
+  // Run Panel — docked to the right of the chat. Shows all active and
+  // recently finished workflow runs as a stacked, collapsible list.
+  //   runPanelOpen      true   → panel visible
+  //   runPanelFocusId   runId? → auto-expand this run on mount (e.g. the
+  //                              one just started from PreRunModal)
+  const [runPanelOpen, setRunPanelOpen] = useState(false);
+  const [runPanelFocusId, setRunPanelFocusId] = useState(null);
   const [workflowCount, setWorkflowCount] = useState(0);
   const [runningWorkflow, setRunningWorkflow] = useState(null);
 
@@ -2674,20 +2708,24 @@ export default function ChatView({ initialView = 'chat' }) {
     setWorkflowCount(listTemplatesForUser(currentUserId, currentRole).length);
   }, [isExternalUser, currentUserId, currentRole, showWorkflowsPanel, editingWorkflow]);
 
-  // Subscribe to the active run (if any) so the sidebar indicator
-  // updates live. Runs survive component unmount via the singleton
-  // runner in workflowRunner.ts.
+  // Poll for running workflows so the sidebar indicator reflects all
+  // of them (multiple runs can execute concurrently). Cheap — listRuns
+  // is a synchronous localStorage read. 1.5s cadence is enough for a
+  // progress strip; the detailed Run Panel subscribes per-run for live
+  // tick precision.
   useEffect(() => {
-    const rid = getActiveRunId();
-    if (!rid) { setRunningWorkflow(null); return; }
-    const initial = getRun(rid);
-    if (initial && initial.status === 'running') setRunningWorkflow(initial);
-    const unsub = subscribeRun(rid, (r) => {
-      setRunningWorkflow(r.status === 'running' ? r : null);
-    });
-    return () => unsub();
+    const tick = () => {
+      const running = listRuns().filter((r) => r.status === 'running' && r.userId === currentUserId);
+      if (running.length === 0) { setRunningWorkflow(null); return; }
+      // Represent the state with the first running run + a count field so
+      // the sidebar strip can say "2 workflows running" when appropriate.
+      setRunningWorkflow({ ...running[0], _runningCount: running.length });
+    };
+    tick();
+    const id = setInterval(tick, 1500);
+    return () => clearInterval(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [runningPrep]);
+  }, [runningPrep, currentUserId]);
   // Visible-workspace count is recomputed from localStorage whenever the
   // panel closes, so the sidebar badge stays accurate after create/archive.
   const [workspaceTick, setWorkspaceTick] = useState(0);
@@ -3559,7 +3597,7 @@ INSTRUCTIONS:
         runningWorkflow={runningWorkflow}
         onViewRunning={() => {
           // Close overlay panels so the chat + run panel are visible,
-          // then open the Run Panel for the active run.
+          // then open the multi-run panel and auto-expand the active run.
           setShowTeamPage(false);
           setShowWorkspacesPanel(false);
           setShowWorkflowsPanel(false);
@@ -3568,8 +3606,8 @@ INSTRUCTIONS:
           setShowKnowledgePacksPanel(false);
           setShowDocumentVaultPanel(false);
           setSidebarOpen(false);
-          const runId = runningWorkflow?.id;
-          if (runId) setActiveRunPanelId(runId);
+          setRunPanelFocusId(runningWorkflow?.id || null);
+          setRunPanelOpen(true);
         }}
         promptCount={promptTemplates.length}
         clientCount={clients.length}
@@ -3622,7 +3660,7 @@ INSTRUCTIONS:
               onPromptClick={handlePromptClick}
               navigate={navigate}
               onViewPlans={() => setShowPlanModal(true)}
-              workflows={!isExternalUser ? (listTemplatesForUser(currentUserId, currentRole) || []).filter(t => t.status === 'active').slice(0, 3) : []}
+              workflows={!isExternalUser ? (listFavouriteTemplatesForUser(currentUserId, currentRole) || []).filter(t => t.status === 'active').slice(0, 6) : []}
               onRunWorkflow={(t) => setRunningPrep(t)}
               onOpenWorkflowsPanel={() => { setShowTeamPage?.(false); setShowWorkspacesPanel?.(false); setShowWorkflowsPanel(true); }}
             />
@@ -4063,10 +4101,11 @@ INSTRUCTIONS:
           run starts and from the sidebar running-strip. Does not
           overlay — it shrinks the chat area so users can keep chatting
           while the workflow runs. ─── */}
-      {activeRunPanelId && !showTeamPage && !showWorkspacesPanel && !showWorkflowsPanel && (
+      {runPanelOpen && !showTeamPage && !showWorkspacesPanel && !showWorkflowsPanel && !editingWorkflow && (
         <WorkflowRunPanel
-          runId={activeRunPanelId}
-          onClose={() => setActiveRunPanelId(null)}
+          userId={currentUserId}
+          focusRunId={runPanelFocusId}
+          onClose={() => { setRunPanelOpen(false); setRunPanelFocusId(null); }}
         />
       )}
 
@@ -4171,21 +4210,8 @@ INSTRUCTIONS:
       )}
 
       {/* ─── Workflow pre-run modal ─── */}
+      {/* Multiple runs can run in parallel — no one-at-a-time guard. */}
       {runningPrep && (() => {
-        // One-at-a-time guard — if there's already an active run,
-        // surface the alert modal (Part 8) instead of a fresh pre-run.
-        const activeRid = getActiveRunId();
-        const active = activeRid ? getRun(activeRid) : null;
-        if (active && active.status === 'running' && active.templateId !== runningPrep.id) {
-          return (
-            <AlreadyRunningAlert
-              activeName={active.templateName}
-              currentStep={active.currentStepIndex + 1}
-              total={active.steps.length}
-              onClose={() => setRunningPrep(null)}
-            />
-          );
-        }
         return (
           <PreRunModal
             template={runningPrep}
@@ -4195,10 +4221,9 @@ INSTRUCTIONS:
             onCancel={() => setRunningPrep(null)}
             onStarted={(runId) => {
               setRunningPrep(null);
-              // Run lives in the right-docked Run Panel — not in the chat
-              // thread. Chat stays pure conversation; the panel is the
-              // dedicated surface for long-running pipelines.
-              setActiveRunPanelId(runId);
+              // Open the multi-run panel and auto-expand the new run.
+              setRunPanelFocusId(runId);
+              setRunPanelOpen(true);
             }}
             onToast={(msg) => { setToastMsg(msg); setTimeout(() => setToastMsg(''), 3200); }}
           />

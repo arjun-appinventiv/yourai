@@ -12,7 +12,7 @@ import {
   X, Plus, Search, MoreVertical, Edit3, Copy, Trash2,
   Clock, Loader, Zap, Briefcase as BriefcaseIcon,
   FileText, Search as SearchIcon, GitCompare, FileOutput,
-  BookOpen, ShieldCheck,
+  BookOpen, ShieldCheck, Star,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useRole } from '../../context/RoleContext';
@@ -24,6 +24,7 @@ import {
   listTemplatesForUser, seedTemplatesIfEmpty, getActiveRunId, getRun,
   listRuns,
   canCreateWorkflow, canEditTemplate, canDeleteTemplate,
+  isFavouriteTemplate, toggleFavouriteTemplate,
 } from '../../lib/workflow';
 import { MOCK_WORKFLOW_TEMPLATES } from '../../lib/mockWorkflows';
 
@@ -105,6 +106,8 @@ export default function WorkflowsPanel({ onClose, onCreateNew, onRun, onEdit, on
   const [activeTemplateId, setActiveTemplateId] = useState<string | null>(null);
   const [activeRun, setActiveRun] = useState<WorkflowRun | null>(null);
   const [recentRuns, setRecentRuns] = useState<WorkflowRun[]>([]);
+  // Tick so the star icon re-renders instantly after toggle
+  const [favTick, setFavTick] = useState(0);
 
   useEffect(() => {
     seedTemplatesIfEmpty(MOCK_WORKFLOW_TEMPLATES);
@@ -300,6 +303,8 @@ export default function WorkflowsPanel({ onClose, onCreateNew, onRun, onEdit, on
                 onEdit={() => { onEdit(t); setMenuOpenFor(null); }}
                 onDuplicate={() => { onDuplicate(t); setMenuOpenFor(null); }}
                 onDelete={() => handleDelete(t)}
+                isFav={(favTick, isFavouriteTemplate(currentUserId, t.id))}
+                onToggleFav={() => { toggleFavouriteTemplate(currentUserId, t.id); setFavTick((n) => n + 1); }}
               />
             ))}
           </div>
@@ -400,6 +405,7 @@ interface CardProps {
   template: WorkflowTemplate;
   ctx: PermissionContext;
   isRunning: boolean;
+  isFav: boolean;
   menuOpen: boolean;
   onToggleMenu: () => void;
   onCloseMenu: () => void;
@@ -407,9 +413,10 @@ interface CardProps {
   onEdit: () => void;
   onDuplicate: () => void;
   onDelete: () => void;
+  onToggleFav: () => void;
 }
 
-function WorkflowCard({ template, ctx, isRunning, menuOpen, onToggleMenu, onCloseMenu, onRun, onEdit, onDuplicate, onDelete }: CardProps) {
+function WorkflowCard({ template, ctx, isRunning, isFav, menuOpen, onToggleMenu, onCloseMenu, onRun, onEdit, onDuplicate, onDelete, onToggleFav }: CardProps) {
   const badge = VISIBILITY_BADGE[template.visibility];
   const canEdit = canEditTemplate(template, ctx);
   const canDelete = canDeleteTemplate(template, ctx);
@@ -456,7 +463,17 @@ function WorkflowCard({ template, ctx, isRunning, menuOpen, onToggleMenu, onClos
             )}
           </div>
         </div>
-        <div style={{ position: 'relative', flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 2, flexShrink: 0 }}>
+          <button
+            onClick={(e) => { e.stopPropagation(); onToggleFav(); }}
+            title={isFav ? 'Remove from favourites' : 'Add to favourites — appears in chat empty state'}
+            style={{ padding: 6, borderRadius: 6, background: 'none', border: '1px solid transparent', cursor: 'pointer', display: 'flex' }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)'; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'transparent'; }}
+          >
+            <Star size={15} style={{ color: isFav ? '#E0A12E' : 'var(--text-muted)', fill: isFav ? '#E0A12E' : 'transparent' }} />
+          </button>
+        <div style={{ position: 'relative' }}>
           <button
             onClick={onToggleMenu}
             title="More actions"
@@ -483,6 +500,7 @@ function WorkflowCard({ template, ctx, isRunning, menuOpen, onToggleMenu, onClos
               </div>
             </>
           )}
+        </div>
         </div>
       </div>
 
