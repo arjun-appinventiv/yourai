@@ -18,9 +18,11 @@ import { useAuth } from '../../context/AuthContext';
 import { useRole } from '../../context/RoleContext';
 import {
   type WorkflowTemplate, type WorkflowVisibility, type WorkflowOperation,
+  type WorkflowRun,
   type PermissionContext,
   OPERATION_CONFIG,
   listTemplatesForUser, seedTemplatesIfEmpty, getActiveRunId, getRun,
+  listRuns,
   canCreateWorkflow, canEditTemplate, canDeleteTemplate,
 } from '../../lib/workflow';
 import { MOCK_WORKFLOW_TEMPLATES } from '../../lib/mockWorkflows';
@@ -101,6 +103,8 @@ export default function WorkflowsPanel({ onClose, onCreateNew, onRun, onEdit, on
   // corresponding card's Run button. Changing activeRunId during the
   // lifetime of this modal is rare; re-reading on close is enough.
   const [activeTemplateId, setActiveTemplateId] = useState<string | null>(null);
+  const [activeRun, setActiveRun] = useState<WorkflowRun | null>(null);
+  const [recentRuns, setRecentRuns] = useState<WorkflowRun[]>([]);
 
   useEffect(() => {
     seedTemplatesIfEmpty(MOCK_WORKFLOW_TEMPLATES);
@@ -108,8 +112,16 @@ export default function WorkflowsPanel({ onClose, onCreateNew, onRun, onEdit, on
     const rid = getActiveRunId();
     if (rid) {
       const run = getRun(rid);
-      if (run && (run.status === 'running')) setActiveTemplateId(run.templateId);
+      if (run && (run.status === 'running')) {
+        setActiveTemplateId(run.templateId);
+        setActiveRun(run);
+      }
     }
+    // Last 5 finished runs for the "Recent runs" strip
+    const all = listRuns()
+      .filter((r) => r.status !== 'running' && r.userId === currentUserId)
+      .slice(0, 5);
+    setRecentRuns(all);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -155,65 +167,127 @@ export default function WorkflowsPanel({ onClose, onCreateNew, onRun, onEdit, on
   };
 
   return (
-    <>
-      <div onClick={onClose} style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)', zIndex: 60, backdropFilter: 'blur(4px)' }} />
-      <div
-        className="fixed inset-0 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-[900px] md:max-h-[90vh] md:rounded-2xl"
-        style={{ backgroundColor: 'white', boxShadow: '0 20px 60px rgba(0,0,0,0.2)', zIndex: 61, display: 'flex', flexDirection: 'column' }}
-      >
-        {/* ─── Header ─── */}
-        <div style={{ padding: '22px 28px 18px', borderBottom: '1px solid var(--border)' }}>
-          <div className="flex items-center justify-between gap-2">
-            <div className="min-w-0">
-              <h3 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 22, color: 'var(--text-primary)', margin: 0 }}>Workflow Templates</h3>
-              <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 5, lineHeight: 1.5 }}>
-                {templates.length} template{templates.length !== 1 ? 's' : ''} available · Multi-step AI pipelines you can run over your documents.
+    <div style={{
+      flex: 1, display: 'flex', flexDirection: 'column',
+      background: '#FAF6EE', // warm ivory — signals "different module" from chat
+      minWidth: 0, minHeight: 0, overflow: 'hidden',
+    }}>
+      {/* ─── Page header ─── */}
+      <div style={{
+        padding: '22px 36px 18px',
+        borderBottom: '1px solid var(--border)',
+        background: 'linear-gradient(180deg, #FDFBF5 0%, #FAF6EE 100%)',
+      }}>
+        <div className="flex items-center justify-between gap-2">
+          <div className="min-w-0" style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+            <div style={{
+              width: 44, height: 44, borderRadius: 10,
+              background: 'var(--navy)', display: 'flex',
+              alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+            }}>
+              <Zap size={22} style={{ color: '#C9A84C' }} />
+            </div>
+            <div>
+              <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 26, color: 'var(--navy)', margin: 0, lineHeight: 1.2 }}>
+                Workflow Templates
+              </h1>
+              <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4, lineHeight: 1.5 }}>
+                Multi-step AI pipelines you can run over your documents. {templates.length} template{templates.length !== 1 ? 's' : ''} available.
               </p>
             </div>
-            <div className="flex items-center gap-2" style={{ flexShrink: 0 }}>
-              {canCreateWorkflow(ctx) && (
-                <button
-                  onClick={onCreateNew}
-                  style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '8px 16px', borderRadius: 8, backgroundColor: 'var(--navy)', color: 'white', border: 'none', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}
-                >
-                  <Plus size={14} /> New Workflow
-                </button>
-              )}
-              <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100"><X size={20} style={{ color: 'var(--text-muted)' }} /></button>
-            </div>
           </div>
+          <div className="flex items-center gap-2" style={{ flexShrink: 0 }}>
+            {canCreateWorkflow(ctx) && (
+              <button
+                onClick={onCreateNew}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 18px', borderRadius: 10, backgroundColor: 'var(--navy)', color: 'white', border: 'none', fontSize: 13, fontWeight: 500, cursor: 'pointer', boxShadow: '0 2px 6px rgba(10,36,99,0.14)' }}
+              >
+                <Plus size={15} /> New Workflow
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              title="Back to chat"
+              style={{ padding: 8, borderRadius: 8, background: 'transparent', border: 'none', cursor: 'pointer' }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = '#F3ECDD'; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+            >
+              <X size={20} style={{ color: 'var(--text-muted)' }} />
+            </button>
+          </div>
+        </div>
+      </div>
 
-          {/* Filter pills — hidden for Externals, who only see Platform anyway */}
+      {/* ─── Scroll area ─── */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '24px 36px 36px' }}>
+        {/* Running-now banner */}
+        {activeRun && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 14,
+            padding: '14px 18px', marginBottom: 20,
+            background: '#FFFFFF',
+            border: '1px solid #F3E4BC',
+            borderLeft: '3px solid #C9A84C',
+            borderRadius: 10,
+            boxShadow: '0 2px 8px rgba(201,168,76,0.08)',
+          }}>
+            <div style={{
+              width: 14, height: 14, borderRadius: '50%',
+              border: '2px solid #C9A84C', borderTopColor: 'transparent',
+              animation: 'spin 0.9s linear infinite', flexShrink: 0,
+            }} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--navy)' }}>
+                Running now: {activeRun.templateName}
+              </div>
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
+                Step {Math.min((activeRun.currentStepIndex ?? 0) + 1, activeRun.steps.length)} of {activeRun.steps.length} · started {relativeFrom(activeRun.startedAt)}
+              </div>
+            </div>
+            <button
+              onClick={onClose}
+              style={{ fontSize: 12, color: 'var(--navy)', background: 'transparent', border: '1px solid var(--navy)', padding: '6px 14px', borderRadius: 8, cursor: 'pointer', fontWeight: 500, flexShrink: 0 }}
+            >
+              View run →
+            </button>
+          </div>
+        )}
+
+        {/* Filter pills + search */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 18 }}>
           {showFilters && (
-            <div className="flex items-center gap-2" style={{ marginTop: 16, flexWrap: 'wrap' }}>
+            <div className="flex items-center gap-2" style={{ flexWrap: 'wrap' }}>
               <FilterPill label="All"       count={counts.all}      active={filter === 'all'}      onClick={() => setFilter('all')} />
               <FilterPill label="Platform"  count={counts.platform} active={filter === 'platform'} onClick={() => setFilter('platform')} />
               <FilterPill label="Your Org"  count={counts.org}      active={filter === 'org'}      onClick={() => setFilter('org')} />
               <FilterPill label="Yours"     count={counts.personal} active={filter === 'personal'} onClick={() => setFilter('personal')} />
             </div>
           )}
-
-          <div style={{ position: 'relative', marginTop: 14 }}>
+          <div style={{ position: 'relative', flex: 1, minWidth: 240, maxWidth: 360, marginLeft: 'auto' }}>
             <Search size={14} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search workflows..."
-              style={{ width: '100%', height: 38, borderRadius: 10, border: '1px solid var(--border)', paddingLeft: 36, fontSize: 13, outline: 'none', boxSizing: 'border-box', fontFamily: "'DM Sans', sans-serif" }}
+              style={{ width: '100%', height: 38, borderRadius: 10, border: '1px solid var(--border)', paddingLeft: 36, fontSize: 13, outline: 'none', boxSizing: 'border-box', background: '#fff' }}
             />
           </div>
         </div>
 
-        {/* ─── List ─── */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '12px 20px 20px' }}>
-          {filtered.length === 0 ? (
-            <EmptyState
-              searchActive={!!search.trim()}
-              canCreate={canCreateWorkflow(ctx)}
-              onCreate={onCreateNew}
-            />
-          ) : (
-            filtered.map((t) => (
+        {/* ─── Card grid ─── */}
+        {filtered.length === 0 ? (
+          <EmptyState
+            searchActive={!!search.trim()}
+            canCreate={canCreateWorkflow(ctx)}
+            onCreate={onCreateNew}
+          />
+        ) : (
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))',
+            gap: 16,
+          }}>
+            {filtered.map((t) => (
               <WorkflowCard
                 key={t.id}
                 template={t}
@@ -227,11 +301,50 @@ export default function WorkflowsPanel({ onClose, onCreateNew, onRun, onEdit, on
                 onDuplicate={() => { onDuplicate(t); setMenuOpenFor(null); }}
                 onDelete={() => handleDelete(t)}
               />
-            ))
-          )}
-        </div>
+            ))}
+          </div>
+        )}
+
+        {/* ─── Recent runs ─── */}
+        {recentRuns.length > 0 && (
+          <div style={{ marginTop: 36 }}>
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 8,
+              fontSize: 11, fontWeight: 600, letterSpacing: '0.08em',
+              textTransform: 'uppercase', color: 'var(--text-muted)',
+              marginBottom: 12,
+            }}>
+              <Clock size={12} /> Recent runs
+            </div>
+            <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
+              {recentRuns.map((r, i) => (
+                <div
+                  key={r.id}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 12,
+                    padding: '12px 16px',
+                    borderTop: i === 0 ? 'none' : '1px solid #F3F0E8',
+                    fontSize: 13,
+                  }}
+                >
+                  <span style={{
+                    width: 8, height: 8, borderRadius: '50%',
+                    background: r.status === 'complete' ? '#5CA868' : r.status === 'failed' ? '#C65454' : '#9CA3AF',
+                    flexShrink: 0,
+                  }} />
+                  <span style={{ flex: 1, minWidth: 0, fontWeight: 500, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {r.templateName}
+                  </span>
+                  <span style={{ fontSize: 11, color: 'var(--text-muted)', flexShrink: 0 }}>
+                    {r.status === 'complete' ? 'Completed' : r.status === 'failed' ? 'Failed' : 'Cancelled'} · {relativeFrom(r.completedAt || r.startedAt)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
-    </>
+    </div>
   );
 }
 
@@ -310,124 +423,119 @@ function WorkflowCard({ template, ctx, isRunning, menuOpen, onToggleMenu, onClos
   return (
     <div
       style={{
-        padding: '16px 18px', borderRadius: 12, border: '1px solid var(--border)',
-        marginTop: 10, background: '#fff', transition: 'all 0.15s',
+        padding: '18px 18px 16px',
+        borderRadius: 14,
+        border: '1px solid var(--border)',
+        background: '#fff',
+        display: 'flex', flexDirection: 'column',
+        minHeight: 220,
+        transition: 'all 0.15s',
       }}
-      onMouseEnter={(e) => { e.currentTarget.style.boxShadow = '0 3px 14px rgba(10,36,99,0.06)'; e.currentTarget.style.borderColor = 'var(--navy)'; }}
-      onMouseLeave={(e) => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.borderColor = 'var(--border)'; }}
+      onMouseEnter={(e) => { e.currentTarget.style.boxShadow = '0 6px 20px rgba(10,36,99,0.08)'; e.currentTarget.style.borderColor = 'var(--navy)'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+      onMouseLeave={(e) => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.transform = 'translateY(0)'; }}
     >
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
-        {/* Avatar tile */}
+      {/* Top row: avatar + title + menu */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 10 }}>
         <div style={{ width: 40, height: 40, borderRadius: 10, background: 'var(--ice-warm)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
           <Zap size={18} style={{ color: 'var(--navy)' }} />
         </div>
-
-        {/* Main content */}
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div className="flex items-center gap-2 flex-wrap">
-            <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{template.name}</span>
-            <PracticeAreaBadge area={template.practiceArea} />
-            {isDraftByMe && (
-              <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 999, background: '#FEF3C7', color: '#92400E', fontWeight: 500, border: '1px solid #FDE68A' }}>
-                Draft
-              </span>
-            )}
+          <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)', lineHeight: 1.35 }}>
+            {template.name}
           </div>
-
-          <p
-            style={{
-              fontSize: 12, color: 'var(--text-muted)', marginTop: 4,
-              lineHeight: 1.55,
-              display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as any,
-              overflow: 'hidden', textOverflow: 'ellipsis',
-            }}
-          >
-            {template.description || <span style={{ fontStyle: 'italic' }}>No description.</span>}
-          </p>
-
-          {/* Middle: step count + operation pills */}
-          <div className="flex items-center gap-2 flex-wrap" style={{ marginTop: 10 }}>
-            <span style={{ fontSize: 11, color: 'var(--text-muted)', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-              <Clock size={11} /> {template.steps.length} step{template.steps.length !== 1 ? 's' : ''} · ~{template.estimatedTotalSeconds}s
-            </span>
-            <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>·</span>
-            <div className="flex items-center gap-1 flex-wrap">
-              {pills.map((s) => (
-                <OperationPill key={s.id} operation={s.operation} />
-              ))}
-              {remaining > 0 && (
-                <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 999, background: '#F3F4F6', color: '#6B7280', border: '1px solid #E5E7EB' }}>
-                  + {remaining} more
-                </span>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Right column: visibility badge, Run, menu */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8, flexShrink: 0 }}>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 flex-wrap" style={{ marginTop: 4 }}>
             <span
-              title={template.visibility === 'platform' ? 'Maintained by YourAI — available to everyone' : template.visibility === 'org' ? 'Shared with your organisation' : 'Only visible to you'}
+              title={template.visibility === 'platform' ? 'Maintained by YourAI' : template.visibility === 'org' ? 'Shared with your organisation' : 'Only visible to you'}
               style={{ fontSize: 10, padding: '2px 8px', borderRadius: 999, background: badge.bg, color: badge.color, border: `1px solid ${badge.border}`, fontWeight: 600, letterSpacing: '0.02em' }}
             >
               {badge.label}
             </span>
-            <span style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace" }}>
-              Updated {relativeFrom(template.updatedAt)}
-            </span>
-          </div>
-
-          <div className="flex items-center gap-1">
-            <button
-              onClick={onRun}
-              disabled={isRunning}
-              style={{
-                display: 'inline-flex', alignItems: 'center', gap: 6,
-                padding: '7px 16px', borderRadius: 8,
-                backgroundColor: isRunning ? '#9CA3AF' : 'var(--navy)',
-                color: '#fff', border: 'none',
-                fontSize: 12, fontWeight: 500,
-                cursor: isRunning ? 'not-allowed' : 'pointer',
-                opacity: isRunning ? 0.8 : 1,
-              }}
-            >
-              {isRunning ? <><Loader size={12} className="animate-spin" /> Running…</> : <>Run</>}
-            </button>
-
-            <div style={{ position: 'relative' }}>
-              <button
-                onClick={onToggleMenu}
-                title="More actions"
-                style={{ padding: 6, borderRadius: 6, background: 'none', border: '1px solid var(--border)', cursor: 'pointer', display: 'flex' }}
-              >
-                <MoreVertical size={14} style={{ color: 'var(--text-muted)' }} />
-              </button>
-              {menuOpen && (
-                <>
-                  {/* Outside-click catcher */}
-                  <div onClick={onCloseMenu} style={{ position: 'fixed', inset: 0, zIndex: 65 }} />
-                  <div
-                    style={{
-                      position: 'absolute', top: 'calc(100% + 4px)', right: 0,
-                      width: 180, background: '#fff',
-                      border: '1px solid var(--border)', borderRadius: 10,
-                      boxShadow: '0 8px 24px rgba(10,36,99,0.12)', overflow: 'hidden', zIndex: 66,
-                    }}
-                  >
-                    {canEdit && (
-                      <MenuItem icon={Edit3} label="Edit" onClick={onEdit} />
-                    )}
-                    <MenuItem icon={Copy} label="Duplicate" onClick={onDuplicate} />
-                    {canDelete && (
-                      <MenuItem icon={Trash2} label="Delete" danger onClick={onDelete} />
-                    )}
-                  </div>
-                </>
-              )}
-            </div>
+            <PracticeAreaBadge area={template.practiceArea} />
+            {isDraftByMe && (
+              <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 999, background: '#FEF3C7', color: '#92400E', fontWeight: 500, border: '1px solid #FDE68A' }}>Draft</span>
+            )}
           </div>
         </div>
+        <div style={{ position: 'relative', flexShrink: 0 }}>
+          <button
+            onClick={onToggleMenu}
+            title="More actions"
+            style={{ padding: 6, borderRadius: 6, background: 'none', border: '1px solid transparent', cursor: 'pointer', display: 'flex' }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)'; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'transparent'; }}
+          >
+            <MoreVertical size={14} style={{ color: 'var(--text-muted)' }} />
+          </button>
+          {menuOpen && (
+            <>
+              <div onClick={onCloseMenu} style={{ position: 'fixed', inset: 0, zIndex: 65 }} />
+              <div
+                style={{
+                  position: 'absolute', top: 'calc(100% + 4px)', right: 0,
+                  width: 180, background: '#fff',
+                  border: '1px solid var(--border)', borderRadius: 10,
+                  boxShadow: '0 8px 24px rgba(10,36,99,0.12)', overflow: 'hidden', zIndex: 66,
+                }}
+              >
+                {canEdit && <MenuItem icon={Edit3} label="Edit" onClick={onEdit} />}
+                <MenuItem icon={Copy} label="Duplicate" onClick={onDuplicate} />
+                {canDelete && <MenuItem icon={Trash2} label="Delete" danger onClick={onDelete} />}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Description */}
+      <p
+        style={{
+          fontSize: 13, color: 'var(--text-muted)',
+          lineHeight: 1.55, margin: 0,
+          display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as any,
+          overflow: 'hidden', textOverflow: 'ellipsis',
+          minHeight: 40, // reserve 2-line height so grid rows align
+        }}
+      >
+        {template.description || <span style={{ fontStyle: 'italic' }}>No description.</span>}
+      </p>
+
+      {/* Step summary + pills */}
+      <div style={{ marginTop: 12, flex: 1 }}>
+        <div style={{ fontSize: 11, color: 'var(--text-muted)', display: 'inline-flex', alignItems: 'center', gap: 5, marginBottom: 8 }}>
+          <Clock size={11} /> {template.steps.length} step{template.steps.length !== 1 ? 's' : ''} · ~{template.estimatedTotalSeconds}s
+        </div>
+        <div className="flex items-center gap-1 flex-wrap">
+          {pills.map((s) => (
+            <OperationPill key={s.id} operation={s.operation} />
+          ))}
+          {remaining > 0 && (
+            <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 999, background: '#F3F4F6', color: '#6B7280', border: '1px solid #E5E7EB' }}>
+              + {remaining} more
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Footer row: last updated + Run button */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginTop: 14, paddingTop: 12, borderTop: '1px solid #F3F0E8' }}>
+        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+          Updated {relativeFrom(template.updatedAt)}
+        </span>
+        <button
+          onClick={onRun}
+          disabled={isRunning}
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+            padding: '8px 20px', borderRadius: 8,
+            backgroundColor: isRunning ? '#9CA3AF' : 'var(--navy)',
+            color: '#fff', border: 'none',
+            fontSize: 13, fontWeight: 500,
+            cursor: isRunning ? 'not-allowed' : 'pointer',
+            opacity: isRunning ? 0.8 : 1,
+          }}
+        >
+          {isRunning ? <><Loader size={12} className="animate-spin" /> Running…</> : <>Run Workflow →</>}
+        </button>
       </div>
     </div>
   );

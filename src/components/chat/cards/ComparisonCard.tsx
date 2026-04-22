@@ -64,7 +64,7 @@ export default function ComparisonCard({ data }: { data: ComparisonCardData }) {
 
       {/* Rows */}
       {rows.length === 0 ? (
-        <div style={{ padding: '28px', textAlign: 'center', fontSize: 13, color: '#9CA3AF', fontStyle: 'italic' }}>
+        <div style={{ padding: '20px 22px', textAlign: 'center', fontSize: 13, color: '#9CA3AF', fontStyle: 'italic' }}>
           No clauses to compare.
         </div>
       ) : (
@@ -84,7 +84,7 @@ export default function ComparisonCard({ data }: { data: ComparisonCardData }) {
                 background: '#F9FAFB',
                 borderRight: '1px solid #E4E7EC',
                 fontFamily: MONO,
-                fontSize: 9,
+                fontSize: 11,
                 letterSpacing: '0.1em',
                 textTransform: 'uppercase',
                 color: '#6B7280',
@@ -106,7 +106,7 @@ export default function ComparisonCard({ data }: { data: ComparisonCardData }) {
       {data?.recommendation ? (
         <div
           style={{
-            padding: '16px 28px',
+            padding: '12px 22px',
             background: '#F8FAFC',
             borderTop: '1px solid #E4E7EC',
             fontSize: 12,
@@ -129,7 +129,7 @@ function HeaderCell({ text, color, last }: { text: string; color: string; last?:
     <div
       style={{
         fontFamily: MONO,
-        fontSize: 9,
+        fontSize: 11,
         letterSpacing: '0.14em',
         textTransform: 'uppercase',
         padding: '12px 16px',
@@ -156,7 +156,7 @@ function DataCell({ verdict, text, last }: { verdict: ComparisonVerdict; text: s
         style={{
           display: 'inline-flex',
           fontFamily: MONO,
-          fontSize: 8,
+          fontSize: 11,
           letterSpacing: '0.1em',
           textTransform: 'uppercase',
           padding: '2px 8px',

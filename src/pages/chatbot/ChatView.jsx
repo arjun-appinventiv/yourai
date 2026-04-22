@@ -3589,7 +3589,7 @@ INSTRUCTIONS:
       />
       {/* Chat main area — hidden when a full-page view (Team or Workspaces)
           is active so the sidebar stays visible but the chat UI is replaced. */}
-      <div style={{ flex: 1, display: (showTeamPage || showWorkspacesPanel) ? 'none' : 'flex', flexDirection: 'column', minWidth: 0 }}>
+      <div style={{ flex: 1, display: (showTeamPage || showWorkspacesPanel || showWorkflowsPanel) ? 'none' : 'flex', flexDirection: 'column', minWidth: 0 }}>
         <TopNav plan={plan} usage={usage} onOpenSidebar={() => setSidebarOpen(true)} />
 
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#FAFBFC', minHeight: 0 }}>

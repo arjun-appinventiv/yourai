@@ -63,8 +63,8 @@ export default function CaseBriefCard({ data }: { data: CaseBriefCardData }) {
                     padding: '16px 20px',
                     borderBottom: isLast ? 'none' : '1px solid #F3F4F6',
                     fontFamily: MONO,
-                    fontSize: 8,
-                    letterSpacing: '0.16em',
+                    fontSize: 11,
+                    letterSpacing: '0.1em',
                     textTransform: 'uppercase',
                     color: '#D1D5DB',
                     background: '#F9FAFB',
@@ -98,8 +98,8 @@ export default function CaseBriefCard({ data }: { data: CaseBriefCardData }) {
               style={{
                 padding: '16px 20px',
                 fontFamily: MONO,
-                fontSize: 8,
-                letterSpacing: '0.16em',
+                fontSize: 11,
+                letterSpacing: '0.1em',
                 textTransform: 'uppercase',
                 color: '#D1D5DB',
                 background: '#F9FAFB',
@@ -123,7 +123,7 @@ export default function CaseBriefCard({ data }: { data: CaseBriefCardData }) {
                         style={{
                           display: 'inline-block',
                           fontFamily: MONO,
-                          fontSize: 9,
+                          fontSize: 11,
                           letterSpacing: '0.08em',
                           padding: '3px 10px',
                           borderRadius: 4,
@@ -162,8 +162,8 @@ export default function CaseBriefCard({ data }: { data: CaseBriefCardData }) {
           <div
             style={{
               fontFamily: MONO,
-              fontSize: 8,
-              letterSpacing: '0.2em',
+              fontSize: 11,
+              letterSpacing: '0.12em',
               textTransform: 'uppercase',
               color: '#0B1D3A',
               marginBottom: 8,

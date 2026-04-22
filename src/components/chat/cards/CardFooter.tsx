@@ -35,7 +35,7 @@ export default function CardFooter({ sourceType, sourceName }: CardFooterProps) 
         justifyContent: 'space-between',
         background: '#F9FAFB',
         borderTop: '1px solid #E4E7EC',
-        padding: '12px 28px',
+        padding: '10px 22px',
       }}
     >
       <span
