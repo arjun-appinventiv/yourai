@@ -95,6 +95,19 @@ export default function WorkflowBuilder({ template, knowledgePacks = [], onBack,
 
   const [errors, setErrors] = useState<{ name?: string; practiceArea?: string; steps?: string }>({});
 
+  // Wizard step — 1: Details, 2: Pipeline. Only affects the render;
+  // all state above is kept mounted between steps.
+  const [wizardStep, setWizardStep] = useState<1 | 2>(1);
+
+  const goStep2 = () => {
+    const e: typeof errors = {};
+    if (!name.trim()) e.name = 'Name is required';
+    if (!practiceArea) e.practiceArea = 'Pick a practice area';
+    if (Object.keys(e).length > 0) { setErrors(e); return; }
+    setErrors({});
+    setWizardStep(2);
+  };
+
   // Which step is currently showing the "Advanced options" block and
   // which reference-doc tab. Tracked externally so we don't remount the
   // tab state when the step list re-orders.
@@ -215,58 +228,88 @@ export default function WorkflowBuilder({ template, knowledgePacks = [], onBack,
 
   /* ─── Render ─── */
   return (
-    <>
-      <div onClick={onBack} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.35)', zIndex: 65, backdropFilter: 'blur(3px)' }} />
-      <div
-        style={{
-          position: 'fixed', top: 0, right: 0, bottom: 0,
-          width: '100%', maxWidth: 680, background: '#fff',
-          boxShadow: '-12px 0 32px rgba(0,0,0,0.1)', zIndex: 66,
-          display: 'flex', flexDirection: 'column',
-          animation: 'slideInRight 200ms ease-out',
-        }}
-      >
-        {/* Header */}
-        <div style={{ padding: '16px 24px 14px', borderBottom: '1px solid var(--border)' }}>
-          <button
-            onClick={onBack}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 8px', marginLeft: -8, borderRadius: 6, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 12 }}
-            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-primary)'; }}
-            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)'; }}
-          >
-            <ArrowLeft size={13} /> Workflow Templates
-          </button>
-
-          <div className="flex items-center justify-between gap-3" style={{ marginTop: 8 }}>
-            <div style={{ minWidth: 0 }}>
-              <h2 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 22, color: 'var(--text-primary)', margin: 0, lineHeight: 1.3 }}>
-                {isEditing ? (template!.name || 'Edit Workflow') : 'New Workflow'}
-              </h2>
-              <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
-                {isEditing ? 'Edit the steps or metadata. Saved changes apply to future runs.' : 'Build a reusable sequence of AI steps.'}
-              </p>
-            </div>
-            <div className="flex items-center gap-2" style={{ flexShrink: 0 }}>
-              <button onClick={onBack} style={{ padding: '8px 14px', borderRadius: 8, border: '1px solid var(--border)', background: '#fff', fontSize: 13, color: 'var(--text-muted)', cursor: 'pointer' }}>Cancel</button>
-              <button
-                onClick={handleSave}
-                disabled={!canEdit}
-                style={{ padding: '8px 18px', borderRadius: 8, border: 'none', background: canEdit ? 'var(--navy)' : '#9CA3AF', color: '#fff', fontSize: 13, fontWeight: 500, cursor: canEdit ? 'pointer' : 'not-allowed' }}
-              >
-                Save
-              </button>
-            </div>
-          </div>
-          {!canEdit && (
-            <div style={{ marginTop: 10, padding: '8px 12px', borderRadius: 8, background: '#FFFBEB', border: '1px solid #FDE68A', fontSize: 11, color: '#6B4E1F', lineHeight: 1.55 }}>
-              You don't have permission to edit this workflow. Try <em>Duplicate</em> from the picker to make your own copy.
-            </div>
+    <div
+      style={{
+        flex: 1, display: 'flex', flexDirection: 'column',
+        background: '#FAF6EE', minWidth: 0, minHeight: 0, overflow: 'hidden',
+      }}
+    >
+      {/* Breadcrumb bar */}
+      <div style={{
+        padding: '12px 36px',
+        borderBottom: '1px solid rgba(10,36,99,0.06)',
+        background: '#FDFBF5',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        flexShrink: 0,
+      }}>
+        <button
+          onClick={onBack}
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+            padding: '6px 10px', marginLeft: -10, borderRadius: 8,
+            background: 'transparent', border: 'none', cursor: 'pointer',
+            color: 'var(--text-muted)', fontSize: 13,
+          }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--navy)'; (e.currentTarget as HTMLButtonElement).style.background = '#F3ECDD'; }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)'; (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; }}
+        >
+          <ArrowLeft size={14} /> Workflows
+        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <button onClick={onBack} style={{ padding: '8px 14px', borderRadius: 8, border: '1px solid var(--border)', background: '#fff', fontSize: 13, color: 'var(--text-muted)', cursor: 'pointer' }}>Cancel</button>
+          {wizardStep === 1 ? (
+            <button
+              onClick={goStep2}
+              disabled={!canEdit}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 18px', borderRadius: 8, border: 'none', background: canEdit ? 'var(--navy)' : '#9CA3AF', color: '#fff', fontSize: 13, fontWeight: 500, cursor: canEdit ? 'pointer' : 'not-allowed' }}
+            >
+              Continue <ArrowRight size={13} />
+            </button>
+          ) : (
+            <button
+              onClick={handleSave}
+              disabled={!canEdit}
+              style={{ padding: '8px 20px', borderRadius: 8, border: 'none', background: canEdit ? 'var(--navy)' : '#9CA3AF', color: '#fff', fontSize: 13, fontWeight: 500, cursor: canEdit ? 'pointer' : 'not-allowed' }}
+            >
+              Save workflow
+            </button>
           )}
         </div>
+      </div>
 
-        {/* Body — scrollable */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '24px 24px 40px' }}>
+      {/* Wizard hero with step indicator */}
+      <div style={{
+        padding: '24px 36px 18px',
+        borderBottom: '1px solid rgba(10,36,99,0.06)',
+        background: 'linear-gradient(180deg, #FDFBF5 0%, #FAF6EE 100%)',
+        flexShrink: 0,
+      }}>
+        <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 28, color: 'var(--navy)', margin: 0, lineHeight: 1.1 }}>
+          {isEditing ? `Edit: ${template!.name || 'Workflow'}` : 'New Workflow'}
+        </h1>
+        <p style={{ fontSize: 13, color: '#374151', marginTop: 6, lineHeight: 1.55 }}>
+          {wizardStep === 1 ? 'First, tell us about this workflow.' : 'Now, add the steps this workflow should run.'}
+        </p>
+
+        {/* Step indicator */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 18 }}>
+          <WizardDot num={1} label="Details"  active={wizardStep === 1} done={wizardStep > 1} onClick={() => setWizardStep(1)} />
+          <div style={{ flex: '0 0 40px', height: 2, background: wizardStep > 1 ? 'var(--navy)' : '#E4E7EC', borderRadius: 2 }} />
+          <WizardDot num={2} label="Pipeline" active={wizardStep === 2} done={false}         onClick={() => canEdit && name.trim() && practiceArea && setWizardStep(2)} />
+        </div>
+
+        {!canEdit && (
+          <div style={{ marginTop: 14, padding: '10px 14px', borderRadius: 8, background: '#FFFBEB', border: '1px solid #FDE68A', fontSize: 12, color: '#6B4E1F', lineHeight: 1.55 }}>
+            You don't have permission to edit this workflow. Try <em>Duplicate</em> from Workflows to make your own copy.
+          </div>
+        )}
+      </div>
+
+      {/* Body */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '28px 36px 40px' }}>
+        <div style={{ maxWidth: 820, margin: '0 auto' }}>
           {/* Section 1 — Details */}
+          {wizardStep === 1 && (
           <Section label="Workflow Details">
             <Field label={`Workflow name (${name.length}/${MAX_NAME})`} error={errors.name}>
               <input
@@ -343,8 +386,10 @@ export default function WorkflowBuilder({ template, knowledgePacks = [], onBack,
               )}
             </Field>
           </Section>
+          )}
 
           {/* Section 2 — Steps */}
+          {wizardStep === 2 && (
           <Section
             label="Workflow Steps"
             help={`Add steps in the order they should run. Max ${MAX_STEPS} steps. Each step is one AI task.`}
@@ -395,16 +440,67 @@ export default function WorkflowBuilder({ template, knowledgePacks = [], onBack,
               </span>
             </div>
           </Section>
+          )}
+
+          {/* Inline step-nav at bottom of wizard for easy back/forward */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 28, paddingTop: 20, borderTop: '1px solid rgba(10,36,99,0.06)' }}>
+            {wizardStep === 2 ? (
+              <button
+                onClick={() => setWizardStep(1)}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 8, border: '1px solid var(--border)', background: '#fff', fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}
+              >
+                <ArrowLeft size={13} /> Back to details
+              </button>
+            ) : <div />}
+            {wizardStep === 1 ? (
+              <button
+                onClick={goStep2}
+                disabled={!canEdit}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '10px 22px', borderRadius: 10, border: 'none', background: canEdit ? 'var(--navy)' : '#9CA3AF', color: '#fff', fontSize: 14, fontWeight: 600, cursor: canEdit ? 'pointer' : 'not-allowed', boxShadow: canEdit ? '0 2px 8px rgba(10,36,99,0.2)' : 'none' }}
+              >
+                Continue to Pipeline <ArrowRight size={14} />
+              </button>
+            ) : (
+              <button
+                onClick={handleSave}
+                disabled={!canEdit}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '10px 24px', borderRadius: 10, border: 'none', background: canEdit ? 'var(--navy)' : '#9CA3AF', color: '#fff', fontSize: 14, fontWeight: 600, cursor: canEdit ? 'pointer' : 'not-allowed', boxShadow: canEdit ? '0 2px 8px rgba(10,36,99,0.2)' : 'none' }}
+              >
+                Save workflow
+              </button>
+            )}
+          </div>
         </div>
       </div>
+    </div>
+  );
+}
 
-      <style>{`
-        @keyframes slideInRight {
-          from { transform: translateX(40px); opacity: 0; }
-          to   { transform: translateX(0);    opacity: 1; }
-        }
-      `}</style>
-    </>
+/* ─── Wizard step indicator dot ─── */
+function WizardDot({ num, label, active, done, onClick }: { num: number; label: string; active: boolean; done: boolean; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        display: 'inline-flex', alignItems: 'center', gap: 8,
+        padding: '6px 10px 6px 6px', borderRadius: 999,
+        background: active ? 'var(--navy)' : done ? '#DCFCE7' : 'transparent',
+        border: active ? 'none' : `1px solid ${done ? '#86EFAC' : 'var(--border)'}`,
+        color: active ? '#fff' : done ? '#166534' : '#6B7280',
+        fontSize: 12, fontWeight: 500, cursor: 'pointer', transition: 'all 150ms',
+      }}
+    >
+      <span style={{
+        width: 22, height: 22, borderRadius: '50%',
+        background: active ? 'rgba(255,255,255,0.2)' : done ? '#16A34A' : '#F3F4F6',
+        color: active ? '#fff' : done ? '#fff' : '#6B7280',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: 11, fontWeight: 600,
+      }}>
+        {done ? '✓' : num}
+      </span>
+      {label}
+    </button>
   );
 }
 
