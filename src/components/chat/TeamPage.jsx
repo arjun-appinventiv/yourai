@@ -99,20 +99,20 @@ export default function TeamPage({ onBack, onCountChange, onToast }) {
     };
     setMembers((prev) => [newMember, ...prev]);
 
-    // External Users are tied to the workspaces picked in Step 2 — add them
-    // to each workspace's membership so the invite is meaningful.
-    if (draft.role === ROLE.EXTERNAL_USER && Array.isArray(draft.workspaceIds)) {
+    // Both External (required) and Internal (optional) invites can include
+    // a list of workspaces to immediately add the new member to. Honour the
+    // KB-edit toggle per workspace.
+    if (Array.isArray(draft.workspaceIds) && draft.workspaceIds.length > 0) {
       const today = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      const wsRole = draft.role === ROLE.EXTERNAL_USER ? 'external_user' : 'internal_user';
       draft.workspaceIds.forEach((wsId) => {
         addWorkspaceMember(wsId, {
           userId: newMember.id,
           name: newMember.name,
           email: newMember.email,
-          role: 'external_user',
+          role: wsRole,
           addedAt: today,
           addedBy: 'You',
-          // Honour the KB-edit choice made in Step 2 (default false — clients
-          // are read-only unless the admin explicitly flipped the toggle).
           canEditKB: !!draft.canEditKB,
         });
       });
@@ -371,11 +371,12 @@ function InviteFlow({ onBack, onSubmit }) {
   const togglePerm = (p) => setPermissions((prev) => (prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p]));
   const toggleWorkspace = (wsId) => setWorkspaceIds((prev) => (prev.includes(wsId) ? prev.filter((x) => x !== wsId) : [...prev, wsId]));
 
-  // Step labels change based on role — external uses 'Workspaces', internal uses 'Permissions'
+  // Step labels change based on role — external uses 'Workspaces', internal
+  // uses 'Access' (permissions + optional workspace assignment).
   const steps = [1, 2, 3];
   const stepLabels = {
     1: 'Details',
-    2: role === ROLE.EXTERNAL_USER ? 'Workspaces' : 'Permissions',
+    2: role === ROLE.EXTERNAL_USER ? 'Workspaces' : 'Access',
     3: 'Review & send',
   };
 
@@ -471,7 +472,21 @@ function InviteFlow({ onBack, onSubmit }) {
           />
         )}
         {step === 2 && role !== ROLE.EXTERNAL_USER && (
-          <StepPermissions permissions={permissions} togglePerm={togglePerm} />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+            <StepPermissions permissions={permissions} togglePerm={togglePerm} />
+            {/* Internal users get workspace assignment + KB toggle here too,
+                but it's optional — they can be added to workspaces later
+                from inside the workspace. */}
+            <StepAssignWorkspaces
+              workspaceIds={workspaceIds}
+              toggleWorkspace={toggleWorkspace}
+              canEditKB={canEditKB}
+              setCanEditKB={setCanEditKB}
+              error={workspaceError}
+              inviteeName={name}
+              optional
+            />
+          </div>
         )}
         {step === 3 && (
           <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 14, padding: '24px 28px' }}>
@@ -589,9 +604,10 @@ function PermissionCheckbox({ checked, onToggle, label, description }) {
   );
 }
 
-/* ─── Step 2 (External User variant): assign workspaces ─── */
-function StepAssignWorkspaces({ workspaceIds, toggleWorkspace, canEditKB, setCanEditKB, error, inviteeName }) {
-  // Re-read fresh each render; seed if empty so demo flows work on first load.
+/* ─── Step 2 assign-workspaces block ─── */
+// Used for External users (required) and Internal users (optional).
+// `optional` softens copy and lets zero selections be valid.
+function StepAssignWorkspaces({ workspaceIds, toggleWorkspace, canEditKB, setCanEditKB, error, inviteeName, optional = false }) {
   React.useEffect(() => { seedWorkspacesIfEmpty(MOCK_WORKSPACES); }, []);
   const workspaces = listWorkspaces();
 
@@ -600,7 +616,9 @@ function StepAssignWorkspaces({ workspaceIds, toggleWorkspace, canEditKB, setCan
       <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 14, padding: '28px 28px', textAlign: 'center' }}>
         <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)' }}>No workspaces yet</div>
         <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 8, lineHeight: 1.55, maxWidth: 420, margin: '8px auto 0' }}>
-          External clients can only access workspaces. Create your first workspace before inviting a client.
+          {optional
+            ? 'Once you create a workspace, you can add this member to it.'
+            : 'External clients can only access workspaces. Create your first workspace before inviting a client.'}
         </p>
       </div>
     );
@@ -609,10 +627,12 @@ function StepAssignWorkspaces({ workspaceIds, toggleWorkspace, canEditKB, setCan
   return (
     <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 14, padding: '24px 28px' }}>
       <h3 style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 15, fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>
-        Assign to workspaces
+        {optional ? 'Assign to workspaces (optional)' : 'Assign to workspaces'}
       </h3>
       <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 6, lineHeight: 1.55 }}>
-        {inviteeName ? `${inviteeName} will only be able to access the workspaces you select.` : 'External clients only see workspaces they are assigned to.'} Select one or more.
+        {optional
+          ? `Add ${inviteeName || 'this member'} straight into one or more workspaces now, or skip and assign from inside each workspace later.`
+          : `${inviteeName ? `${inviteeName} will only be able to access the workspaces you select.` : 'External clients only see workspaces they are assigned to.'} Select one or more.`}
       </p>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 16 }}>
@@ -687,7 +707,9 @@ function StepAssignWorkspaces({ workspaceIds, toggleWorkspace, canEditKB, setCan
 function StepReview({ name, email, role, permissions, workspaceIds = [], canEditKB = false }) {
   const pills = permissions.map((p) => PERM_PILL_LABELS[p]).filter(Boolean);
   const baseList = role === ROLE.EXTERNAL_USER ? EXTERNAL_USER_BASE : INTERNAL_USER_BASE;
-  const assignedWorkspaces = role === ROLE.EXTERNAL_USER
+  // Both roles can carry workspace assignments now — Internal's is optional,
+  // External's is required. Surface whatever the admin picked.
+  const assignedWorkspaces = workspaceIds.length > 0
     ? listWorkspaces().filter((w) => workspaceIds.includes(w.id))
     : [];
   return (
@@ -714,11 +736,13 @@ function StepReview({ name, email, role, permissions, workspaceIds = [], canEdit
           )}
         </div>
       </div>
-      {role === ROLE.EXTERNAL_USER && (
+      {(role === ROLE.EXTERNAL_USER || assignedWorkspaces.length > 0) && (
         <div>
           <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>Assigned workspaces</div>
           {assignedWorkspaces.length === 0 ? (
-            <span style={{ fontSize: 12, color: '#C65454', fontStyle: 'italic' }}>No workspaces selected — client will have no access.</span>
+            role === ROLE.EXTERNAL_USER
+              ? <span style={{ fontSize: 12, color: '#C65454', fontStyle: 'italic' }}>No workspaces selected — client will have no access.</span>
+              : <span style={{ fontSize: 12, color: 'var(--text-muted)', fontStyle: 'italic' }}>Not added to any workspace yet — you can do this from inside each workspace.</span>
           ) : (
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
               {assignedWorkspaces.map((w) => (
@@ -728,11 +752,13 @@ function StepReview({ name, email, role, permissions, workspaceIds = [], canEdit
               ))}
             </div>
           )}
-          <div style={{ marginTop: 10, fontSize: 11, color: canEditKB ? '#3F7E4A' : 'var(--text-muted)' }}>
-            {canEditKB
-              ? 'Can edit workspace documents in every assigned workspace.'
-              : 'Read-only on workspace documents in every assigned workspace.'}
-          </div>
+          {assignedWorkspaces.length > 0 && (
+            <div style={{ marginTop: 10, fontSize: 11, color: canEditKB ? '#3F7E4A' : 'var(--text-muted)' }}>
+              {canEditKB
+                ? 'Can edit workspace documents in every assigned workspace.'
+                : 'Read-only on workspace documents in every assigned workspace.'}
+            </div>
+          )}
         </div>
       )}
       <div style={{ padding: '12px 14px', borderRadius: 10, background: '#FBEED5', border: '1px solid #F3E2B1', display: 'flex', alignItems: 'flex-start', gap: 8 }}>
