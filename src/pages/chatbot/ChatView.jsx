@@ -18,6 +18,13 @@ import WorkspacesPage from './WorkspacesPage';
 import { listWorkspacesForUser, seedWorkspacesIfEmpty } from '../../lib/workspace';
 import { MOCK_WORKSPACES } from '../../lib/mockWorkspaces';
 import { loadVault, saveVault, seedVaultIfEmpty } from '../../lib/documentVaultStore';
+import IntentCard, { isCardIntent, tryParseCardData } from '../../components/chat/cards/IntentCard';
+import {
+  MOCK_SUMMARY_CARD,
+  MOCK_COMPARISON_CARD,
+  MOCK_CASE_BRIEF_CARD,
+  MOCK_RESEARCH_BRIEF_CARD,
+} from '../../lib/mockCardData';
 import { billingData, subscriptionPlans } from '../../data/mockData';
 import { callLLM, getApiKey } from '../../lib/llm-client';
 import { extractFileText } from '../../lib/file-parser';
@@ -1974,19 +1981,34 @@ function MessageBubble({ msg }) {
         )}
         <div style={{ fontSize: 14, lineHeight: 1.6, color: 'var(--text-primary)', wordBreak: 'break-word' }}>
           {isBot ? (
-            <ReactMarkdown
-              components={{
-                h2: ({children}) => <h2 style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', margin: '14px 0 6px 0', paddingBottom: 4, borderBottom: '0.5px solid var(--border)' }}>{children}</h2>,
-                h3: ({children}) => <h3 style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', margin: '10px 0 4px 0' }}>{children}</h3>,
-                p: ({children}) => <p style={{ fontSize: 14, color: 'var(--text-primary)', lineHeight: 1.7, margin: '0 0 8px 0' }}>{children}</p>,
-                ul: ({children}) => <ul style={{ paddingLeft: 18, margin: '4px 0 8px 0' }}>{children}</ul>,
-                ol: ({children}) => <ol style={{ paddingLeft: 18, margin: '4px 0 8px 0' }}>{children}</ol>,
-                li: ({children}) => <li style={{ fontSize: 14, color: 'var(--text-primary)', lineHeight: 1.6, marginBottom: 3 }}>{children}</li>,
-                strong: ({children}) => <strong style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{children}</strong>,
-                blockquote: ({children}) => <blockquote style={{ borderLeft: '2px solid var(--border)', paddingLeft: 12, margin: '8px 0', color: 'var(--text-muted)', fontStyle: 'italic' }}>{children}</blockquote>,
-                code: ({children}) => <code style={{ fontSize: 12, fontFamily: 'monospace', background: 'var(--ice-warm)', padding: '1px 4px', borderRadius: 3, color: 'var(--text-primary)' }}>{children}</code>,
-              }}
-            >{msg.content}</ReactMarkdown>
+            // Intent cards: if this bot message carries a known intent and
+            // either pre-parsed cardData or JSON-parseable content, render
+            // the dedicated card. Any parse or shape failure falls through
+            // to the existing ReactMarkdown renderer — never crash.
+            (() => {
+              if (msg.cardData && isCardIntent(msg.intent)) {
+                return <IntentCard intent={msg.intent} data={msg.cardData} />;
+              }
+              if (isCardIntent(msg.intent)) {
+                const parsed = tryParseCardData(msg.content);
+                if (parsed) return <IntentCard intent={msg.intent} data={parsed} />;
+              }
+              return (
+                <ReactMarkdown
+                  components={{
+                    h2: ({children}) => <h2 style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', margin: '14px 0 6px 0', paddingBottom: 4, borderBottom: '0.5px solid var(--border)' }}>{children}</h2>,
+                    h3: ({children}) => <h3 style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', margin: '10px 0 4px 0' }}>{children}</h3>,
+                    p: ({children}) => <p style={{ fontSize: 14, color: 'var(--text-primary)', lineHeight: 1.7, margin: '0 0 8px 0' }}>{children}</p>,
+                    ul: ({children}) => <ul style={{ paddingLeft: 18, margin: '4px 0 8px 0' }}>{children}</ul>,
+                    ol: ({children}) => <ol style={{ paddingLeft: 18, margin: '4px 0 8px 0' }}>{children}</ol>,
+                    li: ({children}) => <li style={{ fontSize: 14, color: 'var(--text-primary)', lineHeight: 1.6, marginBottom: 3 }}>{children}</li>,
+                    strong: ({children}) => <strong style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{children}</strong>,
+                    blockquote: ({children}) => <blockquote style={{ borderLeft: '2px solid var(--border)', paddingLeft: 12, margin: '8px 0', color: 'var(--text-muted)', fontStyle: 'italic' }}>{children}</blockquote>,
+                    code: ({children}) => <code style={{ fontSize: 12, fontFamily: 'monospace', background: 'var(--ice-warm)', padding: '1px 4px', borderRadius: 3, color: 'var(--text-primary)' }}>{children}</code>,
+                  }}
+                >{msg.content}</ReactMarkdown>
+              );
+            })()
           ) : msg.content}
         </div>
         {msg.knowledgePack && (
@@ -2598,6 +2620,36 @@ export default function ChatView({ initialView = 'chat' }) {
   const sendMessage = useCallback(async (text) => {
     const trimmed = (text || '').trim();
     if ((!trimmed && pendingAttachments.length === 0) || isTyping) return;
+
+    // ─── Dev-only slash commands to preview intent cards with mock data ───
+    // /demo-summary, /demo-comparison, /demo-casebrief, /demo-research
+    // Lets PM/QA render any card without needing a live backend that
+    // returns structured JSON. No LLM round-trip.
+    const demoMap = {
+      '/demo-summary':    { intent: 'document_summarisation', data: MOCK_SUMMARY_CARD },
+      '/demo-comparison': { intent: 'clause_comparison',      data: MOCK_COMPARISON_CARD },
+      '/demo-casebrief':  { intent: 'case_law_analysis',      data: MOCK_CASE_BRIEF_CARD },
+      '/demo-research':   { intent: 'legal_research',         data: MOCK_RESEARCH_BRIEF_CARD },
+    };
+    if (demoMap[trimmed]) {
+      if (showEmptyState) setShowEmptyState(false);
+      const { intent, data } = demoMap[trimmed];
+      const userMsg = { id: Date.now(), sender: 'user', content: trimmed, timestamp: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) };
+      const botMsg  = {
+        id: Date.now() + 1,
+        sender: 'bot',
+        content: '',
+        intent,
+        cardData: data,
+        timestamp: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
+        sourceBadge: null,
+      };
+      setMessages((prev) => [...prev, userMsg, botMsg]);
+      setInput('');
+      if (inputRef.current) inputRef.current.style.height = 'auto';
+      return;
+    }
+
     if (showEmptyState) setShowEmptyState(false);
     const userMsg = { id: Date.now(), sender: 'user', content: trimmed, timestamp: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }), attachments: pendingAttachments };
     setMessages((prev) => [...prev, userMsg]);
@@ -2826,10 +2878,21 @@ INSTRUCTIONS:
         sourceBadge = sourceBadgeMap[result.sourceType] ?? 'AI-generated response';
       }
 
+      // For card-rendering intents, try to parse the response as JSON.
+      // If it parses, attach it as cardData so MessageBubble dispatches
+      // to the correct card component. If parsing fails, the message
+      // falls back to markdown rendering automatically.
+      let cardData = null;
+      if (isCardIntent(effectiveIntent)) {
+        cardData = tryParseCardData(fullContent);
+      }
+
       const botMsg = {
         id: Date.now() + 1,
         sender: 'bot',
         content: fullContent,
+        intent: effectiveIntent,
+        cardData,
         timestamp: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
         knowledgePack: activeKnowledgePack?.name || null,
         vaultDocument: activeVaultDocument?.name || null,
