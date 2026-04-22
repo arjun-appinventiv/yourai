@@ -111,7 +111,9 @@ export default function TeamPage({ onBack, onCountChange, onToast }) {
           role: 'external_user',
           addedAt: today,
           addedBy: 'You',
-          canEditKB: false, // Clients are read-only on the KB by default
+          // Honour the KB-edit choice made in Step 2 (default false — clients
+          // are read-only unless the admin explicitly flipped the toggle).
+          canEditKB: !!draft.canEditKB,
         });
       });
     }
@@ -360,6 +362,10 @@ function InviteFlow({ onBack, onSubmit }) {
   // other access path. Step 2 collects that assignment before the review.
   const [workspaceIds, setWorkspaceIds] = useState([]);
   const [workspaceError, setWorkspaceError] = useState('');
+  // Whether this external user can add / remove docs in the workspaces they
+  // are assigned to. Defaults to false (read-only) because externals are
+  // clients; the Org Admin can explicitly elevate.
+  const [canEditKB, setCanEditKB] = useState(false);
 
   const validEmail = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
   const togglePerm = (p) => setPermissions((prev) => (prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p]));
@@ -458,6 +464,8 @@ function InviteFlow({ onBack, onSubmit }) {
           <StepAssignWorkspaces
             workspaceIds={workspaceIds}
             toggleWorkspace={toggleWorkspace}
+            canEditKB={canEditKB}
+            setCanEditKB={setCanEditKB}
             error={workspaceError}
             inviteeName={name}
           />
@@ -467,7 +475,7 @@ function InviteFlow({ onBack, onSubmit }) {
         )}
         {step === 3 && (
           <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 14, padding: '24px 28px' }}>
-            <StepReview name={name} email={email} role={role} permissions={permissions} workspaceIds={workspaceIds} />
+            <StepReview name={name} email={email} role={role} permissions={permissions} workspaceIds={workspaceIds} canEditKB={canEditKB} />
           </div>
         )}
       </div>
@@ -489,7 +497,7 @@ function InviteFlow({ onBack, onSubmit }) {
                 Continue <ChevronRight size={14} />
               </button>
             ) : (
-              <button onClick={() => onSubmit({ name, email, role, permissions, workspaceIds })} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 22px', borderRadius: 8, border: 'none', background: 'var(--navy)', color: 'white', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>
+              <button onClick={() => onSubmit({ name, email, role, permissions, workspaceIds, canEditKB })} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 22px', borderRadius: 8, border: 'none', background: 'var(--navy)', color: 'white', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>
                 <Mail size={13} /> Send Invitation
               </button>
             )}
@@ -582,7 +590,7 @@ function PermissionCheckbox({ checked, onToggle, label, description }) {
 }
 
 /* ─── Step 2 (External User variant): assign workspaces ─── */
-function StepAssignWorkspaces({ workspaceIds, toggleWorkspace, error, inviteeName }) {
+function StepAssignWorkspaces({ workspaceIds, toggleWorkspace, canEditKB, setCanEditKB, error, inviteeName }) {
   // Re-read fresh each render; seed if empty so demo flows work on first load.
   React.useEffect(() => { seedWorkspacesIfEmpty(MOCK_WORKSPACES); }, []);
   const workspaces = listWorkspaces();
@@ -649,11 +657,34 @@ function StepAssignWorkspaces({ workspaceIds, toggleWorkspace, error, inviteeNam
       {error && (
         <div style={{ marginTop: 12, fontSize: 12, color: '#C65454' }}>{error}</div>
       )}
+
+      {/* ─── KB-edit toggle — applies to every selected workspace ─── */}
+      <div
+        onClick={() => setCanEditKB(!canEditKB)}
+        style={{
+          marginTop: 18, padding: '14px 16px', borderRadius: 12, cursor: 'pointer',
+          border: '1px solid ' + (canEditKB ? '#5CA868' : 'var(--border)'),
+          background: canEditKB ? '#F3FAF5' : '#fff',
+          display: 'flex', alignItems: 'center', gap: 12, transition: 'all 120ms',
+        }}
+      >
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>Can edit the workspace knowledge base</div>
+          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4, lineHeight: 1.55 }}>
+            {canEditKB
+              ? 'Can add and remove workspace documents in every assigned workspace. Good for collaborators actively contributing to the matter.'
+              : 'Read-only. Can chat with the AI and view documents but cannot upload or remove them. Recommended default for clients.'}
+          </div>
+        </div>
+        <span style={{ width: 36, height: 20, borderRadius: 999, background: canEditKB ? '#5CA868' : '#CBD5E1', position: 'relative', transition: 'background 150ms', flexShrink: 0 }}>
+          <span style={{ position: 'absolute', top: 2, left: canEditKB ? 18 : 2, width: 16, height: 16, borderRadius: '50%', background: '#fff', boxShadow: '0 1px 2px rgba(0,0,0,0.2)', transition: 'left 150ms' }} />
+        </span>
+      </div>
     </div>
   );
 }
 
-function StepReview({ name, email, role, permissions, workspaceIds = [] }) {
+function StepReview({ name, email, role, permissions, workspaceIds = [], canEditKB = false }) {
   const pills = permissions.map((p) => PERM_PILL_LABELS[p]).filter(Boolean);
   const baseList = role === ROLE.EXTERNAL_USER ? EXTERNAL_USER_BASE : INTERNAL_USER_BASE;
   const assignedWorkspaces = role === ROLE.EXTERNAL_USER
@@ -697,6 +728,11 @@ function StepReview({ name, email, role, permissions, workspaceIds = [] }) {
               ))}
             </div>
           )}
+          <div style={{ marginTop: 10, fontSize: 11, color: canEditKB ? '#3F7E4A' : 'var(--text-muted)' }}>
+            {canEditKB
+              ? 'Can edit workspace documents in every assigned workspace.'
+              : 'Read-only on workspace documents in every assigned workspace.'}
+          </div>
         </div>
       )}
       <div style={{ padding: '12px 14px', borderRadius: 10, background: '#FBEED5', border: '1px solid #F3E2B1', display: 'flex', alignItems: 'flex-start', gap: 8 }}>
