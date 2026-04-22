@@ -27,7 +27,7 @@ import WorkflowProgressCard from '../../components/chat/WorkflowProgressCard';
 import WorkflowReportCard from '../../components/chat/WorkflowReportCard';
 import {
   listTemplatesForUser, listFavouriteTemplatesForUser, seedTemplatesIfEmpty, duplicateTemplate as duplicateWorkflow,
-  deleteTemplate as deleteWorkflow, getActiveRunId, getRun,
+  deleteTemplate as deleteWorkflow, getActiveRunId, getRun, listRuns,
 } from '../../lib/workflow';
 import { MOCK_WORKFLOW_TEMPLATES } from '../../lib/mockWorkflows';
 import { subscribeRun } from '../../lib/workflowRunner';

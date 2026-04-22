@@ -12,7 +12,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ArrowLeft, Check, ChevronDown, FileText, Package, Plus, Search,
+  ArrowLeft, ArrowRight, Check, ChevronDown, FileText, Package, Plus, Search,
   Trash2, UploadCloud, X,
   FileText as FileTextIcon, Search as SearchIcon, GitCompare,
   FileOutput, BookOpen, ShieldCheck, GripVertical,
