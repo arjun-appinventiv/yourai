@@ -2627,15 +2627,31 @@ export default function ChatView({ initialView = 'chat' }) {
     } catch { return { id: wsId, name: null, hasDocs: false }; }
   }, [location?.pathname, currentRole, currentUserId]);
 
-  // External Users never use the personal chat — their home is the workspace
-  // list. If they land here (typed URL, stale link, etc.) we redirect them
-  // to /chat/workspaces immediately. The chat-mode toggle now lives inside
-  // WorkspaceChatView where it actually belongs.
+  // External Users never use the personal chat — their home is their
+  // workspace(s). Routing rules:
+  //   • 0 workspaces → /chat/workspaces (shows empty state)
+  //   • 1 workspace  → /chat/workspaces/<id>  (skip the list, go straight
+  //                    to the only room they can use — matches the real
+  //                    mental model: the client opens "their matter")
+  //   • 2+           → /chat/workspaces (let them pick)
   useEffect(() => {
-    if (isExternalUser && initialView !== 'workspaces') {
+    if (!isExternalUser) return;
+    let visibleWs = [];
+    try { visibleWs = listWorkspacesForUser(currentUserId, currentRole) || []; } catch { /* ignore */ }
+    // Single-workspace short-circuit — only if we aren't already inside it.
+    if (visibleWs.length === 1) {
+      const targetPath = `/chat/workspaces/${visibleWs[0].id}`;
+      if ((location?.pathname || '') !== targetPath) {
+        navigate(targetPath, { replace: true });
+      }
+      return;
+    }
+    // Otherwise land on the list
+    if (initialView !== 'workspaces') {
       navigate('/chat/workspaces', { replace: true });
     }
-  }, [isExternalUser, initialView, navigate]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isExternalUser, initialView, currentUserId, currentRole]);
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
