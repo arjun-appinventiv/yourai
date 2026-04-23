@@ -2519,12 +2519,12 @@ function EmptyState({ profile, plan, onPromptClick, navigate, onViewPlans, workf
             {getGreeting()}, {currentUserName}
           </h2>
           <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: 'var(--text-muted)', margin: '0 auto', maxWidth: 520, lineHeight: 1.45 }}>
-            Your AI assistant is ready. Based on your profile, here's where you can start:
+            Your AI assistant is ready — start with one of these.
           </p>
         </div>
 
         {/* ── Prompt cards (3-up) ── */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-left" style={{ marginTop: 36 }}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-left" style={{ marginTop: 72 }}>
           {prompts.map((p, i) => {
             const Icon = p.icon;
             return (
@@ -2535,34 +2535,39 @@ function EmptyState({ profile, plan, onPromptClick, navigate, onViewPlans, workf
                   background: '#fff',
                   border: '1px solid var(--border)',
                   borderRadius: 14,
-                  padding: '20px 22px',
+                  padding: '22px 22px 0',
                   cursor: 'pointer',
                   transition: 'border-color 0.15s, box-shadow 0.15s, transform 0.15s',
+                  display: 'flex', flexDirection: 'column',
                 }}
                 onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#C9A84C'; e.currentTarget.style.boxShadow = '0 6px 18px rgba(10, 36, 99, 0.08)'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
                 onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.transform = 'translateY(0)'; }}
               >
-                <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(201, 168, 76, 0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
-                  <Icon size={18} color="#C9A84C" />
+                <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'rgba(201, 168, 76, 0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 14 }}>
+                  <Icon size={22} color="#C9A84C" />
                 </div>
                 <div style={{ fontFamily: "'DM Serif Display', serif", fontSize: 17, fontWeight: 400, color: 'var(--navy)', marginBottom: 6, lineHeight: 1.25 }}>{p.title}</div>
-                <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.55, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{p.prompt}</div>
+                <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.55, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', marginBottom: 14 }}>{p.prompt}</div>
+                <div style={{ marginTop: 'auto', paddingTop: 10, borderTop: '1px solid #F3F0E8', paddingBottom: 12, fontSize: 11, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 6, fontFamily: "'DM Sans', sans-serif" }}>
+                  <span style={{ fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--navy)' }}>Click to start</span>
+                  <span style={{ color: '#9CA3AF' }}>&rarr;</span>
+                </div>
               </div>
             );
           })}
         </div>
 
-        {/* ── Favourites row — label + chips + view-all, one row ── */}
-        {onOpenWorkflowsPanel && onRunWorkflow && (workflows.length > 0 || totalWorkflowCount > 0) && (
+        {/* ── Favourites row — only renders when there ARE favourites (fill-or-kill) ── */}
+        {onOpenWorkflowsPanel && onRunWorkflow && workflows.length > 0 && (
           <div style={{ marginTop: 18, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
               <Zap size={12} style={{ color: '#C9A84C' }} />
               <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                {workflows.length > 0 ? 'Favourites' : 'Workflows'}
+                Favourites
               </span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', flex: 1, minWidth: 0 }}>
-              {workflows.length > 0 ? workflows.slice(0, 4).map((w) => (
+              {workflows.slice(0, 4).map((w) => (
                 <button
                   key={w.id}
                   onClick={() => onRunWorkflow(w)}
@@ -2572,11 +2577,7 @@ function EmptyState({ profile, plan, onPromptClick, navigate, onViewPlans, workf
                 >
                   {w.name}
                 </button>
-              )) : (
-                <span style={{ fontSize: 12, color: 'var(--text-muted)', fontFamily: "'DM Sans', sans-serif" }}>
-                  Pin workflows you run often for one-click launch.
-                </span>
-              )}
+              ))}
             </div>
             <button
               onClick={onOpenWorkflowsPanel}
@@ -2770,11 +2771,13 @@ export default function ChatView({ initialView = 'chat' }) {
   // ─── Intent system state ───
   const [activeIntent, setActiveIntent] = useState(DEFAULT_INTENT);
   const [isIntentDropdownOpen, setIsIntentDropdownOpen] = useState(false);
+  const [isMorePillOpen, setIsMorePillOpen] = useState(false);
   const [suggestedIntent, setSuggestedIntent] = useState(null); // Smart suggestion from keyword detection
   const [suggestedIntents, setSuggestedIntents] = useState([]); // Multiple matches for user to pick
   const [dismissedSuggestion, setDismissedSuggestion] = useState(null);
   const suggestionTimer = useRef(null);
   const intentDropdownRef = useRef(null);
+  const morePillRef = useRef(null);
   const [showDocVersionBanner, setShowDocVersionBanner] = useState(false);
   const [pendingNewDoc, setPendingNewDoc] = useState(null); // holds the new doc until user decides
   const [streamingContent, setStreamingContent] = useState('');
@@ -3855,36 +3858,87 @@ INSTRUCTIONS:
             )}
 
             {/* ─── STATE 1: Intent pills above input (empty chat only) ─── */}
-            {showEmptyState && (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 8, marginBottom: 6, justifyContent: 'center' }}>
-                {INTENTS.map(intent => {
-                  const isActive = activeIntent === intent.id;
-                  return (
+            {/* Shows the 6 most-used intents inline + a "More…" overflow
+                pill that opens a popover with the remaining intents. */}
+            {showEmptyState && (() => {
+              const VISIBLE_INTENTS = INTENTS.slice(0, 6);
+              const OVERFLOW_INTENTS = INTENTS.slice(6);
+              const isActiveInOverflow = OVERFLOW_INTENTS.some(i => i.id === activeIntent);
+              return (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 8, marginBottom: 6, justifyContent: 'center' }}>
+                  {VISIBLE_INTENTS.map(intent => {
+                    const isActive = activeIntent === intent.id;
+                    return (
+                      <button
+                        key={intent.id}
+                        onClick={() => setActiveIntent(intent.id)}
+                        style={{
+                          display: 'inline-flex', alignItems: 'center', gap: 5,
+                          padding: '5px 12px', borderRadius: 999,
+                          fontSize: 12, fontFamily: "'DM Sans', sans-serif",
+                          fontWeight: isActive ? 500 : 400,
+                          border: isActive ? '1px solid var(--navy)' : '1px solid var(--border)',
+                          backgroundColor: isActive ? 'var(--navy)' : 'white',
+                          color: isActive ? '#fff' : 'var(--text-secondary)',
+                          cursor: 'pointer',
+                          transition: 'all 150ms ease',
+                          whiteSpace: 'nowrap',
+                          boxShadow: isActive ? '0 1px 3px rgba(10, 36, 99, 0.14)' : 'none',
+                        }}
+                        onMouseEnter={(e) => { if (!isActive) { e.currentTarget.style.borderColor = 'var(--navy)'; e.currentTarget.style.color = 'var(--navy)'; } }}
+                        onMouseLeave={(e) => { if (!isActive) { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-secondary)'; } }}
+                      >
+                        {intent.label}
+                      </button>
+                    );
+                  })}
+                  {/* More… overflow pill */}
+                  <div style={{ position: 'relative' }} ref={morePillRef}>
                     <button
-                      key={intent.id}
-                      onClick={() => setActiveIntent(intent.id)}
+                      onClick={() => setIsMorePillOpen(v => !v)}
                       style={{
-                        display: 'inline-flex', alignItems: 'center', gap: 5,
+                        display: 'inline-flex', alignItems: 'center', gap: 4,
                         padding: '5px 12px', borderRadius: 999,
                         fontSize: 12, fontFamily: "'DM Sans', sans-serif",
-                        fontWeight: isActive ? 500 : 400,
-                        border: isActive ? '1px solid var(--navy)' : '1px solid var(--border)',
-                        backgroundColor: isActive ? 'var(--navy)' : 'white',
-                        color: isActive ? '#fff' : 'var(--text-secondary)',
+                        fontWeight: isActiveInOverflow ? 500 : 400,
+                        border: isActiveInOverflow ? '1px solid var(--navy)' : '1px solid var(--border)',
+                        backgroundColor: isActiveInOverflow ? 'var(--navy)' : 'white',
+                        color: isActiveInOverflow ? '#fff' : 'var(--text-secondary)',
                         cursor: 'pointer',
                         transition: 'all 150ms ease',
                         whiteSpace: 'nowrap',
-                        boxShadow: isActive ? '0 1px 3px rgba(10, 36, 99, 0.14)' : 'none',
+                        boxShadow: isActiveInOverflow ? '0 1px 3px rgba(10, 36, 99, 0.14)' : 'none',
                       }}
-                      onMouseEnter={(e) => { if (!isActive) { e.currentTarget.style.borderColor = 'var(--navy)'; e.currentTarget.style.color = 'var(--navy)'; } }}
-                      onMouseLeave={(e) => { if (!isActive) { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-secondary)'; } }}
                     >
-                      {intent.label}
+                      {isActiveInOverflow ? getIntentLabel(activeIntent) : 'More'}
+                      <ChevronDown size={11} style={{ transform: isMorePillOpen ? 'rotate(180deg)' : 'none', transition: 'transform 150ms' }} />
                     </button>
-                  );
-                })}
-              </div>
-            )}
+                    {isMorePillOpen && (
+                      <>
+                        <div onClick={() => setIsMorePillOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 50 }} />
+                        <div style={{ position: 'absolute', bottom: '100%', right: 0, marginBottom: 6, width: 220, backgroundColor: 'white', borderRadius: 12, border: '1px solid var(--border)', boxShadow: '0 8px 24px rgba(0,0,0,0.12)', zIndex: 51, maxHeight: 320, overflowY: 'auto' }}>
+                          {OVERFLOW_INTENTS.map(intent => {
+                            const isCurrent = activeIntent === intent.id;
+                            return (
+                              <div
+                                key={intent.id}
+                                onClick={() => { setActiveIntent(intent.id); setIsMorePillOpen(false); }}
+                                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 14px', cursor: 'pointer', fontSize: 13, color: isCurrent ? 'var(--text-primary)' : 'var(--text-secondary)', fontWeight: isCurrent ? 500 : 400, transition: 'background 100ms' }}
+                                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--ice-warm)'; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+                              >
+                                <span>{intent.label}</span>
+                                {isCurrent && <CheckCircle size={13} style={{ color: 'var(--navy)', flexShrink: 0 }} />}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Mid-conversation switch banner removed — a single thread
                 can mix intents freely; switching is seamless and only

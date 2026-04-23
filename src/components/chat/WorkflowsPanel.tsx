@@ -306,7 +306,7 @@ export default function WorkflowsPanel({ onClose, onCreateNew, onRun, onEdit, on
               <FilterPill label="Yours"     count={counts.personal} active={filter === 'personal'} onClick={() => setFilter('personal')} />
             </div>
           )}
-          <div style={{ position: 'relative', flex: 1, minWidth: 240, maxWidth: 360, marginLeft: 'auto' }}>
+          <div style={{ position: 'relative', flex: 1, minWidth: 280, marginLeft: 'auto' }}>
             <Search size={14} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
             <input
               value={search}
@@ -317,7 +317,7 @@ export default function WorkflowsPanel({ onClose, onCreateNew, onRun, onEdit, on
           </div>
         </div>
 
-        {/* ─── Card grid ─── */}
+        {/* ─── Card grid — split into Featured (platform) and Your library ─── */}
         {filtered.length === 0 ? (
           <EmptyState
             searchActive={!!search.trim()}
@@ -325,34 +325,65 @@ export default function WorkflowsPanel({ onClose, onCreateNew, onRun, onEdit, on
             onCreate={onCreateNew}
           />
         ) : (
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))',
-            gap: 16,
-          }}>
-            {filtered.map((t) => (
-              <WorkflowCard
-                key={t.id}
-                template={t}
-                ctx={ctx}
-                isRunning={activeTemplateId === t.id}
-                menuOpen={menuOpenFor === t.id}
-                onToggleMenu={() => setMenuOpenFor((x) => (x === t.id ? null : t.id))}
-                onCloseMenu={() => setMenuOpenFor(null)}
-                onRun={() => onRun(t)}
-                onEdit={() => { onEdit(t); setMenuOpenFor(null); }}
-                onDuplicate={() => { onDuplicate(t); setMenuOpenFor(null); }}
-                onDelete={() => handleDelete(t)}
-                isFav={(favTick, isFavouriteTemplate(currentUserId, t.id))}
-                onToggleFav={() => { toggleFavouriteTemplate(currentUserId, t.id); setFavTick((n) => n + 1); }}
-              />
-            ))}
-          </div>
+          <>
+            {featuredTemplates.length > 0 && (
+              <div>
+                <h2 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 20, color: 'var(--navy)', margin: '0 0 14px', lineHeight: 1.2 }}>
+                  Featured workflows
+                </h2>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: 16 }}>
+                  {featuredTemplates.map((t) => (
+                    <WorkflowCard
+                      key={t.id}
+                      template={t}
+                      ctx={ctx}
+                      isRunning={activeTemplateId === t.id}
+                      menuOpen={menuOpenFor === t.id}
+                      onToggleMenu={() => setMenuOpenFor((x) => (x === t.id ? null : t.id))}
+                      onCloseMenu={() => setMenuOpenFor(null)}
+                      onRun={() => onRun(t)}
+                      onEdit={() => { onEdit(t); setMenuOpenFor(null); }}
+                      onDuplicate={() => { onDuplicate(t); setMenuOpenFor(null); }}
+                      onDelete={() => handleDelete(t)}
+                      isFav={(favTick, isFavouriteTemplate(currentUserId, t.id))}
+                      onToggleFav={() => { toggleFavouriteTemplate(currentUserId, t.id); setFavTick((n) => n + 1); }}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+            {libraryTemplates.length > 0 && (
+              <div style={{ marginTop: featuredTemplates.length > 0 ? 32 : 0 }}>
+                <h2 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 20, color: 'var(--navy)', margin: '0 0 14px', lineHeight: 1.2 }}>
+                  Your library
+                </h2>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: 16 }}>
+                  {libraryTemplates.map((t) => (
+                    <WorkflowCard
+                      key={t.id}
+                      template={t}
+                      ctx={ctx}
+                      isRunning={activeTemplateId === t.id}
+                      menuOpen={menuOpenFor === t.id}
+                      onToggleMenu={() => setMenuOpenFor((x) => (x === t.id ? null : t.id))}
+                      onCloseMenu={() => setMenuOpenFor(null)}
+                      onRun={() => onRun(t)}
+                      onEdit={() => { onEdit(t); setMenuOpenFor(null); }}
+                      onDuplicate={() => { onDuplicate(t); setMenuOpenFor(null); }}
+                      onDelete={() => handleDelete(t)}
+                      isFav={(favTick, isFavouriteTemplate(currentUserId, t.id))}
+                      onToggleFav={() => { toggleFavouriteTemplate(currentUserId, t.id); setFavTick((n) => n + 1); }}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
         )}
 
         {/* ─── Recent runs ─── */}
         {recentRuns.length > 0 && (
-          <div style={{ marginTop: 40 }}>
+          <div style={{ marginTop: 48, paddingTop: 40, borderTop: '1px solid rgba(10,36,99,0.08)' }}>
             <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 14 }}>
               <div>
                 <div style={{ fontFamily: "'DM Serif Display', serif", fontSize: 20, color: 'var(--navy)', lineHeight: 1.2 }}>
@@ -363,7 +394,7 @@ export default function WorkflowsPanel({ onClose, onCreateNew, onRun, onEdit, on
                 </div>
               </div>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 10 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: 16 }}>
               {recentRuns.map((r) => {
                 const ok = r.status === 'complete';
                 const dur = r.steps.reduce((a, s) => a + (s.durationSeconds || 0), 0);
@@ -516,6 +547,9 @@ function WorkflowCard({ template, ctx, isRunning, isFav, menuOpen, onToggleMenu,
   const flowOps = template.steps.slice(0, 5);
   const flowRemaining = Math.max(0, template.steps.length - flowOps.length);
 
+  // Use the first step's operation icon so every card reads uniquely at-a-glance
+  // (falls back to Zap if unknown).
+  const HeroIcon = (template.steps[0] && OP_ICON[template.steps[0].operation]) || Zap;
   return (
     <div
       style={{
@@ -523,7 +557,6 @@ function WorkflowCard({ template, ctx, isRunning, isFav, menuOpen, onToggleMenu,
         border: '1px solid rgba(10,36,99,0.08)',
         background: '#FFFFFF',
         display: 'flex', flexDirection: 'column',
-        minHeight: 300,
         overflow: 'hidden',
         transition: 'all 0.18s ease',
         boxShadow: '0 1px 3px rgba(10,36,99,0.03)',
@@ -542,8 +575,8 @@ function WorkflowCard({ template, ctx, isRunning, isFav, menuOpen, onToggleMenu,
         <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: theme.accent }} />
 
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-          <div style={{ width: 38, height: 38, borderRadius: 10, background: theme.iconBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 1px 2px rgba(0,0,0,0.04)' }}>
-            <Zap size={18} style={{ color: theme.accent }} />
+          <div style={{ width: 44, height: 44, borderRadius: 12, background: theme.iconBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 1px 2px rgba(0,0,0,0.04)' }}>
+            <HeroIcon size={20} style={{ color: theme.accent }} />
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: theme.accent }}>
@@ -654,15 +687,13 @@ function WorkflowCard({ template, ctx, isRunning, isFav, menuOpen, onToggleMenu,
           lineHeight: 1.55, margin: '12px 18px 0',
           display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as any,
           overflow: 'hidden', textOverflow: 'ellipsis',
-          minHeight: 40,
-          flex: 1,
         }}
       >
         {template.description || <span style={{ fontStyle: 'italic', color: '#9CA3AF' }}>No description.</span>}
       </p>
 
-      {/* ── Footer ── */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '14px 18px', marginTop: 14, borderTop: '1px solid #F3F0E8' }}>
+      {/* ── Footer (pinned to bottom so cards with short descriptions don't show dead space) ── */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '14px 18px', marginTop: 'auto', borderTop: '1px solid #F3F0E8' }}>
         <span style={{ fontSize: 11, color: '#6B7280' }}>
           Updated {relativeFrom(template.updatedAt)}
         </span>

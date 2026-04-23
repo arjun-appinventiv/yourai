@@ -372,7 +372,7 @@ export default function WorkflowBuilder({ template, knowledgePacks = [], onBack,
                   <strong>Personal</strong> — only visible to you.
                 </div>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
                   {allowedVisibilities.map((v) => (
                     <VisibilityOption
                       key={v}
@@ -442,34 +442,20 @@ export default function WorkflowBuilder({ template, knowledgePacks = [], onBack,
           </Section>
           )}
 
-          {/* Inline step-nav at bottom of wizard for easy back/forward */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 28, paddingTop: 20, borderTop: '1px solid rgba(10,36,99,0.06)' }}>
-            {wizardStep === 2 ? (
+          {/* Inline Back-to-details link on Section 2 only (primary CTAs live
+              in the top bar — avoid duplicate nav). */}
+          {wizardStep === 2 && (
+            <div style={{ marginTop: 24, paddingTop: 18, borderTop: '1px solid rgba(10,36,99,0.06)' }}>
               <button
                 onClick={() => setWizardStep(1)}
-                style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 8, border: '1px solid var(--border)', background: '#fff', fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 10px', marginLeft: -10, borderRadius: 8, border: 'none', background: 'transparent', fontSize: 13, color: 'var(--text-muted)', cursor: 'pointer' }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--navy)'; (e.currentTarget as HTMLButtonElement).style.background = '#F3ECDD'; }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)'; (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; }}
               >
                 <ArrowLeft size={13} /> Back to details
               </button>
-            ) : <div />}
-            {wizardStep === 1 ? (
-              <button
-                onClick={goStep2}
-                disabled={!canEdit}
-                style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '10px 22px', borderRadius: 10, border: 'none', background: canEdit ? 'var(--navy)' : '#9CA3AF', color: '#fff', fontSize: 14, fontWeight: 600, cursor: canEdit ? 'pointer' : 'not-allowed', boxShadow: canEdit ? '0 2px 8px rgba(10,36,99,0.2)' : 'none' }}
-              >
-                Continue to Pipeline <ArrowRight size={14} />
-              </button>
-            ) : (
-              <button
-                onClick={handleSave}
-                disabled={!canEdit}
-                style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '10px 24px', borderRadius: 10, border: 'none', background: canEdit ? 'var(--navy)' : '#9CA3AF', color: '#fff', fontSize: 14, fontWeight: 600, cursor: canEdit ? 'pointer' : 'not-allowed', boxShadow: canEdit ? '0 2px 8px rgba(10,36,99,0.2)' : 'none' }}
-              >
-                Save workflow
-              </button>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -557,13 +543,14 @@ function StepCard(props: StepCardProps) {
         <GripVertical size={16} />
       </div>
 
-      {/* Step number badge */}
+      {/* Step number badge — neutral (brand accent is reserved for Save button) */}
       <div style={{
         width: 28, height: 28, borderRadius: '50%',
-        background: 'var(--navy)', color: '#C9A84C',
+        background: 'var(--ice-warm)', color: 'var(--navy)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
         fontSize: 11, fontWeight: 600, flexShrink: 0, marginTop: 2,
+        border: '1px solid var(--border)',
       }}>
         {String(index + 1).padStart(2, '0')}
       </div>
@@ -602,12 +589,12 @@ function StepCard(props: StepCardProps) {
             value={step.instruction}
             onChange={(e) => onChange({ instruction: e.target.value.slice(0, MAX_INSTRUCTION) })}
             placeholder={cfg.instructionPlaceholder}
-            rows={2}
+            rows={4}
             style={{
               width: '100%', border: '1px solid var(--border)', borderRadius: 8,
-              padding: '8px 10px', fontSize: 13, outline: 'none', resize: 'vertical',
+              padding: '10px 12px', fontSize: 13, outline: 'none', resize: 'vertical',
               lineHeight: 1.55, fontFamily: "'DM Sans', sans-serif",
-              boxSizing: 'border-box',
+              boxSizing: 'border-box', minHeight: 88,
             }}
           />
           <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 3, textAlign: 'right' }}>
@@ -631,7 +618,7 @@ function StepCard(props: StepCardProps) {
           </button>
 
           {advancedOpen && (
-            <div style={{ marginTop: 8, padding: 12, borderRadius: 10, background: 'var(--ice-warm)', border: '1px solid var(--border)' }}>
+            <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px dashed var(--border)' }}>
               <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 2 }}>Reference document (optional)</div>
               <p style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.55, margin: '0 0 10px 0' }}>
                 Upload a playbook, checklist, or standard template. The AI will use it as context for this step.
@@ -921,12 +908,12 @@ function KnowledgePackTab({ packs, onSelect }: { packs: WorkflowBuilderProps['kn
 
 function Section({ label, help, error, children }: { label: string; help?: string; error?: string; children: React.ReactNode }) {
   return (
-    <section style={{ marginBottom: 26 }}>
-      <div style={{ marginBottom: 12 }}>
-        <h3 style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', margin: 0, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+    <section style={{ marginBottom: 32 }}>
+      <div style={{ marginBottom: 20 }}>
+        <h3 style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 16, fontWeight: 600, color: 'var(--navy)', margin: 0 }}>
           {label}
         </h3>
-        {help && <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4, lineHeight: 1.55 }}>{help}</p>}
+        {help && <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 6, lineHeight: 1.55 }}>{help}</p>}
         {error && <p style={{ fontSize: 11, color: '#C65454', marginTop: 4 }}>{error}</p>}
       </div>
       {children}
@@ -949,19 +936,21 @@ function VisibilityOption({ selected, onSelect, title, subtitle }: { selected: b
     <div
       onClick={onSelect}
       style={{
-        padding: '10px 12px', borderRadius: 10, cursor: 'pointer',
+        padding: '14px 16px', borderRadius: 12, cursor: 'pointer',
         border: '1px solid ' + (selected ? 'var(--navy)' : 'var(--border)'),
         background: selected ? 'var(--ice-warm)' : '#fff',
-        display: 'flex', alignItems: 'flex-start', gap: 10, transition: 'all 120ms',
+        display: 'flex', flexDirection: 'column', gap: 4, transition: 'all 120ms',
+        boxShadow: selected ? '0 1px 3px rgba(10,36,99,0.08)' : 'none',
+        minHeight: 92,
       }}
     >
-      <div style={{ width: 16, height: 16, borderRadius: '50%', border: '2px solid ' + (selected ? 'var(--navy)' : '#CBD5E1'), display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 2 }}>
-        {selected && <div style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--navy)' }} />}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
+        <div style={{ width: 14, height: 14, borderRadius: '50%', border: '2px solid ' + (selected ? 'var(--navy)' : '#CBD5E1'), display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          {selected && <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--navy)' }} />}
+        </div>
+        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{title}</div>
       </div>
-      <div>
-        <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>{title}</div>
-        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{subtitle}</div>
-      </div>
+      <div style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.45 }}>{subtitle}</div>
     </div>
   );
 }
