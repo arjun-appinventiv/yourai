@@ -1909,7 +1909,7 @@ function TopNav({ plan, usage, onOpenSidebar }) {
 
   return (
     <div className="px-3 sm:px-4 md:px-6" style={{ height: 50, minHeight: 50, borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff' }}>
-      <div className="flex items-center gap-3 md:gap-6">
+      <div className="flex items-center gap-3 md:gap-4">
         <button
           onClick={onOpenSidebar}
           className="md:hidden p-1 rounded-lg"
@@ -1918,39 +1918,48 @@ function TopNav({ plan, usage, onOpenSidebar }) {
         >
           <Menu size={20} />
         </button>
+        {/* Small wordmark on top-left (desktop) */}
+        <span className="hidden md:inline-flex" style={{ fontFamily: "'DM Serif Display', serif", fontSize: 15, letterSpacing: '-0.01em' }}>
+          <span style={{ color: 'var(--navy)' }}>Your</span><span style={{ color: '#C9A84C' }}>AI</span>
+        </span>
       </div>
-      <div className="flex items-center gap-2 sm:gap-3 md:gap-4">
-        {/* Usage pill */}
-        <div style={{ position: 'relative' }}>
-          <button
-            onClick={() => setShowUsagePopover(!showUsagePopover)}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 4,
-              padding: '3px 10px', borderRadius: 999,
-              backgroundColor: 'var(--ice-warm)', border: `1px solid ${usageBorder}`,
-              fontSize: 11, color: usageColor, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif",
-            }}
-          >
-            {docPct >= 95 && <AlertTriangle size={11} />}
-            {usage.docs.used.toLocaleString()} / {usage.docs.limit.toLocaleString()}<span className="hidden sm:inline"> docs this month</span><span className="sm:hidden"> docs</span>
-          </button>
-          {showUsagePopover && (
-            <>
-              <div onClick={() => setShowUsagePopover(false)} style={{ position: 'fixed', inset: 0, zIndex: 20 }} />
-              <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: 8, width: 300, backgroundColor: 'white', borderRadius: 12, border: '1px solid var(--border)', boxShadow: '0 8px 24px rgba(0,0,0,0.12)', zIndex: 21, padding: 16 }}>
-                <div style={{ fontFamily: "'DM Serif Display', serif", fontSize: 15, color: 'var(--text-primary)', marginBottom: 12 }}>Your Plan Usage — {plan}</div>
-                <UsageBar label="Documents" used={usage.docs.used} limit={usage.docs.limit} />
-                <UsageBar label="Workflows" used={usage.workflows.used} limit={usage.workflows.limit} />
-                <div style={{ borderTop: '1px solid var(--border)', paddingTop: 10, marginTop: 6 }}>
-                  <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 6 }}>Resets May 1, 2026</div>
-                  <a href="/app/billing" style={{ fontSize: 12, color: 'var(--navy)', textDecoration: 'none', fontWeight: 500 }} onMouseEnter={(e) => e.target.style.textDecoration = 'underline'} onMouseLeave={(e) => e.target.style.textDecoration = 'none'}>View Full Billing →</a>
+      <div className="flex items-center gap-2 sm:gap-3 md:gap-3">
+        {/* Grouped counter + divider + Main Site */}
+        <div className="flex items-center" style={{ gap: 10 }}>
+          {/* Usage pill */}
+          <div style={{ position: 'relative' }}>
+            <button
+              onClick={() => setShowUsagePopover(!showUsagePopover)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 4,
+                padding: '3px 10px', borderRadius: 999,
+                backgroundColor: 'var(--ice-warm)', border: `1px solid ${usageBorder}`,
+                fontSize: 11, color: usageColor, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif",
+              }}
+            >
+              {docPct >= 95 && <AlertTriangle size={11} />}
+              {usage.docs.used.toLocaleString()} / {usage.docs.limit.toLocaleString()}<span className="hidden sm:inline"> docs this month</span><span className="sm:hidden"> docs</span>
+            </button>
+            {showUsagePopover && (
+              <>
+                <div onClick={() => setShowUsagePopover(false)} style={{ position: 'fixed', inset: 0, zIndex: 20 }} />
+                <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: 8, width: 300, backgroundColor: 'white', borderRadius: 12, border: '1px solid var(--border)', boxShadow: '0 8px 24px rgba(0,0,0,0.12)', zIndex: 21, padding: 16 }}>
+                  <div style={{ fontFamily: "'DM Serif Display', serif", fontSize: 15, color: 'var(--text-primary)', marginBottom: 12 }}>Your Plan Usage — {plan}</div>
+                  <UsageBar label="Documents" used={usage.docs.used} limit={usage.docs.limit} />
+                  <UsageBar label="Workflows" used={usage.workflows.used} limit={usage.workflows.limit} />
+                  <div style={{ borderTop: '1px solid var(--border)', paddingTop: 10, marginTop: 6 }}>
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 6 }}>Resets May 1, 2026</div>
+                    <a href="/app/billing" style={{ fontSize: 12, color: 'var(--navy)', textDecoration: 'none', fontWeight: 500 }} onMouseEnter={(e) => e.target.style.textDecoration = 'underline'} onMouseLeave={(e) => e.target.style.textDecoration = 'none'}>View Full Billing →</a>
+                  </div>
                 </div>
-              </div>
-            </>
-          )}
+              </>
+            )}
+          </div>
+          {/* Subtle vertical divider between counter and Main Site */}
+          <span className="hidden sm:inline-block" style={{ width: 1, height: 14, background: 'var(--border)', flexShrink: 0 }} />
+          <span className="hidden sm:inline-flex" style={{ fontSize: 12, color: 'var(--text-muted)', cursor: 'pointer' }}>&lt; Main Site</span>
         </div>
-
-        <span className="hidden sm:inline-flex" style={{ fontSize: 13, color: 'var(--text-muted)', cursor: 'pointer' }}>&lt; Main Site</span>
+        {/* Search — far right */}
         <div className="hidden md:block" style={{ position: 'relative' }}>
           <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
           <input readOnly placeholder="Search files, knowledge, or conversatio..." style={{ width: 240, height: 34, borderRadius: 8, border: '1px solid var(--border)', paddingLeft: 30, paddingRight: 40, fontSize: 13, color: 'var(--text-secondary)', background: '#fff', outline: 'none' }} />
@@ -2489,33 +2498,33 @@ function EmptyState({ profile, plan, onPromptClick, navigate, onViewPlans, workf
   const prompts = getSuggestedPrompts(profile);
 
   return (
-    <div className="px-4 sm:px-6 md:px-10" style={{ flex: 1, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', paddingTop: 24, paddingBottom: 8 }}>
-      <div style={{ maxWidth: 960, width: '100%', textAlign: 'center' }}>
-        {/* ── Gold sparkle dot ─────────────────────────────── */}
-        <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'linear-gradient(135deg, #C9A84C 0%, #E8D48B 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 10px', boxShadow: '0 2px 8px rgba(201, 168, 76, 0.24)' }}>
-          <Sparkles size={16} color="#fff" />
+    <div className="px-4 sm:px-6" style={{ paddingTop: '14vh', paddingBottom: 12 }}>
+      <div style={{ maxWidth: 880, width: '100%', margin: '0 auto' }}>
+        {/* ── Hero (sparkle + heading + subtitle) — one tight unit ── */}
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'linear-gradient(135deg, #C9A84C 0%, #E8D48B 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 10px', boxShadow: '0 2px 8px rgba(201, 168, 76, 0.24)' }}>
+            <Sparkles size={17} color="#fff" />
+          </div>
+          <h2
+            className="text-4xl sm:text-5xl"
+            style={{
+              fontFamily: "'DM Serif Display', serif",
+              fontWeight: 400,
+              color: 'var(--navy)',
+              margin: '0 0 6px',
+              lineHeight: 1.08,
+              letterSpacing: '-0.015em',
+            }}
+          >
+            {getGreeting()}, {currentUserName}
+          </h2>
+          <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: 'var(--text-muted)', margin: '0 auto', maxWidth: 520, lineHeight: 1.45 }}>
+            Your AI assistant is ready. Based on your profile, here's where you can start:
+          </p>
         </div>
 
-        {/* ── Headline greeting — large serif ──────────────── */}
-        <h2
-          className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl"
-          style={{
-            fontFamily: "'DM Serif Display', serif",
-            fontWeight: 400,
-            color: 'var(--navy)',
-            margin: '0 0 4px',
-            lineHeight: 1.1,
-            letterSpacing: '-0.01em',
-          }}
-        >
-          {getGreeting()}, {currentUserName}
-        </h2>
-        <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: 'var(--text-muted)', margin: '0 auto 18px', maxWidth: 560 }}>
-          Your AI assistant is ready. Based on your profile, here's where you can start:
-        </p>
-
-        {/* ── Prompt cards (3-up) ──────────────────────────── */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-left">
+        {/* ── Prompt cards (3-up) ── */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-left" style={{ marginTop: 36 }}>
           {prompts.map((p, i) => {
             const Icon = p.icon;
             return (
@@ -2525,53 +2534,53 @@ function EmptyState({ profile, plan, onPromptClick, navigate, onViewPlans, workf
                 style={{
                   background: '#fff',
                   border: '1px solid var(--border)',
-                  borderRadius: 12,
-                  padding: '12px 14px',
+                  borderRadius: 14,
+                  padding: '20px 22px',
                   cursor: 'pointer',
                   transition: 'border-color 0.15s, box-shadow 0.15s, transform 0.15s',
                 }}
-                onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#C9A84C'; e.currentTarget.style.boxShadow = '0 4px 14px rgba(10, 36, 99, 0.08)'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+                onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#C9A84C'; e.currentTarget.style.boxShadow = '0 6px 18px rgba(10, 36, 99, 0.08)'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
                 onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.transform = 'translateY(0)'; }}
               >
-                <Icon size={16} color="var(--navy)" style={{ marginBottom: 6 }} />
-                <div style={{ fontFamily: "'DM Serif Display', serif", fontSize: 16, fontWeight: 400, color: 'var(--navy)', marginBottom: 3, lineHeight: 1.25 }}>{p.title}</div>
-                <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.45, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{p.prompt}</div>
+                <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(201, 168, 76, 0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
+                  <Icon size={18} color="#C9A84C" />
+                </div>
+                <div style={{ fontFamily: "'DM Serif Display', serif", fontSize: 17, fontWeight: 400, color: 'var(--navy)', marginBottom: 6, lineHeight: 1.25 }}>{p.title}</div>
+                <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.55, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{p.prompt}</div>
               </div>
             );
           })}
         </div>
 
-        {/* ── Favourite workflows — compact single-row strip ── */}
+        {/* ── Favourites row — label + chips + view-all, one row ── */}
         {onOpenWorkflowsPanel && onRunWorkflow && (workflows.length > 0 || totalWorkflowCount > 0) && (
-          <div style={{ marginTop: 16, textAlign: 'left', maxWidth: 860, marginLeft: 'auto', marginRight: 'auto', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          <div style={{ marginTop: 18, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-              <Zap size={13} style={{ color: '#C9A84C' }} />
-              <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>
+              <Zap size={12} style={{ color: '#C9A84C' }} />
+              <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                 {workflows.length > 0 ? 'Favourites' : 'Workflows'}
               </span>
             </div>
-            {workflows.length > 0 ? (
-              <>
-                {workflows.slice(0, 4).map((w) => (
-                  <button
-                    key={w.id}
-                    onClick={() => onRunWorkflow(w)}
-                    style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 12px', borderRadius: 999, fontSize: 12, fontWeight: 500, border: '1px solid rgba(201, 168, 76, 0.35)', background: 'rgba(201, 168, 76, 0.08)', color: 'var(--navy)', cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: "'DM Sans', sans-serif" }}
-                    onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#C9A84C'; e.currentTarget.style.background = 'rgba(201, 168, 76, 0.14)'; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(201, 168, 76, 0.35)'; e.currentTarget.style.background = 'rgba(201, 168, 76, 0.08)'; }}
-                  >
-                    {w.name}
-                  </button>
-                ))}
-              </>
-            ) : (
-              <span style={{ fontSize: 12, color: 'var(--text-muted)', fontFamily: "'DM Sans', sans-serif" }}>
-                Pin workflows you run often for one-click launch.
-              </span>
-            )}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', flex: 1, minWidth: 0 }}>
+              {workflows.length > 0 ? workflows.slice(0, 4).map((w) => (
+                <button
+                  key={w.id}
+                  onClick={() => onRunWorkflow(w)}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 12px', borderRadius: 999, fontSize: 12, fontWeight: 500, border: '1px solid rgba(201, 168, 76, 0.35)', background: 'rgba(201, 168, 76, 0.08)', color: 'var(--navy)', cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: "'DM Sans', sans-serif" }}
+                  onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#C9A84C'; e.currentTarget.style.background = 'rgba(201, 168, 76, 0.14)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(201, 168, 76, 0.35)'; e.currentTarget.style.background = 'rgba(201, 168, 76, 0.08)'; }}
+                >
+                  {w.name}
+                </button>
+              )) : (
+                <span style={{ fontSize: 12, color: 'var(--text-muted)', fontFamily: "'DM Sans', sans-serif" }}>
+                  Pin workflows you run often for one-click launch.
+                </span>
+              )}
+            </div>
             <button
               onClick={onOpenWorkflowsPanel}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: 'var(--navy)', fontWeight: 500, marginLeft: 'auto', flexShrink: 0, fontFamily: "'DM Sans', sans-serif" }}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: 'var(--navy)', fontWeight: 500, flexShrink: 0, fontFamily: "'DM Sans', sans-serif" }}
               onMouseEnter={(e) => { e.currentTarget.style.textDecoration = 'underline'; }}
               onMouseLeave={(e) => { e.currentTarget.style.textDecoration = 'none'; }}
             >
@@ -3808,7 +3817,7 @@ INSTRUCTIONS:
           )}
 
           {/* Chat input area */}
-          <div className="px-3 sm:px-4 md:px-10 py-3" style={{ background: 'transparent' }}>
+          <div className="px-4 sm:px-6" style={{ background: 'transparent', paddingTop: showEmptyState ? 20 : 12, paddingBottom: 12, maxWidth: 880, width: '100%', marginLeft: 'auto', marginRight: 'auto', boxSizing: 'border-box' }}>
             {/* Active Knowledge Pack / Vault Document chips */}
             {(activeKnowledgePack || activeVaultDocument) && (
               <div style={{ marginBottom: 8, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
@@ -3847,7 +3856,7 @@ INSTRUCTIONS:
 
             {/* ─── STATE 1: Intent pills above input (empty chat only) ─── */}
             {showEmptyState && (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 8, justifyContent: 'center' }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 8, marginBottom: 6, justifyContent: 'center' }}>
                 {INTENTS.map(intent => {
                   const isActive = activeIntent === intent.id;
                   return (
