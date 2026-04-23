@@ -2495,28 +2495,28 @@ function EmptyState({ profile, plan, onPromptClick, navigate, onViewPlans, workf
   const prompts = getSuggestedPrompts(profile);
 
   return (
-    <div className="px-4 sm:px-6 md:px-10 py-8" style={{ flex: 1, display: 'flex', alignItems: 'flex-start', justifyContent: 'center' }}>
+    <div className="px-4 sm:px-6 md:px-10 py-5" style={{ flex: 1, display: 'flex', alignItems: 'flex-start', justifyContent: 'center' }}>
       <div style={{ maxWidth: 960, width: '100%', textAlign: 'center' }}>
         {/* ── Gold sparkle dot ─────────────────────────────── */}
-        <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'linear-gradient(135deg, #C9A84C 0%, #E8D48B 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', boxShadow: '0 2px 8px rgba(201, 168, 76, 0.24)' }}>
-          <Sparkles size={20} color="#fff" />
+        <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'linear-gradient(135deg, #C9A84C 0%, #E8D48B 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 10px', boxShadow: '0 2px 8px rgba(201, 168, 76, 0.24)' }}>
+          <Sparkles size={16} color="#fff" />
         </div>
 
         {/* ── Headline greeting — large serif ──────────────── */}
         <h2
-          className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl"
+          className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl"
           style={{
             fontFamily: "'DM Serif Display', serif",
             fontWeight: 400,
             color: 'var(--navy)',
-            margin: '0 0 10px',
+            margin: '0 0 4px',
             lineHeight: 1.1,
             letterSpacing: '-0.01em',
           }}
         >
           {getGreeting()}, {currentUserName}
         </h2>
-        <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 14, color: 'var(--text-muted)', margin: '0 auto 32px', maxWidth: 560 }}>
+        <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: 'var(--text-muted)', margin: '0 auto 18px', maxWidth: 560 }}>
           Your AI assistant is ready. Based on your profile, here's where you can start:
         </p>
 
@@ -2531,103 +2531,60 @@ function EmptyState({ profile, plan, onPromptClick, navigate, onViewPlans, workf
                 style={{
                   background: '#fff',
                   border: '1px solid var(--border)',
-                  borderRadius: 14,
-                  padding: '18px 20px',
+                  borderRadius: 12,
+                  padding: '12px 14px',
                   cursor: 'pointer',
                   transition: 'border-color 0.15s, box-shadow 0.15s, transform 0.15s',
                 }}
                 onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#C9A84C'; e.currentTarget.style.boxShadow = '0 4px 14px rgba(10, 36, 99, 0.08)'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
                 onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.transform = 'translateY(0)'; }}
               >
-                <Icon size={18} color="var(--navy)" style={{ marginBottom: 10 }} />
-                <div style={{ fontFamily: "'DM Serif Display', serif", fontSize: 18, fontWeight: 400, color: 'var(--navy)', marginBottom: 6, lineHeight: 1.25 }}>{p.title}</div>
-                <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.5, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{p.prompt}</div>
+                <Icon size={16} color="var(--navy)" style={{ marginBottom: 6 }} />
+                <div style={{ fontFamily: "'DM Serif Display', serif", fontSize: 16, fontWeight: 400, color: 'var(--navy)', marginBottom: 3, lineHeight: 1.25 }}>{p.title}</div>
+                <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.45, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{p.prompt}</div>
               </div>
             );
           })}
         </div>
 
-        {/* ── Favourite a workflow — section title + Browse all ── */}
-        {onOpenWorkflowsPanel && onRunWorkflow && (
-          <div style={{ marginTop: 36, textAlign: 'left', maxWidth: 860, marginLeft: 'auto', marginRight: 'auto' }}>
-            <div className="flex items-center justify-between" style={{ marginBottom: 12 }}>
-              <div className="flex items-center gap-2">
-                <Zap size={16} style={{ color: '#C9A84C' }} />
-                <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>
-                  {workflows.length > 0 ? 'Your favourite workflows' : 'Favourite a workflow'}
-                </span>
-              </div>
-              <button
-                onClick={onOpenWorkflowsPanel}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: 'var(--navy)', fontWeight: 500 }}
-                onMouseEnter={(e) => { e.currentTarget.style.textDecoration = 'underline'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.textDecoration = 'none'; }}
-              >
-                {totalWorkflowCount > 0 ? `View all ${totalWorkflowCount} workflows →` : 'Browse all workflows →'}
-              </button>
+        {/* ── Favourite workflows — compact single-row strip ── */}
+        {onOpenWorkflowsPanel && onRunWorkflow && (workflows.length > 0 || totalWorkflowCount > 0) && (
+          <div style={{ marginTop: 16, textAlign: 'left', maxWidth: 860, marginLeft: 'auto', marginRight: 'auto', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+              <Zap size={13} style={{ color: '#C9A84C' }} />
+              <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>
+                {workflows.length > 0 ? 'Favourites' : 'Workflows'}
+              </span>
             </div>
             {workflows.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {workflows.slice(0, 6).map((w) => (
-                  <MiniWorkflowCard key={w.id} workflow={w} onRun={() => onRunWorkflow(w)} />
+              <>
+                {workflows.slice(0, 4).map((w) => (
+                  <button
+                    key={w.id}
+                    onClick={() => onRunWorkflow(w)}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 12px', borderRadius: 999, fontSize: 12, fontWeight: 500, border: '1px solid rgba(201, 168, 76, 0.35)', background: 'rgba(201, 168, 76, 0.08)', color: 'var(--navy)', cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: "'DM Sans', sans-serif" }}
+                    onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#C9A84C'; e.currentTarget.style.background = 'rgba(201, 168, 76, 0.14)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(201, 168, 76, 0.35)'; e.currentTarget.style.background = 'rgba(201, 168, 76, 0.08)'; }}
+                  >
+                    {w.name}
+                  </button>
                 ))}
-              </div>
+              </>
             ) : (
-              <div
-                onClick={onOpenWorkflowsPanel}
-                style={{
-                  padding: '18px 20px', borderRadius: 14,
-                  border: '1px solid rgba(201, 168, 76, 0.30)',
-                  background: 'linear-gradient(180deg, rgba(201, 168, 76, 0.10) 0%, rgba(201, 168, 76, 0.04) 100%)',
-                  cursor: 'pointer', textAlign: 'left',
-                  display: 'flex', alignItems: 'center', gap: 14,
-                  transition: 'all 0.15s',
-                }}
-                onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#C9A84C'; e.currentTarget.style.boxShadow = '0 2px 10px rgba(201, 168, 76, 0.18)'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(201, 168, 76, 0.30)'; e.currentTarget.style.boxShadow = 'none'; }}
-              >
-                <div style={{ width: 40, height: 40, borderRadius: 10, background: '#FDF7E7', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <Zap size={18} style={{ color: '#C9A84C' }} />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--navy)' }}>
-                    Pin workflows you run often
-                  </div>
-                  <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2, lineHeight: 1.5 }}>
-                    Open Workflows, click the ⭐ on any workflow, and it'll appear right here for one-click launch.
-                  </div>
-                </div>
-                <span style={{ fontSize: 13, color: 'var(--navy)', fontWeight: 500, flexShrink: 0 }}>Open →</span>
-              </div>
+              <span style={{ fontSize: 12, color: 'var(--text-muted)', fontFamily: "'DM Sans', sans-serif" }}>
+                Pin workflows you run often for one-click launch.
+              </span>
             )}
+            <button
+              onClick={onOpenWorkflowsPanel}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: 'var(--navy)', fontWeight: 500, marginLeft: 'auto', flexShrink: 0, fontFamily: "'DM Sans', sans-serif" }}
+              onMouseEnter={(e) => { e.currentTarget.style.textDecoration = 'underline'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.textDecoration = 'none'; }}
+            >
+              {totalWorkflowCount > 0 ? `View all ${totalWorkflowCount} →` : 'Browse all →'}
+            </button>
           </div>
         )}
-
-        {/* ── One-attachment-per-chat callout ───────────────── */}
-        <div style={{ marginTop: 22, padding: '14px 18px', borderRadius: 14, background: 'linear-gradient(180deg, rgba(201, 168, 76, 0.08) 0%, rgba(201, 168, 76, 0.04) 100%)', border: '1px solid rgba(201, 168, 76, 0.30)', textAlign: 'left', display: 'flex', alignItems: 'flex-start', gap: 12, maxWidth: 860, marginLeft: 'auto', marginRight: 'auto' }}>
-          <Info size={16} style={{ color: '#C9A84C', flexShrink: 0, marginTop: 2 }} />
-          <div>
-            <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 14, fontWeight: 600, color: 'var(--navy)', marginBottom: 3 }}>
-              One attachment per chat
-            </div>
-            <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.55 }}>
-              You can attach a document or knowledge pack at any point in a conversation — but only once. After it's attached, you can't add or swap another in the same chat. To work with different documents, start a new chat.
-            </div>
-          </div>
-        </div>
-
-        {/* ── Edit preferences + Team Plan pill ─────────────── */}
-        <div style={{ marginTop: 24, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
-          <button
-            onClick={() => navigate('/app/profile')}
-            style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'inline-flex', alignItems: 'center', gap: 6 }}
-            onMouseEnter={(e) => { e.currentTarget.style.textDecoration = 'underline'; e.currentTarget.style.color = 'var(--navy)'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.textDecoration = 'none'; e.currentTarget.style.color = 'var(--text-muted)'; }}
-          >
-            &#9998; Edit your preferences
-          </button>
-          <PlanAwarenessBadge plan={plan} onViewPlans={onViewPlans} />
-        </div>
       </div>
     </div>
   );
@@ -3896,7 +3853,7 @@ INSTRUCTIONS:
 
             {/* ─── STATE 1: Intent pills above input (empty chat only) ─── */}
             {showEmptyState && (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 10, justifyContent: 'center' }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 8, justifyContent: 'center' }}>
                 {INTENTS.map(intent => {
                   const isActive = activeIntent === intent.id;
                   return (
@@ -3905,8 +3862,8 @@ INSTRUCTIONS:
                       onClick={() => setActiveIntent(intent.id)}
                       style={{
                         display: 'inline-flex', alignItems: 'center', gap: 5,
-                        padding: '7px 16px', borderRadius: 999,
-                        fontSize: 13, fontFamily: "'DM Sans', sans-serif",
+                        padding: '5px 12px', borderRadius: 999,
+                        fontSize: 12, fontFamily: "'DM Sans', sans-serif",
                         fontWeight: isActive ? 500 : 400,
                         border: isActive ? '1px solid var(--navy)' : '1px solid var(--border)',
                         backgroundColor: isActive ? 'var(--navy)' : 'white',
@@ -4102,8 +4059,8 @@ INSTRUCTIONS:
               <div onClick={() => canSend && sendMessage(input)} style={{ width: 32, height: 32, borderRadius: '50%', background: canSend ? 'var(--navy)' : '#9CA3AF', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: canSend ? 'pointer' : 'not-allowed', flexShrink: 0, opacity: canSend ? 1 : 0.6, transition: 'background 150ms, opacity 150ms' }}><ArrowUp size={16} color="#fff" /></div>
               ); })()}
             </div>
-            <div style={{ textAlign: 'center', fontSize: 12, color: 'var(--text-muted)', marginTop: 8 }}>
-              YourAI may produce inaccurate information. Always verify critical outputs. <strong>Private &amp; encrypted.</strong>
+            <div style={{ textAlign: 'center', fontSize: 11, color: 'var(--text-muted)', marginTop: 6, lineHeight: 1.45 }}>
+              One attachment per chat · YourAI may produce inaccurate information. Always verify critical outputs. <strong>Private &amp; encrypted.</strong>
             </div>
           </div>
         </div>
