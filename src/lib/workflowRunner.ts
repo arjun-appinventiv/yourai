@@ -16,7 +16,7 @@ import {
   type UploadedDoc, type StepSource, type WorkflowReport, type WorkflowReportStep,
   upsertRun, getRun, setActiveRunId,
 } from './workflow';
-import { callLLM } from './llm-client';
+import { executeWorkflowStep } from './workflowExecutor';
 
 /* ─── Options passed to a run ─── */
 export interface RunOptions {
@@ -245,92 +245,21 @@ export async function retryStep(runId: string, stepIndex: number, opts: RunOptio
   }
 }
 
-/* ─── Step execution (LLM call with context assembly) ──────────────── */
+/* ─── Step execution — delegates to workflowExecutor ──────────────── */
 
 async function executeStep(
   run: WorkflowRun,
   tStep: WorkflowTemplate['steps'][number],
   opts: RunOptions,
 ): Promise<{ output: string; source: StepSource }> {
-  const readyDocs = run.uploadedDocs.filter((d) => d.status === 'ready' && d.content);
-  const hasRunUploads = readyDocs.length > 0;
-  const hasRef = !!tStep.referenceDoc;
-  const inWorkspace = !!opts.workspaceId;
-
-  // Source priority per Part 9:
-  //   run-uploaded docs > reference doc > workspace KB > global KB
-  let source: StepSource;
-  if (hasRunUploads) source = 'uploaded_doc';
-  else if (hasRef) source = 'reference_doc';
-  else if (inWorkspace) source = 'workspace_kb';
-  else source = 'global_kb';
-
-  // Build a prompt that the LLM can answer in markdown.
-  const parts: string[] = [];
-  parts.push(`You are executing one step of a multi-step legal workflow.`);
-  parts.push(``);
-  parts.push(`Step ${run.currentStepIndex + 1} of ${opts.template.steps.length}: ${tStep.name || tStep.operation}`);
-  parts.push(`Operation: ${tStep.operation.replace(/_/g, ' ')}`);
-  parts.push(``);
-  parts.push(`INSTRUCTION FROM THE USER:`);
-  parts.push(tStep.instruction || '(no extra instruction — use operation default)');
-  parts.push(``);
-
-  if (hasRunUploads) {
-    parts.push(`DOCUMENTS THE USER UPLOADED FOR THIS RUN (primary source):`);
-    readyDocs.forEach((d) => {
-      parts.push(`--- ${d.name} ---`);
-      parts.push(String(d.content).slice(0, 8000));
-      parts.push(`--- end ---`);
-    });
-    parts.push(``);
-  }
-  if (hasRef && tStep.referenceDoc) {
-    parts.push(`REFERENCE DOCUMENT ATTACHED TO THIS STEP (supporting source):`);
-    parts.push(`--- ${tStep.referenceDoc.name} ---`);
-    parts.push(String(tStep.referenceDoc.content || '').slice(0, 6000));
-    parts.push(`--- end ---`);
-  }
-  if (inWorkspace && opts.workspaceName) {
-    parts.push(`WORKSPACE CONTEXT: "${opts.workspaceName}"`);
-  }
-
-  parts.push(``);
-  parts.push(`Return your answer as markdown that could be dropped into a legal brief. Keep it to 2–6 concise paragraphs unless the instruction asks for a full report, in which case use clear section headings.`);
-
-  const prompt = parts.join('\n');
-
-  // Fire the LLM call through our server proxy. Swallow streaming.
-  try {
-    const res = await Promise.race<Promise<{ fullContent: string; sourceType: string } | null>>([
-      callLLM(prompt, [], () => { /* ignore streaming for now */ }, undefined),
-      new Promise<null>((_r, rej) => setTimeout(() => rej(new Error('Step timed out after 30 seconds.')), 30_000)),
-    ]);
-    if (!res || !res.fullContent) {
-      // Fallback — call didn't crash but returned nothing useful
-      return { output: fallbackOutput(tStep), source };
-    }
-    return { output: res.fullContent, source };
-  } catch (err: any) {
-    // If the LLM is unavailable (no key server-side, network down in demo),
-    // produce a readable fallback so the run still completes end-to-end.
-    if ((err?.message || '').match(/timed out|Failed to fetch|not configured|Network/i)) {
-      return { output: fallbackOutput(tStep), source };
-    }
-    throw err;
-  }
-}
-
-function fallbackOutput(tStep: WorkflowTemplate['steps'][number]): string {
-  // Intentionally minimal. Enough to render in the report without lying.
-  return [
-    `_This step ran in offline demo mode and produced a placeholder result._`,
-    ``,
-    `**Operation:** ${tStep.operation.replace(/_/g, ' ')}`,
-    `**Instruction:** ${tStep.instruction || '(none)'}`,
-    ``,
-    `Connect an LLM backend to produce real output for this step.`,
-  ].join('\n');
+  const { output, source } = await executeWorkflowStep({
+    run,
+    templateStep: tStep,
+    template: opts.template,
+    stepIndex: run.currentStepIndex,
+    workspaceName: opts.workspaceName,
+  });
+  return { output, source };
 }
 
 /* ─── Report builder ───────────────────────────────────────────────── */
