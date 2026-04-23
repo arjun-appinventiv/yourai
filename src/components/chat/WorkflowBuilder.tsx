@@ -242,21 +242,55 @@ export default function WorkflowBuilder({ template, knowledgePacks = [], onBack,
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         flexShrink: 0,
       }}>
-        <button
-          onClick={onBack}
-          style={{
-            display: 'inline-flex', alignItems: 'center', gap: 6,
-            padding: '6px 10px', marginLeft: -10, borderRadius: 8,
-            background: 'transparent', border: 'none', cursor: 'pointer',
-            color: 'var(--text-muted)', fontSize: 13,
-          }}
-          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--navy)'; (e.currentTarget as HTMLButtonElement).style.background = '#F3ECDD'; }}
-          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)'; (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; }}
-        >
-          <ArrowLeft size={14} /> Workflows
-        </button>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <button onClick={onBack} style={{ padding: '8px 14px', borderRadius: 8, border: '1px solid var(--border)', background: '#fff', fontSize: 13, color: 'var(--text-muted)', cursor: 'pointer' }}>Cancel</button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14, minWidth: 0, flex: 1 }}>
+          <button
+            onClick={onBack}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              padding: '6px 10px', marginLeft: -10, borderRadius: 8,
+              background: 'transparent', border: 'none', cursor: 'pointer',
+              color: 'var(--text-muted)', fontSize: 13, flexShrink: 0,
+            }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--navy)'; (e.currentTarget as HTMLButtonElement).style.background = '#F3ECDD'; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)'; (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; }}
+          >
+            <ArrowLeft size={14} /> Workflows
+          </button>
+          <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 15, fontWeight: 600, color: 'var(--navy)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {isEditing ? `Edit: ${template!.name || 'Workflow'}` : 'New Workflow'}
+          </span>
+          {/* Segmented control — replaces the wizard-dot row */}
+          <div style={{ display: 'inline-flex', padding: 3, background: 'var(--ice-warm)', borderRadius: 8, border: '1px solid var(--border)', flexShrink: 0 }}>
+            {[
+              { step: 1, label: 'Details' },
+              { step: 2, label: 'Pipeline' },
+            ].map((t) => {
+              const active = wizardStep === t.step;
+              const disabled = t.step === 2 && !(canEdit && name.trim() && practiceArea);
+              return (
+                <button
+                  key={t.step}
+                  onClick={() => { if (!disabled) setWizardStep(t.step as 1 | 2); }}
+                  disabled={disabled}
+                  style={{
+                    padding: '5px 14px', borderRadius: 6, border: 'none',
+                    background: active ? '#fff' : 'transparent',
+                    color: active ? 'var(--text-primary)' : 'var(--text-muted)',
+                    fontSize: 12, fontWeight: 500,
+                    cursor: disabled ? 'not-allowed' : 'pointer',
+                    opacity: disabled ? 0.5 : 1,
+                    boxShadow: active ? '0 1px 3px rgba(10,36,99,0.08)' : 'none',
+                    transition: 'all 150ms',
+                  }}
+                >
+                  {t.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+          <button onClick={onBack} style={{ padding: '8px 10px', borderRadius: 8, border: 'none', background: 'transparent', fontSize: 13, color: 'var(--text-muted)', cursor: 'pointer' }}>Cancel</button>
           {wizardStep === 1 ? (
             <button
               onClick={goStep2}
@@ -277,37 +311,16 @@ export default function WorkflowBuilder({ template, knowledgePacks = [], onBack,
         </div>
       </div>
 
-      {/* Wizard hero with step indicator */}
-      <div style={{
-        padding: '24px 36px 18px',
-        borderBottom: '1px solid rgba(10,36,99,0.06)',
-        background: 'linear-gradient(180deg, #FDFBF5 0%, #FAF6EE 100%)',
-        flexShrink: 0,
-      }}>
-        <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 28, color: 'var(--navy)', margin: 0, lineHeight: 1.1 }}>
-          {isEditing ? `Edit: ${template!.name || 'Workflow'}` : 'New Workflow'}
-        </h1>
-        <p style={{ fontSize: 13, color: '#374151', marginTop: 6, lineHeight: 1.55 }}>
-          {wizardStep === 1 ? 'First, tell us about this workflow.' : 'Now, add the steps this workflow should run.'}
-        </p>
-
-        {/* Step indicator */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 18 }}>
-          <WizardDot num={1} label="Details"  active={wizardStep === 1} done={wizardStep > 1} onClick={() => setWizardStep(1)} />
-          <div style={{ flex: '0 0 40px', height: 2, background: wizardStep > 1 ? 'var(--navy)' : '#E4E7EC', borderRadius: 2 }} />
-          <WizardDot num={2} label="Pipeline" active={wizardStep === 2} done={false}         onClick={() => canEdit && name.trim() && practiceArea && setWizardStep(2)} />
+      {/* Permission warning (moved out of the hero) */}
+      {!canEdit && (
+        <div style={{ margin: '16px 36px 0', padding: '10px 14px', borderRadius: 8, background: '#FFFBEB', border: '1px solid #FDE68A', fontSize: 12, color: '#6B4E1F', lineHeight: 1.55 }}>
+          You don't have permission to edit this workflow. Try <em>Duplicate</em> from Workflows to make your own copy.
         </div>
-
-        {!canEdit && (
-          <div style={{ marginTop: 14, padding: '10px 14px', borderRadius: 8, background: '#FFFBEB', border: '1px solid #FDE68A', fontSize: 12, color: '#6B4E1F', lineHeight: 1.55 }}>
-            You don't have permission to edit this workflow. Try <em>Duplicate</em> from Workflows to make your own copy.
-          </div>
-        )}
-      </div>
+      )}
 
       {/* Body */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '28px 36px 40px' }}>
-        <div style={{ maxWidth: 820, margin: '0 auto' }}>
+        <div style={{ maxWidth: 720, margin: '0 auto' }}>
           {/* Section 1 — Details */}
           {wizardStep === 1 && (
           <Section label="Workflow Details">
@@ -530,8 +543,8 @@ function StepCard(props: StepCardProps) {
       onDragEnd={onDragEnd}
       style={{
         border: '1px solid var(--border)', borderRadius: 12,
-        background: '#fff', padding: '14px 14px 14px 10px',
-        display: 'flex', gap: 10, alignItems: 'flex-start',
+        background: '#fff', padding: '12px 14px',
+        display: 'flex', gap: 8, alignItems: 'flex-start',
         opacity: dragging ? 0.5 : 1, transition: 'opacity 150ms',
       }}
     >
@@ -543,53 +556,55 @@ function StepCard(props: StepCardProps) {
         <GripVertical size={16} />
       </div>
 
-      {/* Step number badge — neutral (brand accent is reserved for Save button) */}
+      {/* Step number badge — soft neutral */}
       <div style={{
-        width: 28, height: 28, borderRadius: '50%',
-        background: 'var(--ice-warm)', color: 'var(--navy)',
+        width: 26, height: 26, borderRadius: '50%',
+        background: '#F3F4F6', color: '#6B7280',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
         fontSize: 11, fontWeight: 600, flexShrink: 0, marginTop: 2,
-        border: '1px solid var(--border)',
       }}>
         {String(index + 1).padStart(2, '0')}
       </div>
 
       {/* Content */}
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {/* Operation + estimated time */}
+        {/* Operation + estimated time (description moved to dropdown tooltip) */}
         <div className="flex items-center gap-2 flex-wrap">
           <OperationDropdown value={step.operation} onChange={handleOperationChange} />
           <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}>
             ~{step.estimatedSeconds}s
           </span>
-          <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>·</span>
-          <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{cfg.description}</span>
         </div>
 
-        {/* Step name */}
+        {/* Step name — proper bordered input */}
         <input
           value={step.name}
           onChange={(e) => onChange({ name: e.target.value.slice(0, MAX_STEP_NAME) })}
           placeholder="Give this step a short name"
           style={{
-            border: 'none', outline: 'none',
-            fontSize: 14, fontWeight: 600, color: 'var(--text-primary)',
-            padding: '4px 0', background: 'transparent',
-            borderBottom: '1px dashed var(--border)',
+            border: '1px solid var(--border)', outline: 'none', borderRadius: 8,
+            fontSize: 13, fontWeight: 500, color: 'var(--text-primary)',
+            padding: '8px 10px', background: '#fff',
+            fontFamily: "'DM Sans', sans-serif",
           }}
         />
 
         {/* Instruction */}
         <div>
-          <label style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>
-            {cfg.instructionLabel}
-          </label>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
+            <label style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+              {cfg.instructionLabel}
+            </label>
+            <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+              {step.instruction.length}/{MAX_INSTRUCTION}
+            </span>
+          </div>
           <textarea
             value={step.instruction}
             onChange={(e) => onChange({ instruction: e.target.value.slice(0, MAX_INSTRUCTION) })}
             placeholder={cfg.instructionPlaceholder}
-            rows={4}
+            rows={3}
             style={{
               width: '100%', border: '1px solid var(--border)', borderRadius: 8,
               padding: '10px 12px', fontSize: 13, outline: 'none', resize: 'vertical',
@@ -597,18 +612,15 @@ function StepCard(props: StepCardProps) {
               boxSizing: 'border-box', minHeight: 88,
             }}
           />
-          <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 3, textAlign: 'right' }}>
-            {step.instruction.length}/{MAX_INSTRUCTION}
-          </div>
         </div>
 
         {/* Advanced options — reference doc */}
-        <div>
+        <div style={{ borderTop: '1px dashed var(--border)', paddingTop: 10, marginTop: 4 }}>
           <button
             onClick={onToggleAdvanced}
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 4,
-              padding: '4px 8px', marginLeft: -8, borderRadius: 6,
+              padding: '4px 0', borderRadius: 6,
               background: 'none', border: 'none', cursor: 'pointer',
               color: 'var(--text-muted)', fontSize: 11, fontWeight: 500,
             }}

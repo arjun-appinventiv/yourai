@@ -43,9 +43,16 @@ export interface WorkflowProgressCardProps {
   runId: string;
   workspaceName?: string | null;
   onComplete?: (run: WorkflowRun) => void;
+  /**
+   * When 'embedded', the card renders with no outer chrome (no border,
+   * no accent stripe, no border-radius, no shadow) and skips its own
+   * header — it assumes a parent (e.g. RunRow in the Run Panel) is
+   * providing those. Default 'standalone' renders the full card.
+   */
+  variant?: 'standalone' | 'embedded';
 }
 
-export default function WorkflowProgressCard({ runId, workspaceName, onComplete }: WorkflowProgressCardProps) {
+export default function WorkflowProgressCard({ runId, workspaceName, onComplete, variant = 'standalone' }: WorkflowProgressCardProps) {
   const [run, setRun] = useState<WorkflowRun | null>(() => getRun(runId));
   const [template, setTemplate] = useState<WorkflowTemplate | null>(() => run ? getTemplate(run.templateId) : null);
   const [confirmingCancel, setConfirmingCancel] = useState(false);
@@ -100,18 +107,25 @@ export default function WorkflowProgressCard({ runId, workspaceName, onComplete 
 
   const totalDuration = run.steps.reduce((a, s) => a + (s.durationSeconds || 0), 0);
 
+  const isEmbedded = variant === 'embedded';
+
   /* ─── Render ─── */
   return (
     <div
-      style={{
+      style={isEmbedded ? {
+        background: 'transparent',
+      } : {
         border: '1px solid var(--border)', borderRadius: 12, background: '#fff',
         overflow: 'hidden', boxShadow: '0 1px 3px rgba(10,36,99,0.04)',
       }}
     >
-      {/* Accent stripe */}
-      <div style={{ height: 3, background: isDone ? 'linear-gradient(to right, #059669, #10B981)' : isFailed ? 'linear-gradient(to right, #DC2626, #EF4444)' : 'linear-gradient(to right, #0A2463, #1E3A8A)' }} />
+      {/* Accent stripe — only in standalone */}
+      {!isEmbedded && (
+        <div style={{ height: 3, background: isDone ? 'linear-gradient(to right, #059669, #10B981)' : isFailed ? 'linear-gradient(to right, #DC2626, #EF4444)' : 'linear-gradient(to right, #0A2463, #1E3A8A)' }} />
+      )}
 
-      {/* Header */}
+      {/* Header — skipped in embedded mode (parent RunRow renders its own) */}
+      {!isEmbedded && (
       <div style={{ padding: '14px 18px', display: 'flex', alignItems: 'flex-start', gap: 12 }}>
         <div style={{ width: 36, height: 36, borderRadius: 10, background: 'var(--ice-warm)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
           <Briefcase size={16} style={{ color: 'var(--navy)' }} />
@@ -177,9 +191,10 @@ export default function WorkflowProgressCard({ runId, workspaceName, onComplete 
           </div>
         )}
       </div>
+      )}
 
       {/* Steps */}
-      <div style={{ padding: '0 18px 12px' }}>
+      <div style={{ padding: isEmbedded ? '4px 0 8px' : '0 18px 12px' }}>
         {run.steps.map((step, i) => (
           <StepRow
             key={step.stepId}
@@ -197,8 +212,8 @@ export default function WorkflowProgressCard({ runId, workspaceName, onComplete 
         ))}
       </div>
 
-      {/* Progress bar */}
-      {!isDone && !isCancelled && (
+      {/* Progress bar — only in standalone; RunRow renders its own in embedded mode */}
+      {!isEmbedded && !isDone && !isCancelled && (
         <div style={{ padding: '0 18px 14px' }}>
           <div style={{ height: 4, borderRadius: 999, background: '#F3F4F6', overflow: 'hidden' }}>
             <div style={{
