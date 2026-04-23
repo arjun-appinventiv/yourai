@@ -17,6 +17,8 @@ export const INTENTS: IntentDef[] = [
   { id: 'email_letter_drafting', label: 'Email & Letter Drafting' },
   { id: 'legal_qa', label: 'Legal Q&A' },
   { id: 'risk_assessment', label: 'Risk Assessment' },
+  { id: 'clause_analysis', label: 'Clause Analysis' },
+  { id: 'timeline_extraction', label: 'Timeline' },
 ];
 
 export const DEFAULT_INTENT = 'general_chat';

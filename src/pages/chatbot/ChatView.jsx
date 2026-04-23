@@ -36,6 +36,9 @@ import {
   MOCK_COMPARISON_CARD,
   MOCK_CASE_BRIEF_CARD,
   MOCK_RESEARCH_BRIEF_CARD,
+  MOCK_RISK_MEMO_CARD,
+  MOCK_CLAUSE_ANALYSIS_CARD,
+  MOCK_TIMELINE_CARD,
 } from '../../lib/mockCardData';
 import { billingData, subscriptionPlans } from '../../data/mockData';
 import { callLLM, getApiKey } from '../../lib/llm-client';
@@ -2961,7 +2964,11 @@ export default function ChatView({ initialView = 'chat' }) {
       '/demo-summary':    { intent: 'document_summarisation', data: MOCK_SUMMARY_CARD },
       '/demo-comparison': { intent: 'clause_comparison',      data: MOCK_COMPARISON_CARD },
       '/demo-casebrief':  { intent: 'case_law_analysis',      data: MOCK_CASE_BRIEF_CARD },
+      '/demo-brief':      { intent: 'case_law_analysis',      data: MOCK_CASE_BRIEF_CARD },
       '/demo-research':   { intent: 'legal_research',         data: MOCK_RESEARCH_BRIEF_CARD },
+      '/demo-risk':       { intent: 'risk_assessment',        data: MOCK_RISK_MEMO_CARD },
+      '/demo-clauses':    { intent: 'clause_analysis',        data: MOCK_CLAUSE_ANALYSIS_CARD },
+      '/demo-timeline':   { intent: 'timeline_extraction',    data: MOCK_TIMELINE_CARD },
     };
     if (demoMap[trimmed]) {
       if (showEmptyState) setShowEmptyState(false);

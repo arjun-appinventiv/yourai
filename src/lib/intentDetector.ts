@@ -122,18 +122,43 @@ export const INTENT_DEFAULTS: Record<string, IntentConfig> = {
       'what are the risks', 'identify the risks', 'risk assessment',
       'assess the risk', 'any red flags', 'risky clauses', 'risk analysis',
       'should i sign this', 'is this safe to sign', 'anything concerning', 'flag the risks',
-      'help with risk', 'evaluate risk',
+      'help with risk', 'evaluate risk', 'risk memo', 'generate a risk memo',
+      'risk review',
     ],
     opening_behaviour: 'ask_for_document',
     custom_instruction: '',
 
     response_format: 'risk_card',
   },
+  clause_analysis: {
+    keywords: [
+      'analyse clauses', 'analyze clauses', 'extract clauses', 'break down the clauses',
+      'walk me through the clauses', 'clause by clause', 'each clause',
+      'which clauses', 'list the clauses', 'clause analysis', 'analyse each clause',
+      'what clauses are in', 'breakdown of clauses',
+    ],
+    opening_behaviour: 'ask_for_document',
+    custom_instruction: '',
+    response_format: 'structured_sections',
+  },
+  timeline_extraction: {
+    keywords: [
+      'timeline of', 'chronology', 'chronological order', 'dates in this',
+      'key dates', 'build a timeline', 'extract the timeline', 'sequence of events',
+      'what happened when', 'list the events', 'litigation timeline', 'discovery timeline',
+      'deadlines in this', 'important dates',
+    ],
+    opening_behaviour: 'ask_for_document',
+    custom_instruction: '',
+    response_format: 'structured_sections',
+  },
 };
 
 // Priority order — legal_qa checked LAST as fallback
 const PRIORITY_ORDER = [
   'contract_review',
+  'timeline_extraction',
+  'clause_analysis',
   'document_summarisation',
   'document_drafting',
   'risk_assessment',
