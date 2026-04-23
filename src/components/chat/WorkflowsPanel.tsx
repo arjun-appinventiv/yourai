@@ -317,7 +317,7 @@ export default function WorkflowsPanel({ onClose, onCreateNew, onRun, onEdit, on
           <>
             {featuredTemplates.length > 0 && (
               <div>
-                <h2 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 20, color: 'var(--navy)', margin: '0 0 14px', lineHeight: 1.2 }}>
+                <h2 style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#6B7280', margin: '0 0 12px', lineHeight: 1.2 }}>
                   Featured workflows
                 </h2>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 16 }}>
@@ -343,7 +343,7 @@ export default function WorkflowsPanel({ onClose, onCreateNew, onRun, onEdit, on
             )}
             {libraryTemplates.length > 0 && (
               <div style={{ marginTop: featuredTemplates.length > 0 ? 32 : 0 }}>
-                <h2 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 20, color: 'var(--navy)', margin: '0 0 14px', lineHeight: 1.2 }}>
+                <h2 style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#6B7280', margin: '0 0 12px', lineHeight: 1.2 }}>
                   Your library
                 </h2>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 16 }}>
@@ -550,11 +550,11 @@ function WorkflowCard({ template, ctx, isRunning, isFav, menuOpen, onToggleMenu,
       }}>
 
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-          <div style={{ width: 44, height: 44, borderRadius: 12, background: theme.iconBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 1px 2px rgba(0,0,0,0.04)' }}>
-            <HeroIcon size={20} style={{ color: theme.accent }} />
+          <div style={{ width: 44, height: 44, borderRadius: 12, background: 'var(--ice-warm)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, border: '1px solid var(--border)' }}>
+            <HeroIcon size={20} style={{ color: 'var(--navy)' }} />
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: theme.accent }}>
+            <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#9CA3AF' }}>
               {template.practiceArea}
             </div>
             <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-primary)', lineHeight: 1.3, marginTop: 2 }}>
@@ -602,20 +602,20 @@ function WorkflowCard({ template, ctx, isRunning, isFav, menuOpen, onToggleMenu,
           </div>
         </div>
 
-        {/* Badges row */}
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 10 }}>
+        {/* Meta row — plain text, no pills stacking */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10, fontSize: 11, color: '#6B7280' }}>
           <span
             title={template.visibility === 'platform' ? 'Maintained by YourAI' : template.visibility === 'org' ? 'Shared with your organisation' : 'Only visible to you'}
-            style={{ fontSize: 10, padding: '2px 8px', borderRadius: 999, background: badge.bg, color: badge.color, border: `1px solid ${badge.border}`, fontWeight: 600, letterSpacing: '0.02em' }}
+            style={{ fontSize: 10, padding: '1px 7px', borderRadius: 999, background: badge.bg, color: badge.color, border: `1px solid ${badge.border}`, fontWeight: 600, letterSpacing: '0.02em' }}
           >
             {badge.label}
           </span>
-          {isDraftByMe && (
-            <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 999, background: '#FEF3C7', color: '#92400E', fontWeight: 500, border: '1px solid #FDE68A' }}>Draft</span>
-          )}
-          <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 999, background: 'rgba(255,255,255,0.6)', color: '#374151', border: '1px solid rgba(0,0,0,0.08)', fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
             <Clock size={10} /> {template.steps.length} steps · ~{template.estimatedTotalSeconds}s
           </span>
+          {isDraftByMe && (
+            <span style={{ fontSize: 10, padding: '1px 7px', borderRadius: 999, background: '#FEF3C7', color: '#92400E', fontWeight: 500, border: '1px solid #FDE68A' }}>Draft</span>
+          )}
         </div>
       </div>
 
