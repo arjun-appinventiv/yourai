@@ -3053,6 +3053,7 @@ export default function ChatView({ initialView = 'chat' }) {
             conversationId: activeThreadId,
             message: trimmed,
             history,
+            intent: effectiveIntent,
             sessionId: sessionState.sessionKbSnapshotId,
             sessionDocId: sessionState.sessionDocId,
           }),
