@@ -364,7 +364,6 @@ function Sidebar({ onOpenPromptTemplates, onOpenClients, onOpenKnowledgePacks, o
   const [knowledgeOpen, setKnowledgeOpen] = useState(() => {
     try { const v = localStorage.getItem('yourai_sidebar_knowledge_open'); return v === null ? true : v === 'true'; } catch { return true; }
   });
-  const [showChatSearch, setShowChatSearch] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [hoveredItem, setHoveredItem] = useState(null);
   const [hoveredThread, setHoveredThread] = useState(null);
@@ -494,45 +493,57 @@ function Sidebar({ onOpenPromptTemplates, onOpenClients, onOpenKnowledgePacks, o
         <span style={{ fontFamily: "'DM Serif Display', serif", fontSize: 18 }}>
           <span style={{ color: 'var(--navy)' }}>Your</span><span style={{ color: '#C9A84C' }}>AI</span>
         </span>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          {/* Green online dot + avatar — desktop */}
-          <div className="hidden md:flex" style={{ alignItems: 'center', gap: 6 }}>
-            <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#5CA868', flexShrink: 0 }} />
-            <div style={{ width: 26, height: 26, borderRadius: '50%', background: '#F0F3F6', color: '#1E3A8A', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 600 }}>{initials}</div>
-          </div>
-          {/* Close button — mobile only */}
-          <button
-            onClick={onClose}
-            className="md:hidden p-1 rounded-lg"
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}
-            aria-label="Close sidebar"
-          >
-            <X size={18} />
-          </button>
-        </div>
+        {/* Close button — mobile only */}
+        <button
+          onClick={onClose}
+          className="md:hidden p-1 rounded-lg"
+          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}
+          aria-label="Close sidebar"
+        >
+          <X size={18} />
+        </button>
       </div>
+
+      {/* ═══ ZONE 1.5 — Search Chats (top-level) ═══ */}
+      {!isExternalUser && (
+        <div style={{ padding: '12px 12px 0', position: 'relative' }}>
+          <Search size={14} style={{ position: 'absolute', left: 24, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
+          <input
+            value={threadSearch}
+            onChange={(e) => onThreadSearchChange(e.target.value)}
+            placeholder="Search Chats"
+            style={{ width: '100%', height: 36, borderRadius: 8, border: '1px solid var(--border)', paddingLeft: 34, paddingRight: 10, fontSize: 13, outline: 'none', boxSizing: 'border-box', fontFamily: "'DM Sans', sans-serif", color: 'var(--text-primary)', background: '#fff' }}
+          />
+        </div>
+      )}
 
       {/* ═══ ZONE 2 — New Chat Button ═══ */}
       {/* External Users don't have a personal chat — they only use workspace
           chats, which have their own 'New chat' button inside the workspace
           sidebar. Hide this CTA for them. */}
       {!isExternalUser && (
-      <div style={{ padding: '12px 12px 0' }}>
+      <div style={{ padding: '10px 12px 0' }}>
         <button
           onClick={onNewThread}
           style={{
-            width: '100%', height: 34, borderRadius: 8,
-            display: 'flex', alignItems: 'center', gap: 6,
-            padding: '0 12px', background: '#fff',
-            border: '0.5px solid var(--border)',
-            fontSize: 13, fontWeight: 500, color: 'var(--text-secondary)',
-            cursor: 'pointer', transition: 'background 150ms ease',
+            width: '100%', height: 40, borderRadius: 10,
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '0 12px', background: 'var(--navy)',
+            border: 'none',
+            fontSize: 13, fontWeight: 500, color: '#fff',
+            cursor: 'pointer', transition: 'background 150ms ease, box-shadow 150ms ease',
+            boxShadow: '0 1px 2px rgba(10, 36, 99, 0.18)',
           }}
-          onMouseEnter={(e) => { e.currentTarget.style.background = '#F8F4ED'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = '#07183F'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--navy)'; }}
         >
-          <Plus size={14} />
-          <span>New chat</span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+            <Plus size={15} />
+            New Chat
+          </span>
+          <span style={{ fontSize: 11, fontWeight: 500, color: 'rgba(255,255,255,0.78)', padding: '2px 7px', background: 'rgba(255,255,255,0.14)', borderRadius: 5, letterSpacing: '0.02em' }}>
+            &#8984;N
+          </span>
         </button>
       </div>
       )}
@@ -590,28 +601,8 @@ function Sidebar({ onOpenPromptTemplates, onOpenClients, onOpenKnowledgePacks, o
             <span style={{ fontSize: 10, fontWeight: 500, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
               Recent Chats
             </span>
-            <button
-              onClick={() => setShowChatSearch(v => !v)}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, display: 'flex', alignItems: 'center', color: 'var(--text-muted)' }}
-              title="Search chats"
-            >
-              <Search size={12} />
-            </button>
+            <Search size={12} style={{ color: 'var(--text-muted)', opacity: 0.6 }} />
           </div>
-
-          {/* Chat search — toggled by search icon */}
-          {showChatSearch && (
-            <div style={{ padding: '0 4px 6px', position: 'relative' }}>
-              <Search size={11} style={{ position: 'absolute', left: 14, top: 8, color: 'var(--text-muted)' }} />
-              <input
-                value={threadSearch}
-                onChange={(e) => onThreadSearchChange(e.target.value)}
-                placeholder="Search chats..."
-                autoFocus
-                style={{ width: '100%', height: 28, borderRadius: 6, border: '1px solid var(--border)', paddingLeft: 26, fontSize: 11, outline: 'none', boxSizing: 'border-box', fontFamily: "'DM Sans', sans-serif", color: 'var(--text-primary)' }}
-              />
-            </div>
-          )}
 
           {/* Recent thread list — 3 max */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -658,10 +649,13 @@ function Sidebar({ onOpenPromptTemplates, onOpenClients, onOpenKnowledgePacks, o
             })}
           </div>
 
-          {/* View all link */}
+          {/* View all link — focuses the top Search Chats input */}
           {totalThreads > 3 && (
             <div
-              onClick={() => setShowChatSearch(true)}
+              onClick={() => {
+                const el = document.querySelector('input[placeholder="Search Chats"]');
+                if (el) el.focus();
+              }}
               style={{ fontSize: 11, color: 'var(--text-muted)', padding: '6px 8px', cursor: 'pointer', userSelect: 'none' }}
               onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--navy)'; }}
               onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; }}
@@ -2495,7 +2489,7 @@ function EmptyState({ profile, plan, onPromptClick, navigate, onViewPlans, workf
   const prompts = getSuggestedPrompts(profile);
 
   return (
-    <div className="px-4 sm:px-6 md:px-10 py-5" style={{ flex: 1, display: 'flex', alignItems: 'flex-start', justifyContent: 'center' }}>
+    <div className="px-4 sm:px-6 md:px-10" style={{ flex: 1, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', paddingTop: 24, paddingBottom: 8 }}>
       <div style={{ maxWidth: 960, width: '100%', textAlign: 'center' }}>
         {/* ── Gold sparkle dot ─────────────────────────────── */}
         <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'linear-gradient(135deg, #C9A84C 0%, #E8D48B 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 10px', boxShadow: '0 2px 8px rgba(201, 168, 76, 0.24)' }}>
