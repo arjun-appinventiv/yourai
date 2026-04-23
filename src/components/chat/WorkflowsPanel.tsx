@@ -55,7 +55,7 @@ function relativeFrom(iso: string): string {
 
 /* ─── Visibility badge styling ─── */
 const VISIBILITY_BADGE: Record<WorkflowVisibility, { bg: string; color: string; border: string; label: string }> = {
-  platform: { bg: '#0A2463',  color: '#FFFFFF', border: '#0A2463',  label: 'Platform' },
+  platform: { bg: '#F3F0E8',  color: '#0A2463', border: '#E5E0D0',  label: 'Platform' },
   org:      { bg: '#EFF6FF',  color: '#1D4ED8', border: '#BFDBFE',  label: 'Your Org' },
   personal: { bg: '#F3F4F6',  color: '#6B7280', border: '#E5E7EB',  label: 'Yours' },
 };
@@ -226,34 +226,23 @@ export default function WorkflowsPanel({ onClose, onCreateNew, onRun, onEdit, on
         )}
       </div>
 
-      {/* ─── Hero — title + stats row ─── */}
+      {/* ─── Hero — compact title + inline stats ─── */}
       <div style={{
-        padding: '28px 36px 20px',
+        padding: '16px 36px 14px',
         borderBottom: '1px solid rgba(10,36,99,0.06)',
-        background: 'linear-gradient(180deg, #FDFBF5 0%, #FAF6EE 100%)',
+        background: '#FDFBF5',
         flexShrink: 0,
       }}>
-        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 24, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 24, flexWrap: 'wrap' }}>
           <div style={{ flex: '1 1 340px', minWidth: 0 }}>
-            <div style={{
-              display: 'inline-flex', alignItems: 'center', gap: 6,
-              padding: '4px 10px', borderRadius: 999,
-              background: 'rgba(201,168,76,0.14)',
-              border: '1px solid rgba(201,168,76,0.3)',
-              fontSize: 11, letterSpacing: '0.06em', fontWeight: 600, color: '#8A6D1F',
-              textTransform: 'uppercase',
-              marginBottom: 10,
-            }}>
-              <Sparkles size={11} /> AI Pipelines
-            </div>
-            <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 34, color: 'var(--navy)', margin: 0, lineHeight: 1.1 }}>
+            <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 22, color: 'var(--navy)', margin: 0, lineHeight: 1.15 }}>
               Workflows
             </h1>
-            <p style={{ fontSize: 14, color: '#374151', marginTop: 8, lineHeight: 1.55, maxWidth: 560 }}>
+            <p style={{ fontSize: 13, color: '#374151', marginTop: 4, lineHeight: 1.5, maxWidth: 560 }}>
               Chain multiple AI steps into a reusable pipeline — read documents, analyse clauses, check compliance, and produce a structured report, all with one click.
             </p>
           </div>
-          <div style={{ display: 'flex', gap: 10, flexShrink: 0 }}>
+          <div style={{ display: 'flex', gap: 20, flexShrink: 0, alignItems: 'center' }}>
             <StatTile icon={Zap}        value={templates.length} label="Templates" />
             <StatTile icon={TrendingUp} value={runsThisWeek}      label="Runs / week" />
             <StatTile icon={Clock}      value={`~${avgRunSeconds}s`} label="Avg duration" />
@@ -331,7 +320,7 @@ export default function WorkflowsPanel({ onClose, onCreateNew, onRun, onEdit, on
                 <h2 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 20, color: 'var(--navy)', margin: '0 0 14px', lineHeight: 1.2 }}>
                   Featured workflows
                 </h2>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: 16 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 16 }}>
                   {featuredTemplates.map((t) => (
                     <WorkflowCard
                       key={t.id}
@@ -357,7 +346,7 @@ export default function WorkflowsPanel({ onClose, onCreateNew, onRun, onEdit, on
                 <h2 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 20, color: 'var(--navy)', margin: '0 0 14px', lineHeight: 1.2 }}>
                   Your library
                 </h2>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: 16 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 16 }}>
                   {libraryTemplates.map((t) => (
                     <WorkflowCard
                       key={t.id}
@@ -394,7 +383,7 @@ export default function WorkflowsPanel({ onClose, onCreateNew, onRun, onEdit, on
                 </div>
               </div>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: 16 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 16 }}>
               {recentRuns.map((r) => {
                 const ok = r.status === 'complete';
                 const dur = r.steps.reduce((a, s) => a + (s.durationSeconds || 0), 0);
@@ -405,7 +394,6 @@ export default function WorkflowsPanel({ onClose, onCreateNew, onRun, onEdit, on
                     style={{
                       background: '#fff',
                       border: '1px solid rgba(10,36,99,0.08)',
-                      borderLeft: `3px solid ${ok ? '#5CA868' : r.status === 'failed' ? '#C65454' : '#9CA3AF'}`,
                       borderRadius: 12,
                       padding: '14px 16px',
                       display: 'flex', flexDirection: 'column', gap: 8,
@@ -436,22 +424,13 @@ export default function WorkflowsPanel({ onClose, onCreateNew, onRun, onEdit, on
   );
 }
 
-/* ─── Hero stat tile ─── */
+/* ─── Hero stat tile — flat inline ─── */
 function StatTile({ icon: Icon, value, label }: { icon: React.ComponentType<{ size?: number; style?: React.CSSProperties }>; value: number | string; label: string }) {
   return (
-    <div style={{
-      padding: '12px 18px', minWidth: 110,
-      borderRadius: 12, border: '1px solid rgba(10,36,99,0.08)',
-      background: '#FFFFFF',
-      boxShadow: '0 1px 3px rgba(10,36,99,0.04)',
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#8A6D1F', marginBottom: 4 }}>
-        <Icon size={12} />
-        <span style={{ fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 600 }}>{label}</span>
-      </div>
-      <div style={{ fontFamily: "'DM Serif Display', serif", fontSize: 24, color: 'var(--navy)', lineHeight: 1 }}>
-        {value}
-      </div>
+    <div style={{ display: 'inline-flex', alignItems: 'baseline', gap: 6, padding: 0, background: 'transparent', border: 'none' }}>
+      <Icon size={12} style={{ color: '#8A6D1F', alignSelf: 'center' }} />
+      <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 16, fontWeight: 600, color: 'var(--navy)', lineHeight: 1 }}>{value}</span>
+      <span style={{ fontSize: 11, color: 'var(--text-muted)', letterSpacing: '0.02em' }}>{label}</span>
     </div>
   );
 }
@@ -553,26 +532,22 @@ function WorkflowCard({ template, ctx, isRunning, isFav, menuOpen, onToggleMenu,
   return (
     <div
       style={{
-        borderRadius: 16,
+        borderRadius: 12,
         border: '1px solid rgba(10,36,99,0.08)',
         background: '#FFFFFF',
         display: 'flex', flexDirection: 'column',
         overflow: 'hidden',
-        transition: 'all 0.18s ease',
+        transition: 'box-shadow 0.18s ease',
         boxShadow: '0 1px 3px rgba(10,36,99,0.03)',
       }}
-      onMouseEnter={(e) => { e.currentTarget.style.boxShadow = '0 12px 32px rgba(10,36,99,0.1)'; e.currentTarget.style.borderColor = theme.accent; e.currentTarget.style.transform = 'translateY(-2px)'; }}
-      onMouseLeave={(e) => { e.currentTarget.style.boxShadow = '0 1px 3px rgba(10,36,99,0.03)'; e.currentTarget.style.borderColor = 'rgba(10,36,99,0.08)'; e.currentTarget.style.transform = 'translateY(0)'; }}
+      onMouseEnter={(e) => { e.currentTarget.style.boxShadow = '0 8px 24px rgba(10,36,99,0.08)'; }}
+      onMouseLeave={(e) => { e.currentTarget.style.boxShadow = '0 1px 3px rgba(10,36,99,0.03)'; }}
     >
-      {/* ── Themed header tile ── */}
+      {/* ── Header (single surface — no accent stripe, no gradient) ── */}
       <div style={{
         padding: '16px 18px 14px',
-        background: theme.bg,
-        borderBottom: `1px solid ${theme.accent}22`,
-        position: 'relative',
+        background: '#FFFFFF',
       }}>
-        {/* Accent stripe */}
-        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: theme.accent }} />
 
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
           <div style={{ width: 44, height: 44, borderRadius: 12, background: theme.iconBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 1px 2px rgba(0,0,0,0.04)' }}>
@@ -644,42 +619,6 @@ function WorkflowCard({ template, ctx, isRunning, isFav, menuOpen, onToggleMenu,
         </div>
       </div>
 
-      {/* ── Pipeline preview ── */}
-      <div style={{ padding: '14px 18px 0' }}>
-        <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#6B7280', marginBottom: 10 }}>
-          Pipeline
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
-          {flowOps.map((s, i) => {
-            const cfg = OPERATION_CONFIG[s.operation];
-            const OpIcon = OP_ICON[s.operation];
-            return (
-              <React.Fragment key={s.id}>
-                <div
-                  title={cfg?.label || s.operation}
-                  style={{
-                    width: 30, height: 30, borderRadius: 8,
-                    background: '#F9FAFB', border: '1px solid #E5E7EB',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    flexShrink: 0,
-                  }}
-                >
-                  <OpIcon size={14} style={{ color: theme.accent }} />
-                </div>
-                {i < flowOps.length - 1 && (
-                  <ArrowRight size={10} style={{ color: '#9CA3AF', flexShrink: 0 }} />
-                )}
-              </React.Fragment>
-            );
-          })}
-          {flowRemaining > 0 && (
-            <span style={{ fontSize: 11, color: '#6B7280', marginLeft: 4 }}>
-              +{flowRemaining} more
-            </span>
-          )}
-        </div>
-      </div>
-
       {/* ── Description ── */}
       <p
         style={{
@@ -693,7 +632,7 @@ function WorkflowCard({ template, ctx, isRunning, isFav, menuOpen, onToggleMenu,
       </p>
 
       {/* ── Footer (pinned to bottom so cards with short descriptions don't show dead space) ── */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '14px 18px', marginTop: 'auto', borderTop: '1px solid #F3F0E8' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '14px 18px', marginTop: 'auto' }}>
         <span style={{ fontSize: 11, color: '#6B7280' }}>
           Updated {relativeFrom(template.updatedAt)}
         </span>
@@ -703,12 +642,12 @@ function WorkflowCard({ template, ctx, isRunning, isFav, menuOpen, onToggleMenu,
           style={{
             display: 'inline-flex', alignItems: 'center', gap: 6,
             padding: '9px 20px', borderRadius: 10,
-            backgroundColor: isRunning ? '#9CA3AF' : theme.accent,
+            backgroundColor: isRunning ? '#9CA3AF' : 'var(--navy)',
             color: '#fff', border: 'none',
             fontSize: 13, fontWeight: 600,
             cursor: isRunning ? 'not-allowed' : 'pointer',
             opacity: isRunning ? 0.8 : 1,
-            boxShadow: isRunning ? 'none' : `0 2px 8px ${theme.accent}33`,
+            boxShadow: isRunning ? 'none' : '0 1px 2px rgba(10,36,99,0.12)',
             transition: 'all 150ms ease',
           }}
         >

@@ -172,8 +172,8 @@ export default function WorkflowRunPanel({ userId, onClose, focusRunId }: Props)
         </button>
       </div>
 
-      {/* Body — list of runs */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: fullscreen ? '20px 20px 40px' : '14px 14px 32px' }}>
+      {/* Body — list of runs (flat white so cards don't nest visually) */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: fullscreen ? '20px 20px 40px' : '14px 14px 32px', background: '#FFFFFF' }}>
         {runs.length === 0 ? (
           <EmptyState />
         ) : (
@@ -237,21 +237,21 @@ function RunRow({ run, isExpanded, onToggle }: { run: WorkflowRun; isExpanded: b
   const StatusIcon = isRunning ? Loader : isComplete ? CheckCircle2 : isFailed ? XCircle : XCircle;
 
   return (
-    <div style={{ border: `1px solid ${isRunning ? '#DDE6F5' : 'var(--border)'}`, borderLeft: `3px solid ${accent}`, borderRadius: 12, background: bg, overflow: 'hidden' }}>
-      {/* Collapsible header */}
+    <div style={{ border: '1px solid #EEF0F3', borderLeft: `3px solid ${accent}`, borderRadius: 10, background: '#FFFFFF', overflow: 'hidden', boxShadow: '0 1px 2px rgba(10,36,99,0.04)' }}>
+      {/* Collapsible header — single surface, no duplicate title below */}
       <button
         onClick={onToggle}
         style={{
           width: '100%',
           display: 'flex', alignItems: 'center', gap: 10,
-          padding: '12px 14px',
+          padding: '14px 16px',
           background: 'transparent', border: 'none', cursor: 'pointer',
           textAlign: 'left',
         }}
       >
         {isExpanded
-          ? <ChevronDown size={14} style={{ color: '#4B5563', flexShrink: 0 }} />
-          : <ChevronRight size={14} style={{ color: '#4B5563', flexShrink: 0 }} />
+          ? <ChevronDown size={14} style={{ color: '#9CA3AF', flexShrink: 0 }} />
+          : <ChevronRight size={14} style={{ color: '#9CA3AF', flexShrink: 0 }} />
         }
         <StatusIcon
           size={14}
@@ -259,16 +259,19 @@ function RunRow({ run, isExpanded, onToggle }: { run: WorkflowRun; isExpanded: b
           style={{ color: accent, flexShrink: 0 }}
         />
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {run.templateName}
           </div>
-          <div style={{ fontSize: 11, color: '#4B5563', marginTop: 1 }}>
+          <div style={{ fontSize: 12, color: '#6B7280', marginTop: 2 }}>
             {statusText}
           </div>
         </div>
-        {/* Mini progress bar for running runs */}
-        {isRunning && (
-          <div style={{ width: 80, height: 4, borderRadius: 3, background: '#E5E7EB', overflow: 'hidden', flexShrink: 0 }}>
+      </button>
+
+      {/* Run-level progress bar — sits directly under the header as a clear ruler */}
+      {isRunning && (
+        <div style={{ padding: '0 16px 10px' }}>
+          <div style={{ width: '100%', height: 3, borderRadius: 2, background: '#EEF0F3', overflow: 'hidden' }}>
             <div
               style={{
                 height: '100%',
@@ -278,18 +281,18 @@ function RunRow({ run, isExpanded, onToggle }: { run: WorkflowRun; isExpanded: b
               }}
             />
           </div>
-        )}
-      </button>
+        </div>
+      )}
 
-      {/* Expanded body: ProgressCard + (if complete) ReportCard */}
+      {/* Expanded body — embedded ProgressCard has no outer chrome */}
       {isExpanded && (
-        <div style={{ padding: '0 12px 12px', borderTop: '1px solid rgba(0,0,0,0.04)' }}>
-          <div style={{ paddingTop: 10, display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <WorkflowProgressCard runId={run.id} workspaceName={null} />
-            {run.status === 'complete' && run.reportCardData && (
+        <div style={{ padding: '0 16px 14px', borderTop: '1px solid #F3F4F6' }}>
+          <WorkflowProgressCard runId={run.id} workspaceName={null} variant="embedded" />
+          {run.status === 'complete' && run.reportCardData && (
+            <div style={{ marginTop: 12 }}>
               <WorkflowReportCard report={run.reportCardData} />
-            )}
-          </div>
+            </div>
+          )}
         </div>
       )}
     </div>
