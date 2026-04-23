@@ -2479,7 +2479,7 @@ function MiniOpPill({ operation }) {
   );
 }
 
-function EmptyState({ profile, plan, onPromptClick, navigate, onViewPlans, workflows = [], onRunWorkflow, onOpenWorkflowsPanel }) {
+function EmptyState({ profile, plan, onPromptClick, navigate, onViewPlans, workflows = [], totalWorkflowCount = 0, onRunWorkflow, onOpenWorkflowsPanel }) {
   // Resolve first name from the signed-up user persisted to localStorage.
   // EmptyState is a standalone component so we can't destructure AuthContext
   // without a hook call — the localStorage lookup is enough for the demo.
@@ -2563,7 +2563,7 @@ function EmptyState({ profile, plan, onPromptClick, navigate, onViewPlans, workf
                 onMouseEnter={(e) => { e.currentTarget.style.textDecoration = 'underline'; }}
                 onMouseLeave={(e) => { e.currentTarget.style.textDecoration = 'none'; }}
               >
-                Browse all workflows →
+                {totalWorkflowCount > 0 ? `View all ${totalWorkflowCount} workflows →` : 'Browse all workflows →'}
               </button>
             </div>
             {workflows.length > 0 ? (
@@ -2859,7 +2859,7 @@ export default function ChatView({ initialView = 'chat' }) {
 
   useEffect(() => { scrollToBottom(); }, [messages, isTyping, streamingContent, scrollToBottom]);
 
-  const inputPlaceholder = 'Ask anything, analyze files, or search the web...';
+  const inputPlaceholder = 'Ask anything about your documents or Alaska law…';
 
   const handlePromptClick = useCallback((promptText) => {
     setInput(promptText);
@@ -3709,6 +3709,7 @@ INSTRUCTIONS:
               navigate={navigate}
               onViewPlans={() => setShowPlanModal(true)}
               workflows={!isExternalUser ? (listFavouriteTemplatesForUser(currentUserId, currentRole) || []).filter(t => t.status === 'active').slice(0, 6) : []}
+              totalWorkflowCount={!isExternalUser ? workflowCount : 0}
               onRunWorkflow={(t) => setRunningPrep(t)}
               onOpenWorkflowsPanel={() => { setShowTeamPage?.(false); setShowWorkspacesPanel?.(false); setShowWorkflowsPanel(true); }}
             />
