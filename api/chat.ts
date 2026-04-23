@@ -14,6 +14,139 @@ export const config = { runtime: 'edge' };
 
 type ChatMessage = { role: 'system' | 'user' | 'assistant'; content: string };
 
+// ── Per-intent JSON schemas. These match the *CardData types in
+// src/components/chat/cards/*.tsx. If you add a new card-rendering
+// intent, drop its schema here and ChatView will route it. ──
+const CARD_SCHEMAS: Record<string, string> = {
+  document_summarisation: `{
+  "documentName": "string — the uploaded doc name",
+  "clauseCount": 0,
+  "fileSize": "string — e.g. '4.2 MB' or '—'",
+  "date": "string — effective or publication date, e.g. 'March 2026'",
+  "executiveSummary": "string — 2-4 sentence plain-English overview",
+  "metadata": {
+    "parties": "string — multiline allowed with \\n",
+    "keyDates": "string",
+    "governingLaw": "string",
+    "keyObligations": "string"
+  },
+  "keyPoints": ["string — 3-6 bullet findings"],
+  "flag": "string or null — one sentence callout of the biggest risk",
+  "sourceType": "doc" or "kb",
+  "sourceName": "string — filename or KB name"
+}`,
+  legal_research: `{
+  "topic": "string — the research question, e.g. 'Non-Compete Enforceability — New York Law'",
+  "jurisdiction": "string — e.g. 'New York'",
+  "stats": { "statutes": number, "cases": number, "principles": number, "jurisdiction": "short code like 'NY'" },
+  "sections": [
+    { "title": "Applicable Statutes",    "content": "markdown string with **bold** for key terms", "citations": ["short citation strings"] },
+    { "title": "Relevant Case Law",      "content": "markdown string",                              "citations": ["Case (year)", "..."] },
+    { "title": "Key Principles",         "content": "markdown string",                              "citations": [] },
+    { "title": "Practical Implications", "content": "markdown string",                              "citations": [] }
+  ],
+  "sourceType": "kb",
+  "sourceName": "YourAI knowledge base"
+}`,
+  // legal_qa deliberately NOT card-ified — Q&A should stay as markdown
+  // prose so natural follow-ups don't look like forced research briefs.
+  case_law_analysis: `{
+  "caseName": "string — e.g. 'TechFlow Inc v Apex Systems Corp'",
+  "court": "string — short e.g. 'SDNY'",
+  "date": "string — e.g. 'March 2024'",
+  "subject": "string — short subject line",
+  "rows": [
+    { "label": "Parties",   "value": "string" },
+    { "label": "Court",     "value": "string" },
+    { "label": "Date",      "value": "string" },
+    { "label": "Issue",     "value": "string" },
+    { "label": "Holding",   "value": "string", "isHolding": true },
+    { "label": "Reasoning", "value": "string" }
+  ],
+  "precedence": { "tags": ["string"], "tagStyles": ["blue" | "grey" | "amber" | "green"], "note": "string" },
+  "application": "string — how this applies to the user's matter",
+  "sourceType": "doc" or "kb",
+  "sourceName": "string"
+}`,
+  clause_comparison: `{
+  "doc1Name": "string",
+  "doc2Name": "string",
+  "clauseCount": number,
+  "rows": [
+    {
+      "clause": "string — e.g. 'Non-Compete Duration'",
+      "doc1": { "verdict": "better" | "worse" | "neutral", "text": "string" },
+      "doc2": { "verdict": "better" | "worse" | "neutral", "text": "string" }
+    }
+  ],
+  "recommendation": "string — one-sentence closing recommendation",
+  "sourceType": "doc" or "workspace",
+  "sourceName": "string — e.g. 'NDA_v1.pdf + NDA_v2.pdf'"
+}`,
+  risk_assessment: `{
+  "matterName": "string",
+  "documentName": "string or null",
+  "documentMeta": "string or null — e.g. '23 clauses · 4.2 MB'",
+  "pages": number or null,
+  "size": "string or null",
+  "uploadedLabel": "string or null — e.g. 'Uploaded today'",
+  "executiveSummary": "string — 2-3 sentence overview",
+  "highlightQuote": { "quote": "string — most important verbatim finding", "caption": "string — e.g. 'Finding #1 · High severity · Owner: Deal team'" } or null,
+  "trailingSummary": "string or null — closing paragraph after the quote",
+  "findings": [
+    {
+      "title": "string — short finding name",
+      "severity": "high" | "medium" | "low",
+      "location": "string — e.g. '§7.2'",
+      "owner": "string — e.g. 'Deal team'",
+      "quote": "string or null — verbatim from the doc",
+      "recommendation": "string — what to do about it"
+    }
+  ],
+  "sourceName": "string",
+  "generatedLabel": "string — e.g. 'Generated just now'"
+}`,
+  clause_analysis: `{
+  "matterName": "string",
+  "documentName": "string or null",
+  "documentMeta": "string or null",
+  "pages": number or null,
+  "size": "string or null",
+  "uploadedLabel": "string or null",
+  "clauses": [
+    {
+      "title": "string — e.g. 'Limitation of liability'",
+      "location": "string — e.g. '§11'",
+      "risk": "high" | "medium" | "low",
+      "quote": "string or null — verbatim from doc",
+      "interpretation": "string — plain-English explanation",
+      "recommendation": "string or null — optional negotiating move"
+    }
+  ],
+  "sourceName": "string",
+  "generatedLabel": "string"
+}`,
+  timeline_extraction: `{
+  "matterName": "string",
+  "documentName": "string or null",
+  "documentMeta": "string or null",
+  "pages": number or null,
+  "size": "string or null",
+  "uploadedLabel": "string or null",
+  "events": [
+    {
+      "date": "string — keep the source's format",
+      "kind": "event" | "deadline" | "milestone" | "filing",
+      "label": "string — short event title",
+      "description": "string or null",
+      "source": "string or null — e.g. 'p.1' or '§3.2'"
+    }
+  ],
+  "sourceName": "string",
+  "generatedLabel": "string"
+}`,
+};
+
 export default async function handler(req: Request): Promise<Response> {
   if (req.method !== 'POST') {
     return new Response('Method not allowed', { status: 405 });
@@ -73,6 +206,32 @@ WHEN IN DOUBT, ANSWER. It is far worse to refuse a legitimate legal question tha
 
 Within the legal domain: be concise, accurate, cite jurisdictions where relevant, and never fabricate case names, statute numbers, or regulatory citations. If the user's legal question is vague (e.g. "federal rules of California"), interpret it reasonably — ask a clarifying question if needed, but do not refuse.`,
     };
+
+    // ── Intent-specific card-shape instructions ──────────────────────
+    // When the client tags the request with a card-rendering intent,
+    // append a JSON-only instruction with the exact schema so the
+    // response renders in the corresponding front-end card instead of
+    // as markdown prose. If the model can't satisfy the schema, the
+    // client falls back to markdown automatically (tryParseCardData
+    // returns null on non-JSON).
+    const cardSchema = CARD_SCHEMAS[body.intent as string];
+    if (cardSchema) {
+      messages.unshift({
+        role: 'system',
+        content: `OUTPUT FORMAT — CRITICAL:
+
+Return ONLY a single JSON object that matches this TypeScript shape. No prose, no preamble, no backticks, no explanation — the entire response must be valid JSON that JSON.parse() can consume.
+
+${cardSchema}
+
+Rules:
+- Output MUST start with { and end with }
+- No markdown code fences around the JSON
+- No text before or after the JSON
+- Use \\n inside strings for line breaks, never literal newlines that would break the JSON
+- If you can't produce a good answer in this shape, still return valid JSON with empty arrays / "—" strings rather than prose`,
+      });
+    }
     const history: ChatMessage[] = Array.isArray(body.history)
       ? body.history.filter((m: any) => m && typeof m.content === 'string' && (m.role === 'user' || m.role === 'assistant'))
       : [];
