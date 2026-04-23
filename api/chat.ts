@@ -167,6 +167,10 @@ export default async function handler(req: Request): Promise<Response> {
   // Build messages[] — accept both legacy `{messages}` and the client's
   // `{message, history?, system?}` shape.
   let messages: ChatMessage[] = [];
+  // Track card schema in outer scope so the OpenAI call downstream can
+  // flip on response_format: json_object when a card-rendering intent
+  // is active.
+  let cardSchema: string | undefined;
   if (Array.isArray(body?.messages) && body.messages.length > 0) {
     messages = body.messages;
   } else if (typeof body?.message === 'string' && body.message.trim()) {
@@ -207,20 +211,24 @@ WHEN IN DOUBT, ANSWER. It is far worse to refuse a legitimate legal question tha
 Within the legal domain: be concise, accurate, cite jurisdictions where relevant, and never fabricate case names, statute numbers, or regulatory citations. If the user's legal question is vague (e.g. "federal rules of California"), interpret it reasonably — ask a clarifying question if needed, but do not refuse.`,
     };
 
+    const history: ChatMessage[] = Array.isArray(body.history)
+      ? body.history.filter((m: any) => m && typeof m.content === 'string' && (m.role === 'user' || m.role === 'assistant'))
+      : [];
+    messages = [system, ...history, { role: 'user', content: body.message }];
+
     // ── Intent-specific card-shape instructions ──────────────────────
     // When the client tags the request with a card-rendering intent,
-    // append a JSON-only instruction with the exact schema so the
-    // response renders in the corresponding front-end card instead of
-    // as markdown prose. If the model can't satisfy the schema, the
-    // client falls back to markdown automatically (tryParseCardData
-    // returns null on non-JSON).
-    const cardSchema = CARD_SCHEMAS[body.intent as string];
+    // prepend a JSON-only instruction with the exact schema so the
+    // response renders in the corresponding front-end card. Combined
+    // with response_format: json_object on the OpenAI call, this
+    // guarantees valid JSON output.
+    cardSchema = CARD_SCHEMAS[body.intent as string];
     if (cardSchema) {
       messages.unshift({
         role: 'system',
         content: `OUTPUT FORMAT — CRITICAL:
 
-Return ONLY a single JSON object that matches this TypeScript shape. No prose, no preamble, no backticks, no explanation — the entire response must be valid JSON that JSON.parse() can consume.
+Return a SINGLE JSON object that matches this TypeScript shape exactly. No prose, no preamble, no backticks, no explanation — the entire response must be valid JSON that JSON.parse() can consume.
 
 ${cardSchema}
 
@@ -229,13 +237,10 @@ Rules:
 - No markdown code fences around the JSON
 - No text before or after the JSON
 - Use \\n inside strings for line breaks, never literal newlines that would break the JSON
-- If you can't produce a good answer in this shape, still return valid JSON with empty arrays / "—" strings rather than prose`,
+- Every field listed above must be present. If information is unavailable, use an empty string "", empty array [], or null (per the shape above) rather than omitting the key or returning prose.
+- Even for simple questions, populate each section of the schema. Do not return a "Q&A-style" short answer — the user's UI specifically expects the structured shape.`,
       });
     }
-    const history: ChatMessage[] = Array.isArray(body.history)
-      ? body.history.filter((m: any) => m && typeof m.content === 'string' && (m.role === 'user' || m.role === 'assistant'))
-      : [];
-    messages = [system, ...history, { role: 'user', content: body.message }];
   } else {
     // Surface exactly what keys arrived so we can diagnose shape mismatches.
     const keys = body && typeof body === 'object' ? Object.keys(body) : [];
@@ -258,7 +263,17 @@ Rules:
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${apiKey}`,
     },
-    body: JSON.stringify({ model, messages, temperature, max_tokens, stream: true }),
+    body: JSON.stringify({
+      model,
+      messages,
+      temperature,
+      max_tokens,
+      stream: true,
+      // Force JSON object output when a card schema is active — this
+      // is OpenAI's native structured-output flag and is the reliable
+      // way to guarantee the response is a JSON object (vs. prose).
+      ...(cardSchema ? { response_format: { type: 'json_object' } } : {}),
+    }),
   });
 
   if (!upstream.ok || !upstream.body) {
