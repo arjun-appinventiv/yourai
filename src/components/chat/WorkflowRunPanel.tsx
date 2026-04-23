@@ -113,16 +113,16 @@ export default function WorkflowRunPanel({ userId, onClose, focusRunId }: Props)
     <div
       style={fullscreen ? {
         position: 'fixed', inset: 0, zIndex: 90,
-        background: '#FAFBFC',
+        background: '#FDFBF5',
         display: 'flex', flexDirection: 'column',
         boxShadow: '0 0 0 1px var(--border)',
       } : {
         width: 480, flexShrink: 0,
-        background: '#FAFBFC',
+        background: '#FDFBF5',
         borderLeft: '1px solid var(--border)',
         display: 'flex', flexDirection: 'column',
         minHeight: 0,
-        boxShadow: '-4px 0 16px rgba(10,36,99,0.04)',
+        boxShadow: '-4px 0 16px rgba(10,36,99,0.08)',
       }}
     >
       {/* Header */}
@@ -135,13 +135,23 @@ export default function WorkflowRunPanel({ userId, onClose, focusRunId }: Props)
         }}
       >
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#4B5563' }}>
-            Workflow Runs
-          </div>
-          <div style={{ fontFamily: "'DM Serif Display', serif", fontSize: 17, color: 'var(--navy)', marginTop: 2 }}>
+          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#6B7280' }}>
             {runs.length === 0 ? 'No recent runs' : activeCount > 0 ? `${activeCount} running · ${runs.length - activeCount} recent` : `${runs.length} recent`}
           </div>
+          <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 16, fontWeight: 600, color: 'var(--navy)', marginTop: 2 }}>
+            Workflow runs
+          </div>
         </div>
+        {fullscreen && (
+          <button
+            onClick={() => setFullscreen(false)}
+            style={{ padding: '6px 10px', borderRadius: 8, background: 'transparent', border: '1px solid transparent', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--text-muted)', fontFamily: "'DM Sans', sans-serif" }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = '#F3F4F6'; (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)'; (e.currentTarget as HTMLElement).style.color = 'var(--navy)'; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.borderColor = 'transparent'; (e.currentTarget as HTMLElement).style.color = 'var(--text-muted)'; }}
+          >
+            &larr; Back to panel
+          </button>
+        )}
         <button
           onClick={() => setFullscreen((v) => !v)}
           title={fullscreen ? 'Exit fullscreen' : 'Expand to fullscreen'}
@@ -158,7 +168,7 @@ export default function WorkflowRunPanel({ userId, onClose, focusRunId }: Props)
           onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = '#F3F4F6'; (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)'; }}
           onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.borderColor = 'transparent'; }}
         >
-          <X size={16} style={{ color: '#4B5563' }} />
+          <X size={14} style={{ color: '#9CA3AF' }} />
         </button>
       </div>
 
@@ -193,7 +203,7 @@ function EmptyState() {
         No workflow runs yet
       </div>
       <div style={{ fontSize: 12, marginTop: 6, maxWidth: 300, margin: '6px auto 0', lineHeight: 1.55 }}>
-        Kick off a workflow from the Workflow Templates page and it will appear here. You can run multiple in parallel.
+        Kick off a workflow from the Workflows panel in the sidebar and it will appear here. You can run multiple in parallel.
       </div>
     </div>
   );
@@ -227,7 +237,7 @@ function RunRow({ run, isExpanded, onToggle }: { run: WorkflowRun; isExpanded: b
   const StatusIcon = isRunning ? Loader : isComplete ? CheckCircle2 : isFailed ? XCircle : XCircle;
 
   return (
-    <div style={{ border: `1px solid ${isRunning ? '#DDE6F5' : 'var(--border)'}`, borderRadius: 12, background: bg, overflow: 'hidden' }}>
+    <div style={{ border: `1px solid ${isRunning ? '#DDE6F5' : 'var(--border)'}`, borderLeft: `3px solid ${accent}`, borderRadius: 12, background: bg, overflow: 'hidden' }}>
       {/* Collapsible header */}
       <button
         onClick={onToggle}
@@ -258,7 +268,7 @@ function RunRow({ run, isExpanded, onToggle }: { run: WorkflowRun; isExpanded: b
         </div>
         {/* Mini progress bar for running runs */}
         {isRunning && (
-          <div style={{ width: 48, height: 3, borderRadius: 2, background: '#E5E7EB', overflow: 'hidden', flexShrink: 0 }}>
+          <div style={{ width: 80, height: 4, borderRadius: 3, background: '#E5E7EB', overflow: 'hidden', flexShrink: 0 }}>
             <div
               style={{
                 height: '100%',

@@ -14,7 +14,7 @@ import {
   X, Plus, Briefcase, Database, FileText, Clock,
   UploadCloud, Loader, AlertTriangle, CheckCircle, Trash2,
   FileText as FileTextIcon, Search as SearchIcon, GitCompare,
-  FileOutput, BookOpen, ShieldCheck,
+  FileOutput, BookOpen, ShieldCheck, ArrowRight, RefreshCw,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import {
@@ -123,7 +123,7 @@ export default function PreRunModal({ template, workspaceId, workspaceName, work
       <div
         style={{
           position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)',
-          width: 520, maxHeight: '88vh', background: '#fff',
+          width: 520, maxHeight: '88vh', minHeight: 480, background: '#fff',
           borderRadius: 16, boxShadow: '0 20px 60px rgba(0,0,0,0.25)',
           zIndex: 71, display: 'flex', flexDirection: 'column', overflow: 'hidden',
         }}
@@ -144,7 +144,7 @@ export default function PreRunModal({ template, workspaceId, workspaceName, work
                 </span>
               </div>
             </div>
-            <button onClick={onCancel} className="p-1.5 rounded-lg hover:bg-gray-100" style={{ flexShrink: 0 }}>
+            <button onClick={onCancel} className="p-2 rounded-lg hover:bg-gray-100" style={{ flexShrink: 0 }}>
               <X size={18} style={{ color: 'var(--text-muted)' }} />
             </button>
           </div>
@@ -154,7 +154,7 @@ export default function PreRunModal({ template, workspaceId, workspaceName, work
         <div style={{ flex: 1, overflowY: 'auto', padding: '18px 24px 8px' }}>
           {/* Knowledge source */}
           <div style={{
-            padding: '12px 14px', borderRadius: 10, marginBottom: 16,
+            padding: '12px 14px', borderRadius: 10, marginBottom: workspaceHasNoDocs ? 8 : 16,
             display: 'flex', alignItems: 'flex-start', gap: 10,
             ...(inWorkspace
               ? { background: '#EFF6FF', border: '1px solid #BFDBFE' }
@@ -168,12 +168,6 @@ export default function PreRunModal({ template, workspaceId, workspaceName, work
               {inWorkspace ? (
                 <>
                   <strong>{workspaceName}</strong> — workspace documents are the primary knowledge source, supplemented by the YourAI global knowledge base.
-                  {workspaceHasNoDocs && (
-                    <div style={{ marginTop: 6, padding: '6px 10px', borderRadius: 8, background: '#FEF3C7', border: '1px solid #FDE68A', color: '#6B4E1F', display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <AlertTriangle size={11} />
-                      <span>This workspace has no documents yet — steps will fall back to global KB.</span>
-                    </div>
-                  )}
                 </>
               ) : (
                 <>
@@ -182,28 +176,44 @@ export default function PreRunModal({ template, workspaceId, workspaceName, work
               )}
             </div>
           </div>
+          {/* Sibling warning (no nested banner) */}
+          {workspaceHasNoDocs && (
+            <div style={{ marginBottom: 16, padding: '10px 14px', borderRadius: 8, background: '#FEF3C7', border: '1px solid #FDE68A', color: '#6B4E1F', fontSize: 12, display: 'flex', alignItems: 'center', gap: 8, lineHeight: 1.45 }}>
+              <AlertTriangle size={13} style={{ flexShrink: 0 }} />
+              <span>This workspace has no documents yet — steps will fall back to global KB.</span>
+            </div>
+          )}
 
-          {/* Steps preview */}
+          {/* Steps preview — horizontal pipeline with arrows */}
           <div style={{ marginBottom: 18 }}>
-            <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>
+            <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>
               Workflow Steps
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
               {template.steps.map((s, i) => {
                 const cfg = OPERATION_CONFIG[s.operation];
                 const Icon = OP_ICON[s.operation];
                 return (
-                  <div key={s.id} className="flex items-center gap-2" style={{ padding: '6px 10px', borderRadius: 8, background: 'var(--ice-warm)', border: '1px solid var(--border)' }}>
-                    <div style={{ width: 20, height: 20, borderRadius: '50%', background: '#fff', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', flexShrink: 0 }}>
-                      {i + 1}
+                  <React.Fragment key={s.id}>
+                    <div
+                      title={`${i + 1}. ${s.name || 'unnamed'} — ${cfg.label}`}
+                      style={{
+                        position: 'relative',
+                        width: 44, height: 44, borderRadius: 10,
+                        background: 'var(--ice-warm)', border: '1px solid var(--border)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        flexShrink: 0,
+                      }}
+                    >
+                      <Icon size={16} style={{ color: 'var(--navy)' }} />
+                      <span style={{ position: 'absolute', bottom: -4, right: -4, width: 16, height: 16, borderRadius: '50%', background: '#fff', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 600, color: 'var(--text-muted)' }}>
+                        {i + 1}
+                      </span>
                     </div>
-                    <span className={cfg.color} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 999, fontSize: 10, fontWeight: 500, border: '1px solid' }}>
-                      <Icon size={10} /> {cfg.label}
-                    </span>
-                    <span style={{ fontSize: 12, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {s.name || <em style={{ color: 'var(--text-muted)' }}>unnamed</em>}
-                    </span>
-                  </div>
+                    {i < template.steps.length - 1 && (
+                      <ArrowRight size={11} style={{ color: '#9CA3AF', flexShrink: 0 }} />
+                    )}
+                  </React.Fragment>
                 );
               })}
             </div>
@@ -224,15 +234,22 @@ export default function PreRunModal({ template, workspaceId, workspaceName, work
               onDragLeave={() => setDragActive(false)}
               onDrop={(e) => { e.preventDefault(); setDragActive(false); if (e.dataTransfer.files) handleFilesPicked(e.dataTransfer.files); }}
               style={{
-                padding: '24px 18px', borderRadius: 12, textAlign: 'center', cursor: 'pointer',
+                padding: '32px 20px', borderRadius: 12, textAlign: 'center', cursor: 'pointer',
                 border: `2px dashed ${dragActive ? '#C9A84C' : 'var(--border)'}`,
                 background: dragActive ? '#FDF6E3' : '#FBFAF7',
                 transition: 'all 120ms',
               }}
             >
-              <UploadCloud size={24} style={{ margin: '0 auto 8px', color: dragActive ? '#C9A84C' : 'var(--navy)', opacity: 0.8 }} />
-              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>Drag files here or click to browse</div>
-              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6 }}>PDF, DOCX, XLSX, TXT · up to 100 MB each</div>
+              <UploadCloud size={32} style={{ margin: '0 auto 10px', color: dragActive ? '#C9A84C' : 'var(--navy)', opacity: 0.85 }} />
+              <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>Drag files here to upload</div>
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 12 }}>PDF, DOCX, XLSX, TXT · up to 100 MB each</div>
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 14px', borderRadius: 7, border: '1px solid var(--border)', background: '#fff', fontSize: 12, fontWeight: 500, color: 'var(--navy)', cursor: 'pointer' }}
+              >
+                or browse files
+              </button>
               <input
                 ref={fileInputRef}
                 type="file"
@@ -254,7 +271,7 @@ export default function PreRunModal({ template, workspaceId, workspaceName, work
         </div>
 
         {/* Footer */}
-        <div style={{ padding: '14px 24px 18px', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+        <div style={{ padding: '14px 24px 18px', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, boxShadow: '0 -4px 12px rgba(0,0,0,0.04)' }}>
           <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}>
             ~{template.estimatedTotalSeconds}s estimated
           </span>
@@ -265,11 +282,12 @@ export default function PreRunModal({ template, workspaceId, workspaceName, work
             <button
               onClick={handleRun}
               disabled={!canRun}
+              title={!canRun && !anyProcessing ? 'Upload at least one document to run' : undefined}
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: 6,
                 padding: '9px 18px', borderRadius: 8, border: 'none',
-                background: canRun ? 'var(--navy)' : '#9CA3AF',
-                color: '#fff', fontSize: 13, fontWeight: 500,
+                background: canRun ? 'var(--navy)' : '#E5E7EB',
+                color: canRun ? '#fff' : '#9CA3AF', fontSize: 13, fontWeight: 500,
                 cursor: canRun ? 'pointer' : 'not-allowed',
               }}
             >
