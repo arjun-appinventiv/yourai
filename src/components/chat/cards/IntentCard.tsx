@@ -3,6 +3,9 @@ import SummaryCard, { type SummaryCardData } from './SummaryCard';
 import ComparisonCard, { type ComparisonCardData } from './ComparisonCard';
 import CaseBriefCard, { type CaseBriefCardData } from './CaseBriefCard';
 import ResearchBriefCard, { type ResearchBriefCardData } from './ResearchBriefCard';
+import RiskMemoCard, { type RiskMemoCardData } from './RiskMemoCard';
+import ClauseAnalysisCard, { type ClauseAnalysisCardData } from './ClauseAnalysisCard';
+import TimelineCard, { type TimelineCardData } from './TimelineCard';
 
 /**
  * IntentCard — dispatches to the correct card component based on the
@@ -14,13 +17,19 @@ export type CardIntent =
   | 'document_summarisation'
   | 'clause_comparison'
   | 'case_law_analysis'
-  | 'legal_research';
+  | 'legal_research'
+  | 'risk_assessment'
+  | 'clause_analysis'
+  | 'timeline_extraction';
 
 export const CARD_INTENTS: CardIntent[] = [
   'document_summarisation',
   'clause_comparison',
   'case_law_analysis',
   'legal_research',
+  'risk_assessment',
+  'clause_analysis',
+  'timeline_extraction',
 ];
 
 export function isCardIntent(intent: string | undefined | null): intent is CardIntent {
@@ -60,6 +69,12 @@ export default function IntentCard({ intent, data }: IntentCardProps): React.Rea
       return <CaseBriefCard data={data as CaseBriefCardData} />;
     case 'legal_research':
       return <ResearchBriefCard data={data as ResearchBriefCardData} />;
+    case 'risk_assessment':
+      return <RiskMemoCard data={data as RiskMemoCardData} />;
+    case 'clause_analysis':
+      return <ClauseAnalysisCard data={data as ClauseAnalysisCardData} />;
+    case 'timeline_extraction':
+      return <TimelineCard data={data as TimelineCardData} />;
     default:
       return null;
   }

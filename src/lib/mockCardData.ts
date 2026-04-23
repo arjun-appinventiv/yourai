@@ -6,6 +6,9 @@ import type { SummaryCardData } from '../components/chat/cards/SummaryCard';
 import type { ComparisonCardData } from '../components/chat/cards/ComparisonCard';
 import type { CaseBriefCardData } from '../components/chat/cards/CaseBriefCard';
 import type { ResearchBriefCardData } from '../components/chat/cards/ResearchBriefCard';
+import type { RiskMemoCardData } from '../components/chat/cards/RiskMemoCard';
+import type { ClauseAnalysisCardData } from '../components/chat/cards/ClauseAnalysisCard';
+import type { TimelineCardData } from '../components/chat/cards/TimelineCard';
 
 export const MOCK_SUMMARY_CARD: SummaryCardData = {
   documentName: 'Meridian Capital NDA v2',
@@ -120,4 +123,140 @@ export const MOCK_RESEARCH_BRIEF_CARD: ResearchBriefCardData = {
   ],
   sourceType: 'kb',
   sourceName: 'YourAI knowledge base',
+};
+
+/* ─── Risk Memo ─── */
+export const MOCK_RISK_MEMO_CARD: RiskMemoCardData = {
+  matterName: 'Meridian Capital NDA v2',
+  documentName: 'Meridian_NDA_v2.pdf',
+  documentMeta: '23 clauses · 4.2 MB · March 2026',
+  pages: 24,
+  size: '4.2 MB',
+  uploadedLabel: 'Uploaded today',
+  executiveSummary:
+    'The Meridian Capital NDA materially favours the disclosing party on three structural points: a 36-month non-compete, unilateral modification rights, and perpetual confidentiality without a residuals carve-out. High-severity items should be renegotiated before execution; medium items can be handled with targeted redlines.',
+  highlightQuote: {
+    quote:
+      "Non-compete extends 36 months post-termination — three times the 12-month industry standard for this sector.",
+    caption: 'Finding #1 · High severity · Owner: Deal team',
+  },
+  trailingSummary:
+    'Of the 9 findings below, 3 are high-severity structural issues that warrant pushback before signing. The remaining 6 are medium or low items that can be resolved through the redline process.',
+  findings: [
+    {
+      title: 'Non-compete duration',
+      severity: 'high',
+      location: '§7.2',
+      owner: 'Deal team',
+      quote: 'The Receiving Party shall not engage in any business that competes with the Disclosing Party for a period of thirty-six (36) months…',
+      recommendation: 'Counter to 12 months with narrow scope tied to confidential information actually used. Enforceability beyond 12 months faces significant risk under NY law (BDO Seidman).',
+    },
+    {
+      title: 'Unilateral modification rights',
+      severity: 'high',
+      location: '§4.1',
+      owner: 'Legal',
+      quote: 'The Disclosing Party may modify the scope of this Agreement upon fourteen (14) days written notice…',
+      recommendation: 'Require mutual written consent for modifications. Unilateral change-of-terms clauses create contract-formation risk.',
+    },
+    {
+      title: 'No residuals clause',
+      severity: 'high',
+      location: '§3.4',
+      owner: 'Legal',
+      recommendation: 'Add a standard residuals carve-out — information retained in unaided memory should be excluded from confidentiality obligations, per market standard.',
+    },
+    {
+      title: 'Automatic renewal',
+      severity: 'medium',
+      location: '§9.1',
+      owner: 'Deal team',
+      recommendation: 'Change to affirmative renewal (opt-in) or extend the notice window from 90 to 60 days.',
+    },
+    {
+      title: 'Indemnification asymmetry',
+      severity: 'medium',
+      location: '§10.3',
+      owner: 'Legal',
+      recommendation: 'Make indemnification mutual and cap at 12 months of fees.',
+    },
+    {
+      title: 'Assignment restriction',
+      severity: 'low',
+      location: '§12.2',
+      recommendation: 'Standard carve-out for assignment in connection with a merger or sale of substantially all assets.',
+    },
+  ],
+  sourceName: 'Meridian_NDA_v2.pdf',
+  generatedLabel: 'Generated just now · Ryan',
+};
+
+/* ─── Clause Analysis ─── */
+export const MOCK_CLAUSE_ANALYSIS_CARD: ClauseAnalysisCardData = {
+  matterName: 'Apex MSA — Clause Walkthrough',
+  documentName: 'Apex_MSA_FINAL.pdf',
+  documentMeta: '18 clauses · 2.8 MB',
+  pages: 18,
+  size: '2.8 MB',
+  uploadedLabel: 'Uploaded 2 min ago',
+  clauses: [
+    {
+      title: 'Limitation of liability',
+      location: '§11',
+      risk: 'high',
+      quote: "In no event shall either party's total aggregate liability exceed the fees paid in the preceding six (6) months.",
+      interpretation: 'Caps liability at 6 months of fees — below the 12-month industry standard. If the contract value is material, this cap may leave you under-protected on data-breach scenarios.',
+      recommendation: 'Counter to 12 months. Carve out breaches of confidentiality and indemnification obligations from the cap.',
+    },
+    {
+      title: 'Indemnification',
+      location: '§10',
+      risk: 'medium',
+      interpretation: 'One-way indemnification — only Apex indemnifies the other party, with no reciprocal obligation.',
+      recommendation: 'Request mutual indemnification for IP infringement and breach of confidentiality.',
+    },
+    {
+      title: 'Termination for convenience',
+      location: '§13.2',
+      risk: 'medium',
+      quote: 'Either party may terminate this Agreement at any time with thirty (30) days written notice.',
+      interpretation: 'Both parties can walk with 30 days notice. That\'s short for a multi-year engagement with significant onboarding.',
+      recommendation: 'Extend to 90 days, with shorter notice reserved for material breach.',
+    },
+    {
+      title: 'Payment terms',
+      location: '§5.1',
+      risk: 'low',
+      interpretation: 'Net 30 on delivery. Standard commercial terms.',
+    },
+    {
+      title: 'Governing law',
+      location: '§15.1',
+      risk: 'low',
+      interpretation: 'New York law, with exclusive jurisdiction in SDNY. Standard for an NY-headquartered counterparty.',
+    },
+  ],
+  sourceName: 'Apex_MSA_FINAL.pdf',
+  generatedLabel: 'Generated just now',
+};
+
+/* ─── Timeline ─── */
+export const MOCK_TIMELINE_CARD: TimelineCardData = {
+  matterName: 'Apex v. Meridian — Discovery Timeline',
+  documentName: 'Discovery_Schedule_2026.pdf',
+  documentMeta: '6 pages · 340 KB',
+  pages: 6,
+  size: '340 KB',
+  uploadedLabel: 'Uploaded today',
+  events: [
+    { date: 'Jan 14, 2026', kind: 'milestone', label: 'Complaint filed',       description: 'Apex Systems Corp filed complaint in SDNY alleging breach of confidentiality.', source: 'p.1' },
+    { date: 'Feb 2, 2026',  kind: 'filing',    label: 'Answer due',            description: 'Meridian\'s answer and counterclaim deadline.', source: 'Rule 12(a)' },
+    { date: 'Feb 18, 2026', kind: 'event',     label: 'Rule 26(f) conference', description: 'Parties met and agreed on ESI protocol.', source: 'ECF #14' },
+    { date: 'Mar 3, 2026',  kind: 'deadline',  label: 'Initial disclosures',   description: 'Exchanged per Rule 26(a)(1).', source: 'ECF #18' },
+    { date: 'Apr 15, 2026', kind: 'deadline',  label: 'Fact discovery closes', description: 'All depositions and document requests must be completed.', source: 'Scheduling Order §2' },
+    { date: 'Jun 30, 2026', kind: 'deadline',  label: 'Expert reports due',    description: 'Plaintiff\'s expert reports; defendant\'s 30 days later.', source: 'Scheduling Order §3' },
+    { date: 'Sep 8, 2026',  kind: 'milestone', label: 'Dispositive motions',   description: 'Summary judgment motions due.', source: 'Scheduling Order §5' },
+  ],
+  sourceName: 'Discovery_Schedule_2026.pdf',
+  generatedLabel: 'Generated just now',
 };
