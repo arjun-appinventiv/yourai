@@ -2781,8 +2781,6 @@ export default function ChatView({ initialView = 'chat' }) {
   const [sessionDocContext, setSessionDocContext] = useState(null); // { name, content } — persisted doc for follow-up questions
   // ─── Intent system state ───
   const [activeIntent, setActiveIntent] = useState(DEFAULT_INTENT);
-  const [pendingIntent, setPendingIntent] = useState(null); // For Option C mid-convo switch
-  const [showSwitchBanner, setShowSwitchBanner] = useState(false); // Option C banner
   const [isIntentDropdownOpen, setIsIntentDropdownOpen] = useState(false);
   const [suggestedIntent, setSuggestedIntent] = useState(null); // Smart suggestion from keyword detection
   const [suggestedIntents, setSuggestedIntents] = useState([]); // Multiple matches for user to pick
@@ -2865,8 +2863,6 @@ export default function ChatView({ initialView = 'chat' }) {
     setInput('');
     setSessionDocContext(null);
     setActiveIntent(DEFAULT_INTENT);
-    setPendingIntent(null);
-    setShowSwitchBanner(false);
     setSuggestedIntent(null);
     setSuggestedIntents([]);
     setDismissedSuggestion(null);
@@ -3899,47 +3895,13 @@ INSTRUCTIONS:
               </div>
             )}
 
-            {/* ─── Option C: Mid-conversation intent switch banner ─── */}
-            {showSwitchBanner && pendingIntent && (
-              <div style={{
-                padding: '12px 16px', marginBottom: 8, borderRadius: 12,
-                backgroundColor: 'var(--ice-warm)', border: '0.5px solid var(--border)',
-                fontSize: 13, color: 'var(--text-secondary)',
-              }}>
-                <div style={{ marginBottom: 10 }}>
-                  You switched to <strong style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{getIntentLabel(pendingIntent)}</strong>.
-                </div>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <button
-                    onClick={() => {
-                      setActiveIntent(pendingIntent);
-                      setPendingIntent(null);
-                      setShowSwitchBanner(false);
-                      // Start fresh — clear messages & session
-                      setMessages([]);
-                      setShowEmptyState(true);
-                      setSessionDocContext(null);
-                      setPendingAttachments([]);
-                      setActiveKnowledgePack(null);
-                      setActiveVaultDocument(null);
-                    }}
-                    style={{ fontSize: 12, padding: '6px 14px', border: '0.5px solid var(--border)', borderRadius: 999, background: 'white', color: 'var(--text-primary)', cursor: 'pointer', whiteSpace: 'nowrap', fontWeight: 500 }}
-                  >Start fresh conversation</button>
-                  <button
-                    onClick={() => {
-                      setActiveIntent(pendingIntent);
-                      setPendingIntent(null);
-                      setShowSwitchBanner(false);
-                    }}
-                    style={{ fontSize: 12, padding: '6px 14px', border: 'none', background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer', whiteSpace: 'nowrap' }}
-                  >Continue with this intent</button>
-                </div>
-              </div>
-            )}
+            {/* Mid-conversation switch banner removed — a single thread
+                can mix intents freely; switching is seamless and only
+                affects the next message. */}
 
             {/* ─── Smart intent suggestion banner (Banner A) ─── */}
             {/* Single intent suggestion */}
-            {suggestedIntent && !suggestedIntents.length && !showDocVersionBanner && !showSwitchBanner && (
+            {suggestedIntent && !suggestedIntents.length && !showDocVersionBanner && (
               <div style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
                 padding: '10px 14px', marginBottom: 6, borderRadius: 12,
@@ -3961,7 +3923,7 @@ INSTRUCTIONS:
             )}
 
             {/* Multi-intent suggestion — user picks from tied matches */}
-            {suggestedIntents.length >= 2 && !showDocVersionBanner && !showSwitchBanner && (
+            {suggestedIntents.length >= 2 && !showDocVersionBanner && (
               <div style={{
                 padding: '10px 14px', marginBottom: 6, borderRadius: 12,
                 backgroundColor: 'var(--ice-warm)', border: '0.5px solid var(--border)',
@@ -3994,7 +3956,7 @@ INSTRUCTIONS:
                 WorkspaceChatView where it belongs. */}
 
             {/* ─── Input bar ─── */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, border: '1.5px solid var(--border)', borderRadius: 24, background: '#fff', minHeight: 48, padding: '8px 8px 8px 12px', opacity: showSwitchBanner ? 0.5 : 1, pointerEvents: showSwitchBanner ? 'none' : 'auto' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, border: '1.5px solid var(--border)', borderRadius: 24, background: '#fff', minHeight: 48, padding: '8px 8px 8px 12px', opacity: 1 }}>
               {/* STATE 2: Collapsed intent pill (conversation active) */}
               {!showEmptyState && (
                 <div style={{ position: 'relative' }} ref={intentDropdownRef}>
@@ -4028,17 +3990,14 @@ INSTRUCTIONS:
                             <div
                               key={intent.id}
                               onClick={() => {
-                                if (intent.id === activeIntent) {
-                                  setIsIntentDropdownOpen(false);
-                                } else if (!showEmptyState) {
-                                  // Option C — mid-conversation switch
-                                  setPendingIntent(intent.id);
-                                  setShowSwitchBanner(true);
-                                  setIsIntentDropdownOpen(false);
-                                } else {
-                                  setActiveIntent(intent.id);
-                                  setIsIntentDropdownOpen(false);
-                                }
+                                // Seamless mid-thread intent switch — no
+                                // "start fresh conversation" interruption.
+                                // A thread can mix intents freely (summary
+                                // → research → draft → comparison, all in
+                                // one matter). The new intent only affects
+                                // the NEXT message.
+                                setActiveIntent(intent.id);
+                                setIsIntentDropdownOpen(false);
                               }}
                               style={{
                                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -4108,7 +4067,7 @@ INSTRUCTIONS:
                   }
                 }, 600);
               }} onKeyDown={handleKeyDown} placeholder={inputPlaceholder} rows={1} style={{ flex: 1, border: 'none', outline: 'none', fontSize: 14, color: 'var(--text-primary)', background: 'transparent', resize: 'none', maxHeight: 120, overflowY: 'auto', lineHeight: '1.5', fontFamily: 'inherit' }} onInput={(e) => { e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px'; }} />
-              {(() => { const canSend = (input.trim() || pendingAttachments.length > 0) && !isTyping && !showSwitchBanner; return (
+              {(() => { const canSend = (input.trim() || pendingAttachments.length > 0) && !isTyping; return (
               <div onClick={() => canSend && sendMessage(input)} style={{ width: 32, height: 32, borderRadius: '50%', background: canSend ? 'var(--navy)' : '#9CA3AF', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: canSend ? 'pointer' : 'not-allowed', flexShrink: 0, opacity: canSend ? 1 : 0.6, transition: 'background 150ms, opacity 150ms' }}><ArrowUp size={16} color="#fff" /></div>
               ); })()}
             </div>
