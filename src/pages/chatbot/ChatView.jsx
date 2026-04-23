@@ -2589,6 +2589,17 @@ function EmptyState({ profile, plan, onPromptClick, navigate, onViewPlans, workf
             </button>
           </div>
         )}
+
+        {/* ── One-attachment-per-chat context note ── */}
+        {/* Full explanation of the single-attachment rule, compact
+            enough to keep the empty state above the fold. */}
+        <div style={{ marginTop: 18, padding: '10px 14px', borderRadius: 10, background: 'rgba(201, 168, 76, 0.08)', border: '1px solid rgba(201, 168, 76, 0.26)', textAlign: 'left', display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+          <Info size={14} style={{ color: '#C9A84C', flexShrink: 0, marginTop: 2 }} />
+          <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.55 }}>
+            <strong style={{ color: 'var(--navy)', fontWeight: 600 }}>One attachment per chat.</strong>{' '}
+            Attach a document or knowledge pack at any point in the conversation — but only once. Once attached, you can&rsquo;t add or swap another in the same chat. To work with a different document, start a new chat.
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -4117,7 +4128,7 @@ INSTRUCTIONS:
               ); })()}
             </div>
             <div style={{ textAlign: 'center', fontSize: 11, color: 'var(--text-muted)', marginTop: 6, lineHeight: 1.45 }}>
-              One attachment per chat · YourAI may produce inaccurate information. Always verify critical outputs. <strong>Private &amp; encrypted.</strong>
+              YourAI may produce inaccurate information. Always verify critical outputs. <strong>Private &amp; encrypted.</strong>
             </div>
           </div>
         </div>
