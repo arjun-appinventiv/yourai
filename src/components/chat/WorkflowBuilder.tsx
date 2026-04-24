@@ -234,7 +234,7 @@ export default function WorkflowBuilder({ template, knowledgePacks = [], onBack,
         background: '#FAF6EE', minWidth: 0, minHeight: 0, overflow: 'hidden',
       }}
     >
-      {/* Breadcrumb bar */}
+      {/* ─── Top bar: just the breadcrumb + Cancel, no wizard chrome ─── */}
       <div style={{
         padding: '12px 36px',
         borderBottom: '1px solid rgba(10,36,99,0.06)',
@@ -242,72 +242,65 @@ export default function WorkflowBuilder({ template, knowledgePacks = [], onBack,
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         flexShrink: 0,
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14, minWidth: 0, flex: 1 }}>
-          <button
-            onClick={onBack}
-            style={{
-              display: 'inline-flex', alignItems: 'center', gap: 6,
-              padding: '6px 10px', marginLeft: -10, borderRadius: 8,
-              background: 'transparent', border: 'none', cursor: 'pointer',
-              color: 'var(--text-muted)', fontSize: 13, flexShrink: 0,
-            }}
-            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--navy)'; (e.currentTarget as HTMLButtonElement).style.background = '#F3ECDD'; }}
-            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)'; (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; }}
-          >
-            <ArrowLeft size={14} /> Workflows
-          </button>
-          <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 15, fontWeight: 600, color: 'var(--navy)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {isEditing ? `Edit: ${template!.name || 'Workflow'}` : 'New Workflow'}
-          </span>
-          {/* Segmented control — replaces the wizard-dot row */}
-          <div style={{ display: 'inline-flex', padding: 3, background: 'var(--ice-warm)', borderRadius: 8, border: '1px solid var(--border)', flexShrink: 0 }}>
-            {[
-              { step: 1, label: 'Details' },
-              { step: 2, label: 'Pipeline' },
-            ].map((t) => {
-              const active = wizardStep === t.step;
-              const disabled = t.step === 2 && !(canEdit && name.trim() && practiceArea);
-              return (
-                <button
-                  key={t.step}
-                  onClick={() => { if (!disabled) setWizardStep(t.step as 1 | 2); }}
-                  disabled={disabled}
-                  style={{
-                    padding: '5px 14px', borderRadius: 6, border: 'none',
-                    background: active ? '#fff' : 'transparent',
-                    color: active ? 'var(--text-primary)' : 'var(--text-muted)',
-                    fontSize: 12, fontWeight: 500,
-                    cursor: disabled ? 'not-allowed' : 'pointer',
-                    opacity: disabled ? 0.5 : 1,
-                    boxShadow: active ? '0 1px 3px rgba(10,36,99,0.08)' : 'none',
-                    transition: 'all 150ms',
-                  }}
-                >
-                  {t.label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-          <button onClick={onBack} style={{ padding: '8px 10px', borderRadius: 8, border: 'none', background: 'transparent', fontSize: 13, color: 'var(--text-muted)', cursor: 'pointer' }}>Cancel</button>
-          {wizardStep === 1 ? (
-            <button
-              onClick={goStep2}
-              disabled={!canEdit}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 18px', borderRadius: 8, border: 'none', background: canEdit ? 'var(--navy)' : '#9CA3AF', color: '#fff', fontSize: 13, fontWeight: 500, cursor: canEdit ? 'pointer' : 'not-allowed' }}
-            >
-              Continue <ArrowRight size={13} />
-            </button>
-          ) : (
-            <button
-              onClick={handleSave}
-              disabled={!canEdit}
-              style={{ padding: '8px 20px', borderRadius: 8, border: 'none', background: canEdit ? 'var(--navy)' : '#9CA3AF', color: '#fff', fontSize: 13, fontWeight: 500, cursor: canEdit ? 'pointer' : 'not-allowed' }}
-            >
-              Save workflow
-            </button>
-          )}
+        <button
+          onClick={onBack}
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+            padding: '6px 10px', marginLeft: -10, borderRadius: 8,
+            background: 'transparent', border: 'none', cursor: 'pointer',
+            color: 'var(--text-muted)', fontSize: 13,
+          }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--navy)'; (e.currentTarget as HTMLButtonElement).style.background = '#F3ECDD'; }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)'; (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; }}
+        >
+          <ArrowLeft size={14} /> Workflows
+        </button>
+        <button
+          onClick={onBack}
+          style={{
+            padding: '7px 16px', borderRadius: 8,
+            border: '1px solid var(--border)', background: '#fff',
+            fontSize: 13, color: 'var(--text-primary)', fontWeight: 500, cursor: 'pointer',
+          }}
+        >
+          Cancel
+        </button>
+      </div>
+
+      {/* ─── Centered hero: title + subtitle + step pills ─── */}
+      <div style={{
+        padding: '32px 36px 28px',
+        background: 'linear-gradient(180deg, #F1EADA 0%, #E8E4EF 100%)',
+        textAlign: 'center', flexShrink: 0,
+      }}>
+        <h1 style={{
+          fontFamily: "'DM Serif Display', serif", fontSize: 34, color: 'var(--navy)',
+          margin: 0, lineHeight: 1.15, fontWeight: 400,
+        }}>
+          {isEditing ? 'Edit Workflow' : 'New Workflow'}
+        </h1>
+        <p style={{
+          fontSize: 14, color: 'var(--text-secondary)', margin: '6px 0 22px',
+          lineHeight: 1.55,
+        }}>
+          {wizardStep === 1
+            ? 'First, tell us about this workflow.'
+            : 'Now, add the steps this workflow should run.'}
+        </p>
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
+          <WizardStepPill
+            num={1}
+            label="Details"
+            state={wizardStep === 1 ? 'active' : 'done'}
+            onClick={() => setWizardStep(1)}
+          />
+          <span style={{ width: 36, height: 1, background: 'rgba(10,36,99,0.15)' }} />
+          <WizardStepPill
+            num={2}
+            label="Pipeline"
+            state={wizardStep === 2 ? 'active' : (canEdit && name.trim() && practiceArea) ? 'idle' : 'disabled'}
+            onClick={() => { if (canEdit && name.trim() && practiceArea) setWizardStep(2); }}
+          />
         </div>
       </div>
 
@@ -318,13 +311,21 @@ export default function WorkflowBuilder({ template, knowledgePacks = [], onBack,
         </div>
       )}
 
-      {/* Body */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '28px 36px 40px' }}>
-        <div style={{ maxWidth: 720, margin: '0 auto' }}>
+      {/* Body — content in a white rounded panel, centered */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '24px 36px 48px', background: 'linear-gradient(180deg, #E8E4EF 0%, #EDEAF5 100%)' }}>
+        <div style={{
+          maxWidth: 720, margin: '0 auto',
+          background: '#FFFFFF', borderRadius: 14,
+          boxShadow: '0 1px 3px rgba(10,36,99,0.05)',
+          padding: '28px 32px 24px',
+        }}>
           {/* Section 1 — Details */}
           {wizardStep === 1 && (
           <Section label="Workflow Details">
-            <Field label={`Workflow name (${name.length}/${MAX_NAME})`} error={errors.name}>
+            <Field
+              label={<>Workflow name <span style={{ color: '#C9A84C' }}>*</span> <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>({name.length}/{MAX_NAME})</span></>}
+              error={errors.name}
+            >
               <input
                 value={name}
                 onChange={(e) => setName(e.target.value.slice(0, MAX_NAME))}
@@ -334,49 +335,56 @@ export default function WorkflowBuilder({ template, knowledgePacks = [], onBack,
               />
             </Field>
 
-            <div className="flex gap-3" style={{ marginTop: 14 }}>
-              <div style={{ flex: 1 }}>
-                <Field label="Practice area" error={errors.practiceArea}>
-                  <select value={practiceArea} onChange={(e) => setPracticeArea(e.target.value)} style={{ ...inputStyle(!!errors.practiceArea), paddingRight: 30 }}>
-                    {PRACTICE_AREAS.map((a) => <option key={a} value={a}>{a}</option>)}
-                  </select>
-                </Field>
-              </div>
-              {(isOrgAdmin || ctx.isSuperAdmin) && (
-                <div style={{ width: 180 }}>
-                  <Field label="Status">
-                    <div style={{ display: 'flex', gap: 4, padding: 3, background: 'var(--ice-warm)', borderRadius: 8, border: '1px solid var(--border)' }}>
-                      {(['active', 'draft'] as const).map((s) => (
-                        <button
-                          key={s}
-                          onClick={() => setStatus(s)}
-                          style={{
-                            flex: 1, padding: '6px 8px', borderRadius: 6,
-                            border: 'none', fontSize: 12, fontWeight: 500,
-                            background: status === s ? '#fff' : 'transparent',
-                            color: status === s ? 'var(--text-primary)' : 'var(--text-muted)',
-                            cursor: status === s ? 'default' : 'pointer',
-                            boxShadow: status === s ? '0 1px 3px rgba(10,36,99,0.08)' : 'none',
-                            textTransform: 'capitalize',
-                          }}
-                        >
-                          {s}
-                        </button>
-                      ))}
-                    </div>
-                  </Field>
-                </div>
-              )}
-            </div>
+            <Field label="Practice area" error={errors.practiceArea}>
+              <select value={practiceArea} onChange={(e) => setPracticeArea(e.target.value)} style={{ ...inputStyle(!!errors.practiceArea), paddingRight: 30 }}>
+                {PRACTICE_AREAS.map((a) => <option key={a} value={a}>{a}</option>)}
+              </select>
+            </Field>
 
-            <Field label={`Description (${description.length}/${MAX_DESCRIPTION})`}>
-              <textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value.slice(0, MAX_DESCRIPTION))}
-                rows={3}
-                placeholder="What does this workflow produce? Who is it for?"
-                style={{ ...inputStyle(false), height: 'auto', padding: '10px 12px', resize: 'vertical', lineHeight: 1.5 }}
-              />
+            {(isOrgAdmin || ctx.isSuperAdmin) && (
+              <Field label="Status">
+                <>
+                  <div style={{ display: 'inline-flex', gap: 4, padding: 3, background: 'var(--ice-warm)', borderRadius: 8, border: '1px solid var(--border)' }}>
+                    {(['active', 'draft'] as const).map((s) => (
+                      <button
+                        key={s}
+                        onClick={() => setStatus(s)}
+                        style={{
+                          padding: '7px 22px', borderRadius: 6,
+                          border: 'none', fontSize: 13, fontWeight: 500,
+                          background: status === s ? '#fff' : 'transparent',
+                          color: status === s ? 'var(--text-primary)' : 'var(--text-muted)',
+                          cursor: status === s ? 'default' : 'pointer',
+                          boxShadow: status === s ? '0 1px 3px rgba(10,36,99,0.08)' : 'none',
+                          textTransform: 'capitalize',
+                        }}
+                      >
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+                  <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 6, marginBottom: 0, lineHeight: 1.55 }}>
+                    <strong>Active:</strong> visible and runnable by your organisation. <strong>Draft:</strong> only visible to you until published.
+                  </p>
+                </>
+              </Field>
+            )}
+
+            <Field
+              label={<>Description <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>({description.length}/{MAX_DESCRIPTION}) (optional)</span></>}
+            >
+              <>
+                <textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value.slice(0, MAX_DESCRIPTION))}
+                  rows={3}
+                  placeholder="e.g. A risk memo highlighting non-standard clauses and recommended redlines."
+                  style={{ ...inputStyle(false), height: 'auto', padding: '10px 12px', resize: 'vertical', lineHeight: 1.5 }}
+                />
+                <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 6, marginBottom: 0, lineHeight: 1.55 }}>
+                  Describe the output and intended audience. This appears on the workflow card for your team.
+                </p>
+              </>
             </Field>
 
             <Field label="Visibility">
@@ -432,71 +440,129 @@ export default function WorkflowBuilder({ template, knowledgePacks = [], onBack,
               ))}
             </div>
 
-            <div className="flex items-center justify-between" style={{ marginTop: 14 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', marginTop: 16, gap: 12 }}>
               <button
                 onClick={addStep}
                 disabled={steps.length >= MAX_STEPS}
                 style={{
+                  justifySelf: 'start',
                   display: 'inline-flex', alignItems: 'center', gap: 6,
                   padding: '8px 14px', borderRadius: 8,
-                  border: '1px dashed var(--border)', background: '#fff',
-                  color: steps.length >= MAX_STEPS ? 'var(--text-muted)' : 'var(--navy)',
-                  fontSize: 12, fontWeight: 500,
+                  border: '1px solid var(--border)', background: '#fff',
+                  color: steps.length >= MAX_STEPS ? 'var(--text-muted)' : 'var(--text-primary)',
+                  fontSize: 13, fontWeight: 500,
                   cursor: steps.length >= MAX_STEPS ? 'not-allowed' : 'pointer',
                 }}
               >
                 <Plus size={13} />
-                {steps.length >= MAX_STEPS ? `${steps.length} / ${MAX_STEPS} steps (maximum reached)` : 'Add Step'}
+                Add Step
               </button>
-              <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}>
+              <span style={{ fontSize: 12, color: 'var(--text-muted)', textAlign: 'center', whiteSpace: 'nowrap' }}>
+                {steps.length} / {MAX_STEPS} steps
+              </span>
+              <span style={{ justifySelf: 'end', fontSize: 12, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
                 Estimated total: ~{estimatedTotalSeconds}s
               </span>
             </div>
           </Section>
           )}
 
-          {/* Inline Back-to-details link on Section 2 only (primary CTAs live
-              in the top bar — avoid duplicate nav). */}
-          {wizardStep === 2 && (
-            <div style={{ marginTop: 24, paddingTop: 18, borderTop: '1px solid rgba(10,36,99,0.06)' }}>
-              <button
-                onClick={() => setWizardStep(1)}
-                style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 10px', marginLeft: -10, borderRadius: 8, border: 'none', background: 'transparent', fontSize: 13, color: 'var(--text-muted)', cursor: 'pointer' }}
-                onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--navy)'; (e.currentTarget as HTMLButtonElement).style.background = '#F3ECDD'; }}
-                onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)'; (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; }}
-              >
-                <ArrowLeft size={13} /> Back to details
-              </button>
-            </div>
-          )}
+          {/* ─── Panel footer: primary CTA lives here, not in top bar ─── */}
+          <div style={{
+            marginTop: 24, paddingTop: 18,
+            borderTop: '1px solid rgba(10,36,99,0.06)',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
+          }}>
+            {wizardStep === 1 ? (
+              <>
+                <span />
+                <button
+                  onClick={goStep2}
+                  disabled={!canEdit}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 6,
+                    padding: '10px 20px', borderRadius: 10, border: 'none',
+                    background: canEdit ? 'var(--navy)' : '#9CA3AF',
+                    color: '#fff', fontSize: 13, fontWeight: 500,
+                    cursor: canEdit ? 'pointer' : 'not-allowed',
+                  }}
+                >
+                  Continue to Pipeline <ArrowRight size={13} />
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={() => setWizardStep(1)}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 6,
+                    padding: '10px 16px', borderRadius: 10,
+                    border: '1px solid var(--border)', background: '#fff',
+                    fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', cursor: 'pointer',
+                  }}
+                >
+                  <ArrowLeft size={13} /> Back to details
+                </button>
+                <button
+                  onClick={handleSave}
+                  disabled={!canEdit}
+                  style={{
+                    padding: '10px 22px', borderRadius: 10, border: 'none',
+                    background: canEdit ? 'var(--navy)' : '#9CA3AF',
+                    color: '#fff', fontSize: 13, fontWeight: 500,
+                    cursor: canEdit ? 'pointer' : 'not-allowed',
+                  }}
+                >
+                  Save workflow
+                </button>
+              </>
+            )}
+          </div>
         </div>
       </div>
     </div>
   );
 }
 
-/* ─── Wizard step indicator dot ─── */
-function WizardDot({ num, label, active, done, onClick }: { num: number; label: string; active: boolean; done: boolean; onClick: () => void }) {
+/* ─── Wizard step indicator pill (navy-filled active, gold-ring done, outlined idle) ─── */
+function WizardStepPill({ num, label, state, onClick }: {
+  num: number;
+  label: string;
+  state: 'active' | 'done' | 'idle' | 'disabled';
+  onClick: () => void;
+}) {
+  const isActive = state === 'active';
+  const isDone = state === 'done';
+  const isDisabled = state === 'disabled';
   return (
     <button
       onClick={onClick}
+      disabled={isDisabled}
       style={{
-        display: 'inline-flex', alignItems: 'center', gap: 8,
-        padding: '6px 10px 6px 6px', borderRadius: 999,
-        background: active ? 'var(--navy)' : done ? '#DCFCE7' : 'transparent',
-        border: active ? 'none' : `1px solid ${done ? '#86EFAC' : 'var(--border)'}`,
-        color: active ? '#fff' : done ? '#166534' : '#6B7280',
-        fontSize: 12, fontWeight: 500, cursor: 'pointer', transition: 'all 150ms',
+        display: 'inline-flex', alignItems: 'center', gap: 10,
+        padding: '8px 18px 8px 8px', borderRadius: 999,
+        background: isActive ? 'var(--navy)' : '#FFFFFF',
+        border: isActive
+          ? 'none'
+          : isDone
+          ? '1.5px solid #C9A84C'
+          : '1px solid rgba(10,36,99,0.18)',
+        color: isActive ? '#FFFFFF' : 'var(--text-primary)',
+        fontSize: 14, fontWeight: 500, letterSpacing: '0.01em',
+        cursor: isDisabled ? 'not-allowed' : 'pointer',
+        opacity: isDisabled ? 0.55 : 1,
+        transition: 'all 150ms',
       }}
     >
       <span style={{
-        width: 22, height: 22, borderRadius: '50%',
-        background: active ? 'rgba(255,255,255,0.2)' : done ? '#16A34A' : '#F3F4F6',
-        color: active ? '#fff' : done ? '#fff' : '#6B7280',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: 11, fontWeight: 600,
+        width: 26, height: 26, borderRadius: '50%',
+        background: isActive ? 'rgba(255,255,255,0.2)' : isDone ? 'var(--navy)' : '#F3F4F6',
+        color: isActive ? '#FFFFFF' : isDone ? '#FFFFFF' : 'var(--text-muted)',
+        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: 12, fontWeight: 600,
+        fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
       }}>
-        {done ? '✓' : num}
+        {isDone ? <Check size={12} /> : num}
       </span>
       {label}
     </button>
@@ -536,30 +602,32 @@ function StepCard(props: StepCardProps) {
 
   return (
     <div
-      draggable
+      draggable={canRemove}
       onDragStart={onDragStart}
       onDragOver={onDragOver}
       onDrop={onDrop}
       onDragEnd={onDragEnd}
       style={{
         border: '1px solid var(--border)', borderRadius: 12,
-        background: '#fff', padding: '12px 14px',
-        display: 'flex', gap: 8, alignItems: 'flex-start',
+        background: '#fff', padding: '14px 16px',
+        display: 'flex', gap: 10, alignItems: 'flex-start',
         opacity: dragging ? 0.5 : 1, transition: 'opacity 150ms',
       }}
     >
-      {/* Drag handle */}
-      <div
-        title="Drag to reorder"
-        style={{ cursor: 'grab', padding: '4px 0', color: '#D1D5DB', flexShrink: 0 }}
-      >
-        <GripVertical size={16} />
-      </div>
+      {/* Drag handle — only shown when there are multiple steps */}
+      {canRemove && (
+        <div
+          title="Drag to reorder"
+          style={{ cursor: 'grab', padding: '6px 0', color: '#D1D5DB', flexShrink: 0 }}
+        >
+          <GripVertical size={16} />
+        </div>
+      )}
 
-      {/* Step number badge — soft neutral */}
+      {/* Step number badge — navy filled */}
       <div style={{
-        width: 26, height: 26, borderRadius: '50%',
-        background: '#F3F4F6', color: '#6B7280',
+        width: 30, height: 30, borderRadius: '50%',
+        background: 'var(--navy)', color: '#FFFFFF',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
         fontSize: 11, fontWeight: 600, flexShrink: 0, marginTop: 2,
@@ -568,38 +636,42 @@ function StepCard(props: StepCardProps) {
       </div>
 
       {/* Content */}
-      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {/* Operation + estimated time (description moved to dropdown tooltip) */}
-        <div className="flex items-center gap-2 flex-wrap">
+      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 14 }}>
+        {/* Operation pill + estimated time + operation description (inline) */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
           <OperationDropdown value={step.operation} onChange={handleOperationChange} />
-          <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}>
-            ~{step.estimatedSeconds}s
+          <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+            ~{step.estimatedSeconds}s · {cfg.description}
           </span>
         </div>
 
-        {/* Step name — proper bordered input */}
-        <input
-          value={step.name}
-          onChange={(e) => onChange({ name: e.target.value.slice(0, MAX_STEP_NAME) })}
-          placeholder="Give this step a short name"
-          style={{
-            border: '1px solid var(--border)', outline: 'none', borderRadius: 8,
-            fontSize: 13, fontWeight: 500, color: 'var(--text-primary)',
-            padding: '8px 10px', background: '#fff',
-            fontFamily: "'DM Sans', sans-serif",
-          }}
-        />
+        {/* Step name */}
+        <div>
+          <label style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', display: 'block', marginBottom: 5 }}>
+            Step name <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>(optional)</span>
+          </label>
+          <input
+            value={step.name}
+            onChange={(e) => onChange({ name: e.target.value.slice(0, MAX_STEP_NAME) })}
+            placeholder="e.g. Read NDA and all amendments"
+            style={{
+              width: '100%', boxSizing: 'border-box',
+              border: '1px solid var(--border)', outline: 'none', borderRadius: 8,
+              fontSize: 13, color: 'var(--text-primary)',
+              padding: '10px 12px', background: '#fff',
+              fontFamily: "'DM Sans', sans-serif",
+            }}
+          />
+          <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 6, marginBottom: 0 }}>
+            Appears in the report to identify this step.
+          </p>
+        </div>
 
         {/* Instruction */}
         <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
-            <label style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-              {cfg.instructionLabel}
-            </label>
-            <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-              {step.instruction.length}/{MAX_INSTRUCTION}
-            </span>
-          </div>
+          <label style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', display: 'block', marginBottom: 5 }}>
+            Document type instructions <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>(optional)</span>
+          </label>
           <textarea
             value={step.instruction}
             onChange={(e) => onChange({ instruction: e.target.value.slice(0, MAX_INSTRUCTION) })}
@@ -609,30 +681,44 @@ function StepCard(props: StepCardProps) {
               width: '100%', border: '1px solid var(--border)', borderRadius: 8,
               padding: '10px 12px', fontSize: 13, outline: 'none', resize: 'vertical',
               lineHeight: 1.55, fontFamily: "'DM Sans', sans-serif",
-              boxSizing: 'border-box', minHeight: 88,
+              boxSizing: 'border-box', minHeight: 92,
             }}
           />
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginTop: 6 }}>
+            <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+              Describe the documents this step should process.
+            </span>
+            <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+              {step.instruction.length}/{MAX_INSTRUCTION}
+            </span>
+          </div>
         </div>
 
-        {/* Advanced options — reference doc */}
-        <div style={{ borderTop: '1px dashed var(--border)', paddingTop: 10, marginTop: 4 }}>
+        {/* Advanced options — pill toggle */}
+        <div>
           <button
             onClick={onToggleAdvanced}
             style={{
-              display: 'inline-flex', alignItems: 'center', gap: 4,
-              padding: '4px 0', borderRadius: 6,
-              background: 'none', border: 'none', cursor: 'pointer',
-              color: 'var(--text-muted)', fontSize: 11, fontWeight: 500,
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              padding: '6px 14px', borderRadius: 999,
+              background: '#FFFFFF',
+              border: `1px solid ${advancedOpen ? 'var(--navy)' : 'var(--border)'}`,
+              color: advancedOpen ? 'var(--navy)' : 'var(--text-secondary)',
+              fontSize: 12, fontWeight: 500, cursor: 'pointer',
+              transition: 'all 120ms',
             }}
           >
             <ChevronDown size={12} style={{ transform: advancedOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 150ms' }} />
-            Advanced options{step.referenceDoc ? ` (1 reference doc)` : ''}
+            Advanced options{step.referenceDoc ? ` · 1 reference doc` : ''}
           </button>
 
           {advancedOpen && (
-            <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px dashed var(--border)' }}>
-              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 2 }}>Reference document (optional)</div>
-              <p style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.55, margin: '0 0 10px 0' }}>
+            <div style={{
+              marginTop: 14, padding: '16px',
+              background: '#F7F5F0', borderRadius: 10, border: '1px solid rgba(10,36,99,0.06)',
+            }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 2 }}>Reference document (optional)</div>
+              <p style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.55, margin: '0 0 12px 0' }}>
                 Upload a playbook, checklist, or standard template. The AI will use it as context for this step.
               </p>
 
@@ -651,7 +737,7 @@ function StepCard(props: StepCardProps) {
               )}
 
               {/* Tabs */}
-              <div style={{ display: 'flex', gap: 4, marginBottom: 10, padding: 3, background: '#fff', borderRadius: 8, border: '1px solid var(--border)' }}>
+              <div style={{ display: 'flex', gap: 4, marginBottom: 12, padding: 4, background: '#fff', borderRadius: 10, border: '1px solid var(--border)' }}>
                 <TabButton label="Upload file"     active={refTab === 'upload'} onClick={() => onSetRefTab('upload')} />
                 <TabButton label="Document Vault"  active={refTab === 'vault'}  onClick={() => onSetRefTab('vault')} />
                 <TabButton label="Knowledge Pack"  active={refTab === 'kp'}     onClick={() => onSetRefTab('kp')} />
@@ -757,10 +843,10 @@ function TabButton({ label, active, onClick }: { label: string; active: boolean;
     <button
       onClick={onClick}
       style={{
-        flex: 1, padding: '6px 8px', borderRadius: 6, border: 'none',
-        fontSize: 11, fontWeight: 500, cursor: active ? 'default' : 'pointer',
+        flex: 1, padding: '8px 10px', borderRadius: 7, border: 'none',
+        fontSize: 12, fontWeight: 500, cursor: active ? 'default' : 'pointer',
         background: active ? 'var(--navy)' : 'transparent',
-        color: active ? '#fff' : 'var(--text-muted)',
+        color: active ? '#fff' : 'var(--text-secondary)',
         transition: 'all 120ms',
       }}
     >
@@ -920,12 +1006,16 @@ function KnowledgePackTab({ packs, onSelect }: { packs: WorkflowBuilderProps['kn
 
 function Section({ label, help, error, children }: { label: string; help?: string; error?: string; children: React.ReactNode }) {
   return (
-    <section style={{ marginBottom: 32 }}>
-      <div style={{ marginBottom: 20 }}>
-        <h3 style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 16, fontWeight: 600, color: 'var(--navy)', margin: 0 }}>
+    <section style={{ marginBottom: 24 }}>
+      <div style={{ marginBottom: 16 }}>
+        <h3 style={{
+          fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+          fontSize: 11, fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase',
+          color: 'var(--text-secondary)', margin: 0,
+        }}>
           {label}
         </h3>
-        {help && <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 6, lineHeight: 1.55 }}>{help}</p>}
+        {help && <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 6, lineHeight: 1.55 }}>{help}</p>}
         {error && <p style={{ fontSize: 11, color: '#C65454', marginTop: 4 }}>{error}</p>}
       </div>
       {children}
@@ -933,10 +1023,10 @@ function Section({ label, help, error, children }: { label: string; help?: strin
   );
 }
 
-function Field({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
+function Field({ label, error, children }: { label: React.ReactNode; error?: string; children: React.ReactNode }) {
   return (
-    <div style={{ marginBottom: 12 }}>
-      <label style={{ fontSize: 11, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 5 }}>{label}</label>
+    <div style={{ marginBottom: 16 }}>
+      <label style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', display: 'block', marginBottom: 6 }}>{label}</label>
       {children}
       {error && <div style={{ fontSize: 11, color: '#C65454', marginTop: 3 }}>{error}</div>}
     </div>

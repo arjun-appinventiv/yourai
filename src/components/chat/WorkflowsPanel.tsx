@@ -185,10 +185,6 @@ export default function WorkflowsPanel({ onClose, onCreateNew, onRun, onEdit, on
     return Math.round(total / templates.length);
   }, [templates]);
 
-  // Featured = platform workflows; everything else is "your library"
-  const featuredTemplates = useMemo(() => filtered.filter((t) => t.visibility === 'platform'), [filtered]);
-  const libraryTemplates  = useMemo(() => filtered.filter((t) => t.visibility !== 'platform'), [filtered]);
-
   return (
     <div style={{
       flex: 1, display: 'flex', flexDirection: 'column',
@@ -214,7 +210,7 @@ export default function WorkflowsPanel({ onClose, onCreateNew, onRun, onEdit, on
           onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--navy)'; (e.currentTarget as HTMLButtonElement).style.background = '#F3ECDD'; }}
           onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)'; (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; }}
         >
-          <ArrowLeft size={14} /> Back to chat
+          <ArrowLeft size={14} /> Dashboard
         </button>
         {canCreateWorkflow(ctx) && (
           <button
@@ -226,23 +222,44 @@ export default function WorkflowsPanel({ onClose, onCreateNew, onRun, onEdit, on
         )}
       </div>
 
-      {/* ─── Hero — compact title + inline stats ─── */}
+      {/* ─── Hero — eyebrow + title + description + running-in pill + stats ─── */}
       <div style={{
-        padding: '16px 36px 14px',
+        padding: '20px 36px 18px',
         borderBottom: '1px solid rgba(10,36,99,0.06)',
         background: '#FDFBF5',
         flexShrink: 0,
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 24, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 24, flexWrap: 'wrap' }}>
           <div style={{ flex: '1 1 340px', minWidth: 0 }}>
-            <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 22, color: 'var(--navy)', margin: 0, lineHeight: 1.15 }}>
+            {/* Eyebrow pill — signals the module identity */}
+            <span style={{
+              display: 'inline-flex', alignItems: 'center', gap: 5,
+              fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+              fontSize: 10, fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase',
+              color: '#8A6D1F', background: '#F3E4BC', border: '1px solid #E8D59A',
+              padding: '3px 10px', borderRadius: 999, marginBottom: 10,
+            }}>
+              <Sparkles size={10} style={{ color: '#8A6D1F' }} />
+              AI Pipelines
+            </span>
+            <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 26, color: 'var(--navy)', margin: 0, lineHeight: 1.15 }}>
               Workflows
             </h1>
-            <p style={{ fontSize: 13, color: '#374151', marginTop: 4, lineHeight: 1.5, maxWidth: 560 }}>
+            <p style={{ fontSize: 13, color: '#374151', marginTop: 6, lineHeight: 1.55, maxWidth: 620 }}>
               Chain multiple AI steps into a reusable pipeline — read documents, analyse clauses, check compliance, and produce a structured report, all with one click.
             </p>
+            {/* Running-in context pill — display only, no action */}
+            <div style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              marginTop: 12, padding: '6px 12px',
+              border: '1px solid var(--navy)', borderRadius: 999,
+              fontSize: 12, fontWeight: 500, color: 'var(--navy)',
+              background: 'transparent',
+            }}>
+              Running in: Global / Main Site
+            </div>
           </div>
-          <div style={{ display: 'flex', gap: 20, flexShrink: 0, alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: 24, flexShrink: 0, alignItems: 'flex-start', marginTop: 4 }}>
             <StatTile icon={Zap}        value={templates.length} label="Templates" />
             <StatTile icon={TrendingUp} value={runsThisWeek}      label="Runs / week" />
             <StatTile icon={Clock}      value={`~${avgRunSeconds}s`} label="Avg duration" />
@@ -285,28 +302,31 @@ export default function WorkflowsPanel({ onClose, onCreateNew, onRun, onEdit, on
           </div>
         )}
 
-        {/* Filter pills + search */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 18 }}>
+        {/* Filter tabs (underline style) + search */}
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
+          marginBottom: 22, borderBottom: '1px solid rgba(10,36,99,0.08)',
+        }}>
           {showFilters && (
-            <div className="flex items-center gap-2" style={{ flexWrap: 'wrap' }}>
-              <FilterPill label="All"       count={counts.all}      active={filter === 'all'}      onClick={() => setFilter('all')} />
-              <FilterPill label="Platform"  count={counts.platform} active={filter === 'platform'} onClick={() => setFilter('platform')} />
-              <FilterPill label="Your Org"  count={counts.org}      active={filter === 'org'}      onClick={() => setFilter('org')} />
-              <FilterPill label="Yours"     count={counts.personal} active={filter === 'personal'} onClick={() => setFilter('personal')} />
+            <div style={{ display: 'flex', alignItems: 'stretch', gap: 4, flexWrap: 'wrap' }}>
+              <FilterTab label="All"       count={counts.all}      active={filter === 'all'}      onClick={() => setFilter('all')} />
+              <FilterTab label="Platform"  count={counts.platform} active={filter === 'platform'} onClick={() => setFilter('platform')} />
+              <FilterTab label="Your Org"  count={counts.org}      active={filter === 'org'}      onClick={() => setFilter('org')} />
+              <FilterTab label="Yours"     count={counts.personal} active={filter === 'personal'} onClick={() => setFilter('personal')} />
             </div>
           )}
-          <div style={{ position: 'relative', flex: 1, minWidth: 280, marginLeft: 'auto' }}>
-            <Search size={14} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+          <div style={{ position: 'relative', flex: 1, minWidth: 260, marginLeft: 'auto', paddingBottom: 10 }}>
+            <Search size={14} style={{ position: 'absolute', left: 12, top: 'calc(50% - 5px)', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search workflows..."
-              style={{ width: '100%', height: 38, borderRadius: 10, border: '1px solid var(--border)', paddingLeft: 36, fontSize: 13, outline: 'none', boxSizing: 'border-box', background: '#fff' }}
+              style={{ width: '100%', height: 36, borderRadius: 999, border: '1px solid var(--border)', paddingLeft: 36, fontSize: 13, outline: 'none', boxSizing: 'border-box', background: '#fff' }}
             />
           </div>
         </div>
 
-        {/* ─── Card grid — split into Featured (platform) and Your library ─── */}
+        {/* ─── Unified card grid — single grid, no section headers ─── */}
         {filtered.length === 0 ? (
           <EmptyState
             searchActive={!!search.trim()}
@@ -314,65 +334,30 @@ export default function WorkflowsPanel({ onClose, onCreateNew, onRun, onEdit, on
             onCreate={onCreateNew}
           />
         ) : (
-          <>
-            {featuredTemplates.length > 0 && (
-              <div style={{ maxWidth: 960 }}>
-                <h2 style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#6B7280', margin: '0 0 12px', lineHeight: 1.2 }}>
-                  Featured workflows
-                </h2>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 340px))', gap: 16 }}>
-                  {featuredTemplates.map((t) => (
-                    <WorkflowCard
-                      key={t.id}
-                      template={t}
-                      ctx={ctx}
-                      isRunning={activeTemplateId === t.id}
-                      menuOpen={menuOpenFor === t.id}
-                      onToggleMenu={() => setMenuOpenFor((x) => (x === t.id ? null : t.id))}
-                      onCloseMenu={() => setMenuOpenFor(null)}
-                      onRun={() => onRun(t)}
-                      onEdit={() => { onEdit(t); setMenuOpenFor(null); }}
-                      onDuplicate={() => { onDuplicate(t); setMenuOpenFor(null); }}
-                      onDelete={() => handleDelete(t)}
-                      isFav={(favTick, isFavouriteTemplate(currentUserId, t.id))}
-                      onToggleFav={() => { toggleFavouriteTemplate(currentUserId, t.id); setFavTick((n) => n + 1); }}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
-            {libraryTemplates.length > 0 && (
-              <div style={{ maxWidth: 960, marginTop: featuredTemplates.length > 0 ? 32 : 0 }}>
-                <h2 style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#6B7280', margin: '0 0 12px', lineHeight: 1.2 }}>
-                  Your library
-                </h2>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 340px))', gap: 16 }}>
-                  {libraryTemplates.map((t) => (
-                    <WorkflowCard
-                      key={t.id}
-                      template={t}
-                      ctx={ctx}
-                      isRunning={activeTemplateId === t.id}
-                      menuOpen={menuOpenFor === t.id}
-                      onToggleMenu={() => setMenuOpenFor((x) => (x === t.id ? null : t.id))}
-                      onCloseMenu={() => setMenuOpenFor(null)}
-                      onRun={() => onRun(t)}
-                      onEdit={() => { onEdit(t); setMenuOpenFor(null); }}
-                      onDuplicate={() => { onDuplicate(t); setMenuOpenFor(null); }}
-                      onDelete={() => handleDelete(t)}
-                      isFav={(favTick, isFavouriteTemplate(currentUserId, t.id))}
-                      onToggleFav={() => { toggleFavouriteTemplate(currentUserId, t.id); setFavTick((n) => n + 1); }}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
-          </>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: 20 }}>
+            {filtered.map((t) => (
+              <WorkflowCard
+                key={t.id}
+                template={t}
+                ctx={ctx}
+                isRunning={activeTemplateId === t.id}
+                menuOpen={menuOpenFor === t.id}
+                onToggleMenu={() => setMenuOpenFor((x) => (x === t.id ? null : t.id))}
+                onCloseMenu={() => setMenuOpenFor(null)}
+                onRun={() => onRun(t)}
+                onEdit={() => { onEdit(t); setMenuOpenFor(null); }}
+                onDuplicate={() => { onDuplicate(t); setMenuOpenFor(null); }}
+                onDelete={() => handleDelete(t)}
+                isFav={(favTick, isFavouriteTemplate(currentUserId, t.id))}
+                onToggleFav={() => { toggleFavouriteTemplate(currentUserId, t.id); setFavTick((n) => n + 1); }}
+              />
+            ))}
+          </div>
         )}
 
         {/* ─── Recent runs ─── */}
         {recentRuns.length > 0 && (
-          <div style={{ maxWidth: 960, marginTop: 48, paddingTop: 40, borderTop: '1px solid rgba(10,36,99,0.08)' }}>
+          <div style={{ marginTop: 48, paddingTop: 40, borderTop: '1px solid rgba(10,36,99,0.08)' }}>
             <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 14 }}>
               <div>
                 <div style={{ fontFamily: "'DM Serif Display', serif", fontSize: 20, color: 'var(--navy)', lineHeight: 1.2 }}>
@@ -424,13 +409,22 @@ export default function WorkflowsPanel({ onClose, onCreateNew, onRun, onEdit, on
   );
 }
 
-/* ─── Hero stat tile — flat inline ─── */
+/* ─── Hero stat tile — stacked uppercase label + big value ─── */
 function StatTile({ icon: Icon, value, label }: { icon: React.ComponentType<{ size?: number; style?: React.CSSProperties }>; value: number | string; label: string }) {
   return (
-    <div style={{ display: 'inline-flex', alignItems: 'baseline', gap: 6, padding: 0, background: 'transparent', border: 'none' }}>
-      <Icon size={12} style={{ color: '#8A6D1F', alignSelf: 'center' }} />
-      <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 16, fontWeight: 600, color: 'var(--navy)', lineHeight: 1 }}>{value}</span>
-      <span style={{ fontSize: 11, color: 'var(--text-muted)', letterSpacing: '0.02em' }}>{label}</span>
+    <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'flex-start', gap: 2, padding: 0, minWidth: 70 }}>
+      <span style={{
+        display: 'inline-flex', alignItems: 'center', gap: 5,
+        fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+        fontSize: 10, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase',
+        color: '#8A6D1F',
+      }}>
+        <Icon size={11} style={{ color: '#8A6D1F' }} />
+        {label}
+      </span>
+      <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 22, fontWeight: 500, color: 'var(--navy)', lineHeight: 1.1 }}>
+        {value}
+      </span>
     </div>
   );
 }
@@ -450,22 +444,31 @@ function themeFor(area: string) {
   return PRACTICE_THEME[area] || { accent: '#0A2463', bg: 'linear-gradient(135deg, #F3ECDD 0%, #FAF6EE 100%)', iconBg: '#F0E7D2' };
 }
 
-/* ─── Filter pill ─── */
-function FilterPill({ label, count, active, onClick }: { label: string; count: number; active: boolean; onClick: () => void }) {
+/* ─── Filter tab — underline-active style, count pill beside label ─── */
+function FilterTab({ label, count, active, onClick }: { label: string; count: number; active: boolean; onClick: () => void }) {
   return (
     <button
       onClick={onClick}
       style={{
-        display: 'inline-flex', alignItems: 'center', gap: 6,
-        padding: '6px 12px', borderRadius: 999, cursor: 'pointer',
-        border: '1px solid ' + (active ? 'var(--navy)' : 'var(--border)'),
-        background: active ? 'var(--navy)' : '#fff',
-        color: active ? '#fff' : 'var(--text-secondary)',
-        fontSize: 12, fontWeight: 500, transition: 'all 120ms',
+        display: 'inline-flex', alignItems: 'center', gap: 7,
+        padding: '10px 12px 12px', marginBottom: -1,
+        cursor: 'pointer', background: 'transparent', border: 'none',
+        borderBottom: `2px solid ${active ? 'var(--navy)' : 'transparent'}`,
+        color: active ? 'var(--navy)' : 'var(--text-muted)',
+        fontSize: 13, fontWeight: active ? 600 : 500,
+        transition: 'color 120ms, border-color 120ms',
       }}
+      onMouseEnter={(e) => { if (!active) (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-primary)'; }}
+      onMouseLeave={(e) => { if (!active) (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)'; }}
     >
       <span>{label}</span>
-      <span style={{ fontSize: 11, fontWeight: 600, padding: '0 6px', borderRadius: 999, background: active ? 'rgba(255,255,255,0.18)' : 'var(--ice-warm)', color: active ? '#fff' : 'var(--text-primary)', minWidth: 20, textAlign: 'center' }}>
+      <span style={{
+        fontSize: 11, fontWeight: 600,
+        padding: '1px 7px', borderRadius: 999,
+        background: active ? 'var(--ice-warm)' : '#F3F4F6',
+        color: active ? 'var(--navy)' : '#6B7280',
+        minWidth: 18, textAlign: 'center', lineHeight: 1.4,
+      }}>
         {count}
       </span>
     </button>
@@ -520,7 +523,7 @@ function WorkflowCard({ template, ctx, isRunning, isFav, menuOpen, onToggleMenu,
   const isDraftByMe = template.status === 'draft' && template.createdBy === ctx.userId;
   const theme = themeFor(template.practiceArea);
 
-  // Operation flow preview — render every step's icon with arrow separators.
+  // Operation flow preview — show first 5 step icons with arrow separators.
   // Gives a visual pipeline preview so users can tell at a glance what
   // the workflow does, not just read a description.
   const flowOps = template.steps.slice(0, 5);
@@ -543,21 +546,20 @@ function WorkflowCard({ template, ctx, isRunning, isFav, menuOpen, onToggleMenu,
       onMouseEnter={(e) => { e.currentTarget.style.boxShadow = '0 8px 24px rgba(10,36,99,0.08)'; }}
       onMouseLeave={(e) => { e.currentTarget.style.boxShadow = '0 1px 3px rgba(10,36,99,0.03)'; }}
     >
-      {/* ── Header (single surface — no accent stripe, no gradient) ── */}
-      <div style={{
-        padding: '16px 18px 14px',
-        background: '#FFFFFF',
-      }}>
+      {/* ── Practice-area top stripe ── */}
+      <div style={{ height: 3, background: theme.accent }} />
 
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-          <div style={{ width: 44, height: 44, borderRadius: 12, background: 'var(--ice-warm)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, border: '1px solid var(--border)' }}>
-            <HeroIcon size={20} style={{ color: 'var(--navy)' }} />
+      {/* ── Header ── */}
+      <div style={{ padding: '14px 18px 10px' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+          <div style={{ width: 32, height: 32, borderRadius: 8, background: 'var(--ice-warm)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, border: '1px solid var(--border)' }}>
+            <HeroIcon size={16} style={{ color: 'var(--navy)' }} />
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#9CA3AF' }}>
+            <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: theme.accent }}>
               {template.practiceArea}
             </div>
-            <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-primary)', lineHeight: 1.3, marginTop: 2 }}>
+            <div style={{ fontSize: 17, fontWeight: 600, color: 'var(--navy)', lineHeight: 1.3, marginTop: 2 }}>
               {template.name}
             </div>
           </div>
@@ -602,19 +604,65 @@ function WorkflowCard({ template, ctx, isRunning, isFav, menuOpen, onToggleMenu,
           </div>
         </div>
 
-        {/* Meta row — plain text, no pills stacking */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10, fontSize: 11, color: '#6B7280' }}>
+        {/* Pill tags row — visibility + steps/time + draft flag */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 10, flexWrap: 'wrap' }}>
           <span
             title={template.visibility === 'platform' ? 'Maintained by YourAI' : template.visibility === 'org' ? 'Shared with your organisation' : 'Only visible to you'}
-            style={{ fontSize: 10, padding: '1px 7px', borderRadius: 999, background: badge.bg, color: badge.color, border: `1px solid ${badge.border}`, fontWeight: 600, letterSpacing: '0.02em' }}
+            style={{
+              fontSize: 11, padding: '3px 9px', borderRadius: 999,
+              background: template.visibility === 'platform' ? 'var(--navy)' : badge.bg,
+              color: template.visibility === 'platform' ? '#FFFFFF' : badge.color,
+              border: template.visibility === 'platform' ? '1px solid var(--navy)' : `1px solid ${badge.border}`,
+              fontWeight: 500, letterSpacing: '0.01em',
+            }}
           >
             {badge.label}
           </span>
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+          <span style={{
+            display: 'inline-flex', alignItems: 'center', gap: 4,
+            fontSize: 11, padding: '3px 9px', borderRadius: 999,
+            background: '#F3F4F6', color: '#6B7280', border: '1px solid #E5E7EB',
+          }}>
             <Clock size={10} /> {template.steps.length} steps · ~{template.estimatedTotalSeconds}s
           </span>
           {isDraftByMe && (
-            <span style={{ fontSize: 10, padding: '1px 7px', borderRadius: 999, background: '#FEF3C7', color: '#92400E', fontWeight: 500, border: '1px solid #FDE68A' }}>Draft</span>
+            <span style={{ fontSize: 11, padding: '3px 9px', borderRadius: 999, background: '#FEF3C7', color: '#92400E', fontWeight: 500, border: '1px solid #FDE68A' }}>Draft</span>
+          )}
+        </div>
+      </div>
+
+      {/* ── PIPELINE section — operation flow preview ── */}
+      <div style={{ padding: '10px 18px 0', borderTop: '1px solid rgba(10,36,99,0.06)', marginTop: 4 }}>
+        <div style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', fontSize: 10, fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#9CA3AF', marginBottom: 10, marginTop: 8 }}>
+          Pipeline
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'nowrap', overflow: 'hidden' }}>
+          {flowOps.map((s, i) => {
+            const Icon = OP_ICON[s.operation] || Zap;
+            const cfg = OPERATION_CONFIG[s.operation];
+            return (
+              <React.Fragment key={s.id}>
+                <span
+                  title={`${i + 1}. ${cfg?.label || s.operation}`}
+                  style={{
+                    width: 28, height: 28, borderRadius: 7,
+                    background: 'var(--ice-warm)', border: '1px solid var(--border)',
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                    flexShrink: 0,
+                  }}
+                >
+                  <Icon size={13} style={{ color: 'var(--navy)' }} />
+                </span>
+                {i < flowOps.length - 1 && (
+                  <ArrowRight size={10} style={{ color: '#9CA3AF', flexShrink: 0 }} />
+                )}
+              </React.Fragment>
+            );
+          })}
+          {flowRemaining > 0 && (
+            <span style={{ fontSize: 11, color: '#6B7280', marginLeft: 4, flexShrink: 0 }}>
+              +{flowRemaining} more
+            </span>
           )}
         </div>
       </div>
@@ -631,7 +679,7 @@ function WorkflowCard({ template, ctx, isRunning, isFav, menuOpen, onToggleMenu,
         {template.description || <span style={{ fontStyle: 'italic', color: '#9CA3AF' }}>No description.</span>}
       </p>
 
-      {/* ── Footer (pinned to bottom so cards with short descriptions don't show dead space) ── */}
+      {/* ── Footer ── */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '14px 18px', marginTop: 'auto' }}>
         <span style={{ fontSize: 11, color: '#6B7280' }}>
           Updated {relativeFrom(template.updatedAt)}
