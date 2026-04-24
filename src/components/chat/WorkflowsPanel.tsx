@@ -185,10 +185,6 @@ export default function WorkflowsPanel({ onClose, onCreateNew, onRun, onEdit, on
     return Math.round(total / templates.length);
   }, [templates]);
 
-  // Featured = platform workflows; everything else is "your library"
-  const featuredTemplates = useMemo(() => filtered.filter((t) => t.visibility === 'platform'), [filtered]);
-  const libraryTemplates  = useMemo(() => filtered.filter((t) => t.visibility !== 'platform'), [filtered]);
-
   return (
     <div style={{
       flex: 1, display: 'flex', flexDirection: 'column',
@@ -330,7 +326,7 @@ export default function WorkflowsPanel({ onClose, onCreateNew, onRun, onEdit, on
           </div>
         </div>
 
-        {/* ─── Card grid — split into Featured (platform) and Your library ─── */}
+        {/* ─── Unified card grid — single grid, no section headers ─── */}
         {filtered.length === 0 ? (
           <EmptyState
             searchActive={!!search.trim()}
@@ -338,65 +334,30 @@ export default function WorkflowsPanel({ onClose, onCreateNew, onRun, onEdit, on
             onCreate={onCreateNew}
           />
         ) : (
-          <>
-            {featuredTemplates.length > 0 && (
-              <div style={{ maxWidth: 960 }}>
-                <h2 style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#6B7280', margin: '0 0 12px', lineHeight: 1.2 }}>
-                  Featured workflows
-                </h2>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 340px))', gap: 16 }}>
-                  {featuredTemplates.map((t) => (
-                    <WorkflowCard
-                      key={t.id}
-                      template={t}
-                      ctx={ctx}
-                      isRunning={activeTemplateId === t.id}
-                      menuOpen={menuOpenFor === t.id}
-                      onToggleMenu={() => setMenuOpenFor((x) => (x === t.id ? null : t.id))}
-                      onCloseMenu={() => setMenuOpenFor(null)}
-                      onRun={() => onRun(t)}
-                      onEdit={() => { onEdit(t); setMenuOpenFor(null); }}
-                      onDuplicate={() => { onDuplicate(t); setMenuOpenFor(null); }}
-                      onDelete={() => handleDelete(t)}
-                      isFav={(favTick, isFavouriteTemplate(currentUserId, t.id))}
-                      onToggleFav={() => { toggleFavouriteTemplate(currentUserId, t.id); setFavTick((n) => n + 1); }}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
-            {libraryTemplates.length > 0 && (
-              <div style={{ maxWidth: 960, marginTop: featuredTemplates.length > 0 ? 32 : 0 }}>
-                <h2 style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#6B7280', margin: '0 0 12px', lineHeight: 1.2 }}>
-                  Your library
-                </h2>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 340px))', gap: 16 }}>
-                  {libraryTemplates.map((t) => (
-                    <WorkflowCard
-                      key={t.id}
-                      template={t}
-                      ctx={ctx}
-                      isRunning={activeTemplateId === t.id}
-                      menuOpen={menuOpenFor === t.id}
-                      onToggleMenu={() => setMenuOpenFor((x) => (x === t.id ? null : t.id))}
-                      onCloseMenu={() => setMenuOpenFor(null)}
-                      onRun={() => onRun(t)}
-                      onEdit={() => { onEdit(t); setMenuOpenFor(null); }}
-                      onDuplicate={() => { onDuplicate(t); setMenuOpenFor(null); }}
-                      onDelete={() => handleDelete(t)}
-                      isFav={(favTick, isFavouriteTemplate(currentUserId, t.id))}
-                      onToggleFav={() => { toggleFavouriteTemplate(currentUserId, t.id); setFavTick((n) => n + 1); }}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
-          </>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: 20 }}>
+            {filtered.map((t) => (
+              <WorkflowCard
+                key={t.id}
+                template={t}
+                ctx={ctx}
+                isRunning={activeTemplateId === t.id}
+                menuOpen={menuOpenFor === t.id}
+                onToggleMenu={() => setMenuOpenFor((x) => (x === t.id ? null : t.id))}
+                onCloseMenu={() => setMenuOpenFor(null)}
+                onRun={() => onRun(t)}
+                onEdit={() => { onEdit(t); setMenuOpenFor(null); }}
+                onDuplicate={() => { onDuplicate(t); setMenuOpenFor(null); }}
+                onDelete={() => handleDelete(t)}
+                isFav={(favTick, isFavouriteTemplate(currentUserId, t.id))}
+                onToggleFav={() => { toggleFavouriteTemplate(currentUserId, t.id); setFavTick((n) => n + 1); }}
+              />
+            ))}
+          </div>
         )}
 
         {/* ─── Recent runs ─── */}
         {recentRuns.length > 0 && (
-          <div style={{ maxWidth: 960, marginTop: 48, paddingTop: 40, borderTop: '1px solid rgba(10,36,99,0.08)' }}>
+          <div style={{ marginTop: 48, paddingTop: 40, borderTop: '1px solid rgba(10,36,99,0.08)' }}>
             <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 14 }}>
               <div>
                 <div style={{ fontFamily: "'DM Serif Display', serif", fontSize: 20, color: 'var(--navy)', lineHeight: 1.2 }}>
