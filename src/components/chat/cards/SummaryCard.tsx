@@ -27,6 +27,35 @@ export default function SummaryCard({ data }: { data: SummaryCardData }) {
   const points = Array.isArray(data?.keyPoints) ? data.keyPoints.slice(0, 8) : [];
   const meta = data?.metadata || ({} as SummaryCardData['metadata']);
 
+  // When the card schema was enforced but no document was actually supplied,
+  // the LLM returns an envelope with empty strings. Rendering the full grid
+  // of dashes looks broken — collapse to a single empty-state message.
+  const hasExecSummary = !!data?.executiveSummary?.trim();
+  const hasAnyMeta = !!(meta.parties?.trim() || meta.keyDates?.trim() || meta.governingLaw?.trim() || meta.keyObligations?.trim());
+  const isEmpty = !hasExecSummary && !hasAnyMeta && points.length === 0 && !data?.documentName;
+
+  if (isEmpty) {
+    return (
+      <CardShell accentColor="gold">
+        <CardHeader
+          intentLabel="Document Summarisation"
+          title="No document supplied"
+          subtitle="Summarisation needs a source document"
+          sourcePill={{ label: 'Document', type: 'doc' }}
+        />
+        <div style={{ padding: '28px 28px 32px', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 12 }}>
+          <p style={{ fontSize: 15, color: '#374151', lineHeight: 1.7, margin: 0 }}>
+            It looks like you asked for a summary but didn't attach a document. Upload a contract, memo, or filing using the <strong>+</strong> button next to the input, then ask again and I'll produce the full summary card.
+          </p>
+          <p style={{ fontSize: 13, color: '#6B7280', margin: 0, lineHeight: 1.6 }}>
+            If you meant to ask a general question rather than analyse a document, switch the intent pill above the input to <em>General chat</em> or <em>Legal Q&amp;A</em>.
+          </p>
+        </div>
+        <CardFooter sourceType="none" sourceName="—" />
+      </CardShell>
+    );
+  }
+
   return (
     <CardShell accentColor="gold">
       <CardHeader
