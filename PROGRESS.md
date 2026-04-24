@@ -55,6 +55,23 @@
 - **Prior-step chaining** — step N sees a structured summary of every completed step 1..N−1 so the Generate Report step gets a real synthesis, not a re-analysis
 - **`classifyDocs()`** helper exported for a future pre-flight classification UI (not yet wired into PreRunModal)
 
+### Pre-Run pre-flight document classification (2026-04-24)
+- `classifyDocs()` now wired into `PreRunModal` — fires automatically once all uploads reach Ready
+- Per-row detected-type chip (uppercase small pill: "NDA", "CONTRACT", "LEASE", etc.) inline under each upload's filename
+- Summary banner beneath the upload list: "Identifying document types…" → "**Identified:** 2 contracts, 1 memo"
+- Advisory only — never blocks Run. Silently returns `[]` on failure so offline/demo mode is unaffected
+- Spec origin: Stage 1 of the `FRD_Incorrect_Document_Handling.docx` three-stage protocol
+
+### Workflow operation prompts — v2 tightening (2026-04-24, blind)
+Prompt overhaul in `src/lib/workflowPrompts.ts` BEFORE real test feedback. Principled-defaults pass:
+- Base rules gained: "don't restate the instruction", "don't hedge with filler", concrete citation format `[Doc: filename, §X]`, blockquote for top takeaway
+- Per-operation word targets (250 / 400–700 / 300–500 depending on op) — gives the LLM a natural stopping point
+- `analyse_clauses` → priority-ordered (HIGH first), cap at 15 clauses, require short quote when a phrase drives the risk
+- `compare_against_standard` → explicit pipe-syntax table shape, per-cell ≤25 word cap, 5-value Delta whitelist
+- `generate_report` → synthesis-not-re-analysis framing, findings vs. actions must be distinct (actions = what to DO)
+- `research_precedents` → "no live Westlaw/Lexis access — hedge over fabricate" rule, two-format structure (verified vs. principle-only)
+- `compliance_check` → 11-framework whitelist, pipe-syntax control table, "don't cite sections you're not confident about"
+
 ### Workflow Report card (Option D — 2026-04-24)
 - Document-style render: no outer border, no accent stripe, 760px centred column
 - Eyebrow: `WORKFLOW REPORT · <practice area> · <date>` mono uppercase muted
@@ -95,14 +112,7 @@
 
 *(Arjun is test-driving the new real-execution path; feedback incoming.)*
 
-- **Workflow execution live in prod** — as of today's deploy every step really calls OpenAI via `/api/chat`. Arjun is running the 4 sample workflows on real documents and will share test results. Wait for his feedback before iterating further on the operation prompts.
-
-- **Aashna's latest round of UX fixes — not yet applied**:
-  1. Workflows picker grid: switch `auto-fill` → `auto-fit` and cap each section at `maxWidth: 960` so 2 sparse cards don't leave a 40% blank right-hand band.
-  2. Audit log modal step rows: drop the colored operation pill (duplicate of `step.name`), neutralise step-number circles from navy fill to `#F3F4F6`/`#6B7280`.
-  Both have paste-ready prompts saved in the session transcript — apply after Arjun's test feedback lands.
-
-- **Pre-flight doc classification UI** — the `classifyDocs()` helper exists in `workflowExecutor.ts` but is not yet wired into `PreRunModal`. Spec: after all uploads reach Ready, call `classifyDocs()` and display a small detected-type label per upload row; optionally surface a summary banner ("Identified: 2 contracts, 1 memo"). Blocks nothing — advisory only.
+- **Workflow execution live in prod** — as of 2026-04-24 every step really calls OpenAI via `/api/chat`. Operation prompts received an initial principled tightening on 2026-04-24 (word targets, table syntax, citation hedging, findings/actions distinctness). A second, test-output-driven tightening is still pending Arjun's real-workflow feedback.
 
 ---
 
@@ -110,13 +120,11 @@
 
 Short list of probable next priorities based on today's direction — **user should confirm or reorder**:
 
-1. Apply aashna's round-3 fixes (picker grid + audit modal) once Arjun's test feedback lands.
-2. Wire `classifyDocs()` into `PreRunModal` to surface detected doc types per upload.
-3. Iterate the operation prompts based on real test output (first iteration will almost certainly need tightening — 6 operations × ~200-word prompts × real documents ≠ perfect output).
-4. Server-backed favourites (currently localStorage-only → don't sync across devices).
-5. External-user single-workspace auto-redirect (from prior session's punch list).
-6. Reconcile the 3 sources of truth for intents (`intents.ts` / `intentDetector.ts` / `GlobalKnowledgeBase.jsx DEFAULT_INTENTS`).
-7. Migrate the 4 older intent cards (Summary, Comparison, CaseBrief, Research) to `EditorialShell`.
+1. Second-pass prompt tightening once Arjun shares real test output (the first pass was principled/blind).
+2. Server-backed favourites (currently localStorage-only → don't sync across devices).
+3. External-user single-workspace auto-redirect (from prior session's punch list).
+4. Reconcile the 3 sources of truth for intents (`intents.ts` / `intentDetector.ts` / `GlobalKnowledgeBase.jsx DEFAULT_INTENTS`).
+5. Migrate the 4 older intent cards (Summary, Comparison, CaseBrief, Research) to `EditorialShell`.
 
 ---
 
@@ -177,4 +185,6 @@ Reverse chronological. Each entry: *decision — rationale — date*.
 
 ## Last updated
 
-**2026-04-24** — Session focused on: empty-state anchor + 880px container rewrite, sidebar refresh (Search Chats, ⌘N New Chat, Invite Team widened), full aashna-led UX pass across Workflows panel + Builder + Run Panel, real LLM execution via `/api/chat` (workflowPrompts + workflowExecutor), document-style report (Option D), and three FRDs on Desktop (Workflows, Workflow Operations, Incorrect Document Handling). Prod HEAD tracking `yourai/main` — verify with `curl -s https://yourai-black.vercel.app/chat | grep -oE 'index-[A-Za-z0-9_-]+\.js'`.
+**2026-04-24 (afternoon)** — Follow-up session: applied aashna's round-3 fixes (picker grid `maxWidth: 960` cap on all three sections + audit-log modal step-number neutralisation with soft gray pill + dropped duplicate operation label in subtitle), wired `classifyDocs()` into `PreRunModal` (auto-classification on upload ready, per-row uppercase type chip, summary banner), and v2-tightened all 6 workflow operation prompts with word targets + citation hedging + explicit table syntax + findings-vs-actions distinctness rule. Prod HEAD tracking `yourai/main` — verify with `curl -s https://yourai-black.vercel.app/chat | grep -oE 'index-[A-Za-z0-9_-]+\.js'`.
+
+**2026-04-24** — Session focused on: empty-state anchor + 880px container rewrite, sidebar refresh (Search Chats, ⌘N New Chat, Invite Team widened), full aashna-led UX pass across Workflows panel + Builder + Run Panel, real LLM execution via `/api/chat` (workflowPrompts + workflowExecutor), document-style report (Option D), and three FRDs on Desktop (Workflows, Workflow Operations, Incorrect Document Handling).

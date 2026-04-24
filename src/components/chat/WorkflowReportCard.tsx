@@ -1,18 +1,20 @@
-/* ─────────────── Workflow Report Card ───────────────
+/* ─────────────── Workflow Report Card — document-style (Option D) ─────
  *
- * Renders below the completed WorkflowProgressCard and stays in chat
- * history as the permanent deliverable. Contains the executive summary
- * (the Generate Report step output, if present), a collapsible section
- * per remaining step, a documents-processed row with partial-failure
- * warning when applicable, and a Download PDF action that opens a
- * printable window the user can save via the browser's Save-as-PDF.
+ * Renders a completed workflow run as a finished legal memo rather than
+ * a dashboard card. No accent stripes, no bordered chrome — just the
+ * deliverable. The per-step audit trail (which docs were processed,
+ * what each step found, failed docs) lives behind a "View audit log"
+ * link that opens a modal.
+ *
+ * Mental model: the user just ran a pipeline; this is what they'd hand
+ * to a partner. Everything that's "how we got here" is secondary.
  */
 
 import React, { useMemo, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import {
   Briefcase, Database, FileText, ChevronDown, AlertTriangle,
-  Check, X as XIcon, Download, RefreshCw,
+  X as XIcon, Download, RefreshCw, History, Check,
   FileText as FileTextIcon, Search as SearchIcon, GitCompare,
   FileOutput, BookOpen, ShieldCheck,
 } from 'lucide-react';
@@ -30,7 +32,11 @@ const OP_ICON: Record<WorkflowOperation, React.ComponentType<{ size?: number }>>
   compliance_check: ShieldCheck,
 };
 
-const MONO = "'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace";
+function formatDate(iso: string): string {
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return iso;
+  return d.toLocaleString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+}
 
 function relativeFrom(iso: string): string {
   const d = new Date(iso);
@@ -52,12 +58,6 @@ function relativeFrom(iso: string): string {
   return `${Math.floor(months / 12)} yr ago`;
 }
 
-function formatRunAt(iso: string): string {
-  const d = new Date(iso);
-  if (isNaN(d.getTime())) return iso;
-  return d.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
-}
-
 export interface WorkflowReportCardProps {
   report: WorkflowReport;
   userName?: string;
@@ -66,20 +66,159 @@ export interface WorkflowReportCardProps {
 }
 
 export default function WorkflowReportCard({ report, userName, onRetryStep }: WorkflowReportCardProps) {
+  const [auditOpen, setAuditOpen] = useState(false);
+
   // Split the final generate_report step out as the hero summary; the rest
-  // become collapsible findings.
-  const { heroStep, otherSteps } = useMemo(() => {
+  // become the audit log entries.
+  const { heroStep } = useMemo(() => {
     const idxFromEnd = [...report.steps].reverse().findIndex(
       (s) => s.operation === 'generate_report' && s.status === 'complete' && s.output,
     );
     if (idxFromEnd === -1) {
-      return { heroStep: null as WorkflowReportStep | null, otherSteps: report.steps };
+      return { heroStep: null as WorkflowReportStep | null };
     }
     const heroIdx = report.steps.length - 1 - idxFromEnd;
-    const others = report.steps.filter((_, i) => i !== heroIdx);
-    return { heroStep: report.steps[heroIdx], otherSteps: others };
+    return { heroStep: report.steps[heroIdx] };
   }, [report.steps]);
 
+  const summary = heroStep?.output
+    || [...report.steps].reverse().find((s) => s.status === 'complete' && s.output)?.output
+    || '';
+
+  const hasPartialFailure = (report.failedDocs && report.failedDocs.length > 0) || false;
+  const inWorkspace = report.knowledgeSource === 'workspace';
+  const docCount = report.docsProcessed.length;
+
+  const handleDownloadPDF = () => openPrintableWindow(report, userName);
+
+  return (
+    <>
+      <div
+        style={{
+          background: '#FFFFFF',
+          padding: '28px 32px 24px',
+          maxWidth: 760,
+          margin: '0 auto',
+          fontFamily: "'DM Sans', sans-serif",
+          color: 'var(--text-primary)',
+        }}
+      >
+        {/* Eyebrow */}
+        <div style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', fontSize: 10, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#9CA3AF', marginBottom: 10 }}>
+          Workflow report · {report.practiceArea} · {formatDate(report.runAt)}
+        </div>
+
+        {/* Title */}
+        <h2 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 30, color: '#0B1D3A', margin: '0 0 8px 0', lineHeight: 1.15, fontWeight: 400, letterSpacing: '-0.01em' }}>
+          {report.workflowName}
+        </h2>
+
+        {/* Meta caption — one line under the title */}
+        <div style={{ fontSize: 13, color: '#6B7280', lineHeight: 1.55, marginBottom: 4, display: 'inline-flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+          {inWorkspace
+            ? <><Briefcase size={12} style={{ color: '#6B7280' }} /> <span>{report.workspaceName || 'Workspace'} + Global KB</span></>
+            : <><Database size={12} style={{ color: '#6B7280' }} /> <span>Global KB</span></>
+          }
+          <span style={{ color: '#D1D5DB' }}>·</span>
+          <span>{docCount} document{docCount === 1 ? '' : 's'} analysed</span>
+          {hasPartialFailure && (
+            <>
+              <span style={{ color: '#D1D5DB' }}>·</span>
+              <span style={{ color: '#B45309' }}>{report.failedDocs!.length} could not be read</span>
+            </>
+          )}
+          <span style={{ color: '#D1D5DB' }}>·</span>
+          <span>{report.durationSeconds}s runtime</span>
+        </div>
+
+        {/* Partial failure gentle note */}
+        {hasPartialFailure && (
+          <div style={{ marginTop: 12, fontSize: 12, color: '#6B4E1F', lineHeight: 1.55, display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+            <AlertTriangle size={13} style={{ color: '#C9A84C', flexShrink: 0, marginTop: 2 }} />
+            <span>
+              <strong>{report.failedDocs!.length} document{report.failedDocs!.length !== 1 ? 's' : ''}</strong>{' '}
+              could not be parsed and {report.failedDocs!.length === 1 ? 'was' : 'were'} excluded from this analysis. The report continues with what could be processed.
+            </span>
+          </div>
+        )}
+
+        {/* Divider */}
+        <div style={{ height: 1, background: '#F3F0E8', margin: '22px 0 24px' }} />
+
+        {/* Summary — editorial prose */}
+        {summary ? (
+          <div style={{ fontSize: 15, color: '#1F2937', lineHeight: 1.8 }}>
+            <ReactMarkdown
+              components={{
+                h1: ({ children }) => <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 22, color: '#0B1D3A', fontWeight: 400, margin: '0 0 14px 0', lineHeight: 1.25 }}>{children}</h1>,
+                h2: ({ children }) => <h2 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 18, color: '#0B1D3A', fontWeight: 400, margin: '24px 0 10px 0', lineHeight: 1.3 }}>{children}</h2>,
+                h3: ({ children }) => <h3 style={{ fontSize: 14, color: '#0B1D3A', fontWeight: 600, margin: '18px 0 8px 0', letterSpacing: '0.01em' }}>{children}</h3>,
+                p:  ({ children }) => <p style={{ margin: '0 0 14px 0' }}>{children}</p>,
+                ul: ({ children }) => <ul style={{ paddingLeft: 22, margin: '8px 0 14px 0' }}>{children}</ul>,
+                ol: ({ children }) => <ol style={{ paddingLeft: 22, margin: '8px 0 14px 0' }}>{children}</ol>,
+                li: ({ children }) => <li style={{ marginBottom: 6, lineHeight: 1.75 }}>{children}</li>,
+                strong: ({ children }) => <strong style={{ color: '#0B1D3A', fontWeight: 600 }}>{children}</strong>,
+                em: ({ children }) => <em style={{ color: '#374151' }}>{children}</em>,
+                blockquote: ({ children }) => (
+                  <blockquote style={{ borderLeft: '3px solid #C9A84C', paddingLeft: 16, margin: '14px 0', fontStyle: 'italic', color: '#4B5563' }}>
+                    {children}
+                  </blockquote>
+                ),
+                code: ({ children }) => <code style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', fontSize: 13, background: '#F3F4F6', padding: '1px 6px', borderRadius: 4, color: '#1F2937' }}>{children}</code>,
+              }}
+            >
+              {summary}
+            </ReactMarkdown>
+          </div>
+        ) : (
+          <div style={{ fontSize: 13, color: 'var(--text-muted)', fontStyle: 'italic' }}>
+            No summary was produced by the final step. Open the audit log to see per-step findings.
+          </div>
+        )}
+
+        {/* Footer */}
+        <div style={{ marginTop: 28, paddingTop: 18, borderTop: '1px solid #F3F0E8', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+          <div style={{ fontSize: 11, color: '#9CA3AF', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', letterSpacing: '0.02em' }}>
+            Generated {relativeFrom(report.runAt)}{userName ? ` · ${userName}` : ''}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <button
+              onClick={() => setAuditOpen(true)}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 7, background: 'transparent', color: 'var(--text-muted)', border: 'none', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = 'var(--navy)'; (e.currentTarget as HTMLElement).style.background = '#F3ECDD'; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = 'var(--text-muted)'; (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+            >
+              <History size={13} /> View audit log
+            </button>
+            <button
+              onClick={handleDownloadPDF}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 8, background: '#fff', color: 'var(--navy)', border: '1px solid var(--navy)', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}
+            >
+              <Download size={12} /> Download PDF
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Audit log modal — shows docs processed + per-step findings */}
+      {auditOpen && (
+        <AuditLogModal
+          report={report}
+          onClose={() => setAuditOpen(false)}
+          onRetryStep={onRetryStep}
+        />
+      )}
+    </>
+  );
+}
+
+/* ─── Audit log modal ─────────────────────────────────────────────── */
+
+function AuditLogModal({ report, onClose, onRetryStep }: {
+  report: WorkflowReport;
+  onClose: () => void;
+  onRetryStep?: (stepIndex: number) => void;
+}) {
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
   const toggle = (i: number) => setExpanded((prev) => {
     const next = new Set(prev);
@@ -87,172 +226,90 @@ export default function WorkflowReportCard({ report, userName, onRetryStep }: Wo
     return next;
   });
 
-  const hasPartialFailure = (report.failedDocs && report.failedDocs.length > 0) || false;
-  const inWorkspace = report.knowledgeSource === 'workspace';
-
-  const handleDownloadPDF = () => openPrintableWindow(report, userName);
-
   return (
-    <div
-      style={{
-        border: '1px solid var(--border)', borderRadius: 12, background: '#fff',
-        overflow: 'hidden', boxShadow: '0 1px 4px rgba(0, 0, 0, 0.04)',
-      }}
-    >
-      {/* Gold accent stripe (matches intent response cards) */}
-      <div style={{ height: 3, background: 'linear-gradient(to right, #C9A84C, #E8C96A)' }} />
-
-      {/* Header */}
-      <div style={{ padding: '22px 28px 18px', borderBottom: '1px solid var(--border)' }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16 }}>
-          <div style={{ minWidth: 0, flex: 1 }}>
-            <div style={{ fontFamily: MONO, fontSize: 9, letterSpacing: '0.16em', textTransform: 'uppercase', color: '#C9A84C', marginBottom: 8 }}>
-              Workflow Report
+    <>
+      <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 80, backdropFilter: 'blur(4px)' }} />
+      <div
+        style={{
+          position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)',
+          width: 'min(680px, 92vw)', maxHeight: '86vh', background: '#fff',
+          borderRadius: 16, boxShadow: '0 20px 60px rgba(0,0,0,0.25)',
+          zIndex: 81, display: 'flex', flexDirection: 'column', overflow: 'hidden',
+        }}
+      >
+        {/* Header */}
+        <div style={{ padding: '18px 24px 14px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#9CA3AF', marginBottom: 4 }}>
+              Audit log
             </div>
-            <h3 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 18, color: '#0B1D3A', margin: 0, lineHeight: 1.3, fontWeight: 400 }}>
+            <div style={{ fontFamily: "'DM Serif Display', serif", fontSize: 20, color: '#0B1D3A', fontWeight: 400, lineHeight: 1.3 }}>
               {report.workflowName}
-            </h3>
-            <div className="flex items-center gap-2 flex-wrap" style={{ marginTop: 8 }}>
-              <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 999, background: 'var(--ice-warm)', color: 'var(--navy)', border: '1px solid var(--border)', fontWeight: 500 }}>
-                {report.practiceArea}
-              </span>
-              <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: MONO }}>
-                {report.steps.length} steps · {report.durationSeconds}s
-              </span>
             </div>
           </div>
-
-          {/* Knowledge source badge */}
-          <div style={{ flexShrink: 0 }}>
-            <span
-              style={{
-                display: 'inline-flex', alignItems: 'center', gap: 5,
-                fontFamily: MONO, fontSize: 9, letterSpacing: '0.04em',
-                padding: '4px 10px', borderRadius: 999,
-                border: `1px solid ${inWorkspace ? '#BFDBFE' : '#A7F3D0'}`,
-                background: inWorkspace ? '#EFF6FF' : '#ECFDF5',
-                color: inWorkspace ? '#1D4ED8' : '#065F46',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {inWorkspace ? <Briefcase size={10} /> : <Database size={10} />}
-              {inWorkspace && report.workspaceName ? `${report.workspaceName} + Global KB` : 'Global KB'}
-            </span>
-          </div>
+          <button onClick={onClose} style={{ padding: 6, borderRadius: 6, background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', flexShrink: 0 }}>
+            <XIcon size={18} />
+          </button>
         </div>
-      </div>
 
-      {/* Partial doc failure warning */}
-      {hasPartialFailure && (
-        <div style={{ padding: '12px 28px', background: '#FFFBEB', borderBottom: '1px solid #FDE68A', display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: 12, color: '#6B4E1F', lineHeight: 1.55 }}>
-          <AlertTriangle size={14} style={{ color: '#C9A84C', flexShrink: 0, marginTop: 1 }} />
+        {/* Scrollable body */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '18px 24px 20px' }}>
+          {/* Documents processed */}
+          <div style={{ marginBottom: 20 }}>
+            <div style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#9CA3AF', marginBottom: 8 }}>
+              Documents analysed
+            </div>
+            {report.docsProcessed.length === 0 && !(report.failedDocs && report.failedDocs.length > 0) ? (
+              <div style={{ fontSize: 12, color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                No documents were uploaded for this run.
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {report.docsProcessed.map((name, i) => (
+                  <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, padding: '3px 10px', borderRadius: 999, background: '#F3F4F6', color: '#374151', border: '1px solid #E5E7EB' }}>
+                    <FileText size={10} />
+                    {name}
+                  </span>
+                ))}
+                {(report.failedDocs || []).map((name, i) => (
+                  <span
+                    key={`f-${i}`}
+                    title="Could not read this file. It may be a scanned image without a text layer."
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, padding: '3px 10px', borderRadius: 999, background: '#FEF7F7', color: '#C65454', border: '1px solid #F9E7E7' }}
+                  >
+                    <XIcon size={10} />
+                    {name}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Per-step findings */}
           <div>
-            <strong>{report.failedDocs!.length} document{report.failedDocs!.length !== 1 ? 's' : ''} could not be read</strong> and {report.failedDocs!.length === 1 ? 'was' : 'were'} excluded from this analysis. The report continues with the documents that did process.
-          </div>
-        </div>
-      )}
-
-      {/* Documents processed */}
-      <div style={{ padding: '16px 28px', borderBottom: '1px solid var(--border)' }}>
-        <div style={{ fontFamily: MONO, fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#9CA3AF', marginBottom: 8 }}>
-          Documents analysed
-        </div>
-        {report.docsProcessed.length === 0 && !hasPartialFailure ? (
-          <div style={{ fontSize: 12, color: 'var(--text-muted)', fontStyle: 'italic' }}>
-            No documents were processed in this run.
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-            {report.docsProcessed.map((name, i) => (
-              <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, padding: '3px 10px', borderRadius: 999, background: '#EFF6FF', color: '#1D4ED8', border: '1px solid #BFDBFE' }}>
-                <FileText size={10} />
-                {name}
-              </span>
-            ))}
-            {(report.failedDocs || []).map((name, i) => (
-              <span
-                key={`f-${i}`}
-                title="Could not read this file. It may be a scanned image without a text layer."
-                style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, padding: '3px 10px', borderRadius: 999, background: '#FEF7F7', color: '#C65454', border: '1px solid #F9E7E7' }}
-              >
-                <XIcon size={10} />
-                {name}
-              </span>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Executive summary */}
-      {heroStep && heroStep.output ? (
-        <div style={{ padding: '22px 28px 20px', borderBottom: '1px solid var(--border)' }}>
-          <div style={{ fontFamily: MONO, fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#9CA3AF', marginBottom: 10 }}>
-            Executive Summary
-          </div>
-          <div style={{ fontSize: 14, color: '#374151', lineHeight: 1.8 }}>
-            <ReactMarkdown
-              components={{
-                h1: ({ children }) => <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 18, color: '#0B1D3A', fontWeight: 400, margin: '0 0 10px 0' }}>{children}</h1>,
-                h2: ({ children }) => <h2 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 16, color: '#0B1D3A', fontWeight: 400, margin: '16px 0 8px 0' }}>{children}</h2>,
-                h3: ({ children }) => <h3 style={{ fontSize: 14, color: '#0B1D3A', fontWeight: 600, margin: '12px 0 6px 0' }}>{children}</h3>,
-                p:  ({ children }) => <p style={{ margin: '0 0 10px 0' }}>{children}</p>,
-                ul: ({ children }) => <ul style={{ paddingLeft: 20, margin: '6px 0 10px 0' }}>{children}</ul>,
-                ol: ({ children }) => <ol style={{ paddingLeft: 20, margin: '6px 0 10px 0' }}>{children}</ol>,
-                li: ({ children }) => <li style={{ marginBottom: 4 }}>{children}</li>,
-                strong: ({ children }) => <strong style={{ color: '#0B1D3A', fontWeight: 600 }}>{children}</strong>,
-              }}
-            >
-              {heroStep.output}
-            </ReactMarkdown>
-          </div>
-        </div>
-      ) : null}
-
-      {/* Step findings */}
-      {otherSteps.length > 0 && (
-        <div>
-          <div style={{ padding: '16px 28px 8px' }}>
-            <div style={{ fontFamily: MONO, fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#9CA3AF' }}>
+            <div style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#9CA3AF', marginBottom: 8 }}>
               Step findings
             </div>
+            {report.steps.map((step, i) => (
+              <AuditStepRow
+                key={i}
+                step={step}
+                index={i}
+                expanded={expanded.has(i)}
+                onToggle={() => toggle(i)}
+                onRetry={onRetryStep ? () => { onRetryStep(i); onClose(); } : undefined}
+              />
+            ))}
           </div>
-          {otherSteps.map((step, i) => (
-            <FindingSection
-              key={i}
-              step={step}
-              index={report.steps.indexOf(step)}
-              expanded={expanded.has(i)}
-              onToggle={() => toggle(i)}
-              onRetry={onRetryStep ? () => onRetryStep(report.steps.indexOf(step)) : undefined}
-            />
-          ))}
         </div>
-      )}
-
-      {/* Footer */}
-      <div style={{ padding: '14px 28px', background: '#F9FAFB', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
-        <div style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: MONO }}>
-          Generated {relativeFrom(report.runAt)}{userName ? ` · ${userName}` : ''}
-        </div>
-        <button
-          onClick={handleDownloadPDF}
-          style={{
-            display: 'inline-flex', alignItems: 'center', gap: 6,
-            padding: '7px 14px', borderRadius: 8,
-            background: '#fff', color: 'var(--navy)',
-            border: '1px solid var(--navy)', fontSize: 12, fontWeight: 500, cursor: 'pointer',
-          }}
-        >
-          <Download size={12} /> Download PDF
-        </button>
       </div>
-    </div>
+    </>
   );
 }
 
-/* ─── Per-step collapsible section ─── */
+/* ─── Per-step collapsible row (inside the audit modal) ─── */
 
-function FindingSection({ step, index, expanded, onToggle, onRetry }: {
+function AuditStepRow({ step, index, expanded, onToggle, onRetry }: {
   step: WorkflowReportStep;
   index: number;
   expanded: boolean;
@@ -262,96 +319,66 @@ function FindingSection({ step, index, expanded, onToggle, onRetry }: {
   const cfg = OPERATION_CONFIG[step.operation];
   const Icon = OP_ICON[step.operation];
   const isFailed = step.status === 'failed';
-
-  const sourceStyle = (label: string) => {
-    if (label === 'workspace docs' || label === 'run uploads') {
-      return { bg: '#EFF6FF', color: '#1D4ED8', border: '#BFDBFE' };
-    }
-    if (label === 'reference doc') {
-      return { bg: '#FFFBEB', color: '#92400E', border: '#FDE68A' };
-    }
-    return { bg: '#ECFDF5', color: '#065F46', border: '#A7F3D0' };
-  };
-  const src = sourceStyle(step.sourceUsed);
+  // Only show operation label in subtitle when step.name has an explicit
+  // override — otherwise the title already shows it and the subtitle echoes.
+  const hasDistinctTitle = !!step.name && step.name !== cfg?.label;
 
   return (
-    <div style={{ borderTop: '1px solid #F3F4F6' }}>
-      <div
+    <div style={{ borderTop: index === 0 ? 'none' : '1px solid #F3F4F6', padding: '12px 0' }}>
+      <button
         onClick={onToggle}
-        style={{
-          display: 'flex', alignItems: 'center', gap: 12,
-          padding: '14px 28px',
-          cursor: 'pointer', userSelect: 'none',
-          background: 'transparent',
-          transition: 'background-color 100ms',
-        }}
-        onMouseEnter={(e) => { e.currentTarget.style.background = '#F9FAFB'; }}
-        onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+        style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: 0, background: 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left' }}
       >
-        <div style={{
-          width: 24, height: 24, borderRadius: '50%',
-          background: 'var(--navy)', color: '#C9A84C',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontFamily: MONO, fontSize: 10, fontWeight: 600, flexShrink: 0,
+        <span style={{
+          display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+          minWidth: 26, height: 26, padding: '0 7px', borderRadius: 6,
+          background: '#F3F4F6', color: '#6B7280',
+          fontSize: 11, fontWeight: 600,
+          fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+          flexShrink: 0,
         }}>
           {String(index + 1).padStart(2, '0')}
+        </span>
+        <Icon size={13} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 13, fontWeight: 500, color: isFailed ? '#C65454' : '#1F2937', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {step.name || cfg?.label || 'Step'}
+          </div>
+          <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 1 }}>
+            {hasDistinctTitle && <>{cfg?.label || step.operation.replace(/_/g, ' ')} · </>}
+            {step.sourceUsed} · {step.durationSeconds}s
+            {isFailed && <> · <span style={{ color: '#C65454' }}>failed</span></>}
+          </div>
         </div>
-
-        <span className={cfg.color} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 999, fontSize: 10, fontWeight: 500, border: '1px solid' }}>
-          <Icon size={10} /> {cfg.label}
-        </span>
-
-        <span style={{ fontSize: 13, fontWeight: 500, color: isFailed ? '#C65454' : 'var(--text-primary)', flex: 1, minWidth: 0 }}>
-          {step.name || 'Step'}
-        </span>
-
-        <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 999, background: src.bg, color: src.color, border: `1px solid ${src.border}`, fontFamily: MONO }}>
-          {step.sourceUsed}
-        </span>
-
-        <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: MONO, flexShrink: 0 }}>
-          {step.durationSeconds}s
-        </span>
-
-        <ChevronDown size={14} style={{ color: 'var(--text-muted)', transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 150ms', flexShrink: 0 }} />
-      </div>
+        <ChevronDown size={13} style={{ color: '#9CA3AF', transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 150ms', flexShrink: 0 }} />
+      </button>
 
       {expanded && (
-        <div style={{ padding: '0 28px 18px 64px' }}>
-          {isFailed ? (
-            <div style={{ padding: '10px 14px', borderRadius: 8, background: '#FEF7F7', border: '1px solid #F9E7E7', fontSize: 12, color: '#6B1E1E', lineHeight: 1.55 }}>
-              <div style={{ fontWeight: 600, marginBottom: 4 }}>This step did not complete.</div>
-              <div style={{ marginBottom: onRetry ? 10 : 0 }}>{step.output || 'No output was produced.'}</div>
-              {onRetry && (
-                <button
-                  onClick={onRetry}
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 6, border: 'none', background: 'var(--navy)', color: '#fff', fontSize: 11, fontWeight: 500, cursor: 'pointer' }}
-                >
-                  <RefreshCw size={11} /> Retry this step
-                </button>
-              )}
-            </div>
-          ) : step.output ? (
-            <div style={{ fontSize: 13, color: '#374151', lineHeight: 1.75 }}>
-              <ReactMarkdown
-                components={{
-                  h1: ({ children }) => <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 15, color: '#0B1D3A', fontWeight: 400, margin: '0 0 8px 0' }}>{children}</h1>,
-                  h2: ({ children }) => <h2 style={{ fontSize: 14, color: '#0B1D3A', fontWeight: 600, margin: '10px 0 6px 0' }}>{children}</h2>,
-                  h3: ({ children }) => <h3 style={{ fontSize: 13, color: '#0B1D3A', fontWeight: 600, margin: '8px 0 4px 0' }}>{children}</h3>,
-                  p:  ({ children }) => <p style={{ margin: '0 0 8px 0' }}>{children}</p>,
-                  ul: ({ children }) => <ul style={{ paddingLeft: 18, margin: '4px 0 8px 0' }}>{children}</ul>,
-                  ol: ({ children }) => <ol style={{ paddingLeft: 18, margin: '4px 0 8px 0' }}>{children}</ol>,
-                  li: ({ children }) => <li style={{ marginBottom: 3 }}>{children}</li>,
-                  strong: ({ children }) => <strong style={{ color: '#0B1D3A', fontWeight: 600 }}>{children}</strong>,
-                }}
-              >
-                {step.output}
-              </ReactMarkdown>
-            </div>
+        <div style={{ marginTop: 10, marginLeft: 28, padding: '12px 14px', borderRadius: 8, background: '#FBFAF7', border: '1px solid var(--border)', fontSize: 13, color: '#1F2937', lineHeight: 1.7 }}>
+          {step.output ? (
+            <ReactMarkdown
+              components={{
+                p: ({ children }) => <p style={{ margin: '0 0 8px 0' }}>{children}</p>,
+                strong: ({ children }) => <strong style={{ color: 'var(--navy)' }}>{children}</strong>,
+                h1: ({ children }) => <h3 style={{ fontSize: 14, fontWeight: 600, margin: '10px 0 6px 0' }}>{children}</h3>,
+                h2: ({ children }) => <h3 style={{ fontSize: 13, fontWeight: 600, margin: '10px 0 6px 0' }}>{children}</h3>,
+                h3: ({ children }) => <h4 style={{ fontSize: 12, fontWeight: 600, margin: '8px 0 4px 0' }}>{children}</h4>,
+                ul: ({ children }) => <ul style={{ paddingLeft: 18, margin: '4px 0 8px 0' }}>{children}</ul>,
+                li: ({ children }) => <li style={{ marginBottom: 3 }}>{children}</li>,
+              }}
+            >
+              {step.output}
+            </ReactMarkdown>
           ) : (
-            <div style={{ fontSize: 12, color: 'var(--text-muted)', fontStyle: 'italic' }}>
-              No findings identified in this step.
-            </div>
+            <div style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>No output for this step.</div>
+          )}
+          {isFailed && onRetry && (
+            <button
+              onClick={onRetry}
+              style={{ marginTop: 10, display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 6, border: 'none', background: 'var(--navy)', color: '#fff', fontSize: 11, fontWeight: 500, cursor: 'pointer' }}
+            >
+              <RefreshCw size={11} /> Retry step
+            </button>
           )}
         </div>
       )}
@@ -359,157 +386,120 @@ function FindingSection({ step, index, expanded, onToggle, onRetry }: {
   );
 }
 
-/* ─── Printable PDF output ──────────────────────────────────────────
- *
- * Uses the browser's native Save-as-PDF. We open a new window, write a
- * fully-styled HTML document matching the on-screen card, and call
- * window.print(). No runtime dependency, no page-break surprises
- * because we control the print styles.
- */
+/* ─── Printable (Save-as-PDF) window ─────────────────────────────── */
 
 function openPrintableWindow(report: WorkflowReport, userName?: string): void {
-  const win = window.open('', '_blank', 'width=920,height=1100');
-  if (!win) return;
+  const w = window.open('', '_blank', 'width=900,height=1200');
+  if (!w) return;
 
-  const sourceLabel = report.knowledgeSource === 'workspace' && report.workspaceName
-    ? `${report.workspaceName} + Global KB`
-    : 'Global KB';
+  const esc = (s: string) => (s || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
 
-  const heroIdx = [...report.steps].reverse().findIndex((s) => s.operation === 'generate_report' && s.status === 'complete' && s.output);
-  const heroStep = heroIdx === -1 ? null : report.steps[report.steps.length - 1 - heroIdx];
-  const otherSteps = heroStep ? report.steps.filter((s) => s !== heroStep) : report.steps;
+  const summary = [...report.steps].reverse().find(
+    (s) => s.operation === 'generate_report' && s.status === 'complete' && s.output
+  )?.output
+    || [...report.steps].reverse().find((s) => s.status === 'complete' && s.output)?.output
+    || '';
+
+  // Naive markdown → HTML (enough for print)
+  const md = (raw: string) => {
+    let out = esc(raw);
+    out = out.replace(/^### (.*$)/gm, '<h3>$1</h3>');
+    out = out.replace(/^## (.*$)/gm, '<h2>$1</h2>');
+    out = out.replace(/^# (.*$)/gm, '<h1>$1</h1>');
+    out = out.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    out = out.replace(/\*(.*?)\*/g, '<em>$1</em>');
+    // Simple bullet list handling
+    out = out.replace(/(^|\n)([-*] .+(\n[-*] .+)*)/g, (_m, pre, block) => {
+      const items = block.split(/\n/).map((l: string) => l.replace(/^[-*] /, '')).map((li: string) => `<li>${li}</li>`).join('');
+      return `${pre}<ul>${items}</ul>`;
+    });
+    out = out.replace(/\n\n/g, '</p><p>');
+    return `<p>${out}</p>`;
+  };
+
+  const docsRow = report.docsProcessed.length > 0
+    ? report.docsProcessed.map((d) => `<span class="doc">${esc(d)}</span>`).join(' ')
+    : '<span class="muted">No documents were uploaded for this run.</span>';
+
+  const failedRow = (report.failedDocs || []).length > 0
+    ? `<div class="warn">${report.failedDocs!.length} document${report.failedDocs!.length !== 1 ? 's' : ''} could not be parsed: ${report.failedDocs!.map(esc).join(', ')}.</div>`
+    : '';
+
+  const stepsMarkup = report.steps.map((s, i) => {
+    const opLabel = (s.operation || '').replace(/_/g, ' ');
+    return `
+      <section class="step">
+        <div class="step-head">
+          <span class="step-num">${String(i + 1).padStart(2, '0')}</span>
+          <strong>${esc(s.name || opLabel)}</strong>
+          <span class="muted">· ${esc(opLabel)} · ${esc(s.sourceUsed || '')} · ${s.durationSeconds || 0}s${s.status === 'failed' ? ' · failed' : ''}</span>
+        </div>
+        <div class="step-body">${s.output ? md(s.output) : '<p class="muted"><em>No output.</em></p>'}</div>
+      </section>
+    `;
+  }).join('');
 
   const html = `<!doctype html>
-<html lang="en">
+<html>
 <head>
-<meta charset="UTF-8" />
-<title>${escapeHtml(report.workflowName)} — Workflow Report</title>
+<meta charset="utf-8">
+<title>${esc(report.workflowName)} — Workflow Report</title>
 <style>
-  :root { --navy: #0B1D3A; --gold: #C9A84C; --muted: #6B7280; --border: #E4E7EC; }
+  :root { --ink: #0B1D3A; --muted: #6B7280; --border: #E5E7EB; --accent: #C9A84C; }
   * { box-sizing: border-box; }
-  body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; margin: 0; padding: 40px 48px; color: #1F2937; font-size: 12.5pt; line-height: 1.6; background: #fff; }
-  h1, h2, h3 { font-family: 'DM Serif Display', Georgia, serif; font-weight: 400; color: var(--navy); }
-  h1 { font-size: 26pt; margin: 0 0 4pt; }
-  h2 { font-size: 16pt; margin: 22pt 0 8pt; page-break-after: avoid; }
-  h3 { font-size: 13pt; margin: 14pt 0 4pt; page-break-after: avoid; }
-  .tag { font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 9pt; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold); }
-  .meta { font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 9pt; color: var(--muted); }
-  .pill { display: inline-block; padding: 2pt 8pt; border-radius: 999px; font-size: 9pt; margin-right: 4pt; border: 1px solid var(--border); background: #F9FAFB; color: var(--navy); }
-  .divider { border-top: 1px solid var(--border); margin: 18pt 0; }
-  .doc-pill { display: inline-block; padding: 2pt 8pt; border-radius: 999px; font-size: 9pt; margin: 0 4pt 4pt 0; border: 1px solid #BFDBFE; background: #EFF6FF; color: #1D4ED8; }
-  .doc-pill.failed { border-color: #F9E7E7; background: #FEF7F7; color: #C65454; text-decoration: line-through; }
-  .warning { background: #FFFBEB; border: 1px solid #FDE68A; border-radius: 6pt; padding: 10pt 14pt; font-size: 10.5pt; color: #6B4E1F; margin: 14pt 0; }
-  .step { border-top: 1px solid #F3F4F6; padding: 14pt 0 10pt; page-break-inside: avoid; }
-  .step-header { display: flex; align-items: center; gap: 10pt; margin-bottom: 6pt; }
-  .step-num { display: inline-block; width: 22pt; height: 22pt; line-height: 22pt; border-radius: 50%; background: var(--navy); color: var(--gold); font-family: 'IBM Plex Mono', monospace; font-size: 9pt; text-align: center; }
-  .step-name { font-weight: 600; color: var(--navy); font-size: 12pt; }
-  .step-source { font-family: 'IBM Plex Mono', monospace; font-size: 8.5pt; color: var(--muted); margin-left: auto; }
-  .step-body { padding-left: 32pt; font-size: 11pt; color: #374151; }
-  .step-body p  { margin: 0 0 8pt; }
-  .step-body ul { padding-left: 18pt; margin: 4pt 0 8pt; }
-  .step-body li { margin-bottom: 3pt; }
-  .step-body strong { color: var(--navy); }
-  .footer { margin-top: 28pt; padding-top: 14pt; border-top: 1px solid var(--border); font-size: 9pt; color: var(--muted); font-family: 'IBM Plex Mono', monospace; }
+  body { font-family: 'DM Sans', -apple-system, Segoe UI, Roboto, sans-serif; color: #1F2937; max-width: 760px; margin: 32px auto; padding: 0 28px; line-height: 1.7; }
+  .eyebrow { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
+  h1.title { font-family: 'DM Serif Display', 'Cormorant Garamond', Georgia, serif; font-size: 32px; color: var(--ink); margin: 0 0 8px; font-weight: 400; letter-spacing: -0.01em; line-height: 1.12; }
+  .caption { font-size: 13px; color: var(--muted); }
+  .caption span + span::before { content: " · "; color: #D1D5DB; }
+  .warn { margin-top: 12px; padding: 10px 12px; background: #FFFBEB; border: 1px solid #FDE68A; border-radius: 8px; font-size: 12px; color: #6B4E1F; }
+  .divider { height: 1px; background: #F3F0E8; margin: 24px 0; }
+  h1, h2, h3 { color: var(--ink); font-weight: 600; }
+  h2 { font-family: 'DM Serif Display', Georgia, serif; font-size: 20px; font-weight: 400; margin: 24px 0 10px; }
+  h3 { font-size: 15px; margin: 18px 0 8px; }
+  p { margin: 0 0 12px; font-size: 14px; }
+  ul { margin: 8px 0 12px; padding-left: 22px; }
+  li { margin-bottom: 4px; }
+  strong { color: var(--ink); }
+  section.audit-head { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin-top: 32px; margin-bottom: 8px; }
+  .docs-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 20px; }
+  .doc { display: inline-block; font-size: 11px; padding: 3px 10px; border-radius: 999px; background: #F3F4F6; border: 1px solid var(--border); color: #374151; }
+  section.step { padding: 12px 0; border-top: 1px solid #F3F4F6; }
+  section.step:first-of-type { border-top: none; }
+  .step-head { display: flex; align-items: center; gap: 8px; font-size: 13px; margin-bottom: 4px; }
+  .step-num { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; color: var(--muted); }
+  .step-body { font-size: 13px; color: #1F2937; padding-left: 26px; }
+  .muted { color: var(--muted); font-weight: 400; }
+  .footer { margin-top: 32px; padding-top: 14px; border-top: 1px solid #F3F0E8; font-size: 11px; color: var(--muted); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.02em; }
   @media print {
-    body { padding: 36pt 42pt; }
-    button { display: none; }
+    body { margin: 0.5in; padding: 0; }
+    .noprint { display: none; }
   }
 </style>
 </head>
 <body>
-  <div class="tag">Workflow Report</div>
-  <h1>${escapeHtml(report.workflowName)}</h1>
-  <div class="meta" style="margin-top:6pt;">
-    <span class="pill">${escapeHtml(report.practiceArea)}</span>
-    ${escapeHtml(`${report.steps.length} steps · ${report.durationSeconds}s · Source: ${sourceLabel}`)}
+  <div class="eyebrow">Workflow report · ${esc(report.practiceArea)} · ${esc(formatDate(report.runAt))}</div>
+  <h1 class="title">${esc(report.workflowName)}</h1>
+  <div class="caption">
+    <span>${report.knowledgeSource === 'workspace' ? `${esc(report.workspaceName || 'Workspace')} + Global KB` : 'Global KB'}</span>
+    <span>${report.docsProcessed.length} document${report.docsProcessed.length === 1 ? '' : 's'} analysed</span>
+    <span>${report.durationSeconds}s runtime</span>
   </div>
-
-  ${report.failedDocs && report.failedDocs.length > 0 ? `
-    <div class="warning">
-      <strong>${report.failedDocs.length} document${report.failedDocs.length !== 1 ? 's' : ''} could not be read</strong>
-      and ${report.failedDocs.length === 1 ? 'was' : 'were'} excluded from this analysis.
-    </div>
-  ` : ''}
-
+  ${failedRow}
   <div class="divider"></div>
-  <div class="meta" style="margin-bottom:6pt;">Documents analysed</div>
-  <div>
-    ${report.docsProcessed.map((n) => `<span class="doc-pill">${escapeHtml(n)}</span>`).join('')}
-    ${(report.failedDocs || []).map((n) => `<span class="doc-pill failed">${escapeHtml(n)}</span>`).join('')}
-    ${report.docsProcessed.length === 0 && (!report.failedDocs || report.failedDocs.length === 0) ? `<span class="meta">No documents processed.</span>` : ''}
-  </div>
-
-  ${heroStep && heroStep.output ? `
-    <h2>Executive Summary</h2>
-    <div class="step-body">${markdownToHtml(heroStep.output)}</div>
-  ` : ''}
-
-  ${otherSteps.length > 0 ? `
-    <h2>Step Findings</h2>
-    ${otherSteps.map((s, i) => `
-      <div class="step">
-        <div class="step-header">
-          <span class="step-num">${String(report.steps.indexOf(s) + 1).padStart(2, '0')}</span>
-          <span class="step-name">${escapeHtml(s.name || 'Step')}</span>
-          <span class="step-source">${escapeHtml(s.sourceUsed)} · ${s.durationSeconds}s</span>
-        </div>
-        <div class="step-body">${
-          s.status === 'failed'
-            ? `<em>This step did not complete. ${escapeHtml(s.output || '')}</em>`
-            : s.output
-              ? markdownToHtml(s.output)
-              : `<em>No findings identified.</em>`
-        }</div>
-      </div>
-    `).join('')}
-  ` : ''}
-
-  <div class="footer">
-    Generated ${escapeHtml(formatRunAt(report.runAt))}${userName ? ` · ${escapeHtml(userName)}` : ''} · YourAI Workflow
-  </div>
-
-  <script>
-    window.onload = () => { setTimeout(() => window.print(), 120); };
-  </script>
+  ${md(summary)}
+  <section class="audit-head">Audit log</section>
+  <div class="docs-row">${docsRow}</div>
+  ${stepsMarkup}
+  <div class="footer">Generated ${esc(formatDate(report.runAt))}${userName ? ' · ' + esc(userName) : ''}</div>
+  <script>window.onload = () => setTimeout(() => window.print(), 300);</script>
 </body>
 </html>`;
 
-  win.document.open();
-  win.document.write(html);
-  win.document.close();
-}
-
-/* Lightweight markdown → HTML for the print window (headings, para,
-   lists, bold, italic). We keep this intentionally tiny — the print
-   doc never executes user-controlled JS, and the report markdown has
-   already gone through an LLM response. Safe enough for PDF export. */
-function markdownToHtml(md: string): string {
-  let html = escapeHtml(md);
-  // headings
-  html = html.replace(/^###\s+(.+)$/gm, '<h3>$1</h3>');
-  html = html.replace(/^##\s+(.+)$/gm, '<h3>$1</h3>');
-  html = html.replace(/^#\s+(.+)$/gm, '<h3>$1</h3>');
-  // bold + italic
-  html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-  html = html.replace(/\*([^*]+)\*/g, '<em>$1</em>');
-  // lists (very light — each bullet-line becomes <li>)
-  const lines = html.split(/\n/);
-  const out: string[] = [];
-  let inList = false;
-  for (const line of lines) {
-    const m = line.match(/^[-*]\s+(.+)$/);
-    if (m) {
-      if (!inList) { out.push('<ul>'); inList = true; }
-      out.push(`<li>${m[1]}</li>`);
-    } else {
-      if (inList) { out.push('</ul>'); inList = false; }
-      if (line.trim() === '') out.push(''); else out.push(`<p>${line}</p>`);
-    }
-  }
-  if (inList) out.push('</ul>');
-  return out.join('\n');
-}
-
-function escapeHtml(s: string): string {
-  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  w.document.open();
+  w.document.write(html);
+  w.document.close();
 }

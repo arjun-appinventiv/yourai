@@ -316,7 +316,7 @@ export default function WorkflowsPanel({ onClose, onCreateNew, onRun, onEdit, on
         ) : (
           <>
             {featuredTemplates.length > 0 && (
-              <div>
+              <div style={{ maxWidth: 960 }}>
                 <h2 style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#6B7280', margin: '0 0 12px', lineHeight: 1.2 }}>
                   Featured workflows
                 </h2>
@@ -342,7 +342,7 @@ export default function WorkflowsPanel({ onClose, onCreateNew, onRun, onEdit, on
               </div>
             )}
             {libraryTemplates.length > 0 && (
-              <div style={{ marginTop: featuredTemplates.length > 0 ? 32 : 0 }}>
+              <div style={{ maxWidth: 960, marginTop: featuredTemplates.length > 0 ? 32 : 0 }}>
                 <h2 style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#6B7280', margin: '0 0 12px', lineHeight: 1.2 }}>
                   Your library
                 </h2>
@@ -372,7 +372,7 @@ export default function WorkflowsPanel({ onClose, onCreateNew, onRun, onEdit, on
 
         {/* ─── Recent runs ─── */}
         {recentRuns.length > 0 && (
-          <div style={{ marginTop: 48, paddingTop: 40, borderTop: '1px solid rgba(10,36,99,0.08)' }}>
+          <div style={{ maxWidth: 960, marginTop: 48, paddingTop: 40, borderTop: '1px solid rgba(10,36,99,0.08)' }}>
             <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 14 }}>
               <div>
                 <div style={{ fontFamily: "'DM Serif Display', serif", fontSize: 20, color: 'var(--navy)', lineHeight: 1.2 }}>
