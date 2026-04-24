@@ -90,6 +90,11 @@ YourAI-Test-Suite.md           QA test spec (627 lines, dated 2026-04-14).
 - **Icons**: `lucide-react`. When you use `<SomeIcon>` in JSX, *make sure it's in the import* — repeated production blanks have been caused by missing lucide imports.
 - **CSS-in-JS**: inline `style={{}}` is used heavily; Tailwind is used selectively. Both are fine.
 - **Tests**: none automated — QA via `YourAI-Test-Suite.md`.
+- **AI calls for new features go through `/api/chat` (Edge), not `callLLM`**. `callLLM` is the client-side fallback path that requires a browser-side `VITE_OPENAI_API_KEY` which is NOT set in production. Anything that needs to hit OpenAI (new features, per-operation prompts, classifiers, etc.) must `fetch('/api/chat', { method: 'POST', body: JSON.stringify({ messages, model, temperature, max_tokens }) })` directly. The Edge function accepts both `body.messages[]` (full control) and `body.message` + `body.system` (simpler shape).
+- **"Not covered by supplied documents." is a literal, verbatim anti-hallucination sentence** used across every workflow operation's system prompt. When the uploaded docs don't contain what a step needs, the step's output must begin with that exact sentence + a one-sentence reason, then produce whatever partial analysis is possible. QA tests check for the literal string — don't rephrase.
+- **Workflow operation prompts live in `src/lib/workflowPrompts.ts`**. When adding a new operation or editing an existing one, update that file (not scattered prompt strings elsewhere). Execution is always via `src/lib/workflowExecutor.ts` → `/api/chat`.
+- **Card-in-card rendering uses a `variant="embedded"` prop** to suppress the nested card's outer chrome (border, radius, shadow, accent stripe, header). See `WorkflowProgressCard` as the canonical example.
+- **One primary CTA per screen** — wizard pages especially should not have both a top-bar Continue/Save AND a bottom-row equivalent.
 
 ---
 
@@ -104,6 +109,11 @@ YourAI-Test-Suite.md           QA test spec (627 lines, dated 2026-04-14).
 7. **Intent ↔ Knowledge Pack has zero wiring**: changing intent never changes the active KP or vault doc. They're orthogonal session-level states.
 8. **Headless-Chrome smoke test pattern**: when you think production might be broken after a deploy, run `curl -s <url>` to get the bundle hash, then use `/Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome --headless --dump-dom <url>` with `--enable-logging=stderr` to catch `ReferenceError`s. This caught both blank-production incidents.
 9. **ChatView.jsx is 4000+ lines**: grep ruthlessly, don't Read whole-file. Key sections: state (~2780), auto-switch (~3005), card dispatch (~3220), suggestion banners (~3900), intent dropdown (~3970).
+10. **CSS grid `auto-fill` creates ghost columns on sparse data**: a grid with `repeat(auto-fill, minmax(300px, 1fr))` at a 1440px viewport with only 2 cards leaves a ~40% blank band on the right. For sections that often render few items, use `auto-fit` (collapses empty tracks) and/or cap `maxWidth` on the grid container. Aashna flagged this on the Workflows picker; fix is documented in the session transcript.
+11. **Empty states: anchor via `padding-top`, not flexbox centering**: a container with `flex: 1; justify-content: center` or `align-items: flex-end` produces huge dead zones. Use `padding-top: 14vh` (approximately 15% from the top) inside a fixed max-width centred column instead. This pattern now ships on the chat empty state.
+12. **DM Serif is decorative-only**: reserve it for hero titles and section headers. Never use it for live status strings or dynamic counts ("2 running · 3 recent") — those should be DM Sans. Run Panel header once broke this rule and read as decorative when it needed to read as data.
+13. **Workflow executor uses `/api/chat` with a full `messages[]` payload**: each step = operation system prompt + assembled user message (step metadata + user instruction + prior step outputs capped at ~3500 chars each + uploaded docs capped at ~8000 chars each + optional reference doc + workspace context). Streams via `ReadableStream`, 90s timeout with `AbortController`. See `src/lib/workflowExecutor.ts`.
+14. **Prior-step chaining is the whole point of a workflow**: step N receives a structured summary of every completed step 1..N−1. The Generate Report step is a synthesis of prior outputs, not a re-analysis. Don't send only the raw documents to step N without the prior outputs.
 
 ---
 
@@ -113,6 +123,7 @@ Files here are context for working on specific features. Reference them with `@.
 
 - **`session-notes.md`** — durable notes from the 2026-04-23 session: verbal decisions, corrections, debugging history, open threads, Arjun's communication preferences, and my working assumptions about the project. **Load this if resuming work that was in-flight before the most recent `/clear`.**
 - **`persona-dynamic-config-plan.md`** — implementation plan (from a prior chat) for making each SA Bot Persona config field dynamically wire into chatbot behavior in real-time. Useful when building out persona-editor interactivity.
+- **`workflow-execution-architecture.md`** — reference note on the workflow LLM-execution pattern established 2026-04-24. Load this before touching `workflowRunner.ts`, `workflowExecutor.ts`, `workflowPrompts.ts`, or adding a new operation. Explains why `callLLM` is NOT the path and what the extension points are.
 
 *(Folder is otherwise clean — future planning docs or brief-dumps go here, named by topic.)*
 
@@ -128,6 +139,21 @@ Authored feature inventories live in `docs/extracted/`. Each is a comprehensive 
 - `docs/extracted/tenant-features.md` — Tenant Management (SA-side) + Clients (Org-side)
 - `docs/extracted/user-features.md` — User Management across all portals
 - `docs/bot-persona-scope.md` — PRD-style scope for Bot Persona (status: DRAFT, pending Ryan Hoke visual review)
+
+### Functional FRDs (.docx — for PM / QA / strategist audience)
+
+These live in `docs/extracted/` too and mirror the PMs' tenant-management reference. No code, no API contracts — purely functional.
+
+- `docs/extracted/FRD_Intent_System.docx` — intent selector, auto-switch, suggestion banners, cross-intent redirect, card vs prose formats, SA bot-persona editor.
+- `docs/extracted/FRD_Workflows.docx` — Workflows module surfaces end-to-end: picker, builder, pre-run modal, execution, run panel, report, favourites, permissions. 75 QA test scenarios.
+- `docs/extracted/FRD_Workflow_Operations.docx` — the 7 operations (Read Documents, Analyse Clauses, Compare Against Standard, Research Precedents, Compliance Check, Update Knowledge Base, Generate Report) with per-operation behaviour, vague-doc handling, and test matrices.
+- `docs/extracted/FRD_Incorrect_Document_Handling.docx` — 9-category taxonomy of mismatched uploads + the three-stage handling protocol (Pre-Run → per-step degradation → Report honesty) + 9 worked end-to-end scenarios + 30 QA tests.
+
+## Sub-agents
+
+Defined in `.claude/agents/`:
+
+- **`aashna.md`** — senior UX designer persona (Linear / Stripe / Vercel background). Invoke for layout / hierarchy / spacing audits. Output is *diagnosis → prioritized fixes → paste-ready Claude Code implementation prompt*. Does not write full code — directs. Used three times in the 2026-04-24 session for targeted rounds on the Workflows panel, Builder, Run Panel, and the audit log modal.
 
 ---
 
