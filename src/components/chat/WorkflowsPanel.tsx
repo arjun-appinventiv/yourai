@@ -320,7 +320,7 @@ export default function WorkflowsPanel({ onClose, onCreateNew, onRun, onEdit, on
                 <h2 style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#6B7280', margin: '0 0 12px', lineHeight: 1.2 }}>
                   Featured workflows
                 </h2>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 16 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 340px))', gap: 16 }}>
                   {featuredTemplates.map((t) => (
                     <WorkflowCard
                       key={t.id}
@@ -346,7 +346,7 @@ export default function WorkflowsPanel({ onClose, onCreateNew, onRun, onEdit, on
                 <h2 style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#6B7280', margin: '0 0 12px', lineHeight: 1.2 }}>
                   Your library
                 </h2>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 16 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 340px))', gap: 16 }}>
                   {libraryTemplates.map((t) => (
                     <WorkflowCard
                       key={t.id}
@@ -383,7 +383,7 @@ export default function WorkflowsPanel({ onClose, onCreateNew, onRun, onEdit, on
                 </div>
               </div>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 16 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 340px))', gap: 16 }}>
               {recentRuns.map((r) => {
                 const ok = r.status === 'complete';
                 const dur = r.steps.reduce((a, s) => a + (s.durationSeconds || 0), 0);
