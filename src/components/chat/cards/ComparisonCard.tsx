@@ -40,6 +40,30 @@ export default function ComparisonCard({ data }: { data: ComparisonCardData }) {
   const doc1Name = data?.doc1Name || 'Document 1';
   const doc2Name = data?.doc2Name || 'Document 2';
 
+  // Empty-state: schema-forced JSON with no real data (no docs attached).
+  const isEmpty = rows.length === 0 && !data?.doc1Name && !data?.doc2Name && !data?.recommendation;
+  if (isEmpty) {
+    return (
+      <CardShell accentColor="navy">
+        <CardHeader
+          intentLabel="Clause Comparison"
+          title="No documents to compare"
+          subtitle="Clause comparison needs two documents"
+          sourcePill={{ label: 'Workspace', type: 'workspace' }}
+        />
+        <div style={{ padding: '28px 28px 32px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <p style={{ fontSize: 15, color: '#374151', lineHeight: 1.7, margin: 0 }}>
+            Upload the two contracts (or memos, or policies) you want to compare using the <strong>+</strong> button next to the input, then ask again and I'll produce the clause-by-clause comparison.
+          </p>
+          <p style={{ fontSize: 13, color: '#6B7280', margin: 0, lineHeight: 1.6 }}>
+            If you meant a general question, switch the intent pill above the input to <em>General chat</em> or <em>Legal Q&amp;A</em>.
+          </p>
+        </div>
+        <CardFooter sourceType="none" sourceName="—" />
+      </CardShell>
+    );
+  }
+
   return (
     <CardShell accentColor="navy">
       <CardHeader

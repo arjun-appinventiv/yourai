@@ -40,9 +40,34 @@ export interface RiskMemoCardData {
 }
 
 export default function RiskMemoCard({ data }: { data: RiskMemoCardData }) {
-  const highs = data.findings.filter((f) => f.severity === 'high');
-  const meds  = data.findings.filter((f) => f.severity === 'medium');
-  const lows  = data.findings.filter((f) => f.severity === 'low');
+  const findings = Array.isArray(data?.findings) ? data.findings : [];
+  const highs = findings.filter((f) => f.severity === 'high');
+  const meds  = findings.filter((f) => f.severity === 'medium');
+  const lows  = findings.filter((f) => f.severity === 'low');
+
+  // Empty-state: schema-forced JSON with no contract supplied.
+  const isEmpty = findings.length === 0 && !data?.matterName?.trim() && !data?.executiveSummary?.trim() && !data?.documentName?.trim();
+  if (isEmpty) {
+    return (
+      <EditorialShell>
+        <EditorialHeader
+          intentLabel="Risk Memo"
+          title="No contract supplied"
+          subtitle="Risk memo needs a contract or agreement"
+          sourcePill={{ label: 'Document', kind: 'doc' }}
+        />
+        <div style={{ padding: '26px 32px 28px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <Body>
+            Upload the contract, NDA, lease, or agreement you want assessed using the <strong>+</strong> button next to the input, then ask again and I'll produce the risk memo with findings grouped by severity, locations, owners, and recommendations.
+          </Body>
+          <div style={{ fontSize: 13, color: COLORS.muted, lineHeight: 1.6 }}>
+            For a quicker read, switch the intent pill above the input to <em>Clause Analysis</em> — same input, shorter output.
+          </div>
+        </div>
+        <EditorialFooter footerText={data?.generatedLabel || '—'} />
+      </EditorialShell>
+    );
+  }
 
   return (
     <EditorialShell>
@@ -84,7 +109,7 @@ export default function RiskMemoCard({ data }: { data: RiskMemoCardData }) {
         {highs.length > 0 && <FindingGroup level="high"   items={highs} />}
         {meds.length  > 0 && <FindingGroup level="medium" items={meds} />}
         {lows.length  > 0 && <FindingGroup level="low"    items={lows} />}
-        {data.findings.length === 0 && (
+        {findings.length === 0 && (
           <div style={{ fontSize: 14, color: COLORS.muted, fontStyle: 'italic' }}>
             No material risks identified.
           </div>

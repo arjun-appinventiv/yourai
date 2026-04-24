@@ -38,6 +38,30 @@ export default function CaseBriefCard({ data }: { data: CaseBriefCardData }) {
   const precedence = data?.precedence || { tags: [], tagStyles: [], note: '' };
   const hasPrecedence = (precedence.tags?.length || 0) > 0 || !!precedence.note;
 
+  // Empty-state: schema-forced JSON with no real data (no case document supplied).
+  const isEmpty = rows.length === 0 && !hasPrecedence && !data?.caseName && !data?.application;
+  if (isEmpty) {
+    return (
+      <CardShell accentColor="green">
+        <CardHeader
+          intentLabel="Case Law Analysis"
+          title="No case document supplied"
+          subtitle="Case analysis needs a filing, opinion, or memo"
+          sourcePill={{ label: 'Document', type: 'doc' }}
+        />
+        <div style={{ padding: '28px 28px 32px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <p style={{ fontSize: 15, color: '#374151', lineHeight: 1.7, margin: 0 }}>
+            Upload a court filing, opinion PDF, or case memo using the <strong>+</strong> button next to the input, then ask again and I'll brief the case with holding, facts, procedural posture, and application to your matter.
+          </p>
+          <p style={{ fontSize: 13, color: '#6B7280', margin: 0, lineHeight: 1.6 }}>
+            Looking up a case by name or citation without uploading? Switch the intent pill to <em>Legal Research</em>.
+          </p>
+        </div>
+        <CardFooter sourceType="none" sourceName="—" />
+      </CardShell>
+    );
+  }
+
   return (
     <CardShell accentColor="green">
       <CardHeader

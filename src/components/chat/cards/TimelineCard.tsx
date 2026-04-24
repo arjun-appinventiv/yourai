@@ -8,7 +8,7 @@
 import React from 'react';
 import {
   EditorialShell, EditorialHeader, SectionTitle, CapsLabel,
-  DocumentCard, EditorialFooter,
+  DocumentCard, Body, EditorialFooter,
   COLORS, MONO, SERIF,
 } from './EditorialShell';
 
@@ -40,6 +40,32 @@ const KIND_STYLE: Record<NonNullable<TimelineEvent['kind']>, { dot: string; labe
 };
 
 export default function TimelineCard({ data }: { data: TimelineCardData }) {
+  const events = Array.isArray(data?.events) ? data.events : [];
+
+  // Empty-state: schema-forced JSON with no document to timeline.
+  const isEmpty = events.length === 0 && !data?.matterName?.trim() && !data?.documentName?.trim();
+  if (isEmpty) {
+    return (
+      <EditorialShell>
+        <EditorialHeader
+          intentLabel="Timeline"
+          title="No document supplied"
+          subtitle="Timeline extraction needs a document with dated events"
+          sourcePill={{ label: 'Document', kind: 'doc' }}
+        />
+        <div style={{ padding: '26px 32px 28px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <Body>
+            Upload the filing, memo, correspondence chain, or agreement you want a chronology from using the <strong>+</strong> button next to the input, then ask again and I'll extract the events in order with date, kind (deadline / milestone / filing / event), and source reference.
+          </Body>
+          <div style={{ fontSize: 13, color: COLORS.muted, lineHeight: 1.6 }}>
+            If the document has no explicit dates, the timeline won't be reliable — try <em>Case Brief</em> or <em>Clause Analysis</em> instead.
+          </div>
+        </div>
+        <EditorialFooter footerText={data?.generatedLabel || '—'} />
+      </EditorialShell>
+    );
+  }
+
   return (
     <EditorialShell>
       <EditorialHeader
@@ -64,7 +90,7 @@ export default function TimelineCard({ data }: { data: TimelineCardData }) {
       {/* Timeline */}
       <div style={{ padding: '22px 32px 22px' }}>
         <SectionTitle>Chronology</SectionTitle>
-        {data.events.length === 0 ? (
+        {events.length === 0 ? (
           <div style={{ fontSize: 14, color: COLORS.muted, fontStyle: 'italic' }}>
             No dated events found in the source.
           </div>
@@ -75,12 +101,12 @@ export default function TimelineCard({ data }: { data: TimelineCardData }) {
               position: 'absolute', left: 7, top: 6, bottom: 6,
               width: 2, background: COLORS.border, borderRadius: 1,
             }} />
-            {data.events.map((ev, i) => {
+            {events.map((ev, i) => {
               const kind = ev.kind || 'event';
               const style = KIND_STYLE[kind];
               return (
                 <div key={i} style={{
-                  position: 'relative', marginBottom: i === data.events.length - 1 ? 0 : 22,
+                  position: 'relative', marginBottom: i === events.length - 1 ? 0 : 22,
                 }}>
                   {/* Dot */}
                   <span style={{
