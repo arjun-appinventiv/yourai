@@ -34,7 +34,6 @@ import {
   seedWorkspacesIfEmpty,
 } from '../../lib/workspace';
 import { MOCK_WORKSPACES } from '../../lib/mockWorkspaces';
-import { callLLM } from '../../lib/llm-client';
 import { extractFileText } from '../../lib/file-parser';
 import { addVaultDoc } from '../../lib/documentVaultStore';
 import { INTENTS, DEFAULT_INTENT, getIntentLabel } from '../../lib/intents';
@@ -342,7 +341,38 @@ export default function WorkspaceChatView() {
             }
           : undefined;
 
-      const result = await callLLM(trimmed, history, (s: string) => setStreaming(s), contextLayers);
+      // Inline any doc context into the user message so the Edge function
+      // (which doesn't know about contextLayers) sees it. Replaces the
+      // previous callLLM client-fallback path — that needed VITE_OPENAI_API_KEY
+      // which is never set in prod, which is why every workspace chat
+      // returned "Something went wrong reaching the AI."
+      const userMessageForEdge = contextLayers?.uploadedDoc
+        ? `[Context from ${contextLayers.uploadedDoc.name}]\n${contextLayers.uploadedDoc.content}\n\n[User question]\n${trimmed}`
+        : trimmed;
+
+      let fullContent = '';
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: userMessageForEdge, history }),
+      });
+      if (!response.ok || !response.body) {
+        throw new Error(`LLM backend returned ${response.status}`);
+      }
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        fullContent += decoder.decode(value, { stream: true });
+        setStreaming(fullContent);
+      }
+      fullContent += decoder.decode();
+
+      const result = {
+        fullContent,
+        sourceType: 'GLOBAL_KB' as const,
+      };
 
       let sourceType: Msg['sourceType'] = 'NONE';
       let sourceBadge = 'No source found';
