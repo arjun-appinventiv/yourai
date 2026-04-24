@@ -9,7 +9,7 @@
  * can drop a WorkflowProgressCard into the current thread.
  */
 
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   X, Plus, Briefcase, Database, FileText, Clock,
   UploadCloud, Loader, AlertTriangle, CheckCircle, Trash2,
@@ -23,6 +23,7 @@ import {
 } from '../../lib/workflow';
 import { startRun } from '../../lib/workflowRunner';
 import { extractFileText } from '../../lib/file-parser';
+import { classifyDocs, type DocClassification } from '../../lib/workflowExecutor';
 
 const OP_ICON: Record<WorkflowOperation, React.ComponentType<{ size?: number; style?: React.CSSProperties; className?: string }>> = {
   read_documents: FileTextIcon,
@@ -54,6 +55,9 @@ export default function PreRunModal({ template, workspaceId, workspaceName, work
   const [uploads, setUploads] = useState<UploadedDoc[]>([]);
   const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  // Keyed by upload name — stable across re-renders, tolerates id churn.
+  const [classifications, setClassifications] = useState<Record<string, DocClassification>>({});
+  const [classifying, setClassifying] = useState(false);
 
   const inWorkspace = !!workspaceId;
   const workspaceHasNoDocs = inWorkspace && workspaceHasDocs === false;
@@ -61,6 +65,41 @@ export default function PreRunModal({ template, workspaceId, workspaceName, work
   const anyProcessing = uploads.some((d) => d.status === 'processing');
   const anyReady = uploads.some((d) => d.status === 'ready');
   const canRun = !anyProcessing && uploads.length > 0;
+
+  // Pre-flight classification — fires once all uploads finish processing,
+  // only for ready docs we haven't classified yet. Advisory only; never
+  // blocks Run. See FRD_Incorrect_Document_Handling Stage 1.
+  useEffect(() => {
+    if (anyProcessing) return;
+    const unclassified = uploads.filter(
+      (u) => u.status === 'ready' && u.content && u.content.trim().length > 50 && !classifications[u.name]
+    );
+    if (unclassified.length === 0) return;
+    let cancelled = false;
+    setClassifying(true);
+    classifyDocs(unclassified.map((u) => ({ name: u.name, content: u.content })))
+      .then((results) => {
+        if (cancelled) return;
+        setClassifications((prev) => {
+          const next = { ...prev };
+          results.forEach((r) => { next[r.name] = r; });
+          return next;
+        });
+      })
+      .finally(() => { if (!cancelled) setClassifying(false); });
+    return () => { cancelled = true; };
+  }, [uploads, anyProcessing]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Aggregate detected-type summary — "Identified: 2 contracts, 1 memo"
+  const classificationSummary = React.useMemo(() => {
+    const entries = Object.values(classifications);
+    if (entries.length === 0) return '';
+    const counts = new Map<string, number>();
+    entries.forEach((c) => counts.set(c.type, (counts.get(c.type) || 0) + 1));
+    return Array.from(counts.entries())
+      .map(([type, n]) => `${n} ${type}${n === 1 ? '' : 's'}`)
+      .join(', ');
+  }, [classifications]);
 
   const handleFilesPicked = async (files: FileList | File[]) => {
     const picked = Array.from(files);
@@ -263,8 +302,29 @@ export default function PreRunModal({ template, workspaceId, workspaceName, work
             {uploads.length > 0 && (
               <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {uploads.map((u) => (
-                  <UploadRow key={u.id} upload={u} onRemove={() => removeUpload(u.id)} sizeStr={fileSize(u.size)} />
+                  <UploadRow
+                    key={u.id}
+                    upload={u}
+                    classification={classifications[u.name]}
+                    onRemove={() => removeUpload(u.id)}
+                    sizeStr={fileSize(u.size)}
+                  />
                 ))}
+              </div>
+            )}
+
+            {/* Pre-flight classification summary — advisory, only shown once at
+                least one doc has been classified. */}
+            {(classifying || classificationSummary) && (
+              <div style={{
+                marginTop: 10, padding: '8px 12px', borderRadius: 8,
+                background: '#F8FAFF', border: '1px solid #DBEAFE',
+                fontSize: 11, color: '#1E3A8A', display: 'flex', alignItems: 'center', gap: 8, lineHeight: 1.45,
+              }}>
+                {classifying
+                  ? <><Loader size={11} className="animate-spin" /> <span>Identifying document types…</span></>
+                  : <><CheckCircle size={11} style={{ color: '#1D4ED8' }} /> <span><strong>Identified:</strong> {classificationSummary}</span></>
+                }
               </div>
             )}
           </div>
@@ -300,7 +360,12 @@ export default function PreRunModal({ template, workspaceId, workspaceName, work
   );
 }
 
-function UploadRow({ upload, onRemove, sizeStr }: { upload: UploadedDoc; onRemove: () => void; sizeStr: string }) {
+function UploadRow({ upload, classification, onRemove, sizeStr }: {
+  upload: UploadedDoc;
+  classification?: DocClassification;
+  onRemove: () => void;
+  sizeStr: string;
+}) {
   const statusBadge = (() => {
     if (upload.status === 'ready')      return { bg: '#E7F3E9', color: '#5CA868', label: 'Ready',      Icon: CheckCircle };
     if (upload.status === 'failed')     return { bg: '#F9E7E7', color: '#C65454', label: 'Failed',     Icon: AlertTriangle };
@@ -313,7 +378,23 @@ function UploadRow({ upload, onRemove, sizeStr }: { upload: UploadedDoc; onRemov
       <FileText size={13} style={{ color: 'var(--navy)', flexShrink: 0 }} />
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{upload.name}</div>
-        <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>{upload.type.toUpperCase()} · {sizeStr}</div>
+        <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2, display: 'inline-flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+          <span>{upload.type.toUpperCase()} · {sizeStr}</span>
+          {classification && (
+            <span
+              title={`Detected ${classification.type} (${classification.confidence} confidence)`}
+              style={{
+                display: 'inline-flex', alignItems: 'center',
+                padding: '1px 7px', borderRadius: 999,
+                background: '#EFF6FF', color: '#1D4ED8',
+                border: '1px solid #DBEAFE',
+                fontSize: 9, fontWeight: 600, letterSpacing: '0.02em', textTransform: 'uppercase',
+              }}
+            >
+              {classification.type}
+            </span>
+          )}
+        </div>
       </div>
       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 999, background: statusBadge.bg, color: statusBadge.color, fontSize: 10, fontWeight: 500 }}>
         <Icon size={10} className={upload.status === 'processing' ? 'animate-spin' : ''} />
