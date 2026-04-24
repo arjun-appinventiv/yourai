@@ -42,6 +42,32 @@ export default function ResearchBriefCard({ data }: { data: ResearchBriefCardDat
 
   const stats = data?.stats || { statutes: '—', cases: '—', principles: '—', jurisdiction: '—' };
 
+  // Empty-state: the research pass came back without any topic or sections.
+  // Unlike document-analysis cards, this intent doesn't need an upload — it
+  // usually means the question was too vague for a research pass.
+  const isEmpty = sections.length === 0 && !data?.topic;
+  if (isEmpty) {
+    return (
+      <CardShell accentColor="indigo">
+        <CardHeader
+          intentLabel="Legal Research"
+          title="Not enough to research yet"
+          subtitle="The question was too broad for a research brief"
+          sourcePill={{ label: 'Knowledge Base', type: 'kb' }}
+        />
+        <div style={{ padding: '28px 28px 32px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <p style={{ fontSize: 15, color: '#374151', lineHeight: 1.7, margin: 0 }}>
+            Try a more specific question — include the jurisdiction, the legal issue, and (where useful) the type of party or document. For example: <em>"Force majeure precedents in New York commercial leases, 2020–present"</em>.
+          </p>
+          <p style={{ fontSize: 13, color: '#6B7280', margin: 0, lineHeight: 1.6 }}>
+            If you have a document you want research anchored to, attach it with the <strong>+</strong> button and ask again.
+          </p>
+        </div>
+        <CardFooter sourceType="none" sourceName="—" />
+      </CardShell>
+    );
+  }
+
   return (
     <CardShell accentColor="indigo">
       <CardHeader

@@ -36,15 +36,17 @@ export interface ClauseAnalysisCardData {
 }
 
 export default function ClauseAnalysisCard({ data }: { data: ClauseAnalysisCardData }) {
+  const clauses = Array.isArray(data?.clauses) ? data.clauses : [];
+
   // Severity counts for the summary strip
   const counts = {
-    high:   data.clauses.filter((c) => c.risk === 'high').length,
-    medium: data.clauses.filter((c) => c.risk === 'medium').length,
-    low:    data.clauses.filter((c) => c.risk === 'low').length,
+    high:   clauses.filter((c) => c.risk === 'high').length,
+    medium: clauses.filter((c) => c.risk === 'medium').length,
+    low:    clauses.filter((c) => c.risk === 'low').length,
   };
 
   // First high-risk clause auto-expanded
-  const firstHighIdx = data.clauses.findIndex((c) => c.risk === 'high');
+  const firstHighIdx = clauses.findIndex((c) => c.risk === 'high');
   const [expanded, setExpanded] = useState<Set<number>>(() =>
     new Set(firstHighIdx === -1 ? [0] : [firstHighIdx])
   );
@@ -53,6 +55,30 @@ export default function ClauseAnalysisCard({ data }: { data: ClauseAnalysisCardD
     if (next.has(i)) next.delete(i); else next.add(i);
     return next;
   });
+
+  // Empty-state: schema-forced JSON with no contract supplied.
+  const isEmpty = clauses.length === 0 && !data?.matterName?.trim() && !data?.documentName?.trim();
+  if (isEmpty) {
+    return (
+      <EditorialShell>
+        <EditorialHeader
+          intentLabel="Clause Analysis"
+          title="No contract supplied"
+          subtitle="Clause analysis needs a contract or agreement"
+          sourcePill={{ label: 'Document', kind: 'doc' }}
+        />
+        <div style={{ padding: '26px 32px 28px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <Body>
+            Upload a contract, NDA, lease, or agreement using the <strong>+</strong> button next to the input, then ask again and I'll break it down clause-by-clause with risk level, quote, interpretation, and recommended negotiating moves.
+          </Body>
+          <div style={{ fontSize: 13, color: COLORS.muted, lineHeight: 1.6 }}>
+            Want a narrative memo instead of a clause list? Switch the intent pill above the input to <em>Risk Memo</em>.
+          </div>
+        </div>
+        <EditorialFooter footerText={data?.generatedLabel || '—'} />
+      </EditorialShell>
+    );
+  }
 
   return (
     <EditorialShell>
@@ -83,7 +109,7 @@ export default function ClauseAnalysisCard({ data }: { data: ClauseAnalysisCardD
         background: COLORS.border,
         margin: '22px 32px 0', borderRadius: 10, overflow: 'hidden',
       }}>
-        <CountCell value={data.clauses.length} label="Clauses" />
+        <CountCell value={clauses.length} label="Clauses" />
         <CountCell value={counts.high}   label="High risk" color="#991B1B" />
         <CountCell value={counts.medium} label="Medium"    color="#92400E" />
         <CountCell value={counts.low}    label="Low"       color="#065F46" />
@@ -93,7 +119,7 @@ export default function ClauseAnalysisCard({ data }: { data: ClauseAnalysisCardD
       <div style={{ padding: '24px 32px 22px' }}>
         <SectionTitle>Clause-by-clause</SectionTitle>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {data.clauses.map((c, i) => {
+          {clauses.map((c, i) => {
             const isOpen = expanded.has(i);
             return (
               <div key={i} style={{
