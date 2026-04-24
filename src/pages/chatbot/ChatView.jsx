@@ -376,15 +376,18 @@ function Sidebar({ onOpenPromptTemplates, onOpenClients, onOpenKnowledgePacks, o
   };
 
   // ─── Workspace items ───
-  // Visibility rules (see FRD Part 2):
-  //   Dashboard, Clients, Invite Team → ORG_ADMIN only
-  //   Workspaces → visible to all, but the list is scoped by membership downstream
+  // Visibility rules:
+  //   Dashboard, Clients → ORG_ADMIN only (surfaces they edit)
+  //   Workspaces, Invite Team → visible to everyone who isn't an External User
+  //     (Invite Team is discoverable for Internal Users too; the Team page
+  //      handles role-based UI inside itself so a non-admin sees a clear
+  //      "ask your admin to add people" state rather than a dead link)
   //   + New chat is rendered separately in Zone 2 (visible to all)
   const workspaceItems = [
     isOrgAdmin && { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard', active: true, rightText: '3 running' },
     { id: 'workspaces', icon: Briefcase, label: 'Workspaces', rightText: String(workspaceCount ?? 0), onClick: onOpenWorkspaces },
     isOrgAdmin && { id: 'clients', icon: Users, label: 'Clients', rightText: String(clientCount), onClick: onOpenClients },
-    isOrgAdmin && { id: 'invite-team', icon: UserPlus, label: 'Invite Team', rightText: memberCount != null ? String(memberCount) : undefined, onClick: onOpenInviteTeam },
+    !isExternalUser && { id: 'invite-team', icon: UserPlus, label: 'Invite Team', rightText: memberCount != null ? String(memberCount) : undefined, onClick: onOpenInviteTeam },
   ].filter(Boolean);
 
   // ─── Knowledge items ───
