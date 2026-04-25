@@ -3044,10 +3044,10 @@ export default function ChatView({ initialView = 'chat' }) {
       const controller = new AbortController();
       streamAbortRef.current = controller;
 
+      let edgeError = null;
       try {
         const response = await fetch(`${base}/api/chat`, {
           method: 'POST',
-          credentials: 'include',
           signal: controller.signal,
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -3060,18 +3060,24 @@ export default function ChatView({ initialView = 'chat' }) {
           }),
         });
 
-        const contentType = response.headers.get('content-type') || '';
-        if (response.ok && (contentType.includes('text/plain') || contentType.includes('application/json'))) {
+        if (!response.ok) {
+          const bodyText = await response.text().catch(() => '');
+          edgeError = `AI service returned ${response.status}. ${bodyText.slice(0, 160)}`.trim();
+        } else if (!response.body) {
+          edgeError = 'AI service returned an empty response body.';
+        } else {
           usedBackend = true;
           const reader = response.body.getReader();
           const decoder = new TextDecoder();
           while (true) {
             const { done, value } = await reader.read();
             if (done) break;
-            const chunk = decoder.decode(value);
+            const chunk = decoder.decode(value, { stream: true });
             fullContent += chunk;
             setStreamingContent(fullContent);
           }
+          fullContent += decoder.decode();
+
           const sourceTypeHeader = response.headers.get('X-Source-Type');
           if (sourceTypeHeader === 'UPLOADED_DOC') {
             sourceBadge = 'Answered from: your document';
@@ -3083,15 +3089,29 @@ export default function ChatView({ initialView = 'chat' }) {
             sourceBadge = 'AI-generated response';
           }
         }
-      } catch { /* backend unreachable — fall through to client-side LLM */ }
+      } catch (err) {
+        // Distinguish user-aborted streams (session guard) from real network errors.
+        if (err && (err.name === 'AbortError' || /abort/i.test(String(err.message || '')))) {
+          edgeError = null; // silent — user-initiated
+        } else {
+          edgeError = `Could not reach the AI service: ${err?.message || 'unknown error'}`;
+          // eslint-disable-next-line no-console
+          console.error('[ChatView] /api/chat fetch failed:', err);
+        }
+      }
 
-      // Fallback: call Groq directly from client (Vercel static deploy)
-      // 4-tier priority: Uploaded Doc → Knowledge Pack → Global KB → Fallback
+      // If the Edge path didn't produce content, surface the real reason
+      // rather than the misleading "No LLM backend available" fallback.
+      // The client-side Groq fallback below requires VITE_OPENAI_API_KEY
+      // which is never set in production — keeping it as a last resort
+      // only for dev environments that configure it deliberately.
       if (!usedBackend) {
         if (!getApiKey()) {
           setIsTyping(false);
           setStreamingContent('');
-          const errMsg = { id: Date.now() + 1, sender: 'bot', content: 'No LLM backend available. Please configure the API key or start the backend server.', timestamp: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }), sourceBadge: null };
+          const errText = edgeError
+            || 'The AI service was unreachable or did not return a response. Please try again in a moment.';
+          const errMsg = { id: Date.now() + 1, sender: 'bot', content: errText, timestamp: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }), sourceBadge: null };
           setMessages((prev) => [...prev, errMsg]);
           return;
         }
