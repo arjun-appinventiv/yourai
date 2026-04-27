@@ -2034,6 +2034,18 @@ function DocumentVaultPanel({
     setResultLimit(null);
     setAskExplanation('');
     setAskQuery('');
+    setSearch('');
+  };
+
+  // When the user folds the page back to "All documents" by clicking the
+  // sidebar tree's All-documents row, drop the AI-driven transient
+  // filters too — otherwise leftover sort/limit from a previous Ask
+  // query keeps the table narrowed and confuses the user.
+  const goToAllDocs = () => {
+    setCurrentFolderId(null);
+    setResultLimit(null);
+    setSortBy('recent');
+    setAskExplanation('');
   };
 
   // ─── Visibility (role + isGlobal) ───
@@ -2427,7 +2439,7 @@ Rules:
           <div style={{ flex: 1, overflowY: 'auto', paddingBottom: 8 }}>
             {/* Pinned: All documents */}
             <div
-              onClick={() => setCurrentFolderId(null)}
+              onClick={goToAllDocs}
               style={{
                 display: 'flex', alignItems: 'center', gap: 8,
                 height: 30, paddingLeft: 16, paddingRight: 12,
@@ -2483,10 +2495,18 @@ Rules:
               <input
                 value={askQuery || search}
                 onChange={(e) => {
+                  const v = e.target.value;
                   // Mirror typing into both — search keeps live filtering,
                   // askQuery captures the full query for the Ask button.
-                  setAskQuery(e.target.value);
-                  setSearch(e.target.value);
+                  setAskQuery(v);
+                  setSearch(v);
+                  // Typing exits "AI-narrowed" mode: drop the limit and
+                  // explanation that an earlier Ask query may have set,
+                  // and reset sort. Otherwise "biggest file → top 1"
+                  // sticks even when the user moves on to a fresh search.
+                  if (resultLimit) setResultLimit(null);
+                  if (askExplanation) setAskExplanation('');
+                  if (sortBy !== 'recent') setSortBy('recent');
                 }}
                 onKeyDown={(e) => { if (e.key === 'Enter') handleAskAnything(); }}
                 disabled={askLoading}
@@ -2595,7 +2615,7 @@ Rules:
               <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 8, lineHeight: 1.6, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                 {currentFolder ? (
                   <>
-                    <button onClick={() => setCurrentFolderId(null)} style={{ background: 'none', border: 'none', padding: 0, fontSize: 13, color: 'var(--text-muted)', cursor: 'pointer' }}>All folders</button>
+                    <button onClick={goToAllDocs} style={{ background: 'none', border: 'none', padding: 0, fontSize: 13, color: 'var(--text-muted)', cursor: 'pointer' }}>All folders</button>
                     {breadcrumb.map((f, i) => {
                       const isLast = i === breadcrumb.length - 1;
                       return (
