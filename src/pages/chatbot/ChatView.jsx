@@ -402,16 +402,24 @@ function HomeTileLauncher({
     },
   ].filter(Boolean);
 
+  // Surface treatment per aashna review (Apr 2026): page sits one step
+  // darker than the card so a 1.5px border has something to push against;
+  // accent stripe demoted to a hover signal so peer tiles don't fragment
+  // into a colour-coded carnival; hover relies on shadow depth, not a
+  // borderColor swap (a navy border reads as "selected", not "hoverable").
+  const STATIC_SHADOW = '0 1px 0 #FFFFFF inset, 0 1px 2px rgba(15,23,42,0.04)';
+  const HOVER_SHADOW  = '0 1px 0 #FFFFFF inset, 0 4px 12px rgba(15,23,42,0.08)';
+
   return (
-    <div style={{ flex: 1, overflowY: 'auto', background: '#FAFBFC', padding: '40px 32px 64px' }}>
+    <div style={{ flex: 1, overflowY: 'auto', background: '#F4F5F7', padding: '40px 32px 64px' }}>
       <div style={{ maxWidth: 1080, margin: '0 auto' }}>
         {/* Hero */}
-        <div style={{ marginBottom: 28 }}>
+        <div style={{ marginBottom: 48 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
             <Sparkles size={14} style={{ color: 'var(--gold)' }} />
             <span style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: "'IBM Plex Mono', ui-monospace, monospace", letterSpacing: '0.1em', textTransform: 'uppercase' }}>Home</span>
           </div>
-          <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 32, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.015em' }}>
+          <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 30, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.02em' }}>
             Hi {displayName.charAt(0).toUpperCase() + displayName.slice(1)}, what would you like to do?
           </h1>
           <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.6, marginTop: 8 }}>
@@ -420,7 +428,7 @@ function HomeTileLauncher({
         </div>
 
         {/* Tile grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 14 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(296px, 1fr))', gap: 16 }}>
           {allTiles.map((t) => {
             const Icon = t.icon;
             return (
@@ -429,12 +437,12 @@ function HomeTileLauncher({
                 onClick={t.onClick}
                 style={{
                   textAlign: 'left',
-                  padding: '20px 22px',
-                  borderRadius: 14,
-                  border: '1px solid var(--border)',
+                  padding: '20px 20px',
+                  borderRadius: 12,
+                  border: '1.5px solid #DCE0E6',
                   background: '#fff',
                   cursor: 'pointer',
-                  transition: 'all 150ms ease',
+                  transition: 'box-shadow 180ms ease, transform 180ms ease',
                   fontFamily: 'inherit',
                   display: 'flex',
                   flexDirection: 'column',
@@ -442,20 +450,25 @@ function HomeTileLauncher({
                   minHeight: 168,
                   position: 'relative',
                   overflow: 'hidden',
+                  boxShadow: STATIC_SHADOW,
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.boxShadow = '0 8px 24px rgba(10,36,99,0.08)';
-                  e.currentTarget.style.borderColor = 'var(--navy)';
+                  e.currentTarget.style.boxShadow = HOVER_SHADOW;
                   e.currentTarget.style.transform = 'translateY(-1px)';
+                  const stripe = e.currentTarget.querySelector('[data-tile-stripe]');
+                  if (stripe) stripe.style.opacity = '1';
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.boxShadow = 'none';
-                  e.currentTarget.style.borderColor = 'var(--border)';
+                  e.currentTarget.style.boxShadow = STATIC_SHADOW;
                   e.currentTarget.style.transform = 'translateY(0)';
+                  const stripe = e.currentTarget.querySelector('[data-tile-stripe]');
+                  if (stripe) stripe.style.opacity = '0.55';
                 }}
               >
-                {/* Top accent stripe */}
-                <span style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: t.accent }} />
+                {/* Top accent stripe — demoted: 2px and at 0.55 opacity by
+                    default, lifts to full saturation on hover. Reactive
+                    accent, not identity. */}
+                <span data-tile-stripe style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: t.accent, opacity: 0.55, transition: 'opacity 180ms ease' }} />
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 }}>
                   <div style={{ width: 38, height: 38, borderRadius: 10, background: 'var(--ice-warm)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <Icon size={18} style={{ color: 'var(--navy)' }} />
@@ -466,7 +479,10 @@ function HomeTileLauncher({
                   <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 4 }}>{t.label}</div>
                   <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.55, margin: 0, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{t.desc}</p>
                 </div>
-                <div style={{ marginTop: 'auto', paddingTop: 10, borderTop: '1px solid var(--border)', fontSize: 11, color: 'var(--text-muted)', fontFamily: "'IBM Plex Mono', ui-monospace, monospace", letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                {/* Footer divider lighter than the outer card edge so the
+                    container shape stays intact (outer line must always
+                    be the strongest line on the card). */}
+                <div style={{ marginTop: 'auto', paddingTop: 12, borderTop: '1px solid #EEF0F3', fontSize: 11, color: 'var(--text-muted)', fontFamily: "'IBM Plex Mono', ui-monospace, monospace", letterSpacing: '0.06em', textTransform: 'uppercase' }}>
                   {t.meta}
                 </div>
               </button>

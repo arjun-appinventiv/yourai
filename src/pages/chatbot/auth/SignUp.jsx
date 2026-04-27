@@ -542,7 +542,9 @@ export default function SignUp() {
           )}
         </div>
 
-        {/* Firm Name */}
+        {/* Firm Name — locked when this is an invited-user flow because
+            the org admin already chose the firm name. The invitee can't
+            edit their way into a different firm. */}
         <div>
           <label className="block mb-1.5" style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-secondary)' }}>Firm Name</label>
           <div className={inputWrap}>
@@ -553,10 +555,18 @@ export default function SignUp() {
               onChange={(e) => setFirmName(e.target.value)}
               placeholder="Hartwell & Associates"
               required
-              style={inputStyle}
+              disabled={isInvited}
+              style={{
+                ...inputStyle,
+                background: isInvited ? 'var(--ice-warm)' : inputStyle.background,
+                color: isInvited ? 'var(--text-secondary)' : inputStyle.color,
+                cursor: isInvited ? 'not-allowed' : 'text',
+              }}
             />
           </div>
-          <p className="mt-1" style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Solo practitioner? You can use your own name or chambers name.</p>
+          <p className="mt-1" style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+            {isInvited ? 'Set by the colleague who invited you — can\'t be changed.' : 'Solo practitioner? You can use your own name or chambers name.'}
+          </p>
         </div>
 
         {/* Password */}
