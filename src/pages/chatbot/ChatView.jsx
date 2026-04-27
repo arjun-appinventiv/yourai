@@ -1915,6 +1915,64 @@ function EditKnowledgePackModal({ pack, onClose, onSave }) {
 // Folders are a single-level grouping (no nesting). Root view shows
 // folder tiles + uncategorised docs. Drilling in shows that folder's
 // docs only, with a breadcrumb back to root.
+/* ─── Reusable filter chip with popover (P8 v1) ───
+   Used by the Document Vault toolbar for Date / Uploader / Type / Sort. */
+function FilterChip({ icon: Icon, label, value, isActive, isOpen, onToggle, onClose, options, selectedId, onPick }) {
+  return (
+    <span style={{ position: 'relative' }}>
+      <button
+        onClick={onToggle}
+        style={{
+          display: 'inline-flex', alignItems: 'center', gap: 6,
+          height: 32, padding: '0 12px', borderRadius: 999,
+          border: '1px solid ' + (isActive ? 'var(--navy)' : 'var(--border)'),
+          background: isActive ? 'rgba(10,36,99,0.04)' : '#fff',
+          fontSize: 12, color: 'var(--text-secondary)',
+          cursor: 'pointer', fontFamily: "'DM Sans', sans-serif",
+        }}
+      >
+        <Icon size={12} style={{ color: 'var(--text-muted)' }} />
+        <span style={{ color: 'var(--text-muted)' }}>{label}:</span>
+        <strong style={{ color: isActive ? 'var(--navy)' : 'var(--text-primary)', fontWeight: 500 }}>{value}</strong>
+        <ChevronDown size={11} style={{ color: 'var(--text-muted)' }} />
+      </button>
+      {isOpen && (
+        <>
+          <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 19 }} />
+          <div style={{ position: 'absolute', top: 'calc(100% + 4px)', left: 0, minWidth: 200, background: '#fff', border: '1px solid var(--border)', borderRadius: 8, boxShadow: '0 6px 20px rgba(15,23,42,0.08)', padding: 4, zIndex: 20, maxHeight: 320, overflowY: 'auto' }}>
+            {options.map((o) => {
+              const isSelected = selectedId === o.id;
+              return (
+                <button
+                  key={String(o.id)}
+                  onClick={() => onPick(o.id)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 8,
+                    width: '100%', padding: '8px 10px',
+                    background: 'none', border: 'none',
+                    fontSize: 12, color: 'var(--text-primary)',
+                    cursor: 'pointer', textAlign: 'left', borderRadius: 6,
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(15,23,42,0.04)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = 'none'; }}
+                >
+                  <span style={{ width: 14, display: 'inline-flex', justifyContent: 'center' }}>
+                    {isSelected && <Check size={12} style={{ color: 'var(--navy)' }} />}
+                  </span>
+                  <span style={{ flex: 1 }}>{o.label}</span>
+                  {typeof o.count === 'number' && (
+                    <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>{o.count}</span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </>
+      )}
+    </span>
+  );
+}
+
 function DocumentVaultPanel({
   documents, folders, onClose, onCreateNew, onCreateFolder, onRenameFolder, onDeleteFolder,
   onUploadFolder,
@@ -2509,6 +2567,142 @@ Rules:
                   <span style={{ color: 'var(--text-muted)' }}>{counts.total} {counts.total === 1 ? 'document' : 'documents'} · {visibleFolders.length} {visibleFolders.length === 1 ? 'folder' : 'folders'}</span>
                 )}
               </div>
+            </div>
+
+            {/* ─── Ask anything (P8 — Wendy's "biggest at-close download" use case) ─── */}
+            <div style={{ maxWidth: 1080, margin: '0 auto', padding: '4px 28px 8px' }}>
+              <div style={{ position: 'relative' }}>
+                <Sparkles size={14} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--gold)' }} />
+                <input
+                  value={askQuery}
+                  onChange={(e) => setAskQuery(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleAskAnything(); }}
+                  placeholder='Ask anything across your library — try "biggest file" or "PDFs uploaded this month"'
+                  disabled={askLoading}
+                  style={{
+                    width: '100%', height: 44,
+                    borderRadius: 12,
+                    border: '1px solid var(--border)',
+                    paddingLeft: 38, paddingRight: 110,
+                    fontSize: 14, outline: 'none',
+                    boxSizing: 'border-box',
+                    fontFamily: "'DM Sans', sans-serif",
+                    background: '#fff',
+                    color: 'var(--text-primary)',
+                    boxShadow: '0 1px 2px rgba(15,23,42,0.04)',
+                  }}
+                />
+                <button
+                  onClick={handleAskAnything}
+                  disabled={askLoading || !askQuery.trim()}
+                  style={{
+                    position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)',
+                    height: 32, padding: '0 14px',
+                    borderRadius: 8, border: 'none',
+                    background: askLoading || !askQuery.trim() ? '#9CA3AF' : 'var(--navy)',
+                    color: '#fff', fontSize: 12, fontWeight: 500,
+                    cursor: askLoading || !askQuery.trim() ? 'not-allowed' : 'pointer',
+                    fontFamily: "'DM Sans', sans-serif",
+                  }}
+                >
+                  {askLoading ? 'Thinking…' : 'Ask'}
+                </button>
+              </div>
+              {askExplanation && (
+                <div style={{ marginTop: 8, padding: '8px 12px', borderRadius: 8, background: 'rgba(201,168,76,0.12)', border: '1px solid rgba(201,168,76,0.35)', fontSize: 12, color: '#7A5C0A', display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Sparkles size={12} style={{ color: 'var(--gold)', flexShrink: 0 }} />
+                  <span style={{ flex: 1 }}>{askExplanation}</span>
+                  <button onClick={() => { clearAllFilters(); }} style={{ background: 'none', border: 'none', padding: 0, fontSize: 11, fontWeight: 500, color: '#7A5C0A', cursor: 'pointer', textDecoration: 'underline', whiteSpace: 'nowrap' }}>Clear</button>
+                </div>
+              )}
+            </div>
+
+            {/* ─── Filter chips row (P8 — Date / Uploader / Type / Sort) ─── */}
+            <div style={{ maxWidth: 1080, margin: '0 auto', padding: '4px 28px 12px', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              {/* Date */}
+              <FilterChip
+                icon={Calendar}
+                label="Date"
+                value={({ any: 'Any time', '7d': 'Past 7 days', '30d': 'Past 30 days', year: 'This year' })[dateFilter]}
+                isActive={dateFilter !== 'any'}
+                isOpen={openFilterMenu === 'date'}
+                onToggle={() => setOpenFilterMenu(openFilterMenu === 'date' ? null : 'date')}
+                onClose={() => setOpenFilterMenu(null)}
+                options={[
+                  { id: 'any',  label: 'Any time' },
+                  { id: '7d',   label: 'Past 7 days' },
+                  { id: '30d',  label: 'Past 30 days' },
+                  { id: 'year', label: 'This year' },
+                ]}
+                selectedId={dateFilter}
+                onPick={(id) => { setDateFilter(id); setOpenFilterMenu(null); }}
+              />
+              {/* Uploader */}
+              <FilterChip
+                icon={User}
+                label="Uploaded by"
+                value={uploaderFilter ? (docOwners.find((o) => o.id === uploaderFilter)?.name || 'Member') : 'Anyone'}
+                isActive={!!uploaderFilter}
+                isOpen={openFilterMenu === 'uploader'}
+                onToggle={() => setOpenFilterMenu(openFilterMenu === 'uploader' ? null : 'uploader')}
+                onClose={() => setOpenFilterMenu(null)}
+                options={[
+                  { id: null, label: 'Anyone', count: visibleDocs.length },
+                  ...docOwners.map((o) => ({ id: o.id, label: o.name, count: o.count })),
+                ]}
+                selectedId={uploaderFilter}
+                onPick={(id) => { setUploaderFilter(id); setOpenFilterMenu(null); }}
+              />
+              {/* Type */}
+              <FilterChip
+                icon={FileText}
+                label="Type"
+                value={typeFilter ? typeFilter.toUpperCase() : 'Any'}
+                isActive={!!typeFilter}
+                isOpen={openFilterMenu === 'type'}
+                onToggle={() => setOpenFilterMenu(openFilterMenu === 'type' ? null : 'type')}
+                onClose={() => setOpenFilterMenu(null)}
+                options={[
+                  { id: null,   label: 'Any type' },
+                  { id: 'pdf',  label: 'PDF' },
+                  { id: 'docx', label: 'DOCX' },
+                  { id: 'xlsx', label: 'XLSX' },
+                  { id: 'txt',  label: 'TXT' },
+                ]}
+                selectedId={typeFilter}
+                onPick={(id) => { setTypeFilter(id); setOpenFilterMenu(null); }}
+              />
+              {/* Sort */}
+              <FilterChip
+                icon={ArrowUp}
+                label="Sort"
+                value={({ recent: 'Recently uploaded', name: 'Name (A→Z)', 'size-desc': 'Largest first', 'size-asc': 'Smallest first' })[sortBy]}
+                isActive={sortBy !== 'recent'}
+                isOpen={openFilterMenu === 'sort'}
+                onToggle={() => setOpenFilterMenu(openFilterMenu === 'sort' ? null : 'sort')}
+                onClose={() => setOpenFilterMenu(null)}
+                options={[
+                  { id: 'recent',    label: 'Recently uploaded' },
+                  { id: 'name',      label: 'Name (A→Z)' },
+                  { id: 'size-desc', label: 'Largest first' },
+                  { id: 'size-asc',  label: 'Smallest first' },
+                ]}
+                selectedId={sortBy}
+                onPick={(id) => { setSortBy(id); setOpenFilterMenu(null); }}
+              />
+              {activeFilterCount > 0 && (
+                <button
+                  onClick={clearAllFilters}
+                  style={{ padding: '6px 10px', borderRadius: 999, border: '1px dashed var(--border)', background: 'transparent', fontSize: 11, color: 'var(--text-muted)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                >
+                  <X size={11} /> Clear filters
+                </button>
+              )}
+              {resultLimit && (
+                <span style={{ display: 'inline-flex', alignItems: 'center', padding: '4px 10px', borderRadius: 999, background: 'rgba(10,36,99,0.06)', color: 'var(--navy)', fontSize: 11, fontWeight: 500 }}>
+                  Top {resultLimit}
+                </span>
+              )}
             </div>
 
             {/* Subfolder chip strip */}
