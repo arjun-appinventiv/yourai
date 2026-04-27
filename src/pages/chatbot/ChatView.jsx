@@ -18,6 +18,7 @@ import WorkspacesPage from './WorkspacesPage';
 import { listWorkspacesForUser, seedWorkspacesIfEmpty } from '../../lib/workspace';
 import { MOCK_WORKSPACES } from '../../lib/mockWorkspaces';
 import { loadVault, saveVault, seedVaultIfEmpty, loadFolders, saveFolders, seedFoldersIfEmpty } from '../../lib/documentVaultStore';
+import { SAMPLE_VAULT_CONTENT, SAMPLE_VAULT_NESTED_DOCS } from '../../data/sampleVaultContent';
 import IntentCard, { isCardIntent, tryParseCardData } from '../../components/chat/cards/IntentCard';
 import WorkflowsPanel from '../../components/chat/WorkflowsPanel';
 import WorkflowBuilder from '../../components/chat/WorkflowBuilder';
@@ -206,9 +207,16 @@ const THREAD_MESSAGES = {
 // Vault docs carry the same ownerId / ownerName / isGlobal triple as
 // Knowledge Packs so Org Admin can share firm-wide and non-admins see
 // the right subset.
+//
+// Each seed doc now carries:
+//   - `content`    real extracted text that the AI reads when the user
+//                  clicks "Use" on this doc (sourced from
+//                  src/data/sampleVaultContent.ts)
+//   - `sampleUrl`  path to a real PDF in public/sample-docs/ for
+//                  download/preview
 const DEFAULT_DOCUMENT_VAULT = [
   {
-    id: 1,
+    id: '1',
     name: 'Master Services Agreement — Acme Corp',
     description: 'Signed MSA covering SaaS delivery, support SLAs, and data processing terms.',
     fileName: 'MSA_Acme_Corp_v4.pdf',
@@ -218,9 +226,11 @@ const DEFAULT_DOCUMENT_VAULT = [
     ownerName: 'Ryan Melade',
     isGlobal: true,
     folderId: 'fld-contracts',
+    content: SAMPLE_VAULT_CONTENT['1'],
+    sampleUrl: '/sample-docs/MSA_Acme_Corp_v4.pdf',
   },
   {
-    id: 2,
+    id: '2',
     name: 'Employee Handbook 2026',
     description: 'Current employee handbook with updated PTO, remote work, and conduct policies.',
     fileName: 'Employee_Handbook_2026.pdf',
@@ -230,9 +240,11 @@ const DEFAULT_DOCUMENT_VAULT = [
     ownerName: 'Ryan Melade',
     isGlobal: true,
     folderId: 'fld-policies',
+    content: SAMPLE_VAULT_CONTENT['2'],
+    sampleUrl: '/sample-docs/Employee_Handbook_2026.pdf',
   },
   {
-    id: 3,
+    id: '3',
     name: 'Series B Term Sheet',
     description: 'Executed term sheet for Series B financing round with Ridgeline Ventures.',
     fileName: 'SeriesB_TermSheet_Signed.pdf',
@@ -242,7 +254,15 @@ const DEFAULT_DOCUMENT_VAULT = [
     ownerName: 'Priya Shah',
     isGlobal: false,
     folderId: 'fld-contracts',
+    content: SAMPLE_VAULT_CONTENT['3'],
+    sampleUrl: '/sample-docs/SeriesB_TermSheet_Signed.pdf',
   },
+  // Nested folder doc — lives inside Acme Corp / MSA & Schedules so
+  // the demo's deep folder tree has real content too.
+  ...SAMPLE_VAULT_NESTED_DOCS.map((d) => ({
+    ...d,
+    sampleUrl: `/sample-docs/${d.fileName}`,
+  })),
 ];
 
 // Default folders seeded on first load. ID is a stable string so docs
@@ -4407,14 +4427,29 @@ export default function ChatView({ initialView = 'chat' }) {
     // from the vault and asked a question about it.
     let vaultSelectionContext = '';
     if (activeVaultDocument && !mergedDocContent) {
-      // We don't have raw file text for vault docs (would need re-extraction
-      // from storage), but the name + description give the model enough to
-      // know a doc IS attached and what it's about.
-      vaultSelectionContext = `--- ${activeVaultDocument.name} ---\n[Vault document: ${activeVaultDocument.fileName || activeVaultDocument.name}]${activeVaultDocument.description ? `\n${activeVaultDocument.description}` : ''}`;
+      // Prefer the seeded `content` field — that's the actual extracted
+      // text the AI can reason about clause-by-clause. Falls back to
+      // name + description for older or user-created vault docs that
+      // lack content.
+      const fullText = activeVaultDocument.content || '';
+      const truncated = fullText.length > 20000
+        ? fullText.slice(0, 20000) + '\n[... document truncated at 20,000 characters ...]'
+        : fullText;
+      const body = truncated || (activeVaultDocument.description || `[Vault document: ${activeVaultDocument.fileName || activeVaultDocument.name}]`);
+      vaultSelectionContext = `--- ${activeVaultDocument.name} ---\n${body}`;
     } else if (activeVaultFolder && !mergedDocContent) {
       const folderDocs = documentVault.filter((d) => d.folderId === activeVaultFolder.id);
+      // Same upgrade: when a folder is attached, inline each doc's full
+      // content (capped per-doc) so the user can ask cross-doc questions
+      // across the folder.
+      const PER_DOC_CAP = 8000;
       vaultSelectionContext = `--- Folder: ${activeVaultFolder.name} (${folderDocs.length} document${folderDocs.length === 1 ? '' : 's'}) ---\n` +
-        folderDocs.map((d) => `[${d.name}]${d.description ? `: ${d.description}` : ''}`).join('\n');
+        folderDocs.map((d) => {
+          const txt = (d.content || '').slice(0, PER_DOC_CAP);
+          return txt
+            ? `\n## ${d.name}\n${txt}${d.content && d.content.length > PER_DOC_CAP ? '\n[... truncated ...]' : ''}`
+            : `\n[${d.name}]${d.description ? `: ${d.description}` : ''}`;
+        }).join('\n');
     }
 
     // Final assembly — use whichever context source has content. Real
@@ -5301,7 +5336,10 @@ INSTRUCTIONS:
           <HomeTileLauncher
             navigate={navigate}
             onOpenChat={() => { closeAllPanels(); navigate('/chat'); }}
-            onOpenWorkspaces={() => { closeAllPanels(); navigate('/chat/workspaces'); }}
+            // Workspaces lives at its own route — set the panel flag
+            // explicitly because the route change alone doesn't re-init
+            // showWorkspacesPanel state on a same-component re-render.
+            onOpenWorkspaces={() => { closeAllPanels(); setShowWorkspacesPanel(true); navigate('/chat/workspaces'); }}
             onOpenWorkflows={() => { closeAllPanels(); setShowWorkflowsPanel(true); }}
             onOpenVault={() => { closeAllPanels(); setShowDocumentVaultPanel(true); }}
             onOpenPacks={() => { closeAllPanels(); setShowKnowledgePacksPanel(true); }}

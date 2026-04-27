@@ -18,6 +18,12 @@ export interface VaultDoc {
   addedFromChat?: boolean;
   // Optional folder grouping. null/undefined = root (uncategorised).
   folderId?: string | null;
+  // ─── Real-content fields (added 2026-04-27) ─────────────────────
+  // `content` is the extracted plain text used by the AI when this
+  // doc is selected as chat context; `sampleUrl` is a path under
+  // /public/sample-docs/ to a real PDF the user can download/view.
+  content?: string;
+  sampleUrl?: string;
 }
 
 export interface VaultFolder {
@@ -33,7 +39,10 @@ export interface VaultFolder {
   parentId?: string | null;
 }
 
-const KEY = 'yourai_document_vault';
+// v2: bumped 2026-04-27 when seed docs gained `content` + `sampleUrl`.
+// Older entries didn't carry real text; bumping forces re-seed so users
+// get the new sample PDFs and the bot can actually read them.
+const KEY = 'yourai_document_vault_v2';
 const FOLDERS_KEY = 'yourai_document_vault_folders_v1';
 
 export function loadVault(): VaultDoc[] | null {
