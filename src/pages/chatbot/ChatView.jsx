@@ -4004,10 +4004,32 @@ export default function ChatView({ initialView = 'chat' }) {
       });
     }
 
+    // ─── Also include vault-selection context (Use button on a Doc / Folder) ───
+    // These don't go through pendingAttachments — they're set as
+    // activeVaultDocument / activeVaultFolder. Without this branch the
+    // Edge would think no doc is attached when the user picked one
+    // from the vault and asked a question about it.
+    let vaultSelectionContext = '';
+    if (activeVaultDocument && !mergedDocContent) {
+      // We don't have raw file text for vault docs (would need re-extraction
+      // from storage), but the name + description give the model enough to
+      // know a doc IS attached and what it's about.
+      vaultSelectionContext = `--- ${activeVaultDocument.name} ---\n[Vault document: ${activeVaultDocument.fileName || activeVaultDocument.name}]${activeVaultDocument.description ? `\n${activeVaultDocument.description}` : ''}`;
+    } else if (activeVaultFolder && !mergedDocContent) {
+      const folderDocs = documentVault.filter((d) => d.folderId === activeVaultFolder.id);
+      vaultSelectionContext = `--- Folder: ${activeVaultFolder.name} (${folderDocs.length} document${folderDocs.length === 1 ? '' : 's'}) ---\n` +
+        folderDocs.map((d) => `[${d.name}]${d.description ? `: ${d.description}` : ''}`).join('\n');
+    }
+
+    // Final assembly — use whichever context source has content. Real
+    // uploads (pendingAttachments → mergedDocContent) take precedence
+    // over vault selections so we don't double-stack.
+    const effectiveDocContext = mergedDocContent || vaultSelectionContext;
+
     // (b) When user sends purely an attachment with no typed text, substitute a default question so the Edge guard passes.
-    const effectiveQuestion = trimmed || (mergedDocContent ? 'Please review the attached document(s) and summarise what you find.' : '');
-    const docsHeader = mergedDocContent
-      ? `[Documents attached to this conversation]\n${mergedDocContent}\n\n[User question]\n`
+    const effectiveQuestion = trimmed || (effectiveDocContext ? 'Please review the attached document(s) and summarise what you find.' : '');
+    const docsHeader = effectiveDocContext
+      ? `[Documents attached to this conversation]\n${effectiveDocContext}\n\n[User question]\n`
       : '';
     const messageForEdge = (docsHeader + effectiveQuestion).trim();
 
@@ -4796,6 +4818,21 @@ INSTRUCTIONS:
 
   // Active sidebar item — derived from whichever panel/route is in front.
   // Order matters: full-page panels win over the underlying chat/home.
+  // Close every full-page panel + every modal-style panel before opening
+  // a new one. Without this, two panels can render at the same time
+  // (e.g. Workflows + Knowledge Packs side-by-side) because each
+  // open-handler was only zeroing a subset of siblings.
+  const closeAllPanels = () => {
+    setShowTeamPage(false);
+    setShowWorkspacesPanel(false);
+    setShowWorkflowsPanel(false);
+    setShowPromptPanel(false);
+    setShowClientsPanel(false);
+    setShowKnowledgePacksPanel(false);
+    setShowDocumentVaultPanel(false);
+    setEditingWorkflow(null);
+  };
+
   const sidebarActiveKey = (() => {
     if (showTeamPage) return 'invite-team';
     if (showWorkspacesPanel) return 'workspaces';
@@ -4813,17 +4850,17 @@ INSTRUCTIONS:
       {idleWarning}
       <Sidebar
         activeKey={sidebarActiveKey}
-        onGoHome={() => { setShowTeamPage(false); setShowWorkspacesPanel(false); setShowWorkflowsPanel(false); setShowPromptPanel(false); setShowClientsPanel(false); setShowKnowledgePacksPanel(false); setShowDocumentVaultPanel(false); setSidebarOpen(false); navigate('/chat/home'); }}
-        onOpenChat={() => { setShowTeamPage(false); setShowWorkspacesPanel(false); setShowWorkflowsPanel(false); setSidebarOpen(false); navigate('/chat'); }}
-        onOpenPromptTemplates={() => { setShowTeamPage(false); setShowWorkspacesPanel(false); setShowPromptPanel(true); setSidebarOpen(false); }}
-        onOpenClients={() => { setShowTeamPage(false); setShowWorkspacesPanel(false); setShowClientsPanel(true); setSidebarOpen(false); }}
-        onOpenKnowledgePacks={() => { setShowTeamPage(false); setShowWorkspacesPanel(false); setShowKnowledgePacksPanel(true); setSidebarOpen(false); }}
-        onOpenDocumentVault={() => { setShowTeamPage(false); setShowWorkspacesPanel(false); setShowDocumentVaultPanel(true); setSidebarOpen(false); }}
-        onOpenInviteTeam={() => { setShowWorkspacesPanel(false); setShowTeamPage(true); setSidebarOpen(false); }}
+        onGoHome={() => { closeAllPanels(); setSidebarOpen(false); navigate('/chat/home'); }}
+        onOpenChat={() => { closeAllPanels(); setSidebarOpen(false); navigate('/chat'); }}
+        onOpenPromptTemplates={() => { closeAllPanels(); setShowPromptPanel(true); setSidebarOpen(false); }}
+        onOpenClients={() => { closeAllPanels(); setShowClientsPanel(true); setSidebarOpen(false); }}
+        onOpenKnowledgePacks={() => { closeAllPanels(); setShowKnowledgePacksPanel(true); setSidebarOpen(false); }}
+        onOpenDocumentVault={() => { closeAllPanels(); setShowDocumentVaultPanel(true); setSidebarOpen(false); }}
+        onOpenInviteTeam={() => { closeAllPanels(); setShowTeamPage(true); setSidebarOpen(false); }}
         onOpenAuditLogs={() => { /* TODO: Part 5+ wires real audit-logs panel */ }}
         onOpenBilling={() => { navigate('/app/billing'); setSidebarOpen(false); }}
-        onOpenWorkspaces={() => { setShowTeamPage(false); navigate('/chat/workspaces'); setShowWorkspacesPanel(true); setSidebarOpen(false); }}
-        onOpenWorkflows={() => { setShowTeamPage(false); setShowWorkspacesPanel(false); setShowWorkflowsPanel(true); setSidebarOpen(false); }}
+        onOpenWorkspaces={() => { closeAllPanels(); navigate('/chat/workspaces'); setShowWorkspacesPanel(true); setSidebarOpen(false); }}
+        onOpenWorkflows={() => { closeAllPanels(); setShowWorkflowsPanel(true); setSidebarOpen(false); }}
         workflowCount={workflowCount}
         runningWorkflow={runningWorkflow}
         onViewRunning={() => {
@@ -4867,12 +4904,12 @@ INSTRUCTIONS:
         {initialView === 'home' ? (
           <HomeTileLauncher
             navigate={navigate}
-            onOpenChat={() => navigate('/chat')}
-            onOpenWorkspaces={() => navigate('/chat/workspaces')}
-            onOpenWorkflows={() => { setShowWorkflowsPanel(true); }}
-            onOpenVault={() => { setShowDocumentVaultPanel(true); }}
-            onOpenPacks={() => { setShowKnowledgePacksPanel(true); }}
-            onOpenInviteTeam={() => { setShowTeamPage(true); }}
+            onOpenChat={() => { closeAllPanels(); navigate('/chat'); }}
+            onOpenWorkspaces={() => { closeAllPanels(); navigate('/chat/workspaces'); }}
+            onOpenWorkflows={() => { closeAllPanels(); setShowWorkflowsPanel(true); }}
+            onOpenVault={() => { closeAllPanels(); setShowDocumentVaultPanel(true); }}
+            onOpenPacks={() => { closeAllPanels(); setShowKnowledgePacksPanel(true); }}
+            onOpenInviteTeam={() => { closeAllPanels(); setShowTeamPage(true); }}
             isOrgAdmin={isOrgAdmin}
             isExternalUser={isExternalUser}
             displayName={(operator?.name || (typeof window !== 'undefined' ? localStorage.getItem('yourai_current_email') : '') || 'there').split('@')[0]}
