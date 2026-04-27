@@ -257,34 +257,30 @@ export default function Onboarding() {
   const [paymentProcessing, setPaymentProcessing] = useState(false);
   const [paymentComplete, setPaymentComplete] = useState(false);
 
-  // Onboarding flow (Apr 2026 attorney-feedback restructure):
-  //   Step 1 = Plan
-  //   Step 2 = Payment (skipped if free plan)
-  // Role / Practice / Firm Size / Primary State are no longer collected
-  // up-front — Wendy (attorney) said the survey-before-pricing creates a
-  // trust problem ("now do I not trust those numbers because of the
-  // answers I gave?"). Those fields become a dismissable post-onboarding
-  // profile prompt instead. The renderStep1..renderStep4 functions are
-  // intentionally left in this file as dead code so we can re-surface
-  // them later as a settings page or post-onboarding nudge.
-  const TOTAL_STEPS = 2;
+  // Onboarding flow: Role → Practice Areas → Firm Size → Primary State → Plan → Payment
+  // (Removed: "First Action" step — suggested prompts no longer depend on it.)
+  const TOTAL_STEPS = 6;
 
   const canContinue = () => {
     switch (step) {
-      case 1: return !!selectedPlan;
-      case 2: return !paymentProcessing && (selectedPlan === 'free' || paymentComplete || (cardNumber.replace(/\s/g, '').length >= 15 && cardExpiry.length >= 4 && cardCvc.length >= 3 && billingName.trim().length > 0));
+      case 1: return !!role;
+      case 2: return practiceAreas.length > 0;
+      case 3: return !!firmSize;
+      case 4: return !!primaryState;
+      case 5: return !!selectedPlan;
+      case 6: return !paymentProcessing && (selectedPlan === 'free' || paymentComplete || (cardNumber.replace(/\s/g, '').length >= 15 && cardExpiry.length >= 4 && cardCvc.length >= 3 && billingName.trim().length > 0));
       default: return false;
     }
   };
 
   const goNext = () => {
-    // Step 1 → 2: if free plan, skip payment entirely
-    if (step === 1 && selectedPlan === 'free') {
+    // Step 5 → 6: if free plan, skip payment step entirely
+    if (step === 5 && selectedPlan === 'free') {
       finishOnboarding();
       return;
     }
-    // Step 2 (payment): process then finish
-    if (step === 2) {
+    // Step 6 (payment): process then finish
+    if (step === 6) {
       if (paymentComplete) {
         finishOnboarding();
         return;
@@ -362,9 +358,9 @@ export default function Onboarding() {
         }
       } catch { /* localStorage sync failed — non-critical */ }
 
-      navigate('/chat/home');
+      navigate('/chat');
     } catch {
-      navigate('/chat/home');
+      navigate('/chat');
     }
   };
 
@@ -914,10 +910,10 @@ export default function Onboarding() {
     </div>
   );
 
-  // Active flow: Plan → Payment. The role / practice / firm-size / state
-  // renderers (renderStep1..4) stay defined above for the eventual
-  // post-onboarding profile nudge.
-  const stepRenderers = [renderStep6, renderStep7];
+  // Active flow: Role → Practice Areas → Firm Size → Primary State → Plan → Payment
+  // renderStep5 (First Action) is no longer surfaced — the legal-workflow prompts on
+  // the chat welcome screen don't depend on that answer anymore.
+  const stepRenderers = [renderStep1, renderStep2, renderStep3, renderStep4, renderStep6, renderStep7];
 
   return (
     <div style={styles.wrapper}>
@@ -938,7 +934,7 @@ export default function Onboarding() {
         <div
           style={{
             ...styles.card,
-            maxWidth: step === 1 ? 960 : 560,
+            maxWidth: step === 5 ? 960 : 560,
             animation: `${direction === 'forward' ? 'onb-slide-in-right' : 'onb-slide-in-left'} 0.35s ease`,
           }}
         >
@@ -968,7 +964,7 @@ export default function Onboarding() {
                 cursor: canContinue() ? 'pointer' : 'not-allowed',
               }}
             >
-              {paymentProcessing ? <><Loader size={16} className="animate-spin" style={{ marginRight: 6 }} /> Processing...</> : step === 2 ? (paymentComplete ? 'Get Started' : 'Start Free Trial') : step === 1 ? (selectedPlan === 'free' ? 'Get Started — Free' : 'Continue to Payment') : 'Continue'}
+              {paymentProcessing ? <><Loader size={16} className="animate-spin" style={{ marginRight: 6 }} /> Processing...</> : step === 7 ? (paymentComplete ? 'Get Started' : 'Start Free Trial') : step === 6 ? (selectedPlan === 'free' ? 'Get Started — Free' : 'Continue to Payment') : 'Continue'}
             </button>
           </div>
         </div>

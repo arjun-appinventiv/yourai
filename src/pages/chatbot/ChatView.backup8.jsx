@@ -351,144 +351,12 @@ const riskColors = {
   LOW: { bg: '#F0F3F6', text: '#1E3A8A' },
 };
 
-/* ─────────────────── Home Tile Launcher ───────────────────
-   Decision-page home: a tile per top-level surface (General Chat,
-   Workspaces, Document Vault, Knowledge Packs, Workflows, Invite
-   Team). Replaces the chat empty state when ChatView is mounted with
-   `initialView="home"`. Navigates to the matching surface or opens
-   the matching panel via the parent. */
-function HomeTileLauncher({
-  navigate, onOpenChat, onOpenWorkspaces, onOpenWorkflows, onOpenVault, onOpenPacks, onOpenInviteTeam,
-  isOrgAdmin, isExternalUser, displayName,
-  workspaceCount = 0, workflowCount = 0, vaultCount = 0, packCount = 0, memberCount = null,
-}) {
-  // Compose the tile list based on role. External users only see
-  // General Chat + their workspaces; everyone else sees the full set.
-  const allTiles = [
-    {
-      id: 'chat', icon: MessageSquare, label: 'General Chat',
-      desc: 'Ask any legal question or work with an uploaded document.',
-      meta: 'Open chat', onClick: onOpenChat, accent: '#0A2463',
-    },
-    {
-      id: 'workspaces', icon: Briefcase, label: 'Client Files',
-      desc: 'Per-client workspaces — each holds its own chats, docs, and runs.',
-      meta: `${workspaceCount} ${workspaceCount === 1 ? 'workspace' : 'workspaces'}`,
-      onClick: onOpenWorkspaces, accent: '#5B21B6',
-    },
-    !isExternalUser && {
-      id: 'vault', icon: FolderOpen, label: 'Document Vault',
-      desc: 'Every document you have uploaded — folders, search, attach to chat.',
-      meta: `${vaultCount} ${vaultCount === 1 ? 'document' : 'documents'}`,
-      onClick: onOpenVault, accent: '#0F2E59',
-    },
-    !isExternalUser && {
-      id: 'workflows', icon: Zap, label: 'Workflows',
-      desc: 'Run multi-step AI pipelines — review, compare, generate reports.',
-      meta: `${workflowCount} ${workflowCount === 1 ? 'template' : 'templates'}`,
-      onClick: onOpenWorkflows, accent: '#9A3412',
-    },
-    !isExternalUser && {
-      id: 'packs', icon: Package, label: 'Knowledge Packs',
-      desc: 'Saved bundles of docs you can attach to a chat in one click.',
-      meta: `${packCount} ${packCount === 1 ? 'pack' : 'packs'}`,
-      onClick: onOpenPacks, accent: '#5CA868',
-    },
-    !isExternalUser && {
-      id: 'invite', icon: UserPlus, label: 'Invite Team',
-      desc: 'Add colleagues — they sign in via an emailed link, no setup.',
-      meta: memberCount != null ? `${memberCount} ${memberCount === 1 ? 'member' : 'members'}` : 'Invite via email',
-      onClick: onOpenInviteTeam, accent: '#9333EA',
-    },
-  ].filter(Boolean);
-
-  return (
-    <div style={{ flex: 1, overflowY: 'auto', background: '#FAFBFC', padding: '40px 32px 64px' }}>
-      <div style={{ maxWidth: 1080, margin: '0 auto' }}>
-        {/* Hero */}
-        <div style={{ marginBottom: 28 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-            <Sparkles size={14} style={{ color: 'var(--gold)' }} />
-            <span style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: "'IBM Plex Mono', ui-monospace, monospace", letterSpacing: '0.1em', textTransform: 'uppercase' }}>Home</span>
-          </div>
-          <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 32, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.015em' }}>
-            Hi {displayName.charAt(0).toUpperCase() + displayName.slice(1)}, what would you like to do?
-          </h1>
-          <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.6, marginTop: 8 }}>
-            Pick a starting point. You can always come back here from the <strong>Home</strong> button in the sidebar.
-          </p>
-        </div>
-
-        {/* Tile grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 14 }}>
-          {allTiles.map((t) => {
-            const Icon = t.icon;
-            return (
-              <button
-                key={t.id}
-                onClick={t.onClick}
-                style={{
-                  textAlign: 'left',
-                  padding: '20px 22px',
-                  borderRadius: 14,
-                  border: '1px solid var(--border)',
-                  background: '#fff',
-                  cursor: 'pointer',
-                  transition: 'all 150ms ease',
-                  fontFamily: 'inherit',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 12,
-                  minHeight: 168,
-                  position: 'relative',
-                  overflow: 'hidden',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.boxShadow = '0 8px 24px rgba(10,36,99,0.08)';
-                  e.currentTarget.style.borderColor = 'var(--navy)';
-                  e.currentTarget.style.transform = 'translateY(-1px)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.boxShadow = 'none';
-                  e.currentTarget.style.borderColor = 'var(--border)';
-                  e.currentTarget.style.transform = 'translateY(0)';
-                }}
-              >
-                {/* Top accent stripe */}
-                <span style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: t.accent }} />
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 }}>
-                  <div style={{ width: 38, height: 38, borderRadius: 10, background: 'var(--ice-warm)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <Icon size={18} style={{ color: 'var(--navy)' }} />
-                  </div>
-                  <ArrowRight size={16} style={{ color: 'var(--text-muted)' }} />
-                </div>
-                <div>
-                  <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 4 }}>{t.label}</div>
-                  <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.55, margin: 0, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{t.desc}</p>
-                </div>
-                <div style={{ marginTop: 'auto', paddingTop: 10, borderTop: '1px solid var(--border)', fontSize: 11, color: 'var(--text-muted)', fontFamily: "'IBM Plex Mono', ui-monospace, monospace", letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-                  {t.meta}
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ArrowRight isn't in the lucide import group above; alias to ChevronRight.
-// (Existing imports already include UserPlus, so it can be used directly.)
-const ArrowRight = ChevronRight;
-
-
 /* ─────────────────── Sidebar ─────────────────── */
 /* CONFIDENCE: 5/10 — Sidebar redesign based on Arjun wireframe (Apr 2026).
    Layout structure confirmed by Arjun. Not signed off by Ryan.
    All existing nav items preserved — reorganised only. */
 
-function Sidebar({ onGoHome, onOpenChat, onOpenPromptTemplates, onOpenClients, onOpenKnowledgePacks, onOpenDocumentVault, onOpenInviteTeam, onOpenAuditLogs, onOpenBilling, onOpenWorkspaces, onOpenWorkflows, promptCount, clientCount, packCount, vaultCount, memberCount, workspaceCount, workflowCount, isOpen, onClose, threads, activeThreadId, onSwitchThread, onNewThread, onDeleteThread, threadSearch, onThreadSearchChange, onSignOut, runningWorkflow, onViewRunning }) {
+function Sidebar({ onOpenPromptTemplates, onOpenClients, onOpenKnowledgePacks, onOpenDocumentVault, onOpenInviteTeam, onOpenAuditLogs, onOpenBilling, onOpenWorkspaces, onOpenWorkflows, promptCount, clientCount, packCount, vaultCount, memberCount, workspaceCount, workflowCount, isOpen, onClose, threads, activeThreadId, onSwitchThread, onNewThread, onDeleteThread, threadSearch, onThreadSearchChange, onSignOut, runningWorkflow, onViewRunning }) {
   // Role + permission gating — every nav item decides visibility via hasPermission
   // rather than by comparing role strings directly. See src/lib/roles.ts.
   const { hasPermission, isOrgAdmin, isExternalUser } = useRole();
@@ -540,13 +408,7 @@ function Sidebar({ onGoHome, onOpenChat, onOpenPromptTemplates, onOpenClients, o
   //      "ask your admin to add people" state rather than a dead link)
   //   + New chat is rendered separately in Zone 2 (visible to all)
   const workspaceItems = [
-    // Home tile launcher — entry point to the home decision page. Visible
-    // to everyone; renamed from "Dashboard" per attorney feedback that
-    // "Dashboard" was opaque. Routes to /chat/home regardless of role.
-    { id: 'home', icon: LayoutDashboard, label: 'Home', active: true, onClick: onGoHome },
-    // "Chat" entry — renamed from the prior "Dashboard" item. Goes
-    // straight into the General Chat surface.
-    { id: 'chat', icon: MessageSquare, label: 'Chat', onClick: onOpenChat },
+    isOrgAdmin && { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard', active: true, rightText: '3 running' },
     { id: 'workspaces', icon: Briefcase, label: 'Workspaces', rightText: String(workspaceCount ?? 0), onClick: onOpenWorkspaces },
     isOrgAdmin && { id: 'clients', icon: Users, label: 'Clients', rightText: String(clientCount), onClick: onOpenClients },
     !isExternalUser && { id: 'invite-team', icon: UserPlus, label: 'Invite Team', rightText: memberCount != null ? String(memberCount) : undefined, onClick: onOpenInviteTeam },
@@ -4087,8 +3949,6 @@ INSTRUCTIONS:
     <div style={{ display: 'flex', height: '100vh', width: '100%', overflowX: 'hidden' }}>
       {idleWarning}
       <Sidebar
-        onGoHome={() => { setShowTeamPage(false); setShowWorkspacesPanel(false); setShowWorkflowsPanel(false); setShowPromptPanel(false); setShowClientsPanel(false); setShowKnowledgePacksPanel(false); setShowDocumentVaultPanel(false); setSidebarOpen(false); navigate('/chat/home'); }}
-        onOpenChat={() => { setShowTeamPage(false); setShowWorkspacesPanel(false); setShowWorkflowsPanel(false); setSidebarOpen(false); navigate('/chat'); }}
         onOpenPromptTemplates={() => { setShowTeamPage(false); setShowWorkspacesPanel(false); setShowPromptPanel(true); setSidebarOpen(false); }}
         onOpenClients={() => { setShowTeamPage(false); setShowWorkspacesPanel(false); setShowClientsPanel(true); setSidebarOpen(false); }}
         onOpenKnowledgePacks={() => { setShowTeamPage(false); setShowWorkspacesPanel(false); setShowKnowledgePacksPanel(true); setSidebarOpen(false); }}
@@ -4132,31 +3992,10 @@ INSTRUCTIONS:
         onSignOut={async () => { await session.signOut(); navigate('/chat/login'); }}
       />
       {/* Chat main area — hidden when a full-page view (Team or Workspaces)
-          is active so the sidebar stays visible but the chat UI is replaced.
-          When initialView === 'home' the tile launcher takes over the area
-          inside this same shell (top bar + sidebar still rendered). */}
+          is active so the sidebar stays visible but the chat UI is replaced. */}
       <div style={{ flex: 1, display: (showTeamPage || showWorkspacesPanel || showWorkflowsPanel || editingWorkflow) ? 'none' : 'flex', flexDirection: 'column', minWidth: 0 }}>
         <TopNav plan={plan} usage={usage} onOpenSidebar={() => setSidebarOpen(true)} />
 
-        {initialView === 'home' ? (
-          <HomeTileLauncher
-            navigate={navigate}
-            onOpenChat={() => navigate('/chat')}
-            onOpenWorkspaces={() => navigate('/chat/workspaces')}
-            onOpenWorkflows={() => { setShowWorkflowsPanel(true); }}
-            onOpenVault={() => { setShowDocumentVaultPanel(true); }}
-            onOpenPacks={() => { setShowKnowledgePacksPanel(true); }}
-            onOpenInviteTeam={() => { setShowTeamPage(true); }}
-            isOrgAdmin={isOrgAdmin}
-            isExternalUser={isExternalUser}
-            displayName={(operator?.name || (typeof window !== 'undefined' ? localStorage.getItem('yourai_current_email') : '') || 'there').split('@')[0]}
-            workspaceCount={visibleWorkspaceCount}
-            workflowCount={workflowCount}
-            vaultCount={documentVault.length}
-            packCount={knowledgePacks.length}
-            memberCount={teamMemberCount}
-          />
-        ) : (
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#FAFBFC', minHeight: 0 }}>
           {/* Document limit banners */}
           {docPct >= 100 && (
@@ -4662,7 +4501,6 @@ INSTRUCTIONS:
             </div>
           </div>
         </div>
-        )}
       </div>
 
       {/* ─── Workflow Run Panel — docked to the right of the chat.

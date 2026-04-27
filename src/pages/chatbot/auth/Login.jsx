@@ -48,7 +48,10 @@ export default function Login() {
   const getRedirectTarget = (user) => {
     const candidate = searchParams.get('redirect') || '';
     const isExternal = user?.tenantRole === 'EXTERNAL_USER';
-    const defaultTarget = isExternal ? '/chat/workspaces' : '/chat';
+    // Internal users now land on the tile-based decision home so the
+    // attorney sees a "what would you like to do" picker rather than
+    // an empty chat. Externals still land on their workspace list.
+    const defaultTarget = isExternal ? '/chat/workspaces' : '/chat/home';
     if (!candidate) return defaultTarget;
     if (!candidate.startsWith('/') || candidate.startsWith('//')) return defaultTarget;
     // Externals can only land on workspace routes via deep link; if they have
