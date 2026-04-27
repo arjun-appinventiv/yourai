@@ -8,7 +8,7 @@ import {
   LayoutDashboard, Send, MapPin, FileSearch, Lock, X, AlertTriangle, Info, Zap,
   BookOpen, UserPlus, Trash2, Edit3, Copy, Phone, Mail, Briefcase, Hash, Menu,
   Package, Link2, File, Upload, Paperclip, Database, GitBranch, Settings, LogOut,
-  CreditCard, Folder, FolderPlus, ArrowLeft, User
+  CreditCard, Folder, FolderPlus, ArrowLeft, User, MoreHorizontal, Check
 } from 'lucide-react';
 import { useRole } from '../../context/RoleContext';
 import { useAuth } from '../../context/AuthContext';
@@ -527,7 +527,7 @@ const ArrowRight = ChevronRight;
    Layout structure confirmed by Arjun. Not signed off by Ryan.
    All existing nav items preserved — reorganised only. */
 
-function Sidebar({ onGoHome, onOpenChat, onOpenPromptTemplates, onOpenClients, onOpenKnowledgePacks, onOpenDocumentVault, onOpenInviteTeam, onOpenAuditLogs, onOpenBilling, onOpenWorkspaces, onOpenWorkflows, promptCount, clientCount, packCount, vaultCount, memberCount, workspaceCount, workflowCount, isOpen, onClose, threads, activeThreadId, onSwitchThread, onNewThread, onDeleteThread, threadSearch, onThreadSearchChange, onSignOut, runningWorkflow, onViewRunning }) {
+function Sidebar({ activeKey, onGoHome, onOpenChat, onOpenPromptTemplates, onOpenClients, onOpenKnowledgePacks, onOpenDocumentVault, onOpenInviteTeam, onOpenAuditLogs, onOpenBilling, onOpenWorkspaces, onOpenWorkflows, promptCount, clientCount, packCount, vaultCount, memberCount, workspaceCount, workflowCount, isOpen, onClose, threads, activeThreadId, onSwitchThread, onNewThread, onDeleteThread, threadSearch, onThreadSearchChange, onSignOut, runningWorkflow, onViewRunning }) {
   // Role + permission gating — every nav item decides visibility via hasPermission
   // rather than by comparing role strings directly. See src/lib/roles.ts.
   const { hasPermission, isOrgAdmin, isExternalUser } = useRole();
@@ -582,14 +582,14 @@ function Sidebar({ onGoHome, onOpenChat, onOpenPromptTemplates, onOpenClients, o
     // Home tile launcher — entry point to the home decision page. Visible
     // to everyone; renamed from "Dashboard" per attorney feedback that
     // "Dashboard" was opaque. Routes to /chat/home regardless of role.
-    { id: 'home', icon: LayoutDashboard, label: 'Home', active: true, onClick: onGoHome },
+    { id: 'home', icon: LayoutDashboard, label: 'Home', onClick: onGoHome },
     // "Chat" entry — renamed from the prior "Dashboard" item. Goes
     // straight into the General Chat surface.
     { id: 'chat', icon: MessageSquare, label: 'Chat', onClick: onOpenChat },
     { id: 'workspaces', icon: Briefcase, label: 'Case Workspaces', rightText: String(workspaceCount ?? 0), onClick: onOpenWorkspaces },
     isOrgAdmin && { id: 'clients', icon: Users, label: 'Clients', rightText: String(clientCount), onClick: onOpenClients },
     !isExternalUser && { id: 'invite-team', icon: UserPlus, label: 'Invite Team', rightText: memberCount != null ? String(memberCount) : undefined, onClick: onOpenInviteTeam },
-  ].filter(Boolean);
+  ].filter(Boolean).map((it) => ({ ...it, active: it.id === activeKey }));
 
   // ─── Knowledge items ───
   // External Users don't see Knowledge Packs or Prompt Templates at all.
@@ -600,7 +600,7 @@ function Sidebar({ onGoHome, onOpenChat, onOpenPromptTemplates, onOpenClients, o
     !isExternalUser && { id: 'knowledge-packs', icon: Package, label: 'Knowledge packs', rightText: String(packCount), onClick: onOpenKnowledgePacks },
     !isExternalUser && { id: 'workflows', icon: Zap, label: 'Workflows', rightText: workflowCount != null ? String(workflowCount) : undefined, onClick: onOpenWorkflows },
     !isExternalUser && { id: 'prompt-templates', icon: FileText, label: 'Prompt templates', rightText: String(promptCount), onClick: onOpenPromptTemplates },
-  ].filter(Boolean);
+  ].filter(Boolean).map((it) => ({ ...it, active: it.id === activeKey }));
 
   // ─── Admin items (bottom of scroll area) ───
   // Audit Logs: Org Admin always; Internal User only with view_audit_logs.
@@ -613,7 +613,7 @@ function Sidebar({ onGoHome, onOpenChat, onOpenPromptTemplates, onOpenClients, o
     (isOrgAdmin || hasPermission(PERMISSIONS.ACCESS_BILLING)) && !isExternalUser && {
       id: 'billing', icon: CreditCard, label: 'Billing', onClick: onOpenBilling,
     },
-  ].filter(Boolean);
+  ].filter(Boolean).map((it) => ({ ...it, active: it.id === activeKey }));
 
   // ─── Shared nav item renderer ───
   const renderNavItem = (item) => {
@@ -1266,7 +1266,9 @@ function AddClientModal({ onClose, onSave }) {
 // the view; everyone else gets a single combined list.
 function KnowledgePacksPanel({ packs, onClose, onCreateNew, onEdit, onDelete, onSelect, onToggleGlobal, activePack, currentUserId, currentUserName, isOrgAdmin }) {
   const [search, setSearch] = useState('');
-  const [scope, setScope] = useState('all'); // 'all' | 'org' | 'mine' | `owner:<id>`
+  const [scope, setScope] = useState('all'); // 'all' | 'org' | 'mine'
+  const [ownerFilter, setOwnerFilter] = useState(null); // null = All owners, else owner id
+  const [ownerMenuOpen, setOwnerMenuOpen] = useState(false);
 
   // Role-based visibility — others never see colleagues' personal packs.
   const visible = useMemo(() => {
@@ -1274,7 +1276,7 @@ function KnowledgePacksPanel({ packs, onClose, onCreateNew, onEdit, onDelete, on
     return packs.filter((p) => p.ownerId === currentUserId || p.isGlobal);
   }, [packs, isOrgAdmin, currentUserId]);
 
-  // Faceted owner list for the left rail (Org Admin sees more).
+  // Faceted owner list for the toolbar dropdown (Org Admin sees more).
   const owners = useMemo(() => {
     const map = new Map();
     visible.forEach((p) => {
@@ -1286,15 +1288,12 @@ function KnowledgePacksPanel({ packs, onClose, onCreateNew, onEdit, onDelete, on
   }, [visible]);
 
   const scoped = useMemo(() => {
-    if (scope === 'all') return visible;
-    if (scope === 'org')  return visible.filter((p) => p.isGlobal);
-    if (scope === 'mine') return visible.filter((p) => p.ownerId === currentUserId);
-    if (scope.startsWith('owner:')) {
-      const id = scope.slice(6);
-      return visible.filter((p) => p.ownerId === id);
-    }
-    return visible;
-  }, [visible, scope, currentUserId]);
+    let result = visible;
+    if (scope === 'org')  result = result.filter((p) => p.isGlobal);
+    if (scope === 'mine') result = result.filter((p) => p.ownerId === currentUserId);
+    if (ownerFilter)      result = result.filter((p) => p.ownerId === ownerFilter);
+    return result;
+  }, [visible, scope, ownerFilter, currentUserId]);
 
   const filtered = useMemo(() => {
     if (!search.trim()) return scoped;
@@ -1308,12 +1307,8 @@ function KnowledgePacksPanel({ packs, onClose, onCreateNew, onEdit, onDelete, on
     mine:  visible.filter((p) => p.ownerId === currentUserId).length,
   }), [visible, currentUserId]);
 
-  // Pinned filters in the left rail.
-  const pinned = [
-    { id: 'all',  label: 'All packs',     icon: Package, count: counts.total },
-    { id: 'org',  label: 'Org-wide',      icon: Share2,  count: counts.org },
-    { id: 'mine', label: 'Mine',          icon: User,    count: counts.mine },
-  ];
+  const activeOwner = ownerFilter ? owners.find((o) => o.id === ownerFilter) : null;
+  const truncOwnerName = activeOwner ? (activeOwner.name.length > 14 ? activeOwner.name.slice(0, 13) + '…' : activeOwner.name) : 'All';
 
   return (
     <div style={{ flex: 1, minWidth: 0, height: '100vh', overflow: 'hidden', background: '#FBFAF7', display: 'flex', flexDirection: 'column' }}>
@@ -1330,168 +1325,168 @@ function KnowledgePacksPanel({ packs, onClose, onCreateNew, onEdit, onDelete, on
         <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: "'IBM Plex Mono', ui-monospace, monospace", letterSpacing: '0.08em', textTransform: 'uppercase' }}>Knowledge Packs</span>
       </div>
 
-      {/* Body — left filter rail + main pane */}
-      <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
-        {/* ── LEFT RAIL: filters ── */}
-        <div style={{ width: 280, flexShrink: 0, borderRight: '1px solid var(--border)', background: '#fff', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-          <div style={{ padding: '16px 16px 10px' }}>
-            <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', fontFamily: "'IBM Plex Mono', ui-monospace, monospace" }}>Filter</div>
-          </div>
-          <div style={{ flex: 1, overflowY: 'auto', paddingBottom: 8 }}>
-            {pinned.map((p) => {
-              const Icon = p.icon;
-              const isActive = scope === p.id;
-              return (
-                <div
-                  key={p.id}
-                  onClick={() => setScope(p.id)}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 10,
-                    height: 32, paddingLeft: 16, paddingRight: 12,
-                    cursor: 'pointer',
-                    background: isActive ? 'rgba(10,36,99,0.08)' : 'transparent',
-                    color: isActive ? 'var(--navy)' : 'var(--text-primary)',
-                    fontWeight: isActive ? 600 : 400,
-                    fontSize: 12,
-                    transition: 'background 100ms',
-                  }}
-                  onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = 'rgba(15,23,42,0.04)'; }}
-                  onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
-                >
-                  <Icon size={13} style={{ color: isActive ? 'var(--navy)' : 'var(--text-muted)' }} />
-                  <span style={{ flex: 1 }}>{p.label}</span>
-                  <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>{p.count}</span>
-                </div>
-              );
-            })}
+      {/* Sticky toolbar */}
+      <div style={{ height: 56, padding: '0 28px', display: 'flex', alignItems: 'center', gap: 12, background: '#FBFAF7', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
+        <div style={{ position: 'relative', flex: 1, maxWidth: 320 }}>
+          <Search size={14} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search packs…"
+            style={{ width: '100%', height: 36, borderRadius: 8, border: '1px solid var(--border)', paddingLeft: 36, paddingRight: 12, fontSize: 13, outline: 'none', boxSizing: 'border-box', fontFamily: "'DM Sans', sans-serif", background: '#fff' }}
+          />
+        </div>
 
-            {/* Owners facet — Org Admin only (others can't see colleagues' packs anyway). */}
-            {isOrgAdmin && owners.length > 0 && (
+        {/* Owner filter dropdown */}
+        {owners.length > 0 && (
+          <div style={{ position: 'relative' }}>
+            <button
+              onClick={() => setOwnerMenuOpen((v) => !v)}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                height: 36, padding: '0 12px', borderRadius: 8,
+                border: '1px solid ' + (ownerFilter ? 'var(--navy)' : 'var(--border)'),
+                background: ownerFilter ? 'rgba(10,36,99,0.04)' : '#fff',
+                fontSize: 12, color: 'var(--text-secondary)',
+                cursor: 'pointer', fontFamily: "'DM Sans', sans-serif",
+              }}
+            >
+              <User size={13} style={{ color: 'var(--text-muted)' }} />
+              <span style={{ color: 'var(--text-muted)' }}>Owner:</span>
+              <strong style={{ color: ownerFilter ? 'var(--navy)' : 'var(--text-primary)', fontWeight: 500 }}>{truncOwnerName}</strong>
+              <ChevronDown size={12} style={{ color: 'var(--text-muted)' }} />
+            </button>
+            {ownerMenuOpen && (
               <>
-                <div style={{ padding: '14px 16px 6px' }}>
-                  <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', fontFamily: "'IBM Plex Mono', ui-monospace, monospace" }}>By owner</div>
+                <div onClick={() => setOwnerMenuOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 19 }} />
+                <div style={{ position: 'absolute', top: 'calc(100% + 4px)', left: 0, width: 240, background: '#fff', border: '1px solid var(--border)', borderRadius: 8, boxShadow: '0 6px 20px rgba(15,23,42,0.08)', padding: 4, zIndex: 20, maxHeight: 320, overflowY: 'auto' }}>
+                  <button
+                    onClick={() => { setOwnerFilter(null); setOwnerMenuOpen(false); }}
+                    style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '8px 10px', background: 'none', border: 'none', fontSize: 12, color: 'var(--text-primary)', cursor: 'pointer', textAlign: 'left', borderRadius: 6 }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(15,23,42,0.04)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = 'none'; }}
+                  >
+                    <span style={{ width: 14, display: 'inline-flex', justifyContent: 'center' }}>
+                      {ownerFilter === null && <Check size={12} style={{ color: 'var(--navy)' }} />}
+                    </span>
+                    <span style={{ flex: 1 }}>All owners</span>
+                    <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>{visible.length}</span>
+                  </button>
+                  <div style={{ height: 1, background: 'var(--border)', margin: '4px 4px' }} />
+                  {owners.map((o) => {
+                    const isActive = ownerFilter === o.id;
+                    const initials = (o.name || '?').split(/\s+/).map((p) => p[0]).slice(0, 2).join('').toUpperCase();
+                    return (
+                      <button
+                        key={o.id}
+                        onClick={() => { setOwnerFilter(o.id); setOwnerMenuOpen(false); }}
+                        style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '8px 10px', background: 'none', border: 'none', fontSize: 12, color: 'var(--text-primary)', cursor: 'pointer', textAlign: 'left', borderRadius: 6 }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(15,23,42,0.04)'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = 'none'; }}
+                      >
+                        <span style={{ width: 14, display: 'inline-flex', justifyContent: 'center' }}>
+                          {isActive && <Check size={12} style={{ color: 'var(--navy)' }} />}
+                        </span>
+                        <div style={{ width: 22, height: 22, borderRadius: '50%', background: 'var(--ice-warm)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 600, color: 'var(--navy)' }}>
+                          {initials}
+                        </div>
+                        <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{o.name}</span>
+                        <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>{o.count}</span>
+                      </button>
+                    );
+                  })}
                 </div>
-                {owners.map((o) => {
-                  const ownerScope = `owner:${o.id}`;
-                  const isActive = scope === ownerScope;
-                  return (
-                    <div
-                      key={o.id}
-                      onClick={() => setScope(ownerScope)}
-                      style={{
-                        display: 'flex', alignItems: 'center', gap: 10,
-                        height: 30, paddingLeft: 16, paddingRight: 12,
-                        cursor: 'pointer',
-                        background: isActive ? 'rgba(10,36,99,0.08)' : 'transparent',
-                        color: isActive ? 'var(--navy)' : 'var(--text-primary)',
-                        fontWeight: isActive ? 600 : 400,
-                        fontSize: 12,
-                        transition: 'background 100ms',
-                      }}
-                      onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = 'rgba(15,23,42,0.04)'; }}
-                      onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
-                    >
-                      <div style={{ width: 22, height: 22, borderRadius: '50%', background: 'var(--ice-warm)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 600, color: 'var(--navy)' }}>
-                        {(o.name || '?').split(/\s+/).map((p) => p[0]).slice(0, 2).join('').toUpperCase()}
-                      </div>
-                      <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{o.name}</span>
-                      <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>{o.count}</span>
-                    </div>
-                  );
-                })}
               </>
             )}
           </div>
-          {/* Footer — + new pack */}
-          <div style={{ padding: 10, borderTop: '1px solid var(--border)', background: '#fff' }}>
+        )}
+
+        {/* Scope tabs (segmented control) — replaces the old left-rail pinned filters */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 2, padding: 3, background: '#F0F2F5', borderRadius: 8 }}>
+          {[
+            { id: 'all',  label: 'All',      count: counts.total },
+            { id: 'org',  label: 'Org-wide', count: counts.org },
+            { id: 'mine', label: 'Mine',     count: counts.mine },
+          ].map((t) => (
             <button
-              onClick={onCreateNew}
-              style={{ width: '100%', height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, fontSize: 12, color: 'var(--text-secondary)', background: 'transparent', border: '1px dashed var(--border)', borderRadius: 8, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}
-              onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--navy)'; e.currentTarget.style.color = 'var(--navy)'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
+              key={t.id}
+              onClick={() => setScope(t.id)}
+              style={{
+                padding: '6px 12px', borderRadius: 6, fontSize: 12, fontWeight: 500,
+                background: scope === t.id ? '#fff' : 'transparent',
+                color: scope === t.id ? 'var(--navy)' : 'var(--text-muted)',
+                border: 'none', cursor: 'pointer',
+                boxShadow: scope === t.id ? '0 1px 2px rgba(15,23,42,0.06)' : 'none',
+                fontFamily: "'DM Sans', sans-serif",
+              }}
             >
-              <Plus size={13} /> New pack
+              {t.label} <span style={{ color: 'var(--text-muted)', fontWeight: 400, marginLeft: 2 }}>{t.count}</span>
             </button>
-          </div>
+          ))}
         </div>
 
-        {/* ── MAIN AREA ── */}
-        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-          {/* Sticky toolbar */}
-          <div style={{ height: 56, padding: '0 28px', display: 'flex', alignItems: 'center', gap: 12, background: '#FBFAF7', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
-            <div style={{ position: 'relative', flex: 1, maxWidth: 360 }}>
-              <Search size={14} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-              <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search packs…"
-                style={{ width: '100%', height: 36, borderRadius: 8, border: '1px solid var(--border)', paddingLeft: 36, paddingRight: 12, fontSize: 13, outline: 'none', boxSizing: 'border-box', fontFamily: "'DM Sans', sans-serif", background: '#fff' }}
-              />
-            </div>
-            <div style={{ flex: 1 }} />
-            <button
-              onClick={onCreateNew}
-              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 8, background: 'var(--navy)', color: '#fff', border: 'none', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}
-            >
-              <Plus size={13} /> New pack
-            </button>
+        <div style={{ flex: 1 }} />
+        <button
+          onClick={onCreateNew}
+          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 8, background: 'var(--navy)', color: '#fff', border: 'none', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}
+        >
+          <Plus size={13} /> New pack
+        </button>
+      </div>
+
+      {/* Scrollable content */}
+      <div style={{ flex: 1, overflowY: 'auto' }}>
+        {/* Hero */}
+        <div style={{ maxWidth: 1080, margin: '0 auto', padding: '32px 28px 18px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+            <Sparkles size={14} style={{ color: 'var(--gold)' }} />
+            <span style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: "'IBM Plex Mono', ui-monospace, monospace", letterSpacing: '0.1em', textTransform: 'uppercase' }}>Knowledge Packs</span>
           </div>
+          <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 30, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.02em', lineHeight: 1.2 }}>
+            Saved bundles
+          </h1>
+          <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 8, lineHeight: 1.6, maxWidth: 640 }}>
+            Group documents and links into a pack you can attach to a chat in one click.
+            Useful for state-law libraries, deal-specific exhibits, or playbooks.
+          </p>
+        </div>
 
-          {/* Scrollable content */}
-          <div style={{ flex: 1, overflowY: 'auto' }}>
-            {/* Hero */}
-            <div style={{ maxWidth: 1080, margin: '0 auto', padding: '32px 28px 18px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                <Sparkles size={14} style={{ color: 'var(--gold)' }} />
-                <span style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: "'IBM Plex Mono', ui-monospace, monospace", letterSpacing: '0.1em', textTransform: 'uppercase' }}>Knowledge Packs</span>
+        {/* Pack grid (or empty state) */}
+        <div style={{ maxWidth: 1080, margin: '0 auto', padding: '0 28px 48px' }}>
+          {filtered.length === 0 ? (
+            <div style={{ padding: '64px 24px', textAlign: 'center', borderRadius: 12, border: '1px dashed var(--border)', background: '#fff' }}>
+              <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'var(--ice-warm)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
+                <Package size={26} style={{ color: 'var(--navy)' }} />
               </div>
-              <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 30, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.02em', lineHeight: 1.2 }}>
-                Saved bundles
-              </h1>
-              <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 8, lineHeight: 1.6, maxWidth: 640 }}>
-                Group documents and links into a pack you can attach to a chat in one click.
-                Useful for state-law libraries, deal-specific exhibits, or playbooks.
-              </p>
-            </div>
-
-            {/* Pack grid (or empty state) */}
-            <div style={{ maxWidth: 1080, margin: '0 auto', padding: '0 28px 48px' }}>
-              {filtered.length === 0 ? (
-                <div style={{ padding: '64px 24px', textAlign: 'center', borderRadius: 12, border: '1px dashed var(--border)', background: '#fff' }}>
-                  <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'var(--ice-warm)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
-                    <Package size={26} style={{ color: 'var(--navy)' }} />
-                  </div>
-                  <div style={{ fontSize: 16, fontWeight: 600, fontFamily: "'DM Serif Display', serif", color: 'var(--text-primary)' }}>
-                    {search ? 'No matches' : 'No packs in this view'}
-                  </div>
-                  <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 6, lineHeight: 1.6 }}>
-                    {search ? 'Try a different term, or clear the search.' : 'Bundle a few related documents to spin up your first pack.'}
-                  </div>
-                  {!search && (
-                    <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 16 }}>
-                      <button onClick={onCreateNew} style={{ padding: '8px 16px', borderRadius: 8, background: 'var(--navy)', color: '#fff', border: 'none', fontSize: 12, cursor: 'pointer' }}>+ New pack</button>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 14 }}>
-                  {filtered.map((p) => (
-                    <PackRow
-                      key={p.id}
-                      pack={p}
-                      activePack={activePack}
-                      currentUserId={currentUserId}
-                      isOrgAdmin={isOrgAdmin}
-                      onSelect={onSelect}
-                      onEdit={onEdit}
-                      onDelete={onDelete}
-                      onToggleGlobal={onToggleGlobal}
-                    />
-                  ))}
+              <div style={{ fontSize: 16, fontWeight: 600, fontFamily: "'DM Serif Display', serif", color: 'var(--text-primary)' }}>
+                {search ? 'No matches' : 'No packs in this view'}
+              </div>
+              <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 6, lineHeight: 1.6 }}>
+                {search ? 'Try a different term, or clear the search.' : 'Bundle a few related documents to spin up your first pack.'}
+              </div>
+              {!search && (
+                <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 16 }}>
+                  <button onClick={onCreateNew} style={{ padding: '8px 16px', borderRadius: 8, background: 'var(--navy)', color: '#fff', border: 'none', fontSize: 12, cursor: 'pointer' }}>+ New pack</button>
                 </div>
               )}
             </div>
-          </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 14 }}>
+              {filtered.map((p) => (
+                <PackRow
+                  key={p.id}
+                  pack={p}
+                  activePack={activePack}
+                  currentUserId={currentUserId}
+                  isOrgAdmin={isOrgAdmin}
+                  onSelect={onSelect}
+                  onEdit={onEdit}
+                  onDelete={onDelete}
+                  onToggleGlobal={onToggleGlobal}
+                />
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -1509,23 +1504,22 @@ function ScopeTab({ label, count, active, onClick }) {
         border: '1px solid ' + (active ? 'var(--navy)' : 'var(--border)'),
         background: active ? 'var(--navy)' : '#fff',
         color: active ? '#fff' : 'var(--text-secondary)',
-        fontSize: 12, fontWeight: 500, cursor: 'pointer', transition: 'all 120ms',
+        fontSize: 12, fontWeight: 500, cursor: 'pointer',
       }}
     >
       <span>{label}</span>
-      <span style={{ fontSize: 11, fontWeight: 600, padding: '0 6px', borderRadius: 999, background: active ? 'rgba(255,255,255,0.2)' : 'var(--ice-warm)', color: active ? '#fff' : 'var(--text-primary)', minWidth: 20, textAlign: 'center' }}>
-        {count}
-      </span>
+      {typeof count === 'number' && <span style={{ fontSize: 10, opacity: 0.7 }}>{count}</span>}
     </button>
   );
 }
 
-/* ─── Pack row — richer layout with ownership + quick share toggle ─── */
+/* ─── Knowledge Pack card row (vertical layout for grid cells) ─── */
 function PackRow({ pack, activePack, currentUserId, isOrgAdmin, onSelect, onEdit, onDelete, onToggleGlobal }) {
   const isOwner = pack.ownerId === currentUserId;
   const canEdit = isOrgAdmin || isOwner;
   const canToggleGlobal = isOrgAdmin;
   const isActive = activePack?.id === pack.id;
+  const [kebabOpen, setKebabOpen] = useState(false);
 
   // Org-wide = gold; Personal (someone else's) = muted; Personal (mine) = navy tint
   const ownerPill = pack.isGlobal
@@ -1536,72 +1530,95 @@ function PackRow({ pack, activePack, currentUserId, isOrgAdmin, onSelect, onEdit
 
   return (
     <div
-      style={{ padding: '16px 18px', borderRadius: 12, border: '1px solid var(--border)', marginTop: 10, transition: 'all 0.15s', background: '#fff' }}
-      onMouseEnter={(e) => { e.currentTarget.style.boxShadow = '0 3px 14px rgba(10,36,99,0.06)'; e.currentTarget.style.borderColor = 'var(--navy)'; }}
-      onMouseLeave={(e) => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.borderColor = 'var(--border)'; }}
+      style={{
+        padding: '16px 18px', borderRadius: 12,
+        border: '1px solid ' + (isActive ? '#5CA868' : 'var(--border)'),
+        transition: 'all 0.15s', background: '#fff',
+        display: 'flex', flexDirection: 'column', minHeight: 168,
+        boxShadow: isActive ? '0 0 0 1px rgba(92,168,104,0.4)' : 'none',
+      }}
+      onMouseEnter={(e) => { if (!isActive) { e.currentTarget.style.boxShadow = '0 4px 14px rgba(15,23,42,0.06)'; e.currentTarget.style.borderColor = 'var(--navy)'; } }}
+      onMouseLeave={(e) => { if (!isActive) { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.borderColor = 'var(--border)'; } }}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-start gap-3" style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ width: 40, height: 40, borderRadius: 10, backgroundColor: pack.isGlobal ? 'rgba(201,168,76,0.15)' : 'var(--ice-warm)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            <Package size={18} style={{ color: pack.isGlobal ? '#9A7A22' : 'var(--navy)' }} />
-          </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div className="flex items-center gap-2 flex-wrap">
-              <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{pack.name}</span>
-              <span
-                title={pack.isGlobal ? 'Shared with the whole organisation' : isOwner ? 'Only visible to you' : `Owned by ${pack.ownerName}`}
-                style={{ fontSize: 10, padding: '2px 8px', borderRadius: 999, background: ownerPill.bg, color: ownerPill.color, border: `1px solid ${ownerPill.border}`, fontWeight: 600, letterSpacing: '0.02em' }}
-              >
-                {ownerPill.label}
-              </span>
-            </div>
-            <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4, lineHeight: 1.55 }}>{pack.description}</p>
-            <div className="flex items-center gap-3 flex-wrap" style={{ marginTop: 8 }}>
-              <span className="flex items-center gap-1" style={{ fontSize: 11, color: 'var(--text-muted)' }}><FileText size={12} /> {pack.docs.length} doc{pack.docs.length !== 1 ? 's' : ''}</span>
-              <span className="flex items-center gap-1" style={{ fontSize: 11, color: 'var(--text-muted)' }}><Link2 size={12} /> {pack.links.length} link{pack.links.length !== 1 ? 's' : ''}</span>
-              <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Created {pack.createdAt}</span>
-            </div>
-          </div>
+      {/* Header row — icon, title block, kebab */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+        <div style={{ width: 40, height: 40, borderRadius: 10, backgroundColor: pack.isGlobal ? 'rgba(201,168,76,0.15)' : 'var(--ice-warm)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <Package size={18} style={{ color: pack.isGlobal ? '#9A7A22' : 'var(--navy)' }} />
         </div>
-        <div className="flex flex-col items-end gap-2" style={{ flexShrink: 0 }}>
-          <div className="flex items-center gap-1">
-            {onSelect && (
-              <button
-                onClick={() => onSelect(pack)}
-                style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '6px 14px', borderRadius: 6, backgroundColor: isActive ? '#5CA868' : 'var(--navy)', color: 'white', border: 'none', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}
-              >
-                {isActive ? <><CheckCircle size={12} /> Active</> : 'Use'}
-              </button>
-            )}
-            {canEdit && (
-              <button
-                onClick={() => onEdit(pack)}
-                style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '6px 11px', borderRadius: 6, backgroundColor: onSelect ? 'transparent' : 'var(--navy)', color: onSelect ? 'var(--navy)' : 'white', border: onSelect ? '1px solid var(--border)' : 'none', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}
-              >
-                <Edit3 size={12} /> Edit
-              </button>
-            )}
-            {canEdit && (
-              <button onClick={() => onDelete(pack.id)} style={{ padding: 6, borderRadius: 6, background: 'none', border: '1px solid var(--border)', cursor: 'pointer', display: 'flex' }} title="Delete pack">
-                <Trash2 size={13} style={{ color: '#C65454' }} />
-              </button>
-            )}
-          </div>
-          {canToggleGlobal && (
-            <div
-              onClick={() => onToggleGlobal?.(pack.id, !pack.isGlobal)}
-              title={pack.isGlobal ? 'Turn off — make personal again' : 'Share with entire organisation'}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '3px 4px 3px 10px', borderRadius: 999, background: pack.isGlobal ? 'rgba(201,168,76,0.12)' : 'var(--ice-warm)', border: '1px solid ' + (pack.isGlobal ? 'rgba(201,168,76,0.35)' : 'var(--border)'), cursor: 'pointer', transition: 'all 120ms' }}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{pack.name}</div>
+          <div style={{ marginTop: 4 }}>
+            <span
+              title={pack.isGlobal ? 'Shared with the whole organisation' : isOwner ? 'Only visible to you' : `Owned by ${pack.ownerName}`}
+              style={{ fontSize: 10, padding: '2px 8px', borderRadius: 999, background: ownerPill.bg, color: ownerPill.color, border: `1px solid ${ownerPill.border}`, fontWeight: 600, letterSpacing: '0.02em' }}
             >
-              <span style={{ fontSize: 10, fontWeight: 600, color: pack.isGlobal ? '#9A7A22' : 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                {pack.isGlobal ? 'Shared org-wide' : 'Share org-wide'}
-              </span>
-              <span style={{ width: 28, height: 16, borderRadius: 999, background: pack.isGlobal ? 'var(--navy)' : '#CBD5E1', position: 'relative', transition: 'background 150ms', flexShrink: 0 }}>
-                <span style={{ position: 'absolute', top: 2, left: pack.isGlobal ? 14 : 2, width: 12, height: 12, borderRadius: '50%', background: '#fff', boxShadow: '0 1px 2px rgba(0,0,0,0.2)', transition: 'left 150ms' }} />
-              </span>
-            </div>
-          )}
+              {ownerPill.label}
+            </span>
+          </div>
         </div>
+        {canEdit && (
+          <div style={{ position: 'relative', flexShrink: 0 }}>
+            <button
+              onClick={(e) => { e.stopPropagation(); setKebabOpen((v) => !v); }}
+              title="More"
+              style={{ width: 28, height: 28, borderRadius: 6, background: 'transparent', border: '1px solid transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(15,23,42,0.06)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+            >
+              <MoreHorizontal size={14} style={{ color: 'var(--text-muted)' }} />
+            </button>
+            {kebabOpen && (
+              <>
+                <div onClick={() => setKebabOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 30 }} />
+                <div style={{ position: 'absolute', top: 30, right: 0, minWidth: 160, background: '#fff', borderRadius: 8, border: '1px solid var(--border)', boxShadow: '0 8px 24px rgba(15,23,42,0.12)', zIndex: 31, overflow: 'hidden' }}>
+                  <button onClick={() => { onEdit?.(pack); setKebabOpen(false); }} style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '8px 12px', background: 'none', border: 'none', fontSize: 12, color: 'var(--text-primary)', cursor: 'pointer', textAlign: 'left' }} onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(15,23,42,0.04)'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'none'; }}>
+                    <Edit3 size={12} /> Edit
+                  </button>
+                  <div style={{ borderTop: '1px solid var(--border)' }} />
+                  <button onClick={() => { onDelete?.(pack.id); setKebabOpen(false); }} style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '8px 12px', background: 'none', border: 'none', fontSize: 12, color: '#C65454', cursor: 'pointer', textAlign: 'left' }} onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(198,84,84,0.06)'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'none'; }}>
+                    <Trash2 size={12} /> Delete
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Description (clamped to 2 lines so cards stay even-height) */}
+      <p style={{
+        fontSize: 12, color: 'var(--text-muted)',
+        lineHeight: 1.55, margin: '10px 0 0',
+        display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+      }}>{pack.description}</p>
+
+      {/* Footer — pushes to the bottom of the card, fixed-row metadata + actions */}
+      <div style={{ marginTop: 'auto', paddingTop: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--text-muted)' }}>
+            <FileText size={11} /> {pack.docs?.length || 0} doc{(pack.docs?.length || 0) !== 1 ? 's' : ''}
+          </span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--text-muted)' }}>
+            <Link2 size={11} /> {pack.links?.length || 0} link{(pack.links?.length || 0) !== 1 ? 's' : ''}
+          </span>
+        </div>
+        {canToggleGlobal && (
+          <span
+            onClick={() => onToggleGlobal?.(pack.id, !pack.isGlobal)}
+            title={pack.isGlobal ? 'Shared org-wide — click to make personal' : 'Share with entire organisation'}
+            style={{ width: 28, height: 16, borderRadius: 999, background: pack.isGlobal ? 'var(--navy)' : '#CBD5E1', position: 'relative', transition: 'background 150ms', flexShrink: 0, cursor: 'pointer' }}
+          >
+            <span style={{ position: 'absolute', top: 2, left: pack.isGlobal ? 14 : 2, width: 12, height: 12, borderRadius: '50%', background: '#fff', boxShadow: '0 1px 2px rgba(0,0,0,0.2)', transition: 'left 150ms' }} />
+          </span>
+        )}
+        {onSelect && (
+          <button
+            onClick={() => onSelect(pack)}
+            style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '6px 14px', borderRadius: 6, backgroundColor: isActive ? '#5CA868' : 'var(--navy)', color: 'white', border: 'none', fontSize: 12, fontWeight: 500, cursor: 'pointer', flexShrink: 0 }}
+          >
+            {isActive ? <><CheckCircle size={12} /> Active</> : 'Use'}
+          </button>
+        )}
       </div>
     </div>
   );
@@ -2930,6 +2947,30 @@ function MessageBubble({ msg }) {
   // sender:'workflow' bubbles so old threads don't surface ghost cards.
   if (msg.sender === 'workflow') return null;
 
+  // Upload-added inline note (additive-upload strategy) — looks like a
+  // system note but carries a real "Start a new chat" button. The
+  // button dispatches a window event that ChatView listens for at the
+  // top level so MessageBubble doesn't need a callback prop.
+  if (msg.isUploadAddedNote) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16, marginTop: -8 }}>
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 14px', borderRadius: 999, background: '#F0F3F6', border: '1px solid #D6DDE4', maxWidth: 560 }}>
+          <File size={12} style={{ color: '#1E3A8A', flexShrink: 0 }} />
+          <span style={{ fontSize: 12, color: '#1E3A8A', lineHeight: 1.5 }}>
+            Added <strong style={{ fontWeight: 600 }}>{msg.uploadedFileName || 'doc'}</strong>
+            {msg.uploadedDocIndex ? ` as Document ${msg.uploadedDocIndex}` : ''}. New topic?{' '}
+            <button
+              onClick={() => { try { window.dispatchEvent(new CustomEvent('yourai:start-new-chat')); } catch { /* ignore */ } }}
+              style={{ background: 'none', border: 'none', padding: 0, fontSize: 12, fontWeight: 600, color: '#0A2463', cursor: 'pointer', textDecoration: 'underline' }}
+            >
+              Start a new chat →
+            </button>
+          </span>
+        </div>
+      </div>
+    );
+  }
+
   // System notes render as centered, compact inline badges (e.g. "Switched to Clause Comparison mode")
   if (msg.isSystemNote) {
     return (
@@ -3746,6 +3787,15 @@ export default function ChatView({ initialView = 'chat' }) {
     setPendingNewDoc(null);
   }, [activeThreadId, messages]);
 
+  // Listen for the inline upload-added note's "Start a new chat" click.
+  // The note dispatches a window event because MessageBubble is a leaf
+  // component and we don't want to thread a callback through every msg.
+  useEffect(() => {
+    const handler = () => { handleNewThread(); };
+    window.addEventListener('yourai:start-new-chat', handler);
+    return () => window.removeEventListener('yourai:start-new-chat', handler);
+  }, [handleNewThread]);
+
   const handleSwitchThread = useCallback((threadId) => {
     if (threadId === activeThreadId) return;
     // Save current thread messages before switching
@@ -3988,10 +4038,17 @@ export default function ChatView({ initialView = 'chat' }) {
         // Check current message attachments first, then fall back to persisted session doc
         const docsWithContent = (userMsg.attachments || []).filter(a => a.content);
         if (docsWithContent.length > 0) {
-          // New documents attached to this message — merge and persist for follow-ups
+          // Additive — when sessionDocContext already exists, the new
+          // docs APPEND to it rather than replace. Each new doc gets a
+          // labelled "Document N (added HH:MM)" header so the model can
+          // distinguish docs uploaded together from docs uploaded later.
+          const baseNames = sessionDocContext?.docNames || [];
+          const baseContent = sessionDocContext?.content || '';
+          const baseCount = baseNames.length;
+          const stamp = new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+
           const docParts = [];
-          const docNames = [];
-          const docCount = docsWithContent.length;
+          const newDocNames = [];
           docsWithContent.forEach((doc, idx) => {
             const rawContent = doc.content || '';
             const printableChars = rawContent.replace(/[^\x20-\x7E\n\r\t\u00A0-\u024F]/g, '');
@@ -4000,22 +4057,29 @@ export default function ChatView({ initialView = 'chat' }) {
             const garbleCount = garbleMatches ? garbleMatches.reduce((s, m) => s + m.length, 0) : 0;
             const hasGarble = garbleCount > rawContent.length * 0.1;
             const isReadable = rawContent.length < 50 || (printableRatio > 0.7 && !hasGarble);
-            const docLabel = docCount > 1 ? `Document ${idx + 1}: ${doc.name}` : doc.name;
-            docNames.push(doc.name);
+            const idx1 = baseCount + idx + 1;
+            const docLabel = baseCount > 0
+              ? `Document ${idx1} (added ${stamp}): ${doc.name}`
+              : (docsWithContent.length > 1 ? `Document ${idx1}: ${doc.name}` : doc.name);
+            newDocNames.push(doc.name);
             if (isReadable) {
-              // Per-document truncation: 20K chars each (not shared)
               const truncated = rawContent.length > 20000 ? rawContent.slice(0, 20000) + '\n[... document truncated at 20,000 characters ...]' : rawContent;
               docParts.push(`--- ${docLabel} ---\n${truncated}`);
             } else {
               docParts.push(`--- ${docLabel} ---\n[File: ${doc.name}] The text content could not be extracted from this document. It may be a scanned PDF, image-based, or use non-standard encoding.`);
             }
           });
-          const mergedName = docNames.length === 1 ? docNames[0] : `${docNames.length} documents`;
-          const mergedContent = docParts.join('\n\n');
+
+          const docNames = [...baseNames, ...newDocNames];
+          const mergedContent = baseContent
+            ? baseContent + '\n\n' + docParts.join('\n\n')
+            : docParts.join('\n\n');
+          const docCount = docNames.length;
+          const mergedName = docCount === 1 ? docNames[0] : `${docCount} documents`;
+
           contextLayers.uploadedDoc = { name: mergedName, content: mergedContent };
           contextLayers.multiDocCount = docCount;
           contextLayers.docNames = docNames;
-          // Persist doc context for follow-up questions in this session
           setSessionDocContext({ name: mergedName, content: mergedContent, docCount, docNames });
 
           // ─── Multi-Document Cross-Reference Guardrail ───
@@ -4240,19 +4304,44 @@ INSTRUCTIONS:
       kind, // 'photo' | 'video' | 'doc'
       content: null, // will be populated by FileReader for docs
     }));
-    // DEC-095: Scenario 3 — Option C confirmed
-    // See knowledge-pack-strategy.md
-    // Only block new docs if docs have already been SENT in a message (sessionDocContext is set)
-    if (kind === 'doc' && sessionDocContext) {
-      // Documents already sent in this session — show mid-session banner
-      setPendingNewDoc(newAtts[0]);
-      setShowDocVersionBanner(true);
-      return; // Don't add to pending yet — user must choose
-    }
+    // ─── Additive uploads (Apr 2026 — replaces DEC-095 Option C) ───
+    // The previous policy ("one upload per chat — start a new convo to
+    // attach more") created friction Wendy explicitly named in her
+    // attorney interview. The LLM handles labelled multi-doc context
+    // fine; the gate's value was overstated. New policy: allow uploads
+    // mid-thread, label each doc with its index + timestamp in the
+    // system prompt so the model can disambiguate, and inject an
+    // inline system note in the thread offering a one-click "Start a
+    // new chat" escape hatch for users whose new doc is genuinely a
+    // new topic.
+    const isMidThreadAddition = kind === 'doc' && !!sessionDocContext;
     if (kind === 'doc') {
-      setSessionState(prev => ({ ...prev, sessionDocId: `doc-${Date.now()}` }));
+      setSessionState(prev => ({ ...prev, sessionDocId: prev.sessionDocId || `doc-${Date.now()}` }));
     }
     setPendingAttachments(prev => [...prev, ...newAtts]);
+    if (isMidThreadAddition) {
+      // Drop the inline notice into the chat thread immediately so
+      // the user sees the "new topic? start fresh" affordance before
+      // they hit send. The note is a styled system message; clicking
+      // its "Start a new chat" link calls handleNewThread (which
+      // carries the just-attached doc into the new thread via
+      // pendingNewDoc / pendingAttachments — see handleNewThread).
+      const baseCount = sessionDocContext?.docNames?.length || sessionDocContext?.docCount || 0;
+      newAtts.forEach((a, i) => {
+        const indexLabel = baseCount + i + 1;
+        setMessages((prev) => [...prev, {
+          id: Date.now() + 0.1 + i * 0.01,
+          sender: 'bot',
+          isSystemNote: true,
+          isUploadAddedNote: true,
+          uploadedFileName: a.name,
+          uploadedDocIndex: indexLabel,
+          content: `Added **${a.name}** as Document ${indexLabel} in this conversation. New topic? **[Start a new chat →]**`,
+          timestamp: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
+          sourceBadge: null,
+        }]);
+      });
+    }
 
     // ─── Auto-add to Document Vault ───────────────────────────────────
     // When a file is attached via chat, persist it to the Document Vault.
@@ -4641,10 +4730,25 @@ INSTRUCTIONS:
     </div>
   ) : null;
 
+  // Active sidebar item — derived from whichever panel/route is in front.
+  // Order matters: full-page panels win over the underlying chat/home.
+  const sidebarActiveKey = (() => {
+    if (showTeamPage) return 'invite-team';
+    if (showWorkspacesPanel) return 'workspaces';
+    if (showWorkflowsPanel || editingWorkflow) return 'workflows';
+    if (showDocumentVaultPanel) return 'document-vault';
+    if (showKnowledgePacksPanel) return 'knowledge-packs';
+    if (showPromptPanel) return 'prompt-templates';
+    if (showClientsPanel) return 'clients';
+    if (initialView === 'home') return 'home';
+    return 'chat';
+  })();
+
   return (
     <div style={{ display: 'flex', height: '100vh', width: '100%', overflowX: 'hidden' }}>
       {idleWarning}
       <Sidebar
+        activeKey={sidebarActiveKey}
         onGoHome={() => { setShowTeamPage(false); setShowWorkspacesPanel(false); setShowWorkflowsPanel(false); setShowPromptPanel(false); setShowClientsPanel(false); setShowKnowledgePacksPanel(false); setShowDocumentVaultPanel(false); setSidebarOpen(false); navigate('/chat/home'); }}
         onOpenChat={() => { setShowTeamPage(false); setShowWorkspacesPanel(false); setShowWorkflowsPanel(false); setSidebarOpen(false); navigate('/chat'); }}
         onOpenPromptTemplates={() => { setShowTeamPage(false); setShowWorkspacesPanel(false); setShowPromptPanel(true); setSidebarOpen(false); }}
