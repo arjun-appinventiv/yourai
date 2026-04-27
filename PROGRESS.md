@@ -41,10 +41,10 @@
 - Doc counter + subtle vertical divider + `< Main Site` link grouped together
 - Search box on the far right
 
-### Workflows — picker, builder, panel (2026-04-24 aashna-reviewed pass)
-- **Picker**: compact hero (16/14 padding, 22px title, no gold eyebrow chip), flat inline StatTile (no borders/bg), Featured vs Your library sections under thin 11px uppercase labels, card grid `auto-fit minmax(300px)`, neutral card chrome (no accent stripe, white header, navy Run button regardless of practice area), muted practice-area eyebrow, ice-warm 44px icon tile, Recent runs card without colored border
-- **Builder**: single top bar with segmented control (Details | Pipeline), no floating wizard pills, ghost Cancel, step card with soft neutral step-number badge (26×26, `#F3F4F6`/`#6B7280`), proper bordered name input (no dashed underline), inline char counter in the label row, rows=3 textarea, advanced options with dashed top border, body maxWidth 720
-- **Pre-Run Modal**: workflow name + practice area chip + steps/duration on one header row; knowledge source banner (blue in workspace, neutral in main chat); yellow sibling warning when workspace has no docs; upload dropzone with drag+click; Run enabled once at least one upload is Ready
+### Workflows — picker, builder, panel (2026-04-24 aashna-reviewed pass, picker + builder rewritten 2026-04-25 from aashna's chat-mode mockups)
+- **Picker (2026-04-25 redesign)**: gold `AI PIPELINES` eyebrow pill + DM Serif title + outlined navy `Running in: Global / Main Site` context pill; right-side StatTiles restacked (uppercase mono label on top, 22px navy value below); filter pills replaced by underline-active tabs with count chip beside each label; rounded-pill search box; **single unified grid** (Featured/Your-Library section split removed) at `repeat(auto-fill, minmax(340px, 1fr))` — no maxWidth cap, naturally reflows from 3 cards across at desktop to 2 / 1 at narrower sizes. Card chrome: practice-area accent restored as a 3px coloured top stripe (Legal=indigo, Compliance=red, Corporate=teal, etc.), 32×32 icon tile, theme-tinted practice-area eyebrow, navy-filled Platform pill, gray-outlined Yours/Your-Org pills, `Clock · N steps · ~Xs` pill, **PIPELINE** section with 28×28 op-icon tiles connected by `→` arrows + `+N more` overflow, 2-line description, `Updated X / Run →` footer. Breadcrumb is `← Dashboard` (was `Back to chat`).
+- **Builder (2026-04-25 full rewrite from 8 aashna mockups)**: top bar stripped to `← Workflows` breadcrumb + outlined `Cancel` only; **centered hero** below it on a warm-lilac gradient with DM Serif 34 title (`New Workflow` / `Edit Workflow`), context-aware subtitle (`First, tell us about this workflow.` vs `Now, add the steps this workflow should run.`), and a horizontal two-step pill indicator with a connecting rule — pills are navy-filled (active), gold-ring + check (done), or neutral-outlined (idle/disabled). Body sits in a centered 720px white rounded panel; primary CTAs (`Continue to Pipeline →` / `← Back to details` + `Save workflow`) live inside the panel footer, not the top bar. Section labels (`WORKFLOW DETAILS`, `WORKFLOW STEPS`) are uppercase mono. Details fields single-column: Workflow name with gold `*` + live counter; Practice area; Status (org-admin only) as Active/Draft segmented pill with helper strip; Description with `(N/300) (optional)` muted in label + helper; Visibility radio cards. Step card: navy-filled numbered circle (was gray), drag-handle only when >1 step, op pill on top with `~Xs · <description>` inline, separated Step name and Document type instructions inputs each with their own helper + bottom-right counter, Advanced options is a rounded pill toggle that tints navy when expanded; reference-doc panel is a warm-beige inset with taller navy-filled tabs. Footer strip is a 3-col grid: `Add Step` left · `N / 8 steps` centre · `Estimated total: ~Xs` right.
+- **Pre-Run Modal**: workflow name + practice area chip + steps/duration on one header row; knowledge source banner (blue in workspace, neutral in main chat); yellow sibling warning when workspace has no docs; upload dropzone with drag+click; Run enabled once at least one upload is Ready. **Pre-flight classification banner** (since 2026-04-24): per-row uppercase type chip + "Identified: 2 contracts, 1 memo" summary.
 - **Run Panel**: 480px right-docked, flat white body (was cream), `variant="embedded"` prop on `WorkflowProgressCard` collapses the double-card nesting (RunRow is now the single card), header hierarchy flipped (dynamic count = eyebrow, static "Workflow runs" = title), 3px accent left border + 3px progress ruler under header; fullscreen toggle with 880px content column
 - **Favourites**: per-user ⭐ toggle, stored under `yourai_workflow_favourites_v1`, surfaces top 4 in the chat empty-state launcher
 
@@ -71,6 +71,30 @@ Prompt overhaul in `src/lib/workflowPrompts.ts` BEFORE real test feedback. Princ
 - `generate_report` → synthesis-not-re-analysis framing, findings vs. actions must be distinct (actions = what to DO)
 - `research_precedents` → "no live Westlaw/Lexis access — hedge over fabricate" rule, two-format structure (verified vs. principle-only)
 - `compliance_check` → 11-framework whitelist, pipe-syntax control table, "don't cite sections you're not confident about"
+
+### Intent card empty-states (2026-04-25)
+All seven intent cards now detect "schema-shaped envelope with no real data" — the artefact of `response_format: json_object` forcing the LLM to return JSON even when the user supplied no document — and render a friendly empty-state in the same shell instead of a grid of `—` dashes / "0 clauses" / "No dated events found".
+
+- **SummaryCard / ComparisonCard / CaseBriefCard / RiskMemoCard / ClauseAnalysisCard / TimelineCard**: empty state says "No document supplied" with a paragraph telling the user to upload via the **+** button + a muted hint pointing to a sibling intent (Risk Memo ↔ Clause Analysis, Legal Research for citation lookups, Case Brief for documents without dates).
+- **ResearchBriefCard**: KB-backed, so the empty state asks for a more specific question instead — example query included ("Force majeure precedents in New York commercial leases, 2020–present").
+- Hardened `RiskMemoCard` / `ClauseAnalysisCard` / `TimelineCard` with `Array.isArray` guards on their array fields (`findings` / `clauses` / `events`) so a stray `undefined` from the LLM can't blow up the render.
+
+Detection pattern is uniform: **all schema-required fields blank AND no document name AND empty arrays** → render empty state. See [Card empty-state pattern](#card-empty-state-pattern) at the bottom of the conventions section, plus `.claude-context/card-empty-state-pattern.md`.
+
+### Edge: missing-document handling in chat (2026-04-25)
+`api/chat.ts` system prompt gained a `MISSING DOCUMENT HANDLING` block. When the user asks for a document-analysis task (Review / Summarise / Compare / Analyse / Timeline / Risk memo) but no document content appears anywhere in the conversation, the assistant now replies with a short upload-prompt that echoes the user's task back ("I'd be glad to review that contract for one-sided provisions… Upload the document using the + button…"), capped at ~50 words. Previously the LLM fell through to the generic off-topic refusal copy ("I'm a legal assistant and can only help with legal matters…"), which read as the bot rejecting a perfectly legitimate request. Pure prompt copy change — no schemas or code paths touched.
+
+### WorkspaceChatView routed through Edge (2026-04-25)
+Workspace chats were throwing "Something went wrong reaching the AI" on every message because `WorkspaceChatView.tsx` was still calling `callLLM` (the client-side fallback that needs `VITE_OPENAI_API_KEY`, never set in prod). Same class of bug as the main `ChatView` had on 2026-04-21 — this surface was missed in that fix. Replaced the `callLLM` call with a direct `fetch('/api/chat')` using the same streaming pattern the main chat and `workflowExecutor` already use; any ephemeral / workspace document context is inlined into the user message so the Edge can see it. SourceBadge logic downstream unchanged. **No code path in production now uses `callLLM`** — the file in `src/lib/llm-client.ts` is dead in prod and only hangs on for hypothetical dev environments that set `VITE_OPENAI_API_KEY` deliberately.
+
+### ChatView error surfacing (2026-04-25)
+The main `ChatView` fetch was wrapped in a silent try/catch that funnelled every Edge failure into a "client-side Groq fallback" path, which always failed in prod (no `VITE_OPENAI_API_KEY`) and showed the misleading "No LLM backend available. Please configure the API key…" copy regardless of what actually went wrong. Now:
+- Captures the actual reason (non-2xx status + body excerpt, empty body, network error, AbortError) in an `edgeError` string.
+- Shows that captured reason as the bot's error message ("AI service returned 503…", "Could not reach the AI service: <real JS error>…") instead of the misleading fallback line.
+- Distinguishes `AbortError` (silent — user-initiated, e.g. session-guard timeout) from real network errors.
+- Logs a `[ChatView] /api/chat fetch failed: <err>` line to DevTools console for debugging.
+- Trailing decoder flush added so multibyte UTF-8 boundaries at chunk edges no longer drop characters.
+- Dropped vestigial `credentials: 'include'` flag — request is same-origin, doesn't need cookies, and the flag was a known source of edge-cache weirdness.
 
 ### Workflow Report card (Option D — 2026-04-24)
 - Document-style render: no outer border, no accent stripe, 760px centred column
@@ -110,9 +134,11 @@ Prompt overhaul in `src/lib/workflowPrompts.ts` BEFORE real test feedback. Princ
 
 ## What's currently in progress
 
-*(Arjun is test-driving the new real-execution path; feedback incoming.)*
+*(Arjun is test-driving — picker, builder, chat, and workspace surfaces. Feedback incoming.)*
 
 - **Workflow execution live in prod** — as of 2026-04-24 every step really calls OpenAI via `/api/chat`. Operation prompts received an initial principled tightening on 2026-04-24 (word targets, table syntax, citation hedging, findings/actions distinctness). A second, test-output-driven tightening is still pending Arjun's real-workflow feedback.
+- **Workflows picker + builder UX** redesigned 2026-04-25 from aashna's chat-mode mockup PDFs. Live in prod. Awaiting any further round-by-round feedback.
+- **Card empty-states** (all 7 intent cards) and the Edge `MISSING DOCUMENT HANDLING` branch shipped together 2026-04-25 to fix the "blank card" / "off-topic refusal" failure modes when a document-analysis intent fires without a document. Both layers are needed because the LLM sometimes returns valid empty JSON (caught by the cards) and sometimes prose (caught by the Edge prompt branch).
 
 ---
 
@@ -121,10 +147,12 @@ Prompt overhaul in `src/lib/workflowPrompts.ts` BEFORE real test feedback. Princ
 Short list of probable next priorities based on today's direction — **user should confirm or reorder**:
 
 1. Second-pass prompt tightening once Arjun shares real test output (the first pass was principled/blind).
-2. Server-backed favourites (currently localStorage-only → don't sync across devices).
-3. External-user single-workspace auto-redirect (from prior session's punch list).
-4. Reconcile the 3 sources of truth for intents (`intents.ts` / `intentDetector.ts` / `GlobalKnowledgeBase.jsx DEFAULT_INTENTS`).
-5. Migrate the 4 older intent cards (Summary, Comparison, CaseBrief, Research) to `EditorialShell`.
+2. **Audit any remaining `callLLM` callers** — confirmed three surfaces fixed (workflowExecutor, WorkspaceChatView, ChatView fallback removed). Need a final grep across `src/` to confirm nothing else still routes through the dead client-side path.
+3. Server-backed favourites (currently localStorage-only → don't sync across devices).
+4. External-user single-workspace auto-redirect (from prior session's punch list).
+5. Reconcile the 3 sources of truth for intents (`intents.ts` / `intentDetector.ts` / `GlobalKnowledgeBase.jsx DEFAULT_INTENTS`).
+6. Migrate the 4 older intent cards (Summary, Comparison, CaseBrief, Research) to `EditorialShell`. Note: empty-states now exist on both shell types, so this is purely visual unification rather than a behaviour fix.
+7. Server-side fix for the JSON-schema-with-no-document failure mode at the Edge — the cards + prompt patches handle it cosmetically, but the Edge could detect "card intent + no doc content in messages" and skip the schema injection entirely, returning prose directly. Cleaner long-term than the two-layer band-aid.
 
 ---
 
@@ -140,6 +168,18 @@ Short list of probable next priorities based on today's direction — **user sho
 ## Recent decisions and why
 
 Reverse chronological. Each entry: *decision — rationale — date*.
+
+- **Picker is a single unified grid, no Featured/Library section split, no maxWidth cap** (2026-04-25) — aashna's chat-mode mockup showed cards in a single grid that fills the available width. Earlier compromise of `maxWidth: 960` + section headers fought the design at every viewport: 2 cards of cramped 340px on a 1440px screen. New rule: `repeat(auto-fill, minmax(340px, 1fr))`, no cap. Reflows from 3-across at desktop to 2 / 1 naturally.
+
+- **Builder: centred hero + step-pill indicator, not segmented control** (2026-04-25) — earlier "single top bar with segmented Details | Pipeline" pattern read as a settings sub-nav. Aashna's mockup shows the wizard as a centred hero — title + subtitle + two large pill steps with a connecting rule, on a warm gradient. Pills shift state (idle / active = navy fill / done = gold ring + check). Body sits in a 720px white rounded panel below it; primary CTAs live inside the panel footer instead of the top bar. Reads as a wizard, not a settings page.
+
+- **Card empty-state pattern: detect schema-shaped envelopes with no real data** (2026-04-25) — when a card intent fires without an attached document, the Edge still enforces `response_format: json_object`, so the LLM produces a JSON envelope with empty strings and empty arrays. Each card now checks "all schema-required fields blank AND no document name AND empty arrays" and renders a single inline empty-state ("No document supplied" + upload nudge + sibling-intent hint) inside its normal shell. Fixes the broken-grid look without needing a server-side change. Companion to the Edge `MISSING DOCUMENT HANDLING` prompt branch (next decision).
+
+- **Edge `MISSING DOCUMENT HANDLING` system-prompt branch** (2026-04-25) — when the LLM returns prose instead of JSON for a no-document analysis request, the off-topic refusal copy was firing ("I'm a legal assistant and can only help with legal matters…") because the system prompt had no case for "legal request, but nothing to work with". Added an explicit branch that tells the assistant: if a document-analysis request arrives without a document, reply with a short upload-prompt that echoes the user's task back, capped at ~50 words. Both layers (this + card empty-states) needed because the LLM picks either response shape unpredictably.
+
+- **WorkspaceChatView routed through `/api/chat`, not `callLLM`** (2026-04-25) — every workspace chat message was throwing "Something went wrong reaching the AI" because this surface was still on the dead client-fallback path. Fixed by mirroring the Edge-streaming pattern that `ChatView` and `workflowExecutor` already use; document context is inlined into the user message. **No code path in production now uses `callLLM`** — the file is dead in prod and only kept around for hypothetical dev environments that set `VITE_OPENAI_API_KEY` deliberately.
+
+- **`ChatView` surfaces real Edge errors instead of "No LLM backend available"** (2026-04-25) — the silent try/catch + dead client-side Groq fallback was masking every real failure (Vercel 503, network blip, body-shape mismatch) behind one misleading copy line. Now the catch captures the actual reason — non-2xx status + body excerpt, network error name, `AbortError` (silent for user-initiated aborts) — and shows it as the bot's error message. Also drops `credentials: 'include'` (vestigial, same-origin request) and adds a trailing decoder flush so multibyte UTF-8 at chunk boundaries doesn't drop characters. Fallback line retained as a neutral last resort if nothing was captured.
 
 - **Invite Team widened from Org-Admin-only to all non-External users** (2026-04-24) — the CTA was missing from some sessions due to role-resolution flakiness; moving the gate down so the entry is always discoverable. The Team page itself can still enforce who can actually invite.
 
@@ -185,6 +225,8 @@ Reverse chronological. Each entry: *decision — rationale — date*.
 
 ## Last updated
 
-**2026-04-24 (afternoon)** — Follow-up session: applied aashna's round-3 fixes (picker grid `maxWidth: 960` cap on all three sections + audit-log modal step-number neutralisation with soft gray pill + dropped duplicate operation label in subtitle), wired `classifyDocs()` into `PreRunModal` (auto-classification on upload ready, per-row uppercase type chip, summary banner), and v2-tightened all 6 workflow operation prompts with word targets + citation hedging + explicit table syntax + findings-vs-actions distinctness rule. Prod HEAD tracking `yourai/main` — verify with `curl -s https://yourai-black.vercel.app/chat | grep -oE 'index-[A-Za-z0-9_-]+\.js'`.
+**2026-04-25** — Aashna sent two fresh batches of mockup PDFs (picker chat-mode + 8 builder views). Rewrote the **Workflows picker** (single unified grid with no maxWidth cap, AI PIPELINES eyebrow, Running-in pill, restacked StatTiles, underline filter tabs, restored practice-area top stripe, PIPELINE op-icon row) and the **Workflow Builder** end-to-end (centered hero with step-pill indicator, white rounded panel body, navy step-number circles, in-panel CTAs, uppercase mono section labels, warm-beige reference-doc inset). Then fixed three connected runtime issues: (1) all 7 intent cards now render a friendly "No document supplied" empty-state instead of grids of `—` dashes when the LLM returns a schema-shaped envelope with no data; (2) Edge `api/chat.ts` system prompt got a `MISSING DOCUMENT HANDLING` branch so the bot asks for an upload instead of off-topic-refusing legitimate analysis requests; (3) `WorkspaceChatView` was still calling the dead `callLLM` path — routed it through `/api/chat` like everything else. Also cleaned up `ChatView`'s misleading "No LLM backend available" fallback so real Edge errors surface verbatim, dropped vestigial `credentials: 'include'`, added trailing decoder flush. Prod HEAD tracking `yourai/main` — verify with `curl -s https://yourai-black.vercel.app/chat | grep -oE 'index-[A-Za-z0-9_-]+\.js'`.
+
+**2026-04-24 (afternoon)** — Follow-up session: applied aashna's round-3 fixes (picker grid `maxWidth: 960` cap on all three sections — *later removed in 2026-04-25 picker rewrite* — + audit-log modal step-number neutralisation with soft gray pill + dropped duplicate operation label in subtitle), wired `classifyDocs()` into `PreRunModal` (auto-classification on upload ready, per-row uppercase type chip, summary banner), and v2-tightened all 6 workflow operation prompts with word targets + citation hedging + explicit table syntax + findings-vs-actions distinctness rule.
 
 **2026-04-24** — Session focused on: empty-state anchor + 880px container rewrite, sidebar refresh (Search Chats, ⌘N New Chat, Invite Team widened), full aashna-led UX pass across Workflows panel + Builder + Run Panel, real LLM execution via `/api/chat` (workflowPrompts + workflowExecutor), document-style report (Option D), and three FRDs on Desktop (Workflows, Workflow Operations, Incorrect Document Handling).
