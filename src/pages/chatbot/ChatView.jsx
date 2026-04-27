@@ -1626,13 +1626,13 @@ function DocumentVaultPanel({
     return visibleDocs.filter((d) => d.ownerId === currentUserId);
   }, [visibleDocs, scope, isOrgAdmin, currentUserId]);
 
-  // Docs to show: when in a folder, only its docs. At root, only docs
-  // without a folder OR whose folder is no longer visible to this user.
+  // Docs to show: when in a folder, only docs in that folder. At root,
+  // EVERY visible doc — including those that also live in a folder, so a
+  // doc can be reachable both inside its folder and from the root list.
   const folderDocs = useMemo(() => {
     if (currentFolderId) return scopedDocs.filter((d) => d.folderId === currentFolderId);
-    const folderIds = new Set(visibleFolders.map((f) => f.id));
-    return scopedDocs.filter((d) => !d.folderId || !folderIds.has(d.folderId));
-  }, [scopedDocs, currentFolderId, visibleFolders]);
+    return scopedDocs;
+  }, [scopedDocs, currentFolderId]);
 
   const filteredDocs = useMemo(() => {
     if (!search.trim()) return folderDocs;
@@ -1830,7 +1830,7 @@ function DocumentVaultPanel({
                 })}
               </div>
               <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-muted)', padding: '20px 4px 6px' }}>
-                Uncategorised documents
+                All documents
               </div>
             </div>
           )}
@@ -1883,6 +1883,22 @@ function DocumentVaultPanel({
                         <span className="flex items-center gap-1" style={{ fontSize: 11, color: 'var(--text-muted)' }}><FileText size={12} /> {d.fileName}</span>
                         <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{d.fileSize}</span>
                         <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Created {d.createdAt}</span>
+                        {(() => {
+                          // Show folder pill at root view only — inside a folder
+                          // the breadcrumb already tells the user where they are.
+                          if (currentFolderId || !d.folderId) return null;
+                          const f = visibleFolders.find((x) => x.id === d.folderId);
+                          if (!f) return null;
+                          return (
+                            <span
+                              onClick={(e) => { e.stopPropagation(); setCurrentFolderId(f.id); }}
+                              title={`Open folder ${f.name}`}
+                              style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--navy)', cursor: 'pointer', padding: '2px 8px', borderRadius: 999, background: 'rgba(10,36,99,0.06)', border: '1px solid rgba(10,36,99,0.18)' }}
+                            >
+                              <Folder size={11} /> {f.name}
+                            </span>
+                          );
+                        })()}
                       </div>
                     </div>
                   </div>
