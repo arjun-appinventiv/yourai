@@ -8,7 +8,7 @@ import {
   LayoutDashboard, Send, MapPin, FileSearch, Lock, X, AlertTriangle, Info, Zap,
   BookOpen, UserPlus, Trash2, Edit3, Copy, Phone, Mail, Briefcase, Hash, Menu,
   Package, Link2, File, Upload, Paperclip, Database, GitBranch, Settings, LogOut,
-  CreditCard, Folder, FolderPlus, ArrowLeft
+  CreditCard
 } from 'lucide-react';
 import { useRole } from '../../context/RoleContext';
 import { useAuth } from '../../context/AuthContext';
@@ -17,7 +17,7 @@ import TeamPage from '../../components/chat/TeamPage';
 import WorkspacesPage from './WorkspacesPage';
 import { listWorkspacesForUser, seedWorkspacesIfEmpty } from '../../lib/workspace';
 import { MOCK_WORKSPACES } from '../../lib/mockWorkspaces';
-import { loadVault, saveVault, seedVaultIfEmpty, loadFolders, saveFolders, seedFoldersIfEmpty } from '../../lib/documentVaultStore';
+import { loadVault, saveVault, seedVaultIfEmpty } from '../../lib/documentVaultStore';
 import IntentCard, { isCardIntent, tryParseCardData } from '../../components/chat/cards/IntentCard';
 import WorkflowsPanel from '../../components/chat/WorkflowsPanel';
 import WorkflowBuilder from '../../components/chat/WorkflowBuilder';
@@ -217,7 +217,6 @@ const DEFAULT_DOCUMENT_VAULT = [
     ownerId: 'user-ryan',
     ownerName: 'Ryan Melade',
     isGlobal: true,
-    folderId: 'fld-contracts',
   },
   {
     id: 2,
@@ -229,7 +228,6 @@ const DEFAULT_DOCUMENT_VAULT = [
     ownerId: 'user-ryan',
     ownerName: 'Ryan Melade',
     isGlobal: true,
-    folderId: 'fld-policies',
   },
   {
     id: 3,
@@ -241,28 +239,6 @@ const DEFAULT_DOCUMENT_VAULT = [
     ownerId: 'm-002',
     ownerName: 'Priya Shah',
     isGlobal: false,
-    folderId: 'fld-contracts',
-  },
-];
-
-// Default folders seeded on first load. ID is a stable string so docs
-// can reference it across reloads without depending on Date.now().
-const DEFAULT_DOCUMENT_VAULT_FOLDERS = [
-  {
-    id: 'fld-contracts',
-    name: 'Contracts',
-    createdAt: 'Mar 1, 2026',
-    ownerId: 'user-ryan',
-    ownerName: 'Ryan Melade',
-    isGlobal: true,
-  },
-  {
-    id: 'fld-policies',
-    name: 'Policies & Handbooks',
-    createdAt: 'Jan 10, 2026',
-    ownerId: 'user-ryan',
-    ownerName: 'Ryan Melade',
-    isGlobal: true,
   },
 ];
 
@@ -1583,110 +1559,36 @@ function EditKnowledgePackModal({ pack, onClose, onSave }) {
 //   Org Admin      — sees every doc; inline Share org-wide toggle on each row
 //   Internal User  — own docs + all org-wide docs
 //   External User  — Vault is still visible but filtered to their own docs only
-//
-// Folders are a single-level grouping (no nesting). Root view shows
-// folder tiles + uncategorised docs. Drilling in shows that folder's
-// docs only, with a breadcrumb back to root.
-function DocumentVaultPanel({
-  documents, folders, onClose, onCreateNew, onCreateFolder, onRenameFolder, onDeleteFolder,
-  onEdit, onDelete, onSelect, onSelectFolder, onToggleGlobal, activeDocument, activeFolder,
-  currentUserId, isOrgAdmin, isExternalUser,
-}) {
+function DocumentVaultPanel({ documents, onClose, onCreateNew, onEdit, onDelete, onSelect, onToggleGlobal, activeDocument, currentUserId, isOrgAdmin, isExternalUser }) {
   const [search, setSearch] = useState('');
   const [scope, setScope] = useState('all'); // Org Admin only
-  const [currentFolderId, setCurrentFolderId] = useState(null); // null = root view
-  const [creatingFolder, setCreatingFolder] = useState(false);
-  const [newFolderName, setNewFolderName] = useState('');
-  const [renamingFolderId, setRenamingFolderId] = useState(null);
-  const [renameDraft, setRenameDraft] = useState('');
 
-  const visibleDocs = useMemo(() => {
+  const visible = useMemo(() => {
     if (isOrgAdmin) return documents;
+    // External clients see ONLY their own uploads — never org-wide firm
+    // documents or another member's personal docs.
     if (isExternalUser) return documents.filter((d) => d.ownerId === currentUserId);
+    // Internal users: own + org-wide (+ legacy no-owner docs)
     return documents.filter((d) => d.ownerId === currentUserId || d.isGlobal || !d.ownerId);
   }, [documents, isOrgAdmin, isExternalUser, currentUserId]);
 
-  const visibleFolders = useMemo(() => {
-    const list = folders || [];
-    if (isOrgAdmin) return list;
-    if (isExternalUser) return list.filter((f) => f.ownerId === currentUserId);
-    return list.filter((f) => f.ownerId === currentUserId || f.isGlobal || !f.ownerId);
-  }, [folders, isOrgAdmin, isExternalUser, currentUserId]);
+  const scoped = useMemo(() => {
+    if (!isOrgAdmin || scope === 'all') return visible;
+    if (scope === 'org')  return visible.filter((d) => d.isGlobal);
+    return visible.filter((d) => d.ownerId === currentUserId);
+  }, [visible, scope, isOrgAdmin, currentUserId]);
 
-  const currentFolder = useMemo(
-    () => visibleFolders.find((f) => f.id === currentFolderId) || null,
-    [visibleFolders, currentFolderId],
-  );
-
-  // Org-Admin scope tabs filter the set of *all visible* docs first,
-  // then folder navigation/search apply on top.
-  const scopedDocs = useMemo(() => {
-    if (!isOrgAdmin || scope === 'all') return visibleDocs;
-    if (scope === 'org')  return visibleDocs.filter((d) => d.isGlobal);
-    return visibleDocs.filter((d) => d.ownerId === currentUserId);
-  }, [visibleDocs, scope, isOrgAdmin, currentUserId]);
-
-  // Docs to show: when in a folder, only docs in that folder. At root,
-  // EVERY visible doc — including those that also live in a folder, so a
-  // doc can be reachable both inside its folder and from the root list.
-  const folderDocs = useMemo(() => {
-    if (currentFolderId) return scopedDocs.filter((d) => d.folderId === currentFolderId);
-    return scopedDocs;
-  }, [scopedDocs, currentFolderId]);
-
-  const filteredDocs = useMemo(() => {
-    if (!search.trim()) return folderDocs;
+  const filtered = useMemo(() => {
+    if (!search.trim()) return scoped;
     const q = search.toLowerCase();
-    return folderDocs.filter((d) =>
-      d.name.toLowerCase().includes(q)
-      || (d.description || '').toLowerCase().includes(q)
-      || (d.fileName || '').toLowerCase().includes(q),
-    );
-  }, [folderDocs, search]);
-
-  // Folder tiles only appear at root, and search filters them too.
-  const filteredFolders = useMemo(() => {
-    if (currentFolderId) return [];
-    if (!search.trim()) return visibleFolders;
-    const q = search.toLowerCase();
-    return visibleFolders.filter((f) => f.name.toLowerCase().includes(q));
-  }, [visibleFolders, currentFolderId, search]);
-
-  const docCountByFolder = useMemo(() => {
-    const map = {};
-    scopedDocs.forEach((d) => {
-      if (!d.folderId) return;
-      map[d.folderId] = (map[d.folderId] || 0) + 1;
-    });
-    return map;
-  }, [scopedDocs]);
+    return scoped.filter((d) => d.name.toLowerCase().includes(q) || (d.description || '').toLowerCase().includes(q) || (d.fileName || '').toLowerCase().includes(q));
+  }, [scoped, search]);
 
   const counts = useMemo(() => ({
-    total: visibleDocs.length,
-    org:   visibleDocs.filter((d) => d.isGlobal).length,
-    mine:  visibleDocs.filter((d) => d.ownerId === currentUserId).length,
-  }), [visibleDocs, currentUserId]);
-
-  const handleCreateFolderConfirm = () => {
-    const name = newFolderName.trim();
-    if (!name) return;
-    onCreateFolder?.(name);
-    setNewFolderName('');
-    setCreatingFolder(false);
-  };
-
-  const handleRenameConfirm = () => {
-    const name = renameDraft.trim();
-    if (!name || !renamingFolderId) { setRenamingFolderId(null); return; }
-    onRenameFolder?.(renamingFolderId, name);
-    setRenamingFolderId(null);
-    setRenameDraft('');
-  };
-
-  // When this prop is provided, the panel was opened from the chat
-  // AttachMenu — folder rows render an extra "Use folder" CTA so the
-  // user can attach a whole folder as conversation context.
-  const folderAttachable = typeof onSelectFolder === 'function';
+    total: visible.length,
+    org:   visible.filter((d) => d.isGlobal).length,
+    mine:  visible.filter((d) => d.ownerId === currentUserId).length,
+  }), [visible, currentUserId]);
 
   return (
     <>
@@ -1701,12 +1603,11 @@ function DocumentVaultPanel({
               <h3 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 22, color: 'var(--text-primary)', margin: 0 }}>Document Vault</h3>
               <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 5, lineHeight: 1.5 }}>
                 {isOrgAdmin
-                  ? 'Every document stored in the firm. Group docs into folders, then attach a folder or single doc to chat.'
-                  : 'Documents you can attach to a chat — your own plus firm-wide shared documents. Group related docs into folders.'}
+                  ? 'Every document stored in the firm. Toggle org-wide sharing to make any document available to the whole team.'
+                  : 'Documents you can attach to a chat — your own plus firm-wide shared documents.'}
               </p>
             </div>
             <div className="flex items-center gap-2" style={{ flexShrink: 0 }}>
-              <button onClick={() => setCreatingFolder(true)} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '8px 14px', borderRadius: 8, backgroundColor: 'white', color: 'var(--navy)', border: '1px solid var(--border)', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}><FolderPlus size={14} /> New Folder</button>
               <button onClick={onCreateNew} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '8px 16px', borderRadius: 8, backgroundColor: 'var(--navy)', color: 'white', border: 'none', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}><Plus size={14} /> New Document</button>
               <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100"><X size={20} style={{ color: 'var(--text-muted)' }} /></button>
             </div>
@@ -1720,132 +1621,23 @@ function DocumentVaultPanel({
             </div>
           )}
 
-          {/* Folder breadcrumb — visible only when drilled into a folder */}
-          {currentFolder && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 14, fontSize: 12, color: 'var(--text-muted)' }}>
-              <button
-                onClick={() => setCurrentFolderId(null)}
-                style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 8px', borderRadius: 6, border: '1px solid var(--border)', background: 'white', color: 'var(--text-secondary)', fontSize: 12, cursor: 'pointer' }}
-              >
-                <ArrowLeft size={12} /> All folders
-              </button>
-              <ChevronRight size={12} />
-              <Folder size={13} style={{ color: 'var(--navy)' }} />
-              <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{currentFolder.name}</span>
-              <span>· {filteredDocs.length} {filteredDocs.length === 1 ? 'doc' : 'docs'}</span>
-            </div>
-          )}
-
-          {/* New folder inline composer */}
-          {creatingFolder && (
-            <div style={{ marginTop: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
-              <FolderPlus size={14} style={{ color: 'var(--navy)' }} />
-              <input
-                autoFocus
-                value={newFolderName}
-                onChange={(e) => setNewFolderName(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleCreateFolderConfirm();
-                  if (e.key === 'Escape') { setCreatingFolder(false); setNewFolderName(''); }
-                }}
-                placeholder="Folder name (e.g., Acme Contracts)"
-                style={{ flex: 1, height: 34, borderRadius: 8, border: '1px solid var(--border)', padding: '0 10px', fontSize: 13, outline: 'none', fontFamily: "'DM Sans', sans-serif" }}
-              />
-              <button onClick={handleCreateFolderConfirm} disabled={!newFolderName.trim()} style={{ padding: '7px 14px', borderRadius: 8, border: 'none', background: newFolderName.trim() ? 'var(--navy)' : '#9CA3AF', color: 'white', fontSize: 12, fontWeight: 500, cursor: newFolderName.trim() ? 'pointer' : 'not-allowed' }}>Create</button>
-              <button onClick={() => { setCreatingFolder(false); setNewFolderName(''); }} style={{ padding: '7px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'white', fontSize: 12, color: 'var(--text-muted)', cursor: 'pointer' }}>Cancel</button>
-            </div>
-          )}
-
           <div style={{ position: 'relative', marginTop: 14 }}>
             <Search size={14} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-            <input value={search} onChange={e => setSearch(e.target.value)} placeholder={currentFolder ? `Search in ${currentFolder.name}...` : 'Search folders, names, descriptions, or files...'} style={{ width: '100%', height: 38, borderRadius: 10, border: '1px solid var(--border)', paddingLeft: 36, fontSize: 13, outline: 'none', boxSizing: 'border-box', fontFamily: "'DM Sans', sans-serif" }} />
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by name, description, or file..." style={{ width: '100%', height: 38, borderRadius: 10, border: '1px solid var(--border)', paddingLeft: 36, fontSize: 13, outline: 'none', boxSizing: 'border-box', fontFamily: "'DM Sans', sans-serif" }} />
           </div>
         </div>
 
         <div style={{ flex: 1, overflowY: 'auto', padding: '12px 20px 20px' }}>
-          {/* Folder grid — root view only */}
-          {!currentFolderId && filteredFolders.length > 0 && (
-            <div style={{ marginTop: 4 }}>
-              <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-muted)', padding: '6px 4px 8px' }}>Folders</div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 10 }}>
-                {filteredFolders.map((f) => {
-                  const isOwner = f.ownerId === currentUserId;
-                  const canEdit = isOrgAdmin || isOwner || !f.ownerId;
-                  const docCount = docCountByFolder[f.id] || 0;
-                  const isActive = activeFolder?.id === f.id;
-                  const isRenaming = renamingFolderId === f.id;
-                  return (
-                    <div
-                      key={f.id}
-                      onClick={() => { if (!isRenaming) setCurrentFolderId(f.id); }}
-                      style={{ padding: '14px 14px', borderRadius: 12, border: '1px solid var(--border)', background: '#fff', cursor: isRenaming ? 'default' : 'pointer', display: 'flex', alignItems: 'center', gap: 12, transition: 'all 0.15s' }}
-                      onMouseEnter={(e) => { if (!isRenaming) { e.currentTarget.style.boxShadow = '0 3px 14px rgba(10,36,99,0.06)'; e.currentTarget.style.borderColor = 'var(--navy)'; } }}
-                      onMouseLeave={(e) => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.borderColor = 'var(--border)'; }}
-                    >
-                      <div style={{ width: 38, height: 38, borderRadius: 10, background: f.isGlobal ? 'rgba(201,168,76,0.15)' : 'var(--ice-warm)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        <Folder size={18} style={{ color: f.isGlobal ? '#9A7A22' : 'var(--navy)' }} />
-                      </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        {isRenaming ? (
-                          <input
-                            autoFocus
-                            value={renameDraft}
-                            onClick={(e) => e.stopPropagation()}
-                            onChange={(e) => setRenameDraft(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') handleRenameConfirm();
-                              if (e.key === 'Escape') { setRenamingFolderId(null); setRenameDraft(''); }
-                            }}
-                            style={{ width: '100%', height: 28, borderRadius: 6, border: '1px solid var(--border)', padding: '0 8px', fontSize: 13, outline: 'none', fontFamily: "'DM Sans', sans-serif" }}
-                          />
-                        ) : (
-                          <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{f.name}</div>
-                        )}
-                        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
-                          {docCount} {docCount === 1 ? 'document' : 'documents'}
-                          {f.isGlobal && <span> · Org-wide</span>}
-                        </div>
-                      </div>
-                      <div onClick={(e) => e.stopPropagation()} style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
-                        {folderAttachable && !isRenaming && (
-                          <button onClick={() => onSelectFolder(f)} style={{ padding: '5px 10px', borderRadius: 6, background: isActive ? '#5CA868' : 'var(--navy)', color: 'white', border: 'none', fontSize: 11, fontWeight: 500, cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                            {isActive ? 'Active' : 'Use'}
-                          </button>
-                        )}
-                        {canEdit && !isRenaming && (
-                          <button title="Rename" onClick={() => { setRenamingFolderId(f.id); setRenameDraft(f.name); }} style={{ padding: 5, borderRadius: 6, background: 'transparent', border: '1px solid var(--border)', cursor: 'pointer', display: 'flex' }}><Edit3 size={12} style={{ color: 'var(--text-muted)' }} /></button>
-                        )}
-                        {canEdit && !isRenaming && (
-                          <button title="Delete folder" onClick={() => onDeleteFolder?.(f.id)} style={{ padding: 5, borderRadius: 6, background: 'transparent', border: '1px solid var(--border)', cursor: 'pointer', display: 'flex' }}><Trash2 size={12} style={{ color: '#C65454' }} /></button>
-                        )}
-                        {isRenaming && (
-                          <>
-                            <button onClick={handleRenameConfirm} style={{ padding: '5px 10px', borderRadius: 6, background: 'var(--navy)', color: 'white', border: 'none', fontSize: 11, cursor: 'pointer' }}>Save</button>
-                            <button onClick={() => { setRenamingFolderId(null); setRenameDraft(''); }} style={{ padding: '5px 10px', borderRadius: 6, background: 'white', color: 'var(--text-muted)', border: '1px solid var(--border)', fontSize: 11, cursor: 'pointer' }}>Cancel</button>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-              <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-muted)', padding: '20px 4px 6px' }}>
-                All documents
-              </div>
-            </div>
-          )}
-
-          {filteredDocs.length === 0 && filteredFolders.length === 0 ? (
+          {filtered.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '48px 20px', color: 'var(--text-muted)' }}>
               <FolderOpen size={36} style={{ margin: '0 auto 14px', opacity: 0.4 }} />
               <div style={{ fontSize: 15, fontWeight: 500 }}>
-                {search ? 'No matches for your search' : currentFolder ? 'This folder is empty' : 'No documents yet'}
+                {search ? 'No documents match your search' : 'No documents yet'}
               </div>
-              {!search && !currentFolder && <div style={{ fontSize: 12, marginTop: 6 }}>Upload a document or create a folder to get started.</div>}
-              {!search && currentFolder && <div style={{ fontSize: 12, marginTop: 6 }}>Add a document to this folder via New Document.</div>}
+              {!search && <div style={{ fontSize: 12, marginTop: 6 }}>Upload your first document to get started.</div>}
             </div>
-          ) : filteredDocs.length === 0 && !currentFolderId ? null : (
-            filteredDocs.map(d => {
+          ) : (
+            filtered.map(d => {
               const isOwner = d.ownerId === currentUserId;
               const canEdit = isOrgAdmin || isOwner || !d.ownerId; // legacy
               const ownerPill = d.isGlobal
@@ -1883,22 +1675,6 @@ function DocumentVaultPanel({
                         <span className="flex items-center gap-1" style={{ fontSize: 11, color: 'var(--text-muted)' }}><FileText size={12} /> {d.fileName}</span>
                         <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{d.fileSize}</span>
                         <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Created {d.createdAt}</span>
-                        {(() => {
-                          // Show folder pill at root view only — inside a folder
-                          // the breadcrumb already tells the user where they are.
-                          if (currentFolderId || !d.folderId) return null;
-                          const f = visibleFolders.find((x) => x.id === d.folderId);
-                          if (!f) return null;
-                          return (
-                            <span
-                              onClick={(e) => { e.stopPropagation(); setCurrentFolderId(f.id); }}
-                              title={`Open folder ${f.name}`}
-                              style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--navy)', cursor: 'pointer', padding: '2px 8px', borderRadius: 999, background: 'rgba(10,36,99,0.06)', border: '1px solid rgba(10,36,99,0.18)' }}
-                            >
-                              <Folder size={11} /> {f.name}
-                            </span>
-                          );
-                        })()}
                       </div>
                     </div>
                   </div>
@@ -1943,13 +1719,12 @@ function DocumentVaultPanel({
 }
 
 /* ─────────────────── Edit / Create Document Modal ─────────────────── */
-function EditDocumentModal({ document: docItem, onClose, onSave, folders = [], defaultFolderId = null }) {
+function EditDocumentModal({ document: docItem, onClose, onSave }) {
   const isNew = !docItem;
   const [name, setName] = useState(docItem?.name || '');
   const [description, setDescription] = useState(docItem?.description || '');
   const [fileName, setFileName] = useState(docItem?.fileName || '');
   const [fileSize, setFileSize] = useState(docItem?.fileSize || '');
-  const [folderId, setFolderId] = useState(docItem?.folderId ?? defaultFolderId ?? '');
   const fileInputRef = useRef(null);
 
   const [fileError, setFileError] = useState('');
@@ -1981,7 +1756,6 @@ function EditDocumentModal({ document: docItem, onClose, onSave, folders = [], d
       fileName: fileName.trim(),
       fileSize: fileSize || '—',
       createdAt: docItem?.createdAt || new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-      folderId: folderId || null,
     });
     onClose();
   };
@@ -2010,20 +1784,6 @@ function EditDocumentModal({ document: docItem, onClose, onSave, folders = [], d
           <div>
             <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Description</label>
             <textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="Short description of this document..." rows={2} style={{ ...inputStyle, height: 'auto', padding: '10px 12px', resize: 'vertical', lineHeight: 1.5 }} />
-          </div>
-
-          <div>
-            <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Folder</label>
-            <select
-              value={folderId || ''}
-              onChange={(e) => setFolderId(e.target.value || null)}
-              style={{ ...inputStyle, cursor: 'pointer', backgroundColor: 'white' }}
-            >
-              <option value="">Uncategorised (no folder)</option>
-              {folders.map((f) => (
-                <option key={f.id} value={f.id}>{f.name}</option>
-              ))}
-            </select>
           </div>
 
           <div>
@@ -2061,7 +1821,7 @@ function EditDocumentModal({ document: docItem, onClose, onSave, folders = [], d
 }
 
 /* ─────────────────── Attach Menu (+ icon popover) ─────────────────── */
-function AttachMenu({ activePack, activeDocument, activeFolder, folderDocCount, onClose, onAttachFiles, onOpenKnowledgePacks, onOpenDocumentVault, onOpenDocumentVaultForFolder, onClearPack, onClearDocument, onClearFolder }) {
+function AttachMenu({ activePack, activeDocument, onClose, onAttachFiles, onOpenKnowledgePacks, onOpenDocumentVault, onClearPack, onClearDocument }) {
   const docInputRef = useRef(null);
 
   const handleFiles = (e, kind) => {
@@ -2121,17 +1881,6 @@ function AttachMenu({ activePack, activeDocument, activeFolder, folderDocCount, 
           onClick={onOpenDocumentVault}
           active={!!activeDocument}
           onRemove={onClearDocument}
-        />
-
-        <MenuItem
-          icon={Folder}
-          label={activeFolder ? `Folder: ${activeFolder.name}` : 'Folder from Vault'}
-          subtitle={activeFolder
-            ? `${folderDocCount} ${folderDocCount === 1 ? 'document' : 'documents'} attached as context`
-            : 'Attach a whole folder of saved docs'}
-          onClick={onOpenDocumentVaultForFolder}
-          active={!!activeFolder}
-          onRemove={onClearFolder}
         />
       </div>
     </>
@@ -2929,31 +2678,15 @@ export default function ChatView({ initialView = 'chat' }) {
     return loadVault() || DEFAULT_DOCUMENT_VAULT;
   });
   useEffect(() => { saveVault(documentVault); }, [documentVault]);
-  const [vaultFolders, setVaultFolders] = useState(() => {
-    seedFoldersIfEmpty(DEFAULT_DOCUMENT_VAULT_FOLDERS);
-    return loadFolders() || DEFAULT_DOCUMENT_VAULT_FOLDERS;
-  });
-  useEffect(() => { saveFolders(vaultFolders); }, [vaultFolders]);
   const [showDocumentVaultPanel, setShowDocumentVaultPanel] = useState(false);
-  // When the panel is opened from the AttachMenu's "Folder from Vault"
-  // entry, this flag toggles folder rows into selectable mode (extra
-  // "Use" button on each folder tile). Reset to false on panel close.
-  const [vaultPanelFolderMode, setVaultPanelFolderMode] = useState(false);
   // Refresh from storage when the panel opens so cross-route uploads show up.
   useEffect(() => {
     if (!showDocumentVaultPanel) return;
-    const nextDocs = loadVault();
-    if (nextDocs) setDocumentVault(nextDocs);
-    const nextFolders = loadFolders();
-    if (nextFolders) setVaultFolders(nextFolders);
+    const next = loadVault();
+    if (next) setDocumentVault(next);
   }, [showDocumentVaultPanel]);
   const [editingDocument, setEditingDocument] = useState(null);
   const [activeVaultDocument, setActiveVaultDocument] = useState(null);
-  // A folder attachment is mutually exclusive with a single-doc
-  // attachment — selecting one clears the other. Both feed the same
-  // metadata slot in the bot message and the same chip area above the
-  // chat input.
-  const [activeVaultFolder, setActiveVaultFolder] = useState(null);
   const [docLimitBannerDismissed, setDocLimitBannerDismissed] = useState(false);
   const [promptTemplates, setPromptTemplates] = useState(DEFAULT_PROMPT_TEMPLATES);
   const [showPromptPanel, setShowPromptPanel] = useState(false);
@@ -3131,7 +2864,6 @@ export default function ChatView({ initialView = 'chat' }) {
     setShowEmptyState(true);
     setActiveKnowledgePack(null);
     setActiveVaultDocument(null);
-    setActiveVaultFolder(null);
     setPendingAttachments([]);
     setInput('');
     setSessionDocContext(null);
@@ -3184,7 +2916,6 @@ export default function ChatView({ initialView = 'chat' }) {
     }
     setActiveKnowledgePack(null);
     setActiveVaultDocument(null);
-    setActiveVaultFolder(null);
     setPendingAttachments([]);
     setSessionDocContext(null);
     setInput('');
@@ -3465,17 +3196,6 @@ INSTRUCTIONS:
         } else if (activeVaultDocument) {
           // Vault document selected as context — use its metadata as reference
           contextLayers.uploadedDoc = { name: activeVaultDocument.name, content: activeVaultDocument.description || '' };
-        } else if (activeVaultFolder) {
-          // Vault folder selected — concatenate every doc's name + description
-          // as a lightweight context payload. Same caveat as a single vault
-          // doc: the Edge path doesn't receive raw file content; this is the
-          // best-effort metadata layer the client-fallback prompt sees.
-          const folderDocs = documentVault.filter((d) => d.folderId === activeVaultFolder.id);
-          const summary = folderDocs.map((d) => `[${d.name}]${d.description ? `: ${d.description}` : ''}`).join('\n');
-          contextLayers.uploadedDoc = {
-            name: `Folder: ${activeVaultFolder.name} (${folderDocs.length} ${folderDocs.length === 1 ? 'doc' : 'docs'})`,
-            content: summary,
-          };
         }
 
         // Tier 2: Knowledge Pack (selected by user)
@@ -3537,7 +3257,7 @@ INSTRUCTIONS:
         cardData,
         timestamp: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
         knowledgePack: activeKnowledgePack?.name || null,
-        vaultDocument: activeVaultDocument?.name || (activeVaultFolder ? `Folder: ${activeVaultFolder.name}` : null),
+        vaultDocument: activeVaultDocument?.name || null,
         sourceBadge,
         sessionKbSnapshotId: sessionState.sessionKbSnapshotId,
       };
@@ -3772,47 +3492,7 @@ INSTRUCTIONS:
       return;
     }
     setActiveVaultDocument(doc);
-    setActiveVaultFolder(null); // mutually exclusive
   }, [sessionDocContext]);
-
-  // Folder attach: mutually exclusive with single-doc attach.
-  // Skip the version-banner gate — folders are a coarser context
-  // selection, treated like swapping a Knowledge Pack mid-thread.
-  const handleSelectVaultFolder = useCallback((folder) => {
-    setActiveVaultFolder(folder);
-    setActiveVaultDocument(null);
-  }, []);
-
-  const handleCreateVaultFolder = useCallback((name) => {
-    const trimmed = (name || '').trim();
-    if (!trimmed) return;
-    const newFolder = {
-      id: `fld-${Date.now()}`,
-      name: trimmed,
-      createdAt: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-      ownerId: currentUserId,
-      ownerName: operator?.name || 'You',
-      isGlobal: false,
-    };
-    setVaultFolders((prev) => [newFolder, ...prev]);
-  }, [currentUserId, operator]);
-
-  const handleRenameVaultFolder = useCallback((folderId, name) => {
-    const trimmed = (name || '').trim();
-    if (!trimmed) return;
-    setVaultFolders((prev) => prev.map((f) => (f.id === folderId ? { ...f, name: trimmed } : f)));
-    if (activeVaultFolder?.id === folderId) {
-      setActiveVaultFolder((prev) => (prev ? { ...prev, name: trimmed } : prev));
-    }
-  }, [activeVaultFolder]);
-
-  const handleDeleteVaultFolder = useCallback((folderId) => {
-    setVaultFolders((prev) => prev.filter((f) => f.id !== folderId));
-    // Detach docs from the deleted folder so they fall back to
-    // "Uncategorised" rather than disappear from view.
-    setDocumentVault((prev) => prev.map((d) => (d.folderId === folderId ? { ...d, folderId: null } : d)));
-    if (activeVaultFolder?.id === folderId) setActiveVaultFolder(null);
-  }, [activeVaultFolder]);
 
   const handleSelectKnowledgePack = useCallback((pack) => {
     setActiveKnowledgePack(pack);
@@ -4037,11 +3717,8 @@ INSTRUCTIONS:
                   Context is locked once the first message is sent — no add/remove mid-conversation. */}
               {(() => {
                 const docNames = sessionDocContext?.docNames || [];
-                const hasCtx = docNames.length > 0 || activeKnowledgePack || activeVaultDocument || activeVaultFolder;
+                const hasCtx = docNames.length > 0 || activeKnowledgePack || activeVaultDocument;
                 if (!hasCtx) return null;
-                const folderDocCount = activeVaultFolder
-                  ? documentVault.filter((d) => d.folderId === activeVaultFolder.id).length
-                  : 0;
                 return (
                   <div style={{ marginBottom: 20, padding: '12px 16px', borderRadius: 12, background: 'var(--ice-warm)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                     <Info size={14} style={{ color: 'var(--navy)', flexShrink: 0 }} />
@@ -4060,11 +3737,6 @@ INSTRUCTIONS:
                       {activeVaultDocument && !docNames.includes(activeVaultDocument.name) && (
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '3px 10px', borderRadius: 999, background: 'white', border: '1px solid rgba(10,36,99,0.2)', fontSize: 11, fontWeight: 500, color: 'var(--navy)' }}>
                           <File size={11} /> {activeVaultDocument.name}
-                        </span>
-                      )}
-                      {activeVaultFolder && (
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '3px 10px', borderRadius: 999, background: 'white', border: '1px solid rgba(10,36,99,0.2)', fontSize: 11, fontWeight: 500, color: 'var(--navy)' }}>
-                          <Folder size={11} /> {activeVaultFolder.name} · {folderDocCount} {folderDocCount === 1 ? 'doc' : 'docs'}
                         </span>
                       )}
                     </div>
@@ -4183,39 +3855,25 @@ INSTRUCTIONS:
 
           {/* Chat input area */}
           <div className="px-4 sm:px-6" style={{ background: 'transparent', paddingTop: showEmptyState ? 20 : 12, paddingBottom: 12, maxWidth: 880, width: '100%', marginLeft: 'auto', marginRight: 'auto', boxSizing: 'border-box' }}>
-            {/* Active Knowledge Pack / Vault Document / Vault Folder chips */}
-            {(activeKnowledgePack || activeVaultDocument || activeVaultFolder) && (() => {
-              const folderDocCount = activeVaultFolder
-                ? documentVault.filter((d) => d.folderId === activeVaultFolder.id).length
-                : 0;
-              return (
-                <div style={{ marginBottom: 8, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                  {activeKnowledgePack && (
-                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 12px', borderRadius: 999, background: 'rgba(10, 36, 99, 0.06)', border: '1px solid rgba(10, 36, 99, 0.25)' }}>
-                      <Package size={13} style={{ color: 'var(--navy)' }} />
-                      <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--navy)' }}>Using: {activeKnowledgePack.name}</span>
-                      <button onClick={() => setActiveKnowledgePack(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', color: 'var(--navy)' }}><X size={13} /></button>
-                    </div>
-                  )}
-                  {activeVaultDocument && (
-                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 12px', borderRadius: 999, background: 'rgba(10, 36, 99, 0.06)', border: '1px solid rgba(10, 36, 99, 0.25)' }}>
-                      <File size={13} style={{ color: 'var(--navy)' }} />
-                      <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--navy)' }}>Using: {activeVaultDocument.name}</span>
-                      <button onClick={() => setActiveVaultDocument(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', color: 'var(--navy)' }}><X size={13} /></button>
-                    </div>
-                  )}
-                  {activeVaultFolder && (
-                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 12px', borderRadius: 999, background: 'rgba(10, 36, 99, 0.06)', border: '1px solid rgba(10, 36, 99, 0.25)' }}>
-                      <Folder size={13} style={{ color: 'var(--navy)' }} />
-                      <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--navy)' }}>
-                        Using folder: {activeVaultFolder.name} <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>({folderDocCount} {folderDocCount === 1 ? 'doc' : 'docs'})</span>
-                      </span>
-                      <button onClick={() => setActiveVaultFolder(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', color: 'var(--navy)' }}><X size={13} /></button>
-                    </div>
-                  )}
-                </div>
-              );
-            })()}
+            {/* Active Knowledge Pack / Vault Document chips */}
+            {(activeKnowledgePack || activeVaultDocument) && (
+              <div style={{ marginBottom: 8, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {activeKnowledgePack && (
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 12px', borderRadius: 999, background: 'rgba(10, 36, 99, 0.06)', border: '1px solid rgba(10, 36, 99, 0.25)' }}>
+                    <Package size={13} style={{ color: 'var(--navy)' }} />
+                    <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--navy)' }}>Using: {activeKnowledgePack.name}</span>
+                    <button onClick={() => setActiveKnowledgePack(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', color: 'var(--navy)' }}><X size={13} /></button>
+                  </div>
+                )}
+                {activeVaultDocument && (
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 12px', borderRadius: 999, background: 'rgba(10, 36, 99, 0.06)', border: '1px solid rgba(10, 36, 99, 0.25)' }}>
+                    <File size={13} style={{ color: 'var(--navy)' }} />
+                    <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--navy)' }}>Using: {activeVaultDocument.name}</span>
+                    <button onClick={() => setActiveVaultDocument(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', color: 'var(--navy)' }}><X size={13} /></button>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Pending attachment chips */}
             {pendingAttachments.length > 0 && (
@@ -4441,21 +4099,17 @@ INSTRUCTIONS:
                 </div>
               )}
               <div style={{ position: 'relative' }}>
-                <div onClick={() => setShowPackPicker(v => !v)} title="Attach files or context" style={{ width: 28, height: 28, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: (activeKnowledgePack || activeVaultDocument || activeVaultFolder) ? 'var(--navy)' : 'var(--text-muted)', background: (activeKnowledgePack || activeVaultDocument || activeVaultFolder) ? 'rgba(10, 36, 99, 0.08)' : 'transparent' }}><Plus size={20} /></div>
+                <div onClick={() => setShowPackPicker(v => !v)} title="Attach files or context" style={{ width: 28, height: 28, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: (activeKnowledgePack || activeVaultDocument) ? 'var(--navy)' : 'var(--text-muted)', background: (activeKnowledgePack || activeVaultDocument) ? 'rgba(10, 36, 99, 0.08)' : 'transparent' }}><Plus size={20} /></div>
                 {showPackPicker && (
                   <AttachMenu
                     activePack={activeKnowledgePack}
                     activeDocument={activeVaultDocument}
-                    activeFolder={activeVaultFolder}
-                    folderDocCount={activeVaultFolder ? documentVault.filter((d) => d.folderId === activeVaultFolder.id).length : 0}
                     onClose={() => setShowPackPicker(false)}
                     onAttachFiles={(files, kind) => { handleAttachFiles(files, kind); setShowPackPicker(false); }}
                     onOpenKnowledgePacks={() => { setShowPackPicker(false); setShowKnowledgePacksPanel(true); }}
-                    onOpenDocumentVault={() => { setShowPackPicker(false); setVaultPanelFolderMode(false); setShowDocumentVaultPanel(true); }}
-                    onOpenDocumentVaultForFolder={() => { setShowPackPicker(false); setVaultPanelFolderMode(true); setShowDocumentVaultPanel(true); }}
+                    onOpenDocumentVault={() => { setShowPackPicker(false); setShowDocumentVaultPanel(true); }}
                     onClearPack={() => { setActiveKnowledgePack(null); }}
                     onClearDocument={() => { setActiveVaultDocument(null); }}
-                    onClearFolder={() => { setActiveVaultFolder(null); }}
                   />
                 )}
               </div>
@@ -4687,23 +4341,14 @@ INSTRUCTIONS:
       {showDocumentVaultPanel && (
         <DocumentVaultPanel
           documents={documentVault}
-          folders={vaultFolders}
           activeDocument={activeVaultDocument}
-          activeFolder={activeVaultFolder}
           currentUserId={currentUserId}
           isOrgAdmin={isOrgAdmin}
           isExternalUser={isExternalUser}
-          onClose={() => { setShowDocumentVaultPanel(false); setVaultPanelFolderMode(false); }}
+          onClose={() => setShowDocumentVaultPanel(false)}
           onCreateNew={() => { setShowDocumentVaultPanel(false); setEditingDocument({ isNew: true }); }}
           onEdit={(doc) => { setShowDocumentVaultPanel(false); setEditingDocument(doc); }}
-          onSelect={(d) => { handleSelectVaultDocument(d); setShowDocumentVaultPanel(false); setVaultPanelFolderMode(false); }}
-          // Folder selection only enabled when the panel was opened
-          // from the AttachMenu's "Folder from Vault" entry. Otherwise
-          // folders are pure organisation, not selectable as context.
-          onSelectFolder={vaultPanelFolderMode ? (f) => { handleSelectVaultFolder(f); setShowDocumentVaultPanel(false); setVaultPanelFolderMode(false); } : undefined}
-          onCreateFolder={handleCreateVaultFolder}
-          onRenameFolder={handleRenameVaultFolder}
-          onDeleteFolder={handleDeleteVaultFolder}
+          onSelect={(d) => { handleSelectVaultDocument(d); setShowDocumentVaultPanel(false); }}
           onDelete={handleDeleteDocument}
           onToggleGlobal={(docId, next) => {
             setDocumentVault((prev) => prev.map((d) => (d.id === docId ? { ...d, isGlobal: next } : d)));
@@ -4717,7 +4362,6 @@ INSTRUCTIONS:
       {editingDocument && (
         <EditDocumentModal
           document={editingDocument.isNew ? null : editingDocument}
-          folders={vaultFolders}
           onClose={() => setEditingDocument(null)}
           onSave={(data) => { handleSaveDocument(data); setEditingDocument(null); }}
         />
