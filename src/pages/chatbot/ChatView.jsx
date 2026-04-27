@@ -2452,16 +2452,44 @@ Rules:
 
         {/* ── MAIN AREA ── */}
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-          {/* Sticky toolbar */}
+          {/* Sticky toolbar — search bar is now the dual-purpose
+              "Search OR Ask anything" input. Plain text → substring
+              search (existing behaviour). Pressing Enter triggers the
+              NL parser; if it returns a structured filter, that wins
+              and a gold callout shows the model's interpretation. */}
           <div style={{ height: 56, padding: '0 28px', display: 'flex', alignItems: 'center', gap: 12, background: '#FBFAF7', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
-            <div style={{ position: 'relative', flex: 1, maxWidth: 360 }}>
-              <Search size={14} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+            <div style={{ position: 'relative', flex: 1, maxWidth: 520 }}>
+              <Sparkles size={14} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--gold)' }} />
               <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder={currentFolder ? `Search in ${currentFolder.name}…` : 'Search vault…'}
-                style={{ width: '100%', height: 36, borderRadius: 8, border: '1px solid var(--border)', paddingLeft: 36, paddingRight: 12, fontSize: 13, outline: 'none', boxSizing: 'border-box', fontFamily: "'DM Sans', sans-serif", background: '#fff' }}
+                value={askQuery || search}
+                onChange={(e) => {
+                  // Mirror typing into both — search keeps live filtering,
+                  // askQuery captures the full query for the Ask button.
+                  setAskQuery(e.target.value);
+                  setSearch(e.target.value);
+                }}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleAskAnything(); }}
+                disabled={askLoading}
+                placeholder={currentFolder ? `Search in ${currentFolder.name} or ask…` : 'Search or ask — try "biggest file I have"'}
+                style={{ width: '100%', height: 36, borderRadius: 8, border: '1px solid var(--border)', paddingLeft: 36, paddingRight: askQuery ? 90 : 12, fontSize: 13, outline: 'none', boxSizing: 'border-box', fontFamily: "'DM Sans', sans-serif", background: '#fff' }}
               />
+              {askQuery && (
+                <button
+                  onClick={handleAskAnything}
+                  disabled={askLoading}
+                  style={{
+                    position: 'absolute', right: 4, top: '50%', transform: 'translateY(-50%)',
+                    height: 28, padding: '0 12px',
+                    borderRadius: 6, border: 'none',
+                    background: askLoading ? '#9CA3AF' : 'var(--navy)',
+                    color: '#fff', fontSize: 11, fontWeight: 500,
+                    cursor: askLoading ? 'not-allowed' : 'pointer',
+                    fontFamily: "'DM Sans', sans-serif",
+                  }}
+                >
+                  {askLoading ? '…' : 'Ask ✨'}
+                </button>
+              )}
             </div>
 
             {isOrgAdmin && (
@@ -2569,53 +2597,19 @@ Rules:
               </div>
             </div>
 
-            {/* ─── Ask anything (P8 — Wendy's "biggest at-close download" use case) ─── */}
-            <div style={{ maxWidth: 1080, margin: '0 auto', padding: '4px 28px 8px' }}>
-              <div style={{ position: 'relative' }}>
-                <Sparkles size={14} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--gold)' }} />
-                <input
-                  value={askQuery}
-                  onChange={(e) => setAskQuery(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') handleAskAnything(); }}
-                  placeholder='Ask anything across your library — try "biggest file" or "PDFs uploaded this month"'
-                  disabled={askLoading}
-                  style={{
-                    width: '100%', height: 44,
-                    borderRadius: 12,
-                    border: '1px solid var(--border)',
-                    paddingLeft: 38, paddingRight: 110,
-                    fontSize: 14, outline: 'none',
-                    boxSizing: 'border-box',
-                    fontFamily: "'DM Sans', sans-serif",
-                    background: '#fff',
-                    color: 'var(--text-primary)',
-                    boxShadow: '0 1px 2px rgba(15,23,42,0.04)',
-                  }}
-                />
-                <button
-                  onClick={handleAskAnything}
-                  disabled={askLoading || !askQuery.trim()}
-                  style={{
-                    position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)',
-                    height: 32, padding: '0 14px',
-                    borderRadius: 8, border: 'none',
-                    background: askLoading || !askQuery.trim() ? '#9CA3AF' : 'var(--navy)',
-                    color: '#fff', fontSize: 12, fontWeight: 500,
-                    cursor: askLoading || !askQuery.trim() ? 'not-allowed' : 'pointer',
-                    fontFamily: "'DM Sans', sans-serif",
-                  }}
-                >
-                  {askLoading ? 'Thinking…' : 'Ask'}
-                </button>
-              </div>
-              {askExplanation && (
-                <div style={{ marginTop: 8, padding: '8px 12px', borderRadius: 8, background: 'rgba(201,168,76,0.12)', border: '1px solid rgba(201,168,76,0.35)', fontSize: 12, color: '#7A5C0A', display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <Sparkles size={12} style={{ color: 'var(--gold)', flexShrink: 0 }} />
+            {/* Ask-anything callout — shows the model's interpretation
+                of the NL query the user typed in the toolbar. Triggered
+                from the toolbar input's Enter / "Ask ✨" button, not a
+                duplicate input down here. */}
+            {askExplanation && (
+              <div style={{ maxWidth: 1080, margin: '0 auto', padding: '4px 28px 8px' }}>
+                <div style={{ padding: '10px 14px', borderRadius: 10, background: 'rgba(201,168,76,0.12)', border: '1px solid rgba(201,168,76,0.35)', fontSize: 13, color: '#7A5C0A', display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <Sparkles size={14} style={{ color: 'var(--gold)', flexShrink: 0 }} />
                   <span style={{ flex: 1 }}>{askExplanation}</span>
-                  <button onClick={() => { clearAllFilters(); }} style={{ background: 'none', border: 'none', padding: 0, fontSize: 11, fontWeight: 500, color: '#7A5C0A', cursor: 'pointer', textDecoration: 'underline', whiteSpace: 'nowrap' }}>Clear</button>
+                  <button onClick={() => { clearAllFilters(); }} style={{ background: 'none', border: 'none', padding: 0, fontSize: 12, fontWeight: 500, color: '#7A5C0A', cursor: 'pointer', textDecoration: 'underline', whiteSpace: 'nowrap' }}>Clear</button>
                 </div>
-              )}
-            </div>
+              </div>
+            )}
 
             {/* ─── Filter chips row (P8 — Date / Uploader / Type / Sort) ─── */}
             <div style={{ maxWidth: 1080, margin: '0 auto', padding: '4px 28px 12px', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
