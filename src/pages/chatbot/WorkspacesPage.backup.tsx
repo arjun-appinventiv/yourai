@@ -127,7 +127,7 @@ export default function WorkspacesPage({ onBack, onOpenWorkspace, onToast }: Wor
           <div className="flex items-end justify-between gap-4 flex-wrap" style={{ marginTop: 10 }}>
             <div style={{ minWidth: 0 }}>
               <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 28, color: 'var(--text-primary)', margin: 0, lineHeight: 1.2 }}>
-                Case Workspaces
+                Workspaces
               </h1>
               <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 6, lineHeight: 1.5, maxWidth: 560 }}>
                 {workspaces.length} workspace{workspaces.length !== 1 ? 's' : ''}

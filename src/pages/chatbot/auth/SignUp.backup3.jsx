@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useNavigate, Link, useSearchParams } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { User, Mail, Building2, Lock, Eye, EyeOff, Loader, Check, Circle, XCircle, ShieldCheck } from 'lucide-react';
 import ChatAuthLayout from '../../../components/ChatAuthLayout';
 import { signUp as apiSignUp, claimSession } from '../../../lib/auth';
@@ -9,14 +9,8 @@ import { signUp as apiSignUp, claimSession } from '../../../lib/auth';
 
 export default function SignUp() {
   const [fullName, setFullName] = useState('');
-  // Invite param defaults are read after `searchParams` is available
-  // (below) and applied via useEffect — but for the initial render we
-  // also seed the values from window.location so the form pre-fills on
-  // the very first paint instead of flashing empty.
-  const _initialInvited = typeof window !== 'undefined' && /[?&]invited=1\b/.test(window.location.search);
-  const _initialParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
-  const [email, setEmail] = useState(_initialInvited && _initialParams ? (_initialParams.get('email') || '') : '');
-  const [firmName, setFirmName] = useState(_initialInvited && _initialParams ? (_initialParams.get('firm') || '') : '');
+  const [email, setEmail] = useState('');
+  const [firmName, setFirmName] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -30,17 +24,6 @@ export default function SignUp() {
   // supplies password + firm name to finish creating the account.
   const [ssoProvider, setSsoProvider] = useState(null); // 'google' | 'microsoft' | null
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  // ─── Invited-user fast path ───
-  // When a teammate signs up via an org-admin invite link, the URL
-  // carries `?invited=1` (optionally with `?email=` and `?firm=`). The
-  // invitee is treated as an INTERNAL_USER under the inviter's tenant —
-  // no plan / payment / survey. After signup they land directly on
-  // the chat home, skipping `/chat/onboarding` entirely. Org admin
-  // already configured plan + firm details.
-  const isInvited = searchParams.get('invited') === '1';
-  const invitedEmail = searchParams.get('email') || '';
-  const invitedFirm  = searchParams.get('firm')  || '';
 
   // ─── Email OTP verification ───
   // Verify the user's email address before letting them fill in the rest of
@@ -104,12 +87,6 @@ export default function SignUp() {
       const prefill = (params.get('email') || '').trim();
       if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(prefill) && prefill.length <= 254) {
         setEmail(prefill);
-      }
-      // Invited users: bypass OTP — the invite link itself is the
-      // verification (org admin authored it). Mark the email as
-      // verified so the rest of the form unlocks immediately.
-      if (params.get('invited') === '1') {
-        setVerifyStep('verified');
       }
     } catch { /* ignore */ }
     // Runs once on mount.
@@ -256,22 +233,8 @@ export default function SignUp() {
       const result = await apiSignUp({ name: fullName, email, password, orgName: firmName });
       if (result.success) {
         try { localStorage.setItem('yourai_current_email', email); } catch { /* ignore */ }
-        // Invited internal users skip the onboarding survey entirely —
-        // org admin already chose plan + firm-level config. They land
-        // straight on the chat home.
-        if (isInvited) {
-          try {
-            localStorage.setItem('yourai_user_profile', JSON.stringify({
-              role: 'INTERNAL_USER',
-              firmName: invitedFirm || firmName,
-              onboardingCompleted: true,
-              onboardingCompletedAt: new Date().toISOString(),
-              viaInvite: true,
-            }));
-          } catch { /* ignore */ }
-        }
         claimSession(email);
-        navigate(isInvited ? '/chat/home' : '/chat/onboarding', { replace: true });
+        navigate('/chat/onboarding', { replace: true });
       } else {
         setError(result.error || 'Sign up failed. Please try again.');
         setLoading(false);
@@ -542,9 +505,7 @@ export default function SignUp() {
           )}
         </div>
 
-        {/* Firm Name — locked when this is an invited-user flow because
-            the org admin already chose the firm name. The invitee can't
-            edit their way into a different firm. */}
+        {/* Firm Name */}
         <div>
           <label className="block mb-1.5" style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-secondary)' }}>Firm Name</label>
           <div className={inputWrap}>
@@ -555,18 +516,10 @@ export default function SignUp() {
               onChange={(e) => setFirmName(e.target.value)}
               placeholder="Hartwell & Associates"
               required
-              disabled={isInvited}
-              style={{
-                ...inputStyle,
-                background: isInvited ? 'var(--ice-warm)' : inputStyle.background,
-                color: isInvited ? 'var(--text-secondary)' : inputStyle.color,
-                cursor: isInvited ? 'not-allowed' : 'text',
-              }}
+              style={inputStyle}
             />
           </div>
-          <p className="mt-1" style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-            {isInvited ? 'Set by the colleague who invited you — can\'t be changed.' : 'Solo practitioner? You can use your own name or chambers name.'}
-          </p>
+          <p className="mt-1" style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Solo practitioner? You can use your own name or chambers name.</p>
         </div>
 
         {/* Password */}

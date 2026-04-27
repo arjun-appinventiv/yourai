@@ -57,7 +57,6 @@ import ChatResetPassword from './pages/chatbot/auth/ResetPassword';
 import ChatOnboarding from './pages/chatbot/auth/Onboarding';
 import ChatView from './pages/chatbot/ChatView';
 import WorkspaceChatView from './pages/chatbot/WorkspaceChatView';
-import RestructureMock from './pages/restructure-mock/RestructureMock';
 import RouteErrorBoundary from './components/RouteErrorBoundary';
 import RouteTitle from './components/RouteTitle';
 
@@ -104,10 +103,8 @@ export default function App() {
             <Route path="/chat/reset-password" element={<ChatResetPassword />} />
             <Route path="/chat/onboarding" element={<ChatOnboarding />} />
             <Route path="/chat" element={<ChatRoleProvider><ChatView /></ChatRoleProvider>} />
-            <Route path="/chat/home" element={<ChatRoleProvider><ChatView initialView="home" /></ChatRoleProvider>} />
             <Route path="/chat/workspaces" element={<ChatRoleProvider><ChatView initialView="workspaces" /></ChatRoleProvider>} />
             <Route path="/chat/workspaces/:id" element={<RouteErrorBoundary><ChatRoleProvider><WorkspaceChatView /></ChatRoleProvider></RouteErrorBoundary>} />
-            <Route path="/mock/restructure" element={<RestructureMock />} />
 
             {/* Org Admin routes */}
             <Route
