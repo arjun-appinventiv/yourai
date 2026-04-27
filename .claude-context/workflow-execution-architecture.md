@@ -74,9 +74,10 @@ The sentence is literal. QA tests check for that exact string. Don't rewrite it 
 
 ## What NOT to use
 
-- **Do not call `callLLM`** from any new workflow / AI feature. It's the client-side fallback path, needs `VITE_OPENAI_API_KEY` which is never set, and the "offline demo mode" placeholder will be the silent result.
+- **Do not call `callLLM`** from any new workflow / AI feature. As of 2026-04-25 **no production code path uses `callLLM`** — `workflowExecutor`, main `ChatView`, and `WorkspaceChatView` were all migrated to `/api/chat`. The file in `src/lib/llm-client.ts` only hangs on for hypothetical dev environments that set `VITE_OPENAI_API_KEY` deliberately. Symptoms of regressing back to `callLLM`: bot says **"Something went wrong reaching the AI"** (workspace chat error path) or **"No LLM backend available. Please configure the API key…"** (the latter copy was removed from `ChatView` 2026-04-25 — if you see it return, something added a new fallback path).
 - **Do not build prompts inline inside `workflowRunner`** — operation prompts belong in `workflowPrompts.ts`. Runner stays a pure orchestrator.
 - **Do not skip the anti-hallucination block** in any operation prompt. It's one copy-paste; don't leave a new operation without it.
+- **Do not omit the trailing decoder flush** when consuming the streaming response. After the `while (true) { reader.read() }` loop ends, call `decoder.decode()` once more to flush any partial multibyte UTF-8 character sitting at the boundary. All four streaming consumers (`workflowExecutor`, `ChatView`, `WorkspaceChatView`, `classifyDocs`) do this — match the pattern.
 
 ## Related files
 
