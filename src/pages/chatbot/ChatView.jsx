@@ -1933,6 +1933,31 @@ function DocumentVaultPanel({
   const [openMenuFor, setOpenMenuFor] = useState(null); // doc id
   const [expandedSet, setExpandedSet] = useState(() => new Set());
 
+  // ─── Find / search filters (P8 v1) ───
+  // Filter chips operate on the same scoped doc set as the table; they
+  // narrow what's rendered without changing the folder tree navigation.
+  // Limit chip in particular handles "biggest file" / "smallest file"
+  // style natural-language queries from the Ask-anything parser.
+  const [dateFilter, setDateFilter]    = useState('any');   // 'any' | '7d' | '30d' | 'year'
+  const [uploaderFilter, setUploaderFilter] = useState(null); // null | userId
+  const [typeFilter, setTypeFilter]    = useState(null);    // null | 'PDF' | 'DOCX' | 'XLSX' | other
+  const [sortBy, setSortBy]            = useState('recent'); // 'recent' | 'name' | 'size-desc' | 'size-asc'
+  const [resultLimit, setResultLimit]  = useState(null);    // null = unlimited
+  const [askQuery, setAskQuery]        = useState('');
+  const [askLoading, setAskLoading]    = useState(false);
+  const [askExplanation, setAskExplanation] = useState('');
+  const [openFilterMenu, setOpenFilterMenu] = useState(null); // 'date' | 'uploader' | 'type' | 'sort' | null
+
+  const clearAllFilters = () => {
+    setDateFilter('any');
+    setUploaderFilter(null);
+    setTypeFilter(null);
+    setSortBy('recent');
+    setResultLimit(null);
+    setAskExplanation('');
+    setAskQuery('');
+  };
+
   // ─── Visibility (role + isGlobal) ───
   const visibleDocs = useMemo(() => {
     if (isOrgAdmin) return documents;
@@ -2023,15 +2048,89 @@ function DocumentVaultPanel({
     return scopedDocs;
   }, [scopedDocs, currentFolderId]);
 
+  // Owners list (for the Uploader filter dropdown).
+  const docOwners = useMemo(() => {
+    const map = new Map();
+    visibleDocs.forEach((d) => {
+      if (!d.ownerId) return;
+      if (!map.has(d.ownerId)) map.set(d.ownerId, { id: d.ownerId, name: d.ownerName || 'Member', count: 0 });
+      map.get(d.ownerId).count += 1;
+    });
+    return Array.from(map.values()).sort((a, b) => b.count - a.count);
+  }, [visibleDocs]);
+
+  // Helpers used by the chip filters.
+  const parseSizeMb = (s) => {
+    if (!s) return 0;
+    const m = String(s).match(/([\d.]+)\s*(KB|MB|GB)?/i);
+    if (!m) return 0;
+    const n = parseFloat(m[1]);
+    const unit = (m[2] || 'MB').toUpperCase();
+    return unit === 'KB' ? n / 1024 : unit === 'GB' ? n * 1024 : n;
+  };
+  const parseDate = (s) => {
+    if (!s) return 0;
+    const t = Date.parse(s);
+    return Number.isFinite(t) ? t : 0;
+  };
+  const isWithin = (createdAt, period) => {
+    if (period === 'any') return true;
+    const t = parseDate(createdAt);
+    if (!t) return false;
+    const now = Date.now();
+    const day = 24 * 60 * 60 * 1000;
+    if (period === '7d')   return now - t <= 7 * day;
+    if (period === '30d')  return now - t <= 30 * day;
+    if (period === 'year') return now - t <= 365 * day;
+    return true;
+  };
+
   const filteredDocs = useMemo(() => {
-    if (!search.trim()) return folderDocs;
-    const q = search.toLowerCase();
-    return folderDocs.filter((d) =>
-      d.name.toLowerCase().includes(q)
-      || (d.description || '').toLowerCase().includes(q)
-      || (d.fileName || '').toLowerCase().includes(q),
-    );
-  }, [folderDocs, search]);
+    let out = folderDocs;
+
+    // Free-text search
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      out = out.filter((d) =>
+        d.name.toLowerCase().includes(q)
+        || (d.description || '').toLowerCase().includes(q)
+        || (d.fileName || '').toLowerCase().includes(q),
+      );
+    }
+    // Date filter
+    if (dateFilter !== 'any') out = out.filter((d) => isWithin(d.createdAt, dateFilter));
+    // Uploader filter
+    if (uploaderFilter) out = out.filter((d) => d.ownerId === uploaderFilter);
+    // Type filter (matches against the file extension)
+    if (typeFilter) {
+      const target = typeFilter.toLowerCase();
+      out = out.filter((d) => {
+        const fn = (d.fileName || '').toLowerCase();
+        const ext = fn.lastIndexOf('.') !== -1 ? fn.slice(fn.lastIndexOf('.') + 1) : '';
+        return ext === target;
+      });
+    }
+    // Sort
+    if (sortBy === 'name') {
+      out = [...out].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    } else if (sortBy === 'size-desc') {
+      out = [...out].sort((a, b) => parseSizeMb(b.fileSize) - parseSizeMb(a.fileSize));
+    } else if (sortBy === 'size-asc') {
+      out = [...out].sort((a, b) => parseSizeMb(a.fileSize) - parseSizeMb(b.fileSize));
+    } else {
+      // 'recent' — newest first by parsed createdAt
+      out = [...out].sort((a, b) => parseDate(b.createdAt) - parseDate(a.createdAt));
+    }
+    // Limit (used by NL queries like "biggest file" → limit 1)
+    if (resultLimit && resultLimit > 0) out = out.slice(0, resultLimit);
+    return out;
+  }, [folderDocs, search, dateFilter, uploaderFilter, typeFilter, sortBy, resultLimit]);
+
+  const activeFilterCount = (dateFilter !== 'any' ? 1 : 0)
+    + (uploaderFilter ? 1 : 0)
+    + (typeFilter ? 1 : 0)
+    + (sortBy !== 'recent' ? 1 : 0)
+    + (resultLimit ? 1 : 0);
 
   const docCountByFolder = useMemo(() => {
     const map = {};
@@ -2047,6 +2146,89 @@ function DocumentVaultPanel({
 
   // ─── Folder selection / actions ───
   const folderAttachable = typeof onSelectFolder === 'function';
+
+  // ─── "Ask anything" natural-language → filter parser ───
+  // Wendy's killer query: "what is the biggest at-close download I have?"
+  // We POST to /api/chat with a JSON-only schema and a tiny system prompt
+  // that asks the model to map the natural-language query onto the
+  // structured filter shape we already use. If parsing fails or the
+  // model returns garbage, we fall back to using the query as a
+  // free-text search.
+  const handleAskAnything = async () => {
+    const q = askQuery.trim();
+    if (!q || askLoading) return;
+    setAskLoading(true);
+    setAskExplanation('');
+    try {
+      const ownersList = docOwners.map((o) => `${o.name} (id=${o.id})`).join(', ') || '(none)';
+      const systemPrompt = `You translate natural-language document-library queries into a JSON filter object. Output ONLY a single JSON object — no prose, no code fences. Schema:
+{
+  "search": string | null,
+  "dateFilter": "any" | "7d" | "30d" | "year",
+  "uploaderId": string | null,
+  "fileType": "PDF" | "DOCX" | "XLSX" | "TXT" | null,
+  "sortBy": "recent" | "name" | "size-desc" | "size-asc",
+  "limit": number | null,
+  "explanation": string
+}
+
+Available uploaders: ${ownersList}.
+Available file types in this library: PDF, DOCX, XLSX, TXT.
+Today's date: ${new Date().toISOString().slice(0, 10)}.
+
+Rules:
+- If user asks for "biggest" or "largest", set sortBy="size-desc" and limit=1 (or N if explicit).
+- If user asks for "smallest", sortBy="size-asc" and limit=1.
+- If they say "this month" or "past 30 days", dateFilter="30d". "Past week" → "7d". "This year" → "year".
+- If they name an uploader by full or partial name, set uploaderId to the matching id from the list above. If no match, leave null.
+- "Search" is a substring of filenames/descriptions if specific keywords are mentioned (e.g. "NDA", "Acme"). Otherwise null.
+- "explanation" is one short sentence shown to the user describing what you're filtering for.`;
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: q,
+          system: systemPrompt,
+          history: [],
+        }),
+      });
+      if (!response.ok || !response.body) throw new Error(`status ${response.status}`);
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let raw = '';
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        raw += decoder.decode(value, { stream: true });
+      }
+      raw += decoder.decode();
+      // The Edge may return prose around the JSON; extract the first {...} block.
+      const jsonMatch = raw.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) throw new Error('no json');
+      const parsed = JSON.parse(jsonMatch[0]);
+      // Apply
+      if (parsed.search) setSearch(parsed.search); else setSearch('');
+      if (['any', '7d', '30d', 'year'].includes(parsed.dateFilter)) setDateFilter(parsed.dateFilter);
+      else setDateFilter('any');
+      setUploaderFilter(parsed.uploaderId || null);
+      setTypeFilter(parsed.fileType || null);
+      if (['recent', 'name', 'size-desc', 'size-asc'].includes(parsed.sortBy)) setSortBy(parsed.sortBy);
+      else setSortBy('recent');
+      setResultLimit(typeof parsed.limit === 'number' && parsed.limit > 0 ? parsed.limit : null);
+      setAskExplanation(parsed.explanation || '');
+    } catch (_err) {
+      // Fallback: just treat the query as a substring search.
+      setSearch(q);
+      setDateFilter('any');
+      setUploaderFilter(null);
+      setTypeFilter(null);
+      setSortBy('recent');
+      setResultLimit(null);
+      setAskExplanation(`Couldn't parse that as a filter — searching for "${q}" instead.`);
+    } finally {
+      setAskLoading(false);
+    }
+  };
 
   const handleCreateFolderConfirm = () => {
     const name = newFolderName.trim();
@@ -2952,20 +3134,46 @@ function MessageBubble({ msg }) {
   // button dispatches a window event that ChatView listens for at the
   // top level so MessageBubble doesn't need a callback prop.
   if (msg.isUploadAddedNote) {
+    // Truncate filename with ellipsis but keep the full name on hover
+    // (long PDF names like "[#AULP-4] KFC SPWA _ AMR Login..." were
+    // overflowing the pill and pushing the action onto a second line).
+    const fullName = msg.uploadedFileName || 'doc';
+    const displayName = fullName.length > 38 ? fullName.slice(0, 35) + '…' : fullName;
     return (
       <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16, marginTop: -8 }}>
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 14px', borderRadius: 999, background: '#F0F3F6', border: '1px solid #D6DDE4', maxWidth: 560 }}>
-          <File size={12} style={{ color: '#1E3A8A', flexShrink: 0 }} />
-          <span style={{ fontSize: 12, color: '#1E3A8A', lineHeight: 1.5 }}>
-            Added <strong style={{ fontWeight: 600 }}>{msg.uploadedFileName || 'doc'}</strong>
-            {msg.uploadedDocIndex ? ` as Document ${msg.uploadedDocIndex}` : ''}. New topic?{' '}
-            <button
-              onClick={() => { try { window.dispatchEvent(new CustomEvent('yourai:start-new-chat')); } catch { /* ignore */ } }}
-              style={{ background: 'none', border: 'none', padding: 0, fontSize: 12, fontWeight: 600, color: '#0A2463', cursor: 'pointer', textDecoration: 'underline' }}
-            >
-              Start a new chat →
-            </button>
+        <div
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 10,
+            padding: '7px 14px 7px 12px', borderRadius: 999,
+            background: '#F0F3F6', border: '1px solid #D6DDE4',
+            maxWidth: '90%',
+          }}
+        >
+          {/* Doc icon tile — small navy chip, separates icon from text */}
+          <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 22, height: 22, borderRadius: 6, background: 'rgba(10,36,99,0.08)', flexShrink: 0 }}>
+            <File size={12} style={{ color: '#0A2463' }} />
           </span>
+          {/* Body — single line, ellipsised */}
+          <span
+            title={fullName}
+            style={{ fontSize: 12, color: '#1E3A8A', lineHeight: 1.4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 480 }}
+          >
+            <strong style={{ fontWeight: 600 }}>{displayName}</strong>
+            <span style={{ color: '#5B6877', fontWeight: 400 }}>
+              {msg.uploadedDocIndex ? ` · Document ${msg.uploadedDocIndex}` : ''}
+            </span>
+          </span>
+          {/* Vertical divider */}
+          <span style={{ width: 1, height: 14, background: '#C5CDD7', flexShrink: 0 }} />
+          {/* Action — sits inline on the right, no wrap */}
+          <button
+            onClick={() => { try { window.dispatchEvent(new CustomEvent('yourai:start-new-chat')); } catch { /* ignore */ } }}
+            style={{ background: 'none', border: 'none', padding: 0, fontSize: 12, fontWeight: 500, color: '#0A2463', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}
+            onMouseEnter={(e) => { e.currentTarget.style.textDecoration = 'underline'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.textDecoration = 'none'; }}
+          >
+            New topic? Start fresh →
+          </button>
         </div>
       </div>
     );
