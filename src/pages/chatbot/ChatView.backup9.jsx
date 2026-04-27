@@ -247,9 +247,6 @@ const DEFAULT_DOCUMENT_VAULT = [
 
 // Default folders seeded on first load. ID is a stable string so docs
 // can reference it across reloads without depending on Date.now().
-// Folders can nest via `parentId` — null = root-level. Wendy's mental
-// model: Client > Topic > Files. Seed shows a couple of subfolders so
-// the nested behaviour is visible from first load.
 const DEFAULT_DOCUMENT_VAULT_FOLDERS = [
   {
     id: 'fld-contracts',
@@ -258,7 +255,6 @@ const DEFAULT_DOCUMENT_VAULT_FOLDERS = [
     ownerId: 'user-ryan',
     ownerName: 'Ryan Melade',
     isGlobal: true,
-    parentId: null,
   },
   {
     id: 'fld-policies',
@@ -267,25 +263,6 @@ const DEFAULT_DOCUMENT_VAULT_FOLDERS = [
     ownerId: 'user-ryan',
     ownerName: 'Ryan Melade',
     isGlobal: true,
-    parentId: null,
-  },
-  {
-    id: 'fld-acme',
-    name: 'Acme Corp',
-    createdAt: 'Mar 5, 2026',
-    ownerId: 'user-ryan',
-    ownerName: 'Ryan Melade',
-    isGlobal: true,
-    parentId: 'fld-contracts',
-  },
-  {
-    id: 'fld-acme-msa',
-    name: 'MSA & Schedules',
-    createdAt: 'Mar 5, 2026',
-    ownerId: 'user-ryan',
-    ownerName: 'Ryan Melade',
-    isGlobal: true,
-    parentId: 'fld-acme',
   },
 ];
 
@@ -394,8 +371,8 @@ function HomeTileLauncher({
       meta: 'Open chat', onClick: onOpenChat, accent: '#0A2463',
     },
     {
-      id: 'workspaces', icon: Briefcase, label: 'Case Workspaces',
-      desc: 'Per-case workspaces — each holds its own chats, docs, and runs.',
+      id: 'workspaces', icon: Briefcase, label: 'Client Files',
+      desc: 'Per-client workspaces — each holds its own chats, docs, and runs.',
       meta: `${workspaceCount} ${workspaceCount === 1 ? 'workspace' : 'workspaces'}`,
       onClick: onOpenWorkspaces, accent: '#5B21B6',
     },
@@ -586,7 +563,7 @@ function Sidebar({ onGoHome, onOpenChat, onOpenPromptTemplates, onOpenClients, o
     // "Chat" entry — renamed from the prior "Dashboard" item. Goes
     // straight into the General Chat surface.
     { id: 'chat', icon: MessageSquare, label: 'Chat', onClick: onOpenChat },
-    { id: 'workspaces', icon: Briefcase, label: 'Case Workspaces', rightText: String(workspaceCount ?? 0), onClick: onOpenWorkspaces },
+    { id: 'workspaces', icon: Briefcase, label: 'Workspaces', rightText: String(workspaceCount ?? 0), onClick: onOpenWorkspaces },
     isOrgAdmin && { id: 'clients', icon: Users, label: 'Clients', rightText: String(clientCount), onClick: onOpenClients },
     !isExternalUser && { id: 'invite-team', icon: UserPlus, label: 'Invite Team', rightText: memberCount != null ? String(memberCount) : undefined, onClick: onOpenInviteTeam },
   ].filter(Boolean);
@@ -1766,16 +1743,9 @@ function EditKnowledgePackModal({ pack, onClose, onSave }) {
 // docs only, with a breadcrumb back to root.
 function DocumentVaultPanel({
   documents, folders, onClose, onCreateNew, onCreateFolder, onRenameFolder, onDeleteFolder,
-  onUploadFolder,
   onEdit, onDelete, onSelect, onSelectFolder, onToggleGlobal, activeDocument, activeFolder,
   currentUserId, isOrgAdmin, isExternalUser,
 }) {
-  // Hidden file input ref for the directory picker (P4 — recursive
-  // folder upload). `webkitdirectory` is a browser quirk attribute
-  // that's only set via a ref in JSX (React strips unknown attrs in
-  // some configs); a direct `webkitdirectory=""` works in all evergreen
-  // browsers + Safari.
-  const folderUploadRef = useRef(null);
   const [search, setSearch] = useState('');
   const [scope, setScope] = useState('all'); // Org Admin only
   const [currentFolderId, setCurrentFolderId] = useState(null); // null = root view
@@ -1802,20 +1772,6 @@ function DocumentVaultPanel({
     [visibleFolders, currentFolderId],
   );
 
-  // Walk parents up to root to build a breadcrumb trail.
-  const breadcrumb = useMemo(() => {
-    if (!currentFolder) return [];
-    const trail = [];
-    const byId = new Map(visibleFolders.map((f) => [f.id, f]));
-    let cur = currentFolder;
-    let guard = 0;
-    while (cur && guard++ < 32) {
-      trail.unshift(cur);
-      cur = cur.parentId ? byId.get(cur.parentId) : null;
-    }
-    return trail;
-  }, [currentFolder, visibleFolders]);
-
   // Org-Admin scope tabs filter the set of *all visible* docs first,
   // then folder navigation/search apply on top.
   const scopedDocs = useMemo(() => {
@@ -1823,14 +1779,6 @@ function DocumentVaultPanel({
     if (scope === 'org')  return visibleDocs.filter((d) => d.isGlobal);
     return visibleDocs.filter((d) => d.ownerId === currentUserId);
   }, [visibleDocs, scope, isOrgAdmin, currentUserId]);
-
-  // Subfolders of the current view (or root-level folders if at root).
-  const childFolders = useMemo(() => {
-    return visibleFolders.filter((f) => {
-      const p = f.parentId ?? null;
-      return p === (currentFolderId || null);
-    });
-  }, [visibleFolders, currentFolderId]);
 
   // Docs to show: when in a folder, only docs in that folder. At root,
   // EVERY visible doc — including those that also live in a folder, so a
@@ -1850,18 +1798,14 @@ function DocumentVaultPanel({
     );
   }, [folderDocs, search]);
 
-  // Folder tiles: at root or any drilled-in folder, show that level's
-  // immediate children. Search filters across visible folders at the
-  // current level.
+  // Folder tiles only appear at root, and search filters them too.
   const filteredFolders = useMemo(() => {
-    if (!search.trim()) return childFolders;
+    if (currentFolderId) return [];
+    if (!search.trim()) return visibleFolders;
     const q = search.toLowerCase();
-    return childFolders.filter((f) => f.name.toLowerCase().includes(q));
-  }, [childFolders, search]);
+    return visibleFolders.filter((f) => f.name.toLowerCase().includes(q));
+  }, [visibleFolders, currentFolderId, search]);
 
-  // Doc count per folder = direct children docs only (subfolders'
-  // counts roll up separately so the tile shows local density, not
-  // total descendants — matches Finder/Explorer behaviour).
   const docCountByFolder = useMemo(() => {
     const map = {};
     scopedDocs.forEach((d) => {
@@ -1870,16 +1814,6 @@ function DocumentVaultPanel({
     });
     return map;
   }, [scopedDocs]);
-
-  // Subfolder count per folder for the secondary line on each tile.
-  const subfolderCountByFolder = useMemo(() => {
-    const map = {};
-    visibleFolders.forEach((f) => {
-      if (!f.parentId) return;
-      map[f.parentId] = (map[f.parentId] || 0) + 1;
-    });
-    return map;
-  }, [visibleFolders]);
 
   const counts = useMemo(() => ({
     total: visibleDocs.length,
@@ -1890,24 +1824,9 @@ function DocumentVaultPanel({
   const handleCreateFolderConfirm = () => {
     const name = newFolderName.trim();
     if (!name) return;
-    // New folder nests under the folder the user is currently viewing
-    // (or root if they're at the top). This matches Explorer / Finder
-    // behaviour — "create folder here".
-    onCreateFolder?.(name, currentFolderId || null);
+    onCreateFolder?.(name);
     setNewFolderName('');
     setCreatingFolder(false);
-  };
-
-  // Recursive folder upload — accept the directory picker's File list,
-  // walk each file's `webkitRelativePath`, recreate the folder tree
-  // under the *current* folder so the structure persists into the
-  // vault. Each path segment becomes a VaultFolder; each leaf file
-  // becomes a VaultDoc with `folderId` = its leaf folder.
-  const handleFolderUpload = (fileList) => {
-    if (!fileList || !onUploadFolder) return;
-    const files = Array.from(fileList);
-    if (files.length === 0) return;
-    onUploadFolder(files, currentFolderId || null);
   };
 
   const handleRenameConfirm = () => {
@@ -1941,22 +1860,8 @@ function DocumentVaultPanel({
               </p>
             </div>
             <div className="flex items-center gap-2" style={{ flexShrink: 0 }}>
-              {/* Hidden directory picker — opens when "Upload folder" is
-                  clicked. webkitdirectory makes the browser show its
-                  folder picker instead of a file picker. */}
-              <input
-                ref={folderUploadRef}
-                type="file"
-                multiple
-                // @ts-ignore — webkit-prefixed attr; React forwards it via the spread
-                webkitdirectory=""
-                directory=""
-                style={{ display: 'none' }}
-                onChange={(e) => { handleFolderUpload(e.target.files); e.target.value = ''; }}
-              />
-              <button onClick={() => folderUploadRef.current?.click()} title="Upload an entire folder — subfolder structure is preserved" style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '8px 12px', borderRadius: 8, backgroundColor: 'white', color: 'var(--text-secondary)', border: '1px solid var(--border)', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}><Upload size={14} /> Upload folder</button>
-              <button onClick={() => setCreatingFolder(true)} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '8px 12px', borderRadius: 8, backgroundColor: 'white', color: 'var(--navy)', border: '1px solid var(--border)', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}><FolderPlus size={14} /> Folder</button>
-              <button onClick={onCreateNew} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '8px 14px', borderRadius: 8, backgroundColor: 'var(--navy)', color: 'white', border: 'none', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}><Plus size={14} /> Document</button>
+              <button onClick={() => setCreatingFolder(true)} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '8px 14px', borderRadius: 8, backgroundColor: 'white', color: 'var(--navy)', border: '1px solid var(--border)', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}><FolderPlus size={14} /> New Folder</button>
+              <button onClick={onCreateNew} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '8px 16px', borderRadius: 8, backgroundColor: 'var(--navy)', color: 'white', border: 'none', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}><Plus size={14} /> New Document</button>
               <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100"><X size={20} style={{ color: 'var(--text-muted)' }} /></button>
             </div>
           </div>
@@ -1969,38 +1874,18 @@ function DocumentVaultPanel({
             </div>
           )}
 
-          {/* Folder breadcrumb — walks the full parent trail when nested
-              (e.g. All folders › Contracts › Acme Corp › MSA). Each
-              segment is clickable to jump to that level. Trailing
-              segment is the active folder, non-clickable. */}
+          {/* Folder breadcrumb — visible only when drilled into a folder */}
           {currentFolder && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 14, fontSize: 12, color: 'var(--text-muted)', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 14, fontSize: 12, color: 'var(--text-muted)' }}>
               <button
                 onClick={() => setCurrentFolderId(null)}
                 style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 8px', borderRadius: 6, border: '1px solid var(--border)', background: 'white', color: 'var(--text-secondary)', fontSize: 12, cursor: 'pointer' }}
               >
                 <ArrowLeft size={12} /> All folders
               </button>
-              {breadcrumb.map((f, i) => {
-                const isLast = i === breadcrumb.length - 1;
-                return (
-                  <React.Fragment key={f.id}>
-                    <ChevronRight size={12} />
-                    {isLast ? (
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontWeight: 600, color: 'var(--text-primary)' }}>
-                        <Folder size={13} style={{ color: 'var(--navy)' }} /> {f.name}
-                      </span>
-                    ) : (
-                      <button
-                        onClick={() => setCurrentFolderId(f.id)}
-                        style={{ background: 'none', border: 'none', padding: 0, fontSize: 12, color: 'var(--text-secondary)', cursor: 'pointer' }}
-                      >
-                        {f.name}
-                      </button>
-                    )}
-                  </React.Fragment>
-                );
-              })}
+              <ChevronRight size={12} />
+              <Folder size={13} style={{ color: 'var(--navy)' }} />
+              <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{currentFolder.name}</span>
               <span>· {filteredDocs.length} {filteredDocs.length === 1 ? 'doc' : 'docs'}</span>
             </div>
           )}
@@ -2032,19 +1917,15 @@ function DocumentVaultPanel({
         </div>
 
         <div style={{ flex: 1, overflowY: 'auto', padding: '12px 20px 20px' }}>
-          {/* Folder grid — appears at root and inside any folder that has
-              subfolders. Subfolders show first, documents below. */}
-          {filteredFolders.length > 0 && (
+          {/* Folder grid — root view only */}
+          {!currentFolderId && filteredFolders.length > 0 && (
             <div style={{ marginTop: 4 }}>
-              <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-muted)', padding: '6px 4px 8px' }}>
-                {currentFolderId ? 'Subfolders' : 'Folders'}
-              </div>
+              <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-muted)', padding: '6px 4px 8px' }}>Folders</div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 10 }}>
                 {filteredFolders.map((f) => {
                   const isOwner = f.ownerId === currentUserId;
                   const canEdit = isOrgAdmin || isOwner || !f.ownerId;
                   const docCount = docCountByFolder[f.id] || 0;
-                  const subCount = subfolderCountByFolder[f.id] || 0;
                   const isActive = activeFolder?.id === f.id;
                   const isRenaming = renamingFolderId === f.id;
                   return (
@@ -2075,7 +1956,6 @@ function DocumentVaultPanel({
                           <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{f.name}</div>
                         )}
                         <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
-                          {subCount > 0 && <span>{subCount} {subCount === 1 ? 'subfolder' : 'subfolders'} · </span>}
                           {docCount} {docCount === 1 ? 'document' : 'documents'}
                           {f.isGlobal && <span> · Org-wide</span>}
                         </div>
@@ -2104,7 +1984,7 @@ function DocumentVaultPanel({
                 })}
               </div>
               <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-muted)', padding: '20px 4px 6px' }}>
-                {currentFolderId ? 'Documents in this folder' : 'All documents'}
+                All documents
               </div>
             </div>
           )}
@@ -2294,40 +2174,9 @@ function EditDocumentModal({ document: docItem, onClose, onSave, folders = [], d
               style={{ ...inputStyle, cursor: 'pointer', backgroundColor: 'white' }}
             >
               <option value="">Uncategorised (no folder)</option>
-              {(() => {
-                // Render the folder list as a depth-indented path so a
-                // user can pick a nested folder unambiguously. Walks
-                // each folder's parent chain to compute its depth and
-                // its full path (e.g. "Contracts / Acme Corp / MSA").
-                const byId = new Map(folders.map((f) => [f.id, f]));
-                const depthOf = (f) => {
-                  let d = 0; let cur = f; let guard = 0;
-                  while (cur?.parentId && guard++ < 32) { cur = byId.get(cur.parentId); d++; }
-                  return d;
-                };
-                const pathOf = (f) => {
-                  const trail = []; let cur = f; let guard = 0;
-                  while (cur && guard++ < 32) { trail.unshift(cur.name); cur = cur.parentId ? byId.get(cur.parentId) : null; }
-                  return trail.join(' / ');
-                };
-                // Stable order: depth-first, parent before children.
-                const sorted = [];
-                const visit = (parent) => {
-                  folders.filter((f) => (f.parentId || null) === parent).forEach((f) => {
-                    sorted.push(f); visit(f.id);
-                  });
-                };
-                visit(null);
-                return sorted.map((f) => {
-                  const depth = depthOf(f);
-                  const indent = '    '.repeat(depth);
-                  return (
-                    <option key={f.id} value={f.id} title={pathOf(f)}>
-                      {indent}{depth > 0 ? '↳ ' : ''}{f.name}
-                    </option>
-                  );
-                });
-              })()}
+              {folders.map((f) => (
+                <option key={f.id} value={f.id}>{f.name}</option>
+              ))}
             </select>
           </div>
 
@@ -4088,7 +3937,7 @@ INSTRUCTIONS:
     setActiveVaultDocument(null);
   }, []);
 
-  const handleCreateVaultFolder = useCallback((name, parentId = null) => {
+  const handleCreateVaultFolder = useCallback((name) => {
     const trimmed = (name || '').trim();
     if (!trimmed) return;
     const newFolder = {
@@ -4098,99 +3947,8 @@ INSTRUCTIONS:
       ownerId: currentUserId,
       ownerName: operator?.name || 'You',
       isGlobal: false,
-      parentId: parentId || null,
     };
     setVaultFolders((prev) => [newFolder, ...prev]);
-  }, [currentUserId, operator]);
-
-  // Recursive folder upload — walks each File's `webkitRelativePath`,
-  // creates a folder for every directory segment that doesn't already
-  // exist (parented under `rootParentId` for the topmost segment, then
-  // each child folder under the one above it), and adds a VaultDoc for
-  // every leaf file with its `folderId` set to the deepest folder.
-  // Folders the user already owns are reused by name+parent so a second
-  // upload of the same tree merges into the same structure rather than
-  // duplicating it.
-  const handleUploadVaultFolder = useCallback((files, rootParentId = null) => {
-    if (!files || files.length === 0) return;
-    const today = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-    const ownerName = operator?.name || 'You';
-
-    setVaultFolders((prevFolders) => {
-      // Build a lookup keyed by `${parentId}${name}` → folder id
-      // so we can dedupe quickly across rows.
-      const byKey = new Map();
-      const folders = [...prevFolders];
-      folders.forEach((f) => {
-        byKey.set(`${f.parentId || ''}${f.name}`, f);
-      });
-
-      const ensureFolder = (name, parent) => {
-        const key = `${parent || ''}${name}`;
-        if (byKey.has(key)) return byKey.get(key).id;
-        const newF = {
-          id: `fld-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-          name,
-          createdAt: today,
-          ownerId: currentUserId,
-          ownerName,
-          isGlobal: false,
-          parentId: parent || null,
-        };
-        folders.unshift(newF);
-        byKey.set(key, newF);
-        return newF.id;
-      };
-
-      // Track each file's resolved leaf folder so we can drop them
-      // into the vault in a second setState.
-      const fileToFolder = new Map();
-      files.forEach((f) => {
-        const rel = f.webkitRelativePath || f.name;
-        const segments = rel.split('/').filter(Boolean);
-        // Last segment is the file name itself — drop it.
-        const dirSegments = segments.slice(0, -1);
-        let parent = rootParentId || null;
-        for (const seg of dirSegments) {
-          parent = ensureFolder(seg, parent);
-        }
-        fileToFolder.set(f, parent);
-      });
-
-      // Schedule the doc-add side effect after folders settle.
-      setTimeout(() => {
-        setDocumentVault((prevDocs) => {
-          const seen = new Set(prevDocs.map((d) => `${d.fileName}${d.folderId || ''}`));
-          const next = [...prevDocs];
-          files.forEach((f, idx) => {
-            const folderId = fileToFolder.get(f);
-            const fileName = f.name;
-            const dedupeKey = `${fileName}${folderId || ''}`;
-            if (seen.has(dedupeKey)) return;
-            seen.add(dedupeKey);
-            next.unshift({
-              id: `doc-${Date.now()}-${idx}`,
-              name: fileName.replace(/\.[^.]+$/, ''),
-              description: '',
-              fileName,
-              fileSize: f.size ? `${(f.size / (1024 * 1024)).toFixed(1)} MB` : '—',
-              createdAt: today,
-              ownerId: currentUserId,
-              ownerName,
-              isGlobal: false,
-              folderId,
-              addedFromChat: false,
-            });
-          });
-          return next;
-        });
-        const total = files.length;
-        setToastMsg(`Uploaded ${total} ${total === 1 ? 'file' : 'files'} with folder structure preserved`);
-        setTimeout(() => setToastMsg(''), 3500);
-      }, 0);
-
-      return folders;
-    });
   }, [currentUserId, operator]);
 
   const handleRenameVaultFolder = useCallback((folderId, name) => {
@@ -4203,18 +3961,9 @@ INSTRUCTIONS:
   }, [activeVaultFolder]);
 
   const handleDeleteVaultFolder = useCallback((folderId) => {
-    setVaultFolders((prev) => {
-      // Re-parent any direct child folders to the deleted folder's
-      // parent so the subtree doesn't orphan. Docs inside child folders
-      // keep their folderId — they're still findable via the lifted
-      // child folder. Docs that were in the *deleted* folder itself
-      // get unset (handled in setDocumentVault below).
-      const target = prev.find((f) => f.id === folderId);
-      const newParent = target?.parentId ?? null;
-      return prev
-        .filter((f) => f.id !== folderId)
-        .map((f) => (f.parentId === folderId ? { ...f, parentId: newParent } : f));
-    });
+    setVaultFolders((prev) => prev.filter((f) => f.id !== folderId));
+    // Detach docs from the deleted folder so they fall back to
+    // "Uncategorised" rather than disappear from view.
     setDocumentVault((prev) => prev.map((d) => (d.folderId === folderId ? { ...d, folderId: null } : d)));
     if (activeVaultFolder?.id === folderId) setActiveVaultFolder(null);
   }, [activeVaultFolder]);
@@ -5133,7 +4882,6 @@ INSTRUCTIONS:
           onCreateFolder={handleCreateVaultFolder}
           onRenameFolder={handleRenameVaultFolder}
           onDeleteFolder={handleDeleteVaultFolder}
-          onUploadFolder={handleUploadVaultFolder}
           onDelete={handleDeleteDocument}
           onToggleGlobal={(docId, next) => {
             setDocumentVault((prev) => prev.map((d) => (d.id === docId ? { ...d, isGlobal: next } : d)));

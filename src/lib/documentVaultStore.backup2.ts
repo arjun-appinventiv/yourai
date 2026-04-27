@@ -27,10 +27,6 @@ export interface VaultFolder {
   ownerId?: string;
   ownerName?: string;
   isGlobal?: boolean;
-  // Parent folder id for nesting. null/undefined = root-level folder.
-  // Wendy's mental model: `Client > Topic > Files`. Single-level was
-  // not enough — attorneys want Explorer-style folders-of-folders.
-  parentId?: string | null;
 }
 
 const KEY = 'yourai_document_vault';
