@@ -3947,6 +3947,64 @@ export default function ChatView({ initialView = 'chat' }) {
       content: m.content,
     }));
 
+    // ─── Doc-context inlining for the Edge ───
+    // The Edge function only sees `body.message` + `body.history` + the
+    // intent. The attached files' extracted text doesn't travel there
+    // unless we stitch it INTO the message itself. Without this, the
+    // Edge sees a bare prompt like "Read this doc" and falls into the
+    // MISSING_DOCUMENT_HANDLING branch — telling the user to upload.
+    // We compute the merged content here so the Edge fetch and the
+    // (legacy) callLLM fallback both have access.
+    const newDocs = (userMsg.attachments || []).filter((a) => a.content);
+    const baseNames = sessionDocContext?.docNames || [];
+    const baseContent = sessionDocContext?.content || '';
+    const stamp = new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+
+    let mergedDocNames = baseNames.slice();
+    let mergedDocContent = baseContent;
+    if (newDocs.length > 0) {
+      const newParts = [];
+      newDocs.forEach((doc, idx) => {
+        const raw = doc.content || '';
+        const printable = raw.replace(/[^\x20-\x7E\n\r\t -ɏ]/g, '');
+        const printableRatio = raw.length > 0 ? (printable.length / raw.length) : 1;
+        const garbleMatches = raw.match(/[■-◿☀-⛿�▀-▟]{2,}/g);
+        const garbleCount = garbleMatches ? garbleMatches.reduce((s, m) => s + m.length, 0) : 0;
+        const isReadable = raw.length < 50 || (printableRatio > 0.7 && garbleCount <= raw.length * 0.1);
+        const docNum = baseNames.length + idx + 1;
+        const docLabel = baseNames.length > 0
+          ? `Document ${docNum} (added ${stamp}): ${doc.name}`
+          : (newDocs.length > 1 ? `Document ${docNum}: ${doc.name}` : doc.name);
+        mergedDocNames.push(doc.name);
+        if (isReadable) {
+          const truncated = raw.length > 20000
+            ? raw.slice(0, 20000) + '\n[... document truncated at 20,000 characters ...]'
+            : raw;
+          newParts.push(`--- ${docLabel} ---\n${truncated}`);
+        } else {
+          newParts.push(`--- ${docLabel} ---\n[File: ${doc.name}] The text content could not be extracted (scanned PDF, image-based, or non-standard encoding).`);
+        }
+      });
+      mergedDocContent = baseContent
+        ? baseContent + '\n\n' + newParts.join('\n\n')
+        : newParts.join('\n\n');
+      // Persist for follow-up turns.
+      const totalCount = mergedDocNames.length;
+      setSessionDocContext({
+        name: totalCount === 1 ? mergedDocNames[0] : `${totalCount} documents`,
+        content: mergedDocContent,
+        docCount: totalCount,
+        docNames: mergedDocNames,
+      });
+    }
+
+    // Inline the merged doc content into the user message for the Edge.
+    // If no docs (new or persisted), just send the user's text.
+    const docsHeader = mergedDocContent
+      ? `[Documents attached to this conversation]\n${mergedDocContent}\n\n[User question]\n`
+      : '';
+    const messageForEdge = docsHeader + trimmed;
+
     try {
       // Try backend first
       const base = import.meta.env.VITE_API_URL || '';
@@ -3967,7 +4025,7 @@ export default function ChatView({ initialView = 'chat' }) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             conversationId: activeThreadId,
-            message: trimmed,
+            message: messageForEdge,
             history,
             intent: effectiveIntent,
             sessionId: sessionState.sessionKbSnapshotId,
