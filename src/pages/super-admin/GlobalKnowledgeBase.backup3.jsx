@@ -2359,6 +2359,118 @@ export default function GlobalKnowledgeBase() {
                 </div>
               </div>
 
+              {/* Auto-Routing Preview (visual only — not confirmed) */}
+              {/* CONFIDENCE: 3/10 — Intent classifier not confirmed by Ryan. Visual wireframe only. */}
+              {/* TODO: confirm confidence threshold with AI team */}
+              {/* OQ-pending — do not ship without confirmation */}
+              <div className="p-5 rounded-xl" style={{ backgroundColor: 'white', border: '1px solid var(--border)' }}>
+                <div className="flex items-center gap-2 mb-1">
+                  <GitBranch size={15} style={{ color: 'var(--navy)' }} />
+                  <label className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Message Routing Flow</label>
+                  <InfoButton title="Message Routing — How the AI Picks the Right Mode">
+                    <InfoSection title="What is message routing?">
+                      <InfoText>When a user sends a message, the AI doesn't just use one static prompt. It runs an intent classifier that analyses the message and determines which intent to activate. This happens automatically — the user doesn't need to choose a mode.</InfoText>
+                    </InfoSection>
+                    <InfoSection title="The 4-step flow">
+                      <InfoList items={[
+                        `Step 1: Intent classifier analyses the message (confidence threshold: ${INTENT_CONFIDENCE_THRESHOLD})`,
+                        "Step 2: If confident → picks the matching intent + applies persona format",
+                        "Step 3: If not confident → asks the user to clarify before proceeding",
+                        "Step 4: If no answer found → shows the Fallback Message",
+                      ]} />
+                    </InfoSection>
+                    <InfoSection title="Status">
+                      <InfoText><strong>⚠ DRAFT — Not confirmed.</strong> This flow has not been signed off by Ryan or the AI team. The confidence threshold ({INTENT_CONFIDENCE_THRESHOLD}) is a placeholder. This is a visual preview only — do not treat as final.</InfoText>
+                    </InfoSection>
+                  </InfoButton>
+                  <span className="px-1.5 py-0.5 rounded text-xs font-medium" style={{ backgroundColor: '#FBEED5', color: '#E8A33D', fontSize: 10 }}>DRAFT</span>
+                </div>
+                <p className="text-xs mb-4" style={{ color: 'var(--text-muted)' }}>Visual preview of how the AI routes every message. Not confirmed — for Ryan review.</p>
+
+                {/* Flow diagram — vertical pipeline */}
+                <div className="relative" style={{ paddingLeft: 20 }}>
+                  {/* Vertical connector line */}
+                  <div style={{ position: 'absolute', left: 33, top: 14, bottom: 14, width: 2, backgroundColor: 'var(--border)', zIndex: 0 }} />
+
+                  {[
+                    { step: 1, label: 'User Sends Message', desc: 'Text, document upload, or follow-up question', icon: MessageSquare, bg: '#EDE9FE', color: '#5B21B6', borderColor: '#C4B5FD' },
+                    { step: 2, label: 'Intent Classifier', desc: `Analyses message → picks intent (confidence ≥ ${INTENT_CONFIDENCE_THRESHOLD})`, icon: Target, bg: '#F0F3F6', color: '#0F2E59', borderColor: '#93C5FD' },
+                    { step: 3, label: 'Persona Format Applied', desc: 'User role overrides tone + format rules on top of intent prompt', icon: Users, bg: '#E7F3E9', color: '#5CA868', borderColor: '#86EFAC' },
+                    { step: 4, label: 'Source Resolution', desc: 'Search user doc → knowledge pack → global KB → fallback', icon: Database, bg: '#FFF7ED', color: '#9A3412', borderColor: '#FDBA74' },
+                    { step: 5, label: 'Response Streamed', desc: 'With source badge: "your document" or "YourAI knowledge base"', icon: Zap, bg: '#F0F9FF', color: 'var(--navy)', borderColor: '#93C5FD' },
+                  ].map((s, i) => {
+                    const Icon = s.icon;
+                    return (
+                      <div key={i} className="flex items-start gap-3 relative" style={{ marginBottom: i < 4 ? 8 : 0, zIndex: 1 }}>
+                        {/* Step number circle */}
+                        <div className="flex items-center justify-center rounded-full" style={{ width: 28, height: 28, backgroundColor: s.bg, border: `2px solid ${s.borderColor}`, flexShrink: 0, zIndex: 2 }}>
+                          <span className="text-xs font-bold" style={{ color: s.color }}>{s.step}</span>
+                        </div>
+                        {/* Content card */}
+                        <div className="flex-1 p-3 rounded-lg" style={{ backgroundColor: s.bg, border: `1px solid ${s.borderColor}` }}>
+                          <div className="flex items-center gap-2 mb-0.5">
+                            <Icon size={13} style={{ color: s.color }} />
+                            <span className="text-xs font-semibold" style={{ color: s.color }}>{s.label}</span>
+                          </div>
+                          <p className="text-xs" style={{ color: s.color, opacity: 0.8 }}>{s.desc}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Branching: Low confidence + No answer */}
+                <div className="mt-4 grid grid-cols-2 gap-3">
+                  <div className="p-3 rounded-lg" style={{ backgroundColor: '#FBEED5', border: '1px solid #FBEED5' }}>
+                    <div className="flex items-center gap-2 mb-1">
+                      <HelpCircle size={13} style={{ color: '#E8A33D' }} />
+                      <span className="text-xs font-semibold" style={{ color: '#E8A33D' }}>Low Confidence</span>
+                    </div>
+                    <p className="text-xs" style={{ color: '#E8A33D', lineHeight: 1.5 }}>Confidence &lt; {INTENT_CONFIDENCE_THRESHOLD} → AI asks clarifying question before proceeding.</p>
+                  </div>
+                  <div className="p-3 rounded-lg" style={{ backgroundColor: '#F9E7E7', border: '1px solid #F9E7E7' }}>
+                    <div className="flex items-center gap-2 mb-1">
+                      <AlertTriangle size={13} style={{ color: '#C65454' }} />
+                      <span className="text-xs font-semibold" style={{ color: '#C65454' }}>No Answer Found</span>
+                    </div>
+                    <p className="text-xs" style={{ color: '#C65454', lineHeight: 1.5 }}>All sources exhausted → Fallback message shown to user.</p>
+                  </div>
+                </div>
+
+                {/* Active intents summary */}
+                <div className="mt-4 p-3 rounded-lg" style={{ backgroundColor: '#F8F4ED', border: '1px solid var(--border)' }}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <Bot size={13} style={{ color: 'var(--navy)' }} />
+                    <span className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>Active Intents ({persona.operations.filter(o => o.enabled).length})</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {persona.operations.filter(o => o.enabled).map(op => (
+                      <span key={op.id} className="px-2 py-1 rounded text-xs" style={{ backgroundColor: 'var(--ice-warm)', color: 'var(--navy)', border: '1px solid rgba(10,36,99,0.1)', fontWeight: 500 }}>
+                        {op.label}
+                      </span>
+                    ))}
+                    {persona.operations.filter(o => !o.enabled).map(op => (
+                      <span key={op.id} className="px-2 py-1 rounded text-xs line-through" style={{ backgroundColor: '#F0F3F6', color: 'var(--text-muted)', fontSize: 10 }}>
+                        {op.label}
+                      </span>
+                    ))}
+                  </div>
+                  <div className="flex items-center gap-2 mt-2 pt-2" style={{ borderTop: '1px solid var(--border)' }}>
+                    <Users size={12} style={{ color: 'var(--navy)' }} />
+                    <span className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>Active Personas ({Object.values(personaFormats).filter(p => p.enabled).length})</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5 mt-1.5">
+                    {USER_PERSONAS.map(up => {
+                      const fmt = personaFormats[up.id];
+                      return (
+                        <span key={up.id} className="px-2 py-1 rounded text-xs" style={{ backgroundColor: fmt.enabled ? '#E7F3E9' : '#F0F3F6', color: fmt.enabled ? '#5CA868' : 'var(--text-muted)', border: `1px solid ${fmt.enabled ? '#E7F3E9' : 'var(--border)'}`, fontWeight: 500, textDecoration: fmt.enabled ? 'none' : 'line-through' }}>
+                          {up.label.split(' / ')[0]}
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
