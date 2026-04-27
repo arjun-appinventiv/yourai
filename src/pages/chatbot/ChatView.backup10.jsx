@@ -1266,7 +1266,7 @@ function AddClientModal({ onClose, onSave }) {
 // the view; everyone else gets a single combined list.
 function KnowledgePacksPanel({ packs, onClose, onCreateNew, onEdit, onDelete, onSelect, onToggleGlobal, activePack, currentUserId, currentUserName, isOrgAdmin }) {
   const [search, setSearch] = useState('');
-  const [scope, setScope] = useState('all'); // 'all' | 'org' | 'mine' | `owner:<id>`
+  const [scope, setScope] = useState('all'); // 'all' | 'org' | 'mine' — Org Admin only
 
   // Role-based visibility — others never see colleagues' personal packs.
   const visible = useMemo(() => {
@@ -1274,27 +1274,11 @@ function KnowledgePacksPanel({ packs, onClose, onCreateNew, onEdit, onDelete, on
     return packs.filter((p) => p.ownerId === currentUserId || p.isGlobal);
   }, [packs, isOrgAdmin, currentUserId]);
 
-  // Faceted owner list for the left rail (Org Admin sees more).
-  const owners = useMemo(() => {
-    const map = new Map();
-    visible.forEach((p) => {
-      if (!p.ownerId) return;
-      if (!map.has(p.ownerId)) map.set(p.ownerId, { id: p.ownerId, name: p.ownerName || 'Member', count: 0 });
-      map.get(p.ownerId).count += 1;
-    });
-    return Array.from(map.values()).sort((a, b) => b.count - a.count);
-  }, [visible]);
-
   const scoped = useMemo(() => {
-    if (scope === 'all') return visible;
-    if (scope === 'org')  return visible.filter((p) => p.isGlobal);
-    if (scope === 'mine') return visible.filter((p) => p.ownerId === currentUserId);
-    if (scope.startsWith('owner:')) {
-      const id = scope.slice(6);
-      return visible.filter((p) => p.ownerId === id);
-    }
-    return visible;
-  }, [visible, scope, currentUserId]);
+    if (!isOrgAdmin || scope === 'all') return visible;
+    if (scope === 'org') return visible.filter((p) => p.isGlobal);
+    return visible.filter((p) => p.ownerId === currentUserId); // 'mine'
+  }, [visible, scope, isOrgAdmin, currentUserId]);
 
   const filtered = useMemo(() => {
     if (!search.trim()) return scoped;
@@ -1304,197 +1288,79 @@ function KnowledgePacksPanel({ packs, onClose, onCreateNew, onEdit, onDelete, on
 
   const counts = useMemo(() => ({
     total: visible.length,
-    org:   visible.filter((p) => p.isGlobal).length,
-    mine:  visible.filter((p) => p.ownerId === currentUserId).length,
+    org: visible.filter((p) => p.isGlobal).length,
+    mine: visible.filter((p) => p.ownerId === currentUserId).length,
   }), [visible, currentUserId]);
 
-  // Pinned filters in the left rail.
-  const pinned = [
-    { id: 'all',  label: 'All packs',     icon: Package, count: counts.total },
-    { id: 'org',  label: 'Org-wide',      icon: Share2,  count: counts.org },
-    { id: 'mine', label: 'Mine',          icon: User,    count: counts.mine },
-  ];
-
   return (
-    <div style={{ flex: 1, minWidth: 0, height: '100vh', overflow: 'hidden', background: '#FBFAF7', display: 'flex', flexDirection: 'column' }}>
-      {/* Page chrome — Back to chat + breadcrumb-eyebrow */}
-      <div style={{ padding: '12px 28px', borderBottom: '1px solid var(--border)', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
-        <button
-          onClick={onClose}
-          style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 8px', marginLeft: -8, borderRadius: 6, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 12 }}
-          onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text-primary)'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; }}
-        >
-          <ArrowLeft size={13} /> Back to chat
-        </button>
-        <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: "'IBM Plex Mono', ui-monospace, monospace", letterSpacing: '0.08em', textTransform: 'uppercase' }}>Knowledge Packs</span>
-      </div>
-
-      {/* Body — left filter rail + main pane */}
-      <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
-        {/* ── LEFT RAIL: filters ── */}
-        <div style={{ width: 280, flexShrink: 0, borderRight: '1px solid var(--border)', background: '#fff', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-          <div style={{ padding: '16px 16px 10px' }}>
-            <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', fontFamily: "'IBM Plex Mono', ui-monospace, monospace" }}>Filter</div>
-          </div>
-          <div style={{ flex: 1, overflowY: 'auto', paddingBottom: 8 }}>
-            {pinned.map((p) => {
-              const Icon = p.icon;
-              const isActive = scope === p.id;
-              return (
-                <div
-                  key={p.id}
-                  onClick={() => setScope(p.id)}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 10,
-                    height: 32, paddingLeft: 16, paddingRight: 12,
-                    cursor: 'pointer',
-                    background: isActive ? 'rgba(10,36,99,0.08)' : 'transparent',
-                    color: isActive ? 'var(--navy)' : 'var(--text-primary)',
-                    fontWeight: isActive ? 600 : 400,
-                    fontSize: 12,
-                    transition: 'background 100ms',
-                  }}
-                  onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = 'rgba(15,23,42,0.04)'; }}
-                  onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
-                >
-                  <Icon size={13} style={{ color: isActive ? 'var(--navy)' : 'var(--text-muted)' }} />
-                  <span style={{ flex: 1 }}>{p.label}</span>
-                  <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>{p.count}</span>
-                </div>
-              );
-            })}
-
-            {/* Owners facet — Org Admin only (others can't see colleagues' packs anyway). */}
-            {isOrgAdmin && owners.length > 0 && (
-              <>
-                <div style={{ padding: '14px 16px 6px' }}>
-                  <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', fontFamily: "'IBM Plex Mono', ui-monospace, monospace" }}>By owner</div>
-                </div>
-                {owners.map((o) => {
-                  const ownerScope = `owner:${o.id}`;
-                  const isActive = scope === ownerScope;
-                  return (
-                    <div
-                      key={o.id}
-                      onClick={() => setScope(ownerScope)}
-                      style={{
-                        display: 'flex', alignItems: 'center', gap: 10,
-                        height: 30, paddingLeft: 16, paddingRight: 12,
-                        cursor: 'pointer',
-                        background: isActive ? 'rgba(10,36,99,0.08)' : 'transparent',
-                        color: isActive ? 'var(--navy)' : 'var(--text-primary)',
-                        fontWeight: isActive ? 600 : 400,
-                        fontSize: 12,
-                        transition: 'background 100ms',
-                      }}
-                      onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = 'rgba(15,23,42,0.04)'; }}
-                      onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
-                    >
-                      <div style={{ width: 22, height: 22, borderRadius: '50%', background: 'var(--ice-warm)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 600, color: 'var(--navy)' }}>
-                        {(o.name || '?').split(/\s+/).map((p) => p[0]).slice(0, 2).join('').toUpperCase()}
-                      </div>
-                      <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{o.name}</span>
-                      <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>{o.count}</span>
-                    </div>
-                  );
-                })}
-              </>
-            )}
-          </div>
-          {/* Footer — + new pack */}
-          <div style={{ padding: 10, borderTop: '1px solid var(--border)', background: '#fff' }}>
-            <button
-              onClick={onCreateNew}
-              style={{ width: '100%', height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, fontSize: 12, color: 'var(--text-secondary)', background: 'transparent', border: '1px dashed var(--border)', borderRadius: 8, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}
-              onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--navy)'; e.currentTarget.style.color = 'var(--navy)'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
-            >
-              <Plus size={13} /> New pack
-            </button>
-          </div>
-        </div>
-
-        {/* ── MAIN AREA ── */}
-        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-          {/* Sticky toolbar */}
-          <div style={{ height: 56, padding: '0 28px', display: 'flex', alignItems: 'center', gap: 12, background: '#FBFAF7', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
-            <div style={{ position: 'relative', flex: 1, maxWidth: 360 }}>
-              <Search size={14} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-              <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search packs…"
-                style={{ width: '100%', height: 36, borderRadius: 8, border: '1px solid var(--border)', paddingLeft: 36, paddingRight: 12, fontSize: 13, outline: 'none', boxSizing: 'border-box', fontFamily: "'DM Sans', sans-serif", background: '#fff' }}
-              />
-            </div>
-            <div style={{ flex: 1 }} />
-            <button
-              onClick={onCreateNew}
-              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 8, background: 'var(--navy)', color: '#fff', border: 'none', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}
-            >
-              <Plus size={13} /> New pack
-            </button>
-          </div>
-
-          {/* Scrollable content */}
-          <div style={{ flex: 1, overflowY: 'auto' }}>
-            {/* Hero */}
-            <div style={{ maxWidth: 1080, margin: '0 auto', padding: '32px 28px 18px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                <Sparkles size={14} style={{ color: 'var(--gold)' }} />
-                <span style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: "'IBM Plex Mono', ui-monospace, monospace", letterSpacing: '0.1em', textTransform: 'uppercase' }}>Knowledge Packs</span>
-              </div>
-              <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 30, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.02em', lineHeight: 1.2 }}>
-                Saved bundles
-              </h1>
-              <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 8, lineHeight: 1.6, maxWidth: 640 }}>
-                Group documents and links into a pack you can attach to a chat in one click.
-                Useful for state-law libraries, deal-specific exhibits, or playbooks.
+    <>
+      <div onClick={onClose} style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)', zIndex: 60, backdropFilter: 'blur(4px)' }} />
+      <div
+        className="fixed inset-0 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-[900px] md:max-h-[90vh] md:rounded-2xl"
+        style={{ backgroundColor: 'white', boxShadow: '0 20px 60px rgba(0,0,0,0.2)', zIndex: 61, display: 'flex', flexDirection: 'column' }}
+      >
+        {/* Header */}
+        <div style={{ padding: '22px 28px 18px', borderBottom: '1px solid var(--border)' }}>
+          <div className="flex items-center justify-between gap-2">
+            <div className="min-w-0">
+              <h3 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 22, color: 'var(--text-primary)', margin: 0 }}>Knowledge Packs</h3>
+              <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 5, lineHeight: 1.5 }}>
+                {isOrgAdmin
+                  ? 'Every pack in the firm. Toggle org-wide sharing on any pack to make it available to the whole team.'
+                  : 'Bundles of documents and links you can attach to a chat to focus the AI on a specific topic.'}
               </p>
             </div>
-
-            {/* Pack grid (or empty state) */}
-            <div style={{ maxWidth: 1080, margin: '0 auto', padding: '0 28px 48px' }}>
-              {filtered.length === 0 ? (
-                <div style={{ padding: '64px 24px', textAlign: 'center', borderRadius: 12, border: '1px dashed var(--border)', background: '#fff' }}>
-                  <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'var(--ice-warm)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
-                    <Package size={26} style={{ color: 'var(--navy)' }} />
-                  </div>
-                  <div style={{ fontSize: 16, fontWeight: 600, fontFamily: "'DM Serif Display', serif", color: 'var(--text-primary)' }}>
-                    {search ? 'No matches' : 'No packs in this view'}
-                  </div>
-                  <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 6, lineHeight: 1.6 }}>
-                    {search ? 'Try a different term, or clear the search.' : 'Bundle a few related documents to spin up your first pack.'}
-                  </div>
-                  {!search && (
-                    <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 16 }}>
-                      <button onClick={onCreateNew} style={{ padding: '8px 16px', borderRadius: 8, background: 'var(--navy)', color: '#fff', border: 'none', fontSize: 12, cursor: 'pointer' }}>+ New pack</button>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 14 }}>
-                  {filtered.map((p) => (
-                    <PackRow
-                      key={p.id}
-                      pack={p}
-                      activePack={activePack}
-                      currentUserId={currentUserId}
-                      isOrgAdmin={isOrgAdmin}
-                      onSelect={onSelect}
-                      onEdit={onEdit}
-                      onDelete={onDelete}
-                      onToggleGlobal={onToggleGlobal}
-                    />
-                  ))}
-                </div>
-              )}
+            <div className="flex items-center gap-2" style={{ flexShrink: 0 }}>
+              <button onClick={onCreateNew} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '8px 16px', borderRadius: 8, backgroundColor: 'var(--navy)', color: 'white', border: 'none', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}><Plus size={14} /> New Pack</button>
+              <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100"><X size={20} style={{ color: 'var(--text-muted)' }} /></button>
             </div>
           </div>
+
+          {/* Scope tabs (Org Admin only) */}
+          {isOrgAdmin && (
+            <div className="flex items-center gap-2" style={{ marginTop: 16 }}>
+              <ScopeTab label="All packs" value="all"    count={counts.total} active={scope === 'all'}    onClick={() => setScope('all')} />
+              <ScopeTab label="Org-wide"  value="org"    count={counts.org}   active={scope === 'org'}    onClick={() => setScope('org')} />
+              <ScopeTab label="My packs"  value="mine"   count={counts.mine}  active={scope === 'mine'}   onClick={() => setScope('mine')} />
+            </div>
+          )}
+
+          <div style={{ position: 'relative', marginTop: 14 }}>
+            <Search size={14} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by name or description..." style={{ width: '100%', height: 38, borderRadius: 10, border: '1px solid var(--border)', paddingLeft: 36, fontSize: 13, outline: 'none', boxSizing: 'border-box', fontFamily: "'DM Sans', sans-serif" }} />
+          </div>
+        </div>
+
+        {/* Pack list */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '12px 20px 20px' }}>
+          {filtered.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '48px 20px', color: 'var(--text-muted)' }}>
+              <Package size={36} style={{ margin: '0 auto 14px', opacity: 0.4 }} />
+              <div style={{ fontSize: 15, fontWeight: 500 }}>
+                {search ? 'No knowledge packs match your search' : isOrgAdmin && scope !== 'all' ? `No ${scope === 'org' ? 'org-wide' : 'personal'} packs yet` : 'No knowledge packs yet'}
+              </div>
+              {!search && (
+                <div style={{ fontSize: 12, marginTop: 6 }}>Create a pack to bundle documents and links for a topic.</div>
+              )}
+            </div>
+          ) : (
+            filtered.map((p) => (
+              <PackRow
+                key={p.id}
+                pack={p}
+                activePack={activePack}
+                currentUserId={currentUserId}
+                isOrgAdmin={isOrgAdmin}
+                onSelect={onSelect}
+                onEdit={onEdit}
+                onDelete={onDelete}
+                onToggleGlobal={onToggleGlobal}
+              />
+            ))
+          )}
         </div>
       </div>
-    </div>
+    </>
   );
 }
 
@@ -1904,19 +1770,20 @@ function DocumentVaultPanel({
   onEdit, onDelete, onSelect, onSelectFolder, onToggleGlobal, activeDocument, activeFolder,
   currentUserId, isOrgAdmin, isExternalUser,
 }) {
-  // ─── Refs / state ───
+  // Hidden file input ref for the directory picker (P4 — recursive
+  // folder upload). `webkitdirectory` is a browser quirk attribute
+  // that's only set via a ref in JSX (React strips unknown attrs in
+  // some configs); a direct `webkitdirectory=""` works in all evergreen
+  // browsers + Safari.
   const folderUploadRef = useRef(null);
   const [search, setSearch] = useState('');
   const [scope, setScope] = useState('all'); // Org Admin only
-  const [currentFolderId, setCurrentFolderId] = useState(null);
+  const [currentFolderId, setCurrentFolderId] = useState(null); // null = root view
   const [creatingFolder, setCreatingFolder] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
   const [renamingFolderId, setRenamingFolderId] = useState(null);
   const [renameDraft, setRenameDraft] = useState('');
-  const [openMenuFor, setOpenMenuFor] = useState(null); // doc id
-  const [expandedSet, setExpandedSet] = useState(() => new Set());
 
-  // ─── Visibility (role + isGlobal) ───
   const visibleDocs = useMemo(() => {
     if (isOrgAdmin) return documents;
     if (isExternalUser) return documents.filter((d) => d.ownerId === currentUserId);
@@ -1935,47 +1802,7 @@ function DocumentVaultPanel({
     [visibleFolders, currentFolderId],
   );
 
-  // Children of each parent folder (id → array). null key = root level.
-  const childrenByParent = useMemo(() => {
-    const map = new Map();
-    visibleFolders.forEach((f) => {
-      const p = f.parentId || null;
-      if (!map.has(p)) map.set(p, []);
-      map.get(p).push(f);
-    });
-    return map;
-  }, [visibleFolders]);
-
-  // Auto-expand the ancestor chain when the user navigates into a nested
-  // folder so the tree on the left always reveals where they are.
-  useEffect(() => {
-    if (!currentFolderId) return;
-    const byId = new Map(visibleFolders.map((f) => [f.id, f]));
-    const ancestors = new Set();
-    let cur = byId.get(currentFolderId);
-    let guard = 0;
-    while (cur && cur.parentId && guard++ < 32) {
-      ancestors.add(cur.parentId);
-      cur = byId.get(cur.parentId);
-    }
-    if (ancestors.size > 0) {
-      setExpandedSet((prev) => {
-        const next = new Set(prev);
-        ancestors.forEach((a) => next.add(a));
-        return next;
-      });
-    }
-  }, [currentFolderId, visibleFolders]);
-
-  const toggleExpand = (id) => {
-    setExpandedSet((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      return next;
-    });
-  };
-
-  // Walk parent chain for the breadcrumb.
+  // Walk parents up to root to build a breadcrumb trail.
   const breadcrumb = useMemo(() => {
     if (!currentFolder) return [];
     const trail = [];
@@ -1989,18 +1816,25 @@ function DocumentVaultPanel({
     return trail;
   }, [currentFolder, visibleFolders]);
 
-  // Org-Admin scope tabs filter the doc set first; folder + search apply on top.
+  // Org-Admin scope tabs filter the set of *all visible* docs first,
+  // then folder navigation/search apply on top.
   const scopedDocs = useMemo(() => {
     if (!isOrgAdmin || scope === 'all') return visibleDocs;
-    if (scope === 'org') return visibleDocs.filter((d) => d.isGlobal);
+    if (scope === 'org')  return visibleDocs.filter((d) => d.isGlobal);
     return visibleDocs.filter((d) => d.ownerId === currentUserId);
   }, [visibleDocs, scope, isOrgAdmin, currentUserId]);
 
+  // Subfolders of the current view (or root-level folders if at root).
   const childFolders = useMemo(() => {
-    return visibleFolders.filter((f) => (f.parentId || null) === (currentFolderId || null));
+    return visibleFolders.filter((f) => {
+      const p = f.parentId ?? null;
+      return p === (currentFolderId || null);
+    });
   }, [visibleFolders, currentFolderId]);
 
-  // At root: every visible doc. In a folder: only its direct docs.
+  // Docs to show: when in a folder, only docs in that folder. At root,
+  // EVERY visible doc — including those that also live in a folder, so a
+  // doc can be reachable both inside its folder and from the root list.
   const folderDocs = useMemo(() => {
     if (currentFolderId) return scopedDocs.filter((d) => d.folderId === currentFolderId);
     return scopedDocs;
@@ -2016,11 +1850,36 @@ function DocumentVaultPanel({
     );
   }, [folderDocs, search]);
 
+  // Folder tiles: at root or any drilled-in folder, show that level's
+  // immediate children. Search filters across visible folders at the
+  // current level.
+  const filteredFolders = useMemo(() => {
+    if (!search.trim()) return childFolders;
+    const q = search.toLowerCase();
+    return childFolders.filter((f) => f.name.toLowerCase().includes(q));
+  }, [childFolders, search]);
+
+  // Doc count per folder = direct children docs only (subfolders'
+  // counts roll up separately so the tile shows local density, not
+  // total descendants — matches Finder/Explorer behaviour).
   const docCountByFolder = useMemo(() => {
     const map = {};
-    scopedDocs.forEach((d) => { if (d.folderId) map[d.folderId] = (map[d.folderId] || 0) + 1; });
+    scopedDocs.forEach((d) => {
+      if (!d.folderId) return;
+      map[d.folderId] = (map[d.folderId] || 0) + 1;
+    });
     return map;
   }, [scopedDocs]);
+
+  // Subfolder count per folder for the secondary line on each tile.
+  const subfolderCountByFolder = useMemo(() => {
+    const map = {};
+    visibleFolders.forEach((f) => {
+      if (!f.parentId) return;
+      map[f.parentId] = (map[f.parentId] || 0) + 1;
+    });
+    return map;
+  }, [visibleFolders]);
 
   const counts = useMemo(() => ({
     total: visibleDocs.length,
@@ -2028,15 +1887,27 @@ function DocumentVaultPanel({
     mine:  visibleDocs.filter((d) => d.ownerId === currentUserId).length,
   }), [visibleDocs, currentUserId]);
 
-  // ─── Folder selection / actions ───
-  const folderAttachable = typeof onSelectFolder === 'function';
-
   const handleCreateFolderConfirm = () => {
     const name = newFolderName.trim();
     if (!name) return;
+    // New folder nests under the folder the user is currently viewing
+    // (or root if they're at the top). This matches Explorer / Finder
+    // behaviour — "create folder here".
     onCreateFolder?.(name, currentFolderId || null);
     setNewFolderName('');
     setCreatingFolder(false);
+  };
+
+  // Recursive folder upload — accept the directory picker's File list,
+  // walk each file's `webkitRelativePath`, recreate the folder tree
+  // under the *current* folder so the structure persists into the
+  // vault. Each path segment becomes a VaultFolder; each leaf file
+  // becomes a VaultDoc with `folderId` = its leaf folder.
+  const handleFolderUpload = (fileList) => {
+    if (!fileList || !onUploadFolder) return;
+    const files = Array.from(fileList);
+    if (files.length === 0) return;
+    onUploadFolder(files, currentFolderId || null);
   };
 
   const handleRenameConfirm = () => {
@@ -2047,217 +1918,96 @@ function DocumentVaultPanel({
     setRenameDraft('');
   };
 
-  const handleFolderUpload = (fileList) => {
-    if (!fileList || !onUploadFolder) return;
-    const files = Array.from(fileList);
-    if (files.length === 0) return;
-    onUploadFolder(files, currentFolderId || null);
-  };
-
-  // ─── Recursive tree node ───
-  function TreeNode({ folder, depth }) {
-    const kids = childrenByParent.get(folder.id) || [];
-    const isExpanded = expandedSet.has(folder.id);
-    const isActive = currentFolderId === folder.id;
-    const docCt = docCountByFolder[folder.id] || 0;
-    return (
-      <div>
-        <div
-          onClick={() => setCurrentFolderId(folder.id)}
-          style={{
-            display: 'flex', alignItems: 'center', gap: 6,
-            height: 28,
-            paddingLeft: 12 + depth * 16, paddingRight: 12,
-            cursor: 'pointer',
-            background: isActive ? 'rgba(10,36,99,0.08)' : 'transparent',
-            color: isActive ? 'var(--navy)' : 'var(--text-primary)',
-            fontWeight: isActive ? 600 : 400,
-            fontSize: 12,
-            transition: 'background 100ms',
-          }}
-          onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = 'rgba(15,23,42,0.04)'; }}
-          onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
-        >
-          {kids.length > 0 ? (
-            <span
-              onClick={(e) => { e.stopPropagation(); toggleExpand(folder.id); }}
-              style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 14, height: 14, cursor: 'pointer' }}
-            >
-              <ChevronRight size={11} style={{ transform: isExpanded ? 'rotate(90deg)' : 'none', transition: 'transform 120ms', color: 'var(--text-muted)' }} />
-            </span>
-          ) : (
-            <span style={{ width: 14, display: 'inline-block' }} />
-          )}
-          <Folder size={13} style={{ color: isActive ? 'var(--navy)' : (folder.isGlobal ? '#9A7A22' : 'var(--text-muted)') }} />
-          <span style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {folder.name}
-          </span>
-          {docCt > 0 && (
-            <span style={{ fontSize: 10, color: 'var(--text-muted)', flexShrink: 0 }}>{docCt}</span>
-          )}
-        </div>
-        {isExpanded && kids.map((child) => (
-          <TreeNode key={child.id} folder={child} depth={depth + 1} />
-        ))}
-      </div>
-    );
-  }
-
-  const emptyCopy = currentFolderId
-    ? { title: `Nothing in ${currentFolder?.name || 'this folder'} yet`, body: 'Drop a doc here or upload a new one to fill it.' }
-    : search
-    ? { title: 'No matches', body: 'Try a different term, or clear the search to see everything.' }
-    : { title: 'Build your firm’s library', body: 'Drop a folder or upload your first document.' };
-
-  // Grid template depends on whether we're in a folder (no Folder column).
-  const gridCols = currentFolderId
-    ? 'minmax(280px, 2fr) 140px 80px 120px 96px'
-    : 'minmax(280px, 2fr) 140px 160px 80px 120px 96px';
+  // When this prop is provided, the panel was opened from the chat
+  // AttachMenu — folder rows render an extra "Use folder" CTA so the
+  // user can attach a whole folder as conversation context.
+  const folderAttachable = typeof onSelectFolder === 'function';
 
   return (
-    <div style={{ flex: 1, minWidth: 0, height: '100vh', overflow: 'hidden', background: '#FBFAF7', display: 'flex', flexDirection: 'column' }}>
-      {/* Hidden directory picker */}
-      <input
-        ref={folderUploadRef}
-        type="file"
-        multiple
-        webkitdirectory=""
-        directory=""
-        style={{ display: 'none' }}
-        onChange={(e) => { handleFolderUpload(e.target.files); e.target.value = ''; }}
-      />
-
-      {/* Page chrome — Back to chat + breadcrumb-eyebrow */}
-      <div style={{ padding: '12px 28px', borderBottom: '1px solid var(--border)', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
-        <button
-          onClick={onClose}
-          style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 8px', marginLeft: -8, borderRadius: 6, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 12 }}
-          onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text-primary)'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; }}
-        >
-          <ArrowLeft size={13} /> Back to chat
-        </button>
-        <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: "'IBM Plex Mono', ui-monospace, monospace", letterSpacing: '0.08em', textTransform: 'uppercase' }}>Document Vault</span>
-      </div>
-
-      {/* Body — left rail + main pane */}
-      <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
-        {/* ── LEFT RAIL: folder tree ── */}
-        <div style={{ width: 280, flexShrink: 0, borderRight: '1px solid var(--border)', background: '#fff', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-          <div style={{ padding: '16px 16px 10px' }}>
-            <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', fontFamily: "'IBM Plex Mono', ui-monospace, monospace" }}>Library</div>
-          </div>
-          <div style={{ flex: 1, overflowY: 'auto', paddingBottom: 8 }}>
-            {/* Pinned: All documents */}
-            <div
-              onClick={() => setCurrentFolderId(null)}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 8,
-                height: 30, paddingLeft: 16, paddingRight: 12,
-                cursor: 'pointer',
-                background: currentFolderId === null ? 'rgba(10,36,99,0.08)' : 'transparent',
-                color: currentFolderId === null ? 'var(--navy)' : 'var(--text-primary)',
-                fontWeight: currentFolderId === null ? 600 : 400,
-                fontSize: 12,
-                transition: 'background 100ms',
-              }}
-              onMouseEnter={(e) => { if (currentFolderId !== null) e.currentTarget.style.background = 'rgba(15,23,42,0.04)'; }}
-              onMouseLeave={(e) => { if (currentFolderId !== null) e.currentTarget.style.background = 'transparent'; }}
-            >
-              <FolderOpen size={14} style={{ color: currentFolderId === null ? 'var(--navy)' : 'var(--text-muted)' }} />
-              <span style={{ flex: 1 }}>All documents</span>
-              <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>{counts.total}</span>
+    <>
+      <div onClick={onClose} style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)', zIndex: 60, backdropFilter: 'blur(4px)' }} />
+      <div
+        className="fixed inset-0 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-[900px] md:max-h-[90vh] md:rounded-2xl"
+        style={{ backgroundColor: 'white', boxShadow: '0 20px 60px rgba(0,0,0,0.2)', zIndex: 61, display: 'flex', flexDirection: 'column' }}
+      >
+        <div style={{ padding: '22px 28px 18px', borderBottom: '1px solid var(--border)' }}>
+          <div className="flex items-center justify-between gap-2">
+            <div className="min-w-0">
+              <h3 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 22, color: 'var(--text-primary)', margin: 0 }}>Document Vault</h3>
+              <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 5, lineHeight: 1.5 }}>
+                {isOrgAdmin
+                  ? 'Every document stored in the firm. Group docs into folders, then attach a folder or single doc to chat.'
+                  : 'Documents you can attach to a chat — your own plus firm-wide shared documents. Group related docs into folders.'}
+              </p>
             </div>
-            {/* Folders eyebrow */}
-            <div style={{ padding: '14px 16px 6px' }}>
-              <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', fontFamily: "'IBM Plex Mono', ui-monospace, monospace" }}>Folders</div>
-            </div>
-            {/* Recursive tree */}
-            {(childrenByParent.get(null) || []).length === 0 && (
-              <div style={{ padding: '8px 16px', fontSize: 12, color: 'var(--text-muted)' }}>No folders yet.</div>
-            )}
-            {(childrenByParent.get(null) || []).map((f) => (
-              <TreeNode key={f.id} folder={f} depth={0} />
-            ))}
-          </div>
-          {/* Footer — + new folder */}
-          <div style={{ padding: 10, borderTop: '1px solid var(--border)', background: '#fff' }}>
-            <button
-              onClick={() => setCreatingFolder(true)}
-              style={{ width: '100%', height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, fontSize: 12, color: 'var(--text-secondary)', background: 'transparent', border: '1px dashed var(--border)', borderRadius: 8, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}
-              onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--navy)'; e.currentTarget.style.color = 'var(--navy)'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
-            >
-              <FolderPlus size={13} /> New folder
-            </button>
-          </div>
-        </div>
-
-        {/* ── MAIN AREA ── */}
-        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-          {/* Sticky toolbar */}
-          <div style={{ height: 56, padding: '0 28px', display: 'flex', alignItems: 'center', gap: 12, background: '#FBFAF7', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
-            <div style={{ position: 'relative', flex: 1, maxWidth: 360 }}>
-              <Search size={14} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+            <div className="flex items-center gap-2" style={{ flexShrink: 0 }}>
+              {/* Hidden directory picker — opens when "Upload folder" is
+                  clicked. webkitdirectory makes the browser show its
+                  folder picker instead of a file picker. */}
               <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder={currentFolder ? `Search in ${currentFolder.name}…` : 'Search vault…'}
-                style={{ width: '100%', height: 36, borderRadius: 8, border: '1px solid var(--border)', paddingLeft: 36, paddingRight: 12, fontSize: 13, outline: 'none', boxSizing: 'border-box', fontFamily: "'DM Sans', sans-serif", background: '#fff' }}
+                ref={folderUploadRef}
+                type="file"
+                multiple
+                // @ts-ignore — webkit-prefixed attr; React forwards it via the spread
+                webkitdirectory=""
+                directory=""
+                style={{ display: 'none' }}
+                onChange={(e) => { handleFolderUpload(e.target.files); e.target.value = ''; }}
               />
+              <button onClick={() => folderUploadRef.current?.click()} title="Upload an entire folder — subfolder structure is preserved" style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '8px 12px', borderRadius: 8, backgroundColor: 'white', color: 'var(--text-secondary)', border: '1px solid var(--border)', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}><Upload size={14} /> Upload folder</button>
+              <button onClick={() => setCreatingFolder(true)} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '8px 12px', borderRadius: 8, backgroundColor: 'white', color: 'var(--navy)', border: '1px solid var(--border)', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}><FolderPlus size={14} /> Folder</button>
+              <button onClick={onCreateNew} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '8px 14px', borderRadius: 8, backgroundColor: 'var(--navy)', color: 'white', border: 'none', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}><Plus size={14} /> Document</button>
+              <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100"><X size={20} style={{ color: 'var(--text-muted)' }} /></button>
             </div>
-
-            {isOrgAdmin && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 2, padding: 3, background: '#F0F2F5', borderRadius: 8 }}>
-                {[
-                  { id: 'all',  label: 'All',      count: counts.total },
-                  { id: 'org',  label: 'Org-wide', count: counts.org },
-                  { id: 'mine', label: 'Mine',     count: counts.mine },
-                ].map((t) => (
-                  <button
-                    key={t.id}
-                    onClick={() => setScope(t.id)}
-                    style={{
-                      padding: '6px 12px', borderRadius: 6, fontSize: 12, fontWeight: 500,
-                      background: scope === t.id ? '#fff' : 'transparent',
-                      color: scope === t.id ? 'var(--navy)' : 'var(--text-muted)',
-                      border: 'none', cursor: 'pointer',
-                      boxShadow: scope === t.id ? '0 1px 2px rgba(15,23,42,0.06)' : 'none',
-                      fontFamily: "'DM Sans', sans-serif",
-                    }}
-                  >
-                    {t.label} <span style={{ color: 'var(--text-muted)', fontWeight: 400, marginLeft: 2 }}>{t.count}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-
-            <div style={{ flex: 1 }} />
-
-            <button
-              onClick={() => folderUploadRef.current?.click()}
-              title="Upload an entire folder — subfolder structure is preserved"
-              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 8, background: '#fff', color: 'var(--text-secondary)', border: '1px solid var(--border)', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}
-            >
-              <Upload size={13} /> Upload folder
-            </button>
-            <button
-              onClick={() => setCreatingFolder(true)}
-              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 8, background: '#fff', color: 'var(--navy)', border: '1px solid var(--border)', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}
-            >
-              <FolderPlus size={13} /> Folder
-            </button>
-            <button
-              onClick={onCreateNew}
-              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 8, background: 'var(--navy)', color: '#fff', border: 'none', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}
-            >
-              <Plus size={13} /> Document
-            </button>
           </div>
 
-          {/* Inline create-folder composer */}
+          {isOrgAdmin && (
+            <div className="flex items-center gap-2" style={{ marginTop: 16 }}>
+              <ScopeTab label="All documents" count={counts.total} active={scope === 'all'}  onClick={() => setScope('all')} />
+              <ScopeTab label="Org-wide"      count={counts.org}   active={scope === 'org'}  onClick={() => setScope('org')} />
+              <ScopeTab label="My documents"  count={counts.mine}  active={scope === 'mine'} onClick={() => setScope('mine')} />
+            </div>
+          )}
+
+          {/* Folder breadcrumb — walks the full parent trail when nested
+              (e.g. All folders › Contracts › Acme Corp › MSA). Each
+              segment is clickable to jump to that level. Trailing
+              segment is the active folder, non-clickable. */}
+          {currentFolder && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 14, fontSize: 12, color: 'var(--text-muted)', flexWrap: 'wrap' }}>
+              <button
+                onClick={() => setCurrentFolderId(null)}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 8px', borderRadius: 6, border: '1px solid var(--border)', background: 'white', color: 'var(--text-secondary)', fontSize: 12, cursor: 'pointer' }}
+              >
+                <ArrowLeft size={12} /> All folders
+              </button>
+              {breadcrumb.map((f, i) => {
+                const isLast = i === breadcrumb.length - 1;
+                return (
+                  <React.Fragment key={f.id}>
+                    <ChevronRight size={12} />
+                    {isLast ? (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontWeight: 600, color: 'var(--text-primary)' }}>
+                        <Folder size={13} style={{ color: 'var(--navy)' }} /> {f.name}
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => setCurrentFolderId(f.id)}
+                        style={{ background: 'none', border: 'none', padding: 0, fontSize: 12, color: 'var(--text-secondary)', cursor: 'pointer' }}
+                      >
+                        {f.name}
+                      </button>
+                    )}
+                  </React.Fragment>
+                );
+              })}
+              <span>· {filteredDocs.length} {filteredDocs.length === 1 ? 'doc' : 'docs'}</span>
+            </div>
+          )}
+
+          {/* New folder inline composer */}
           {creatingFolder && (
-            <div style={{ padding: '10px 28px', background: '#FBFAF7', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ marginTop: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
               <FolderPlus size={14} style={{ color: 'var(--navy)' }} />
               <input
                 autoFocus
@@ -2267,243 +2017,202 @@ function DocumentVaultPanel({
                   if (e.key === 'Enter') handleCreateFolderConfirm();
                   if (e.key === 'Escape') { setCreatingFolder(false); setNewFolderName(''); }
                 }}
-                placeholder={currentFolder ? `New folder in ${currentFolder.name}…` : 'New folder name…'}
-                style={{ flex: 1, maxWidth: 360, height: 32, borderRadius: 8, border: '1px solid var(--border)', padding: '0 10px', fontSize: 13, outline: 'none', fontFamily: "'DM Sans', sans-serif" }}
+                placeholder="Folder name (e.g., Acme Contracts)"
+                style={{ flex: 1, height: 34, borderRadius: 8, border: '1px solid var(--border)', padding: '0 10px', fontSize: 13, outline: 'none', fontFamily: "'DM Sans', sans-serif" }}
               />
-              <button onClick={handleCreateFolderConfirm} disabled={!newFolderName.trim()} style={{ padding: '6px 12px', borderRadius: 6, border: 'none', background: newFolderName.trim() ? 'var(--navy)' : '#9CA3AF', color: '#fff', fontSize: 12, fontWeight: 500, cursor: newFolderName.trim() ? 'pointer' : 'not-allowed' }}>Create</button>
-              <button onClick={() => { setCreatingFolder(false); setNewFolderName(''); }} style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid var(--border)', background: '#fff', fontSize: 12, color: 'var(--text-muted)', cursor: 'pointer' }}>Cancel</button>
+              <button onClick={handleCreateFolderConfirm} disabled={!newFolderName.trim()} style={{ padding: '7px 14px', borderRadius: 8, border: 'none', background: newFolderName.trim() ? 'var(--navy)' : '#9CA3AF', color: 'white', fontSize: 12, fontWeight: 500, cursor: newFolderName.trim() ? 'pointer' : 'not-allowed' }}>Create</button>
+              <button onClick={() => { setCreatingFolder(false); setNewFolderName(''); }} style={{ padding: '7px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'white', fontSize: 12, color: 'var(--text-muted)', cursor: 'pointer' }}>Cancel</button>
             </div>
           )}
 
-          {/* Scrollable content */}
-          <div style={{ flex: 1, overflowY: 'auto' }}>
-            {/* Hero */}
-            <div style={{ maxWidth: 1080, margin: '0 auto', padding: '32px 28px 18px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                <Sparkles size={14} style={{ color: 'var(--gold)' }} />
-                <span style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: "'IBM Plex Mono', ui-monospace, monospace", letterSpacing: '0.1em', textTransform: 'uppercase' }}>Vault</span>
-              </div>
-              <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 30, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.02em', lineHeight: 1.2 }}>
-                {currentFolder ? currentFolder.name : 'Document Vault'}
-              </h1>
-              {/* Caption / breadcrumb */}
-              <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 8, lineHeight: 1.6, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                {currentFolder ? (
-                  <>
-                    <button onClick={() => setCurrentFolderId(null)} style={{ background: 'none', border: 'none', padding: 0, fontSize: 13, color: 'var(--text-muted)', cursor: 'pointer' }}>All folders</button>
-                    {breadcrumb.map((f, i) => {
-                      const isLast = i === breadcrumb.length - 1;
-                      return (
-                        <React.Fragment key={f.id}>
-                          <ChevronRight size={12} style={{ color: 'var(--text-muted)' }} />
-                          {isLast ? (
-                            <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{f.name}</span>
-                          ) : (
-                            <button onClick={() => setCurrentFolderId(f.id)} style={{ background: 'none', border: 'none', padding: 0, fontSize: 13, color: 'var(--text-muted)', cursor: 'pointer' }}>{f.name}</button>
-                          )}
-                        </React.Fragment>
-                      );
-                    })}
-                    <span style={{ color: 'var(--text-muted)' }}>· {filteredDocs.length} {filteredDocs.length === 1 ? 'document' : 'documents'}</span>
-                  </>
-                ) : (
-                  <span style={{ color: 'var(--text-muted)' }}>{counts.total} {counts.total === 1 ? 'document' : 'documents'} · {visibleFolders.length} {visibleFolders.length === 1 ? 'folder' : 'folders'}</span>
-                )}
-              </div>
-            </div>
-
-            {/* Subfolder chip strip */}
-            {childFolders.length > 0 && (
-              <div style={{ maxWidth: 1080, margin: '0 auto', padding: '0 28px 16px' }}>
-                <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-muted)', fontFamily: "'IBM Plex Mono', ui-monospace, monospace", marginBottom: 8 }}>
-                  {currentFolderId ? 'Subfolders' : 'Folders'}
-                </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                  {childFolders.map((f) => {
-                    const docCt = docCountByFolder[f.id] || 0;
-                    const isFolderActive = activeFolder?.id === f.id;
-                    return (
-                      <div
-                        key={f.id}
-                        onClick={() => setCurrentFolderId(f.id)}
-                        style={{
-                          display: 'inline-flex', alignItems: 'center', gap: 8,
-                          height: 36, padding: '0 14px', borderRadius: 999,
-                          border: '1px solid var(--border)', background: '#fff',
-                          cursor: 'pointer', transition: 'background 120ms',
-                          fontFamily: "'DM Sans', sans-serif",
-                        }}
-                        onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(10,36,99,0.04)'; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; }}
-                      >
-                        <Folder size={13} style={{ color: f.isGlobal ? '#9A7A22' : 'var(--navy)' }} />
-                        <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-primary)' }}>{f.name}</span>
-                        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{docCt}</span>
-                        {folderAttachable && (
-                          <button
-                            onClick={(e) => { e.stopPropagation(); onSelectFolder(f); }}
-                            style={{ marginLeft: 4, padding: '2px 8px', borderRadius: 4, fontSize: 10, fontWeight: 600, background: isFolderActive ? '#5CA868' : 'var(--navy)', color: '#fff', border: 'none', cursor: 'pointer' }}
-                          >
-                            {isFolderActive ? 'Active' : 'Use'}
-                          </button>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* Documents table */}
-            <div style={{ maxWidth: 1080, margin: '0 auto', padding: '8px 28px 48px' }}>
-              <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-muted)', fontFamily: "'IBM Plex Mono', ui-monospace, monospace", marginBottom: 8 }}>
-                {currentFolderId ? 'Documents in this folder' : 'All documents'}
-              </div>
-
-              {filteredDocs.length === 0 ? (
-                <div style={{ padding: '64px 24px', textAlign: 'center', borderRadius: 12, border: '1px dashed var(--border)', background: '#fff' }}>
-                  <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'var(--ice-warm)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
-                    <FolderOpen size={26} style={{ color: 'var(--navy)' }} />
-                  </div>
-                  <div style={{ fontSize: 16, fontWeight: 600, fontFamily: "'DM Serif Display', serif", color: 'var(--text-primary)' }}>{emptyCopy.title}</div>
-                  <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 6, lineHeight: 1.6 }}>{emptyCopy.body}</div>
-                  {!search && (
-                    <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 16 }}>
-                      <button onClick={() => folderUploadRef.current?.click()} style={{ padding: '8px 14px', borderRadius: 8, background: '#fff', color: 'var(--text-secondary)', border: '1px solid var(--border)', fontSize: 12, cursor: 'pointer' }}>Upload folder</button>
-                      <button onClick={onCreateNew} style={{ padding: '8px 16px', borderRadius: 8, background: 'var(--navy)', color: '#fff', border: 'none', fontSize: 12, cursor: 'pointer' }}>+ Document</button>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div style={{ background: '#fff', borderRadius: 12, border: '1px solid var(--border)', overflow: 'hidden' }}>
-                  {/* Header row */}
-                  <div style={{
-                    display: 'grid', gridTemplateColumns: gridCols,
-                    alignItems: 'center', height: 36,
-                    padding: '0 16px', gap: 12,
-                    fontSize: 10, color: 'var(--text-muted)',
-                    fontFamily: "'IBM Plex Mono', ui-monospace, monospace",
-                    letterSpacing: '0.08em', textTransform: 'uppercase',
-                    borderBottom: '1px solid var(--border)',
-                    background: '#FAFBFC',
-                  }}>
-                    <div>Name</div>
-                    <div>Owner</div>
-                    {!currentFolderId && <div>Folder</div>}
-                    <div style={{ textAlign: 'right' }}>Size</div>
-                    <div>Modified</div>
-                    <div></div>
-                  </div>
-                  {/* Body rows */}
-                  {filteredDocs.map((d) => {
-                    const isOwner = d.ownerId === currentUserId;
-                    const canEdit = isOrgAdmin || isOwner || !d.ownerId;
-                    const ownerLabel = d.isGlobal ? 'Org-wide' : (isOwner ? 'You' : (d.ownerName || 'Member'));
-                    const ownerColor = d.isGlobal ? '#9A7A22' : (isOwner ? 'var(--navy)' : 'var(--text-secondary)');
-                    const docFolder = d.folderId ? visibleFolders.find((f) => f.id === d.folderId) : null;
-                    const isMenuOpen = openMenuFor === d.id;
-                    const isDocActive = activeDocument?.id === d.id;
-                    return (
-                      <div
-                        key={d.id}
-                        style={{
-                          display: 'grid', gridTemplateColumns: gridCols,
-                          alignItems: 'center', height: 56,
-                          padding: '0 16px', gap: 12,
-                          borderBottom: '1px solid #EEF0F3',
-                          fontSize: 13,
-                          cursor: onSelect ? 'pointer' : 'default',
-                          transition: 'background 100ms',
-                        }}
-                        onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(10,36,99,0.04)'; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; }}
-                        onClick={() => { if (onSelect) onSelect(d); }}
-                      >
-                        {/* NAME */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
-                          <div style={{ width: 32, height: 32, borderRadius: 8, background: 'var(--ice-warm)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                            <File size={15} style={{ color: d.isGlobal ? '#9A7A22' : 'var(--navy)' }} />
-                          </div>
-                          <div style={{ minWidth: 0 }}>
-                            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                              {d.name}
-                              {d.addedFromChat && <span style={{ marginLeft: 6, fontSize: 10, fontStyle: 'italic', color: 'var(--text-muted)', fontWeight: 400 }}>· from chat</span>}
-                            </div>
-                            <div style={{ fontSize: 11, color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.fileName}</div>
-                          </div>
-                        </div>
-                        {/* OWNER */}
-                        <div style={{ fontSize: 12, color: ownerColor, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{ownerLabel}</div>
-                        {/* FOLDER */}
-                        {!currentFolderId && (
-                          <div style={{ minWidth: 0 }}>
-                            {docFolder ? (
-                              <button
-                                onClick={(e) => { e.stopPropagation(); setCurrentFolderId(docFolder.id); }}
-                                style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: 0, fontSize: 12, color: 'var(--navy)', background: 'none', border: 'none', cursor: 'pointer', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' }}
-                              >
-                                <Folder size={11} /> {docFolder.name}
-                              </button>
-                            ) : (
-                              <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>—</span>
-                            )}
-                          </div>
-                        )}
-                        {/* SIZE */}
-                        <div style={{ fontSize: 12, color: 'var(--text-muted)', textAlign: 'right' }}>{d.fileSize || '—'}</div>
-                        {/* MODIFIED */}
-                        <div style={{ fontSize: 12, color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.createdAt}</div>
-                        {/* ACTIONS */}
-                        <div onClick={(e) => e.stopPropagation()} style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}>
-                          {onSelect && (
-                            <button
-                              onClick={() => onSelect(d)}
-                              style={{ padding: '4px 10px', borderRadius: 6, background: isDocActive ? '#5CA868' : 'var(--navy)', color: '#fff', border: 'none', fontSize: 11, fontWeight: 500, cursor: 'pointer' }}
-                            >
-                              {isDocActive ? 'Active' : 'Use'}
-                            </button>
-                          )}
-                          {canEdit && (
-                            <button
-                              onClick={() => setOpenMenuFor(isMenuOpen ? null : d.id)}
-                              title="More"
-                              style={{ padding: 4, background: 'none', border: 'none', cursor: 'pointer', display: 'flex', borderRadius: 4 }}
-                              onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(15,23,42,0.06)'; }}
-                              onMouseLeave={(e) => { e.currentTarget.style.background = 'none'; }}
-                            >
-                              <MoreVertical size={14} style={{ color: 'var(--text-muted)' }} />
-                            </button>
-                          )}
-                          {isMenuOpen && (
-                            <>
-                              <div onClick={() => setOpenMenuFor(null)} style={{ position: 'fixed', inset: 0, zIndex: 30 }} />
-                              <div style={{ position: 'absolute', top: 30, right: 0, minWidth: 180, background: '#fff', borderRadius: 8, border: '1px solid var(--border)', boxShadow: '0 8px 24px rgba(15,23,42,0.12)', zIndex: 31, overflow: 'hidden' }}>
-                                <button onClick={() => { onEdit?.(d); setOpenMenuFor(null); }} style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '8px 12px', background: 'none', border: 'none', fontSize: 12, color: 'var(--text-primary)', cursor: 'pointer', textAlign: 'left' }} onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(15,23,42,0.04)'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'none'; }}>
-                                  <Edit3 size={12} /> Edit
-                                </button>
-                                {isOrgAdmin && (
-                                  <button onClick={() => { onToggleGlobal?.(d.id, !d.isGlobal); setOpenMenuFor(null); }} style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '8px 12px', background: 'none', border: 'none', fontSize: 12, color: 'var(--text-primary)', cursor: 'pointer', textAlign: 'left' }} onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(15,23,42,0.04)'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'none'; }}>
-                                    <Share2 size={12} /> {d.isGlobal ? 'Make personal' : 'Share org-wide'}
-                                  </button>
-                                )}
-                                <div style={{ borderTop: '1px solid var(--border)' }} />
-                                <button onClick={() => { onDelete?.(d.id); setOpenMenuFor(null); }} style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '8px 12px', background: 'none', border: 'none', fontSize: 12, color: '#C65454', cursor: 'pointer', textAlign: 'left' }} onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(198,84,84,0.06)'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'none'; }}>
-                                  <Trash2 size={12} /> Delete
-                                </button>
-                              </div>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
+          <div style={{ position: 'relative', marginTop: 14 }}>
+            <Search size={14} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder={currentFolder ? `Search in ${currentFolder.name}...` : 'Search folders, names, descriptions, or files...'} style={{ width: '100%', height: 38, borderRadius: 10, border: '1px solid var(--border)', paddingLeft: 36, fontSize: 13, outline: 'none', boxSizing: 'border-box', fontFamily: "'DM Sans', sans-serif" }} />
           </div>
         </div>
+
+        <div style={{ flex: 1, overflowY: 'auto', padding: '12px 20px 20px' }}>
+          {/* Folder grid — appears at root and inside any folder that has
+              subfolders. Subfolders show first, documents below. */}
+          {filteredFolders.length > 0 && (
+            <div style={{ marginTop: 4 }}>
+              <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-muted)', padding: '6px 4px 8px' }}>
+                {currentFolderId ? 'Subfolders' : 'Folders'}
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 10 }}>
+                {filteredFolders.map((f) => {
+                  const isOwner = f.ownerId === currentUserId;
+                  const canEdit = isOrgAdmin || isOwner || !f.ownerId;
+                  const docCount = docCountByFolder[f.id] || 0;
+                  const subCount = subfolderCountByFolder[f.id] || 0;
+                  const isActive = activeFolder?.id === f.id;
+                  const isRenaming = renamingFolderId === f.id;
+                  return (
+                    <div
+                      key={f.id}
+                      onClick={() => { if (!isRenaming) setCurrentFolderId(f.id); }}
+                      style={{ padding: '14px 14px', borderRadius: 12, border: '1px solid var(--border)', background: '#fff', cursor: isRenaming ? 'default' : 'pointer', display: 'flex', alignItems: 'center', gap: 12, transition: 'all 0.15s' }}
+                      onMouseEnter={(e) => { if (!isRenaming) { e.currentTarget.style.boxShadow = '0 3px 14px rgba(10,36,99,0.06)'; e.currentTarget.style.borderColor = 'var(--navy)'; } }}
+                      onMouseLeave={(e) => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.borderColor = 'var(--border)'; }}
+                    >
+                      <div style={{ width: 38, height: 38, borderRadius: 10, background: f.isGlobal ? 'rgba(201,168,76,0.15)' : 'var(--ice-warm)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <Folder size={18} style={{ color: f.isGlobal ? '#9A7A22' : 'var(--navy)' }} />
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        {isRenaming ? (
+                          <input
+                            autoFocus
+                            value={renameDraft}
+                            onClick={(e) => e.stopPropagation()}
+                            onChange={(e) => setRenameDraft(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') handleRenameConfirm();
+                              if (e.key === 'Escape') { setRenamingFolderId(null); setRenameDraft(''); }
+                            }}
+                            style={{ width: '100%', height: 28, borderRadius: 6, border: '1px solid var(--border)', padding: '0 8px', fontSize: 13, outline: 'none', fontFamily: "'DM Sans', sans-serif" }}
+                          />
+                        ) : (
+                          <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{f.name}</div>
+                        )}
+                        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
+                          {subCount > 0 && <span>{subCount} {subCount === 1 ? 'subfolder' : 'subfolders'} · </span>}
+                          {docCount} {docCount === 1 ? 'document' : 'documents'}
+                          {f.isGlobal && <span> · Org-wide</span>}
+                        </div>
+                      </div>
+                      <div onClick={(e) => e.stopPropagation()} style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+                        {folderAttachable && !isRenaming && (
+                          <button onClick={() => onSelectFolder(f)} style={{ padding: '5px 10px', borderRadius: 6, background: isActive ? '#5CA868' : 'var(--navy)', color: 'white', border: 'none', fontSize: 11, fontWeight: 500, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                            {isActive ? 'Active' : 'Use'}
+                          </button>
+                        )}
+                        {canEdit && !isRenaming && (
+                          <button title="Rename" onClick={() => { setRenamingFolderId(f.id); setRenameDraft(f.name); }} style={{ padding: 5, borderRadius: 6, background: 'transparent', border: '1px solid var(--border)', cursor: 'pointer', display: 'flex' }}><Edit3 size={12} style={{ color: 'var(--text-muted)' }} /></button>
+                        )}
+                        {canEdit && !isRenaming && (
+                          <button title="Delete folder" onClick={() => onDeleteFolder?.(f.id)} style={{ padding: 5, borderRadius: 6, background: 'transparent', border: '1px solid var(--border)', cursor: 'pointer', display: 'flex' }}><Trash2 size={12} style={{ color: '#C65454' }} /></button>
+                        )}
+                        {isRenaming && (
+                          <>
+                            <button onClick={handleRenameConfirm} style={{ padding: '5px 10px', borderRadius: 6, background: 'var(--navy)', color: 'white', border: 'none', fontSize: 11, cursor: 'pointer' }}>Save</button>
+                            <button onClick={() => { setRenamingFolderId(null); setRenameDraft(''); }} style={{ padding: '5px 10px', borderRadius: 6, background: 'white', color: 'var(--text-muted)', border: '1px solid var(--border)', fontSize: 11, cursor: 'pointer' }}>Cancel</button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-muted)', padding: '20px 4px 6px' }}>
+                {currentFolderId ? 'Documents in this folder' : 'All documents'}
+              </div>
+            </div>
+          )}
+
+          {filteredDocs.length === 0 && filteredFolders.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '48px 20px', color: 'var(--text-muted)' }}>
+              <FolderOpen size={36} style={{ margin: '0 auto 14px', opacity: 0.4 }} />
+              <div style={{ fontSize: 15, fontWeight: 500 }}>
+                {search ? 'No matches for your search' : currentFolder ? 'This folder is empty' : 'No documents yet'}
+              </div>
+              {!search && !currentFolder && <div style={{ fontSize: 12, marginTop: 6 }}>Upload a document or create a folder to get started.</div>}
+              {!search && currentFolder && <div style={{ fontSize: 12, marginTop: 6 }}>Add a document to this folder via New Document.</div>}
+            </div>
+          ) : filteredDocs.length === 0 && !currentFolderId ? null : (
+            filteredDocs.map(d => {
+              const isOwner = d.ownerId === currentUserId;
+              const canEdit = isOrgAdmin || isOwner || !d.ownerId; // legacy
+              const ownerPill = d.isGlobal
+                ? { bg: 'rgba(201,168,76,0.18)', color: '#9A7A22', border: 'rgba(201,168,76,0.45)', label: 'Org-wide' }
+                : isOwner
+                  ? { bg: '#F0F3F6', color: '#1E3A8A', border: '#D8DFE9', label: 'Your document' }
+                  : { bg: '#F8F4ED', color: '#6B7885', border: '#E5E0D3', label: `By ${d.ownerName || 'Member'}` };
+              return (
+              <div key={d.id} style={{ padding: '16px 18px', borderRadius: 12, border: '1px solid var(--border)', marginTop: 10, transition: 'all 0.15s', background: '#fff' }}
+                onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 3px 14px rgba(10,36,99,0.06)'; e.currentTarget.style.borderColor = 'var(--navy)'; }}
+                onMouseLeave={e => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.borderColor = 'var(--border)'; }}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-start gap-3" style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ width: 40, height: 40, borderRadius: 10, backgroundColor: d.isGlobal ? 'rgba(201,168,76,0.15)' : 'var(--ice-warm)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <File size={18} style={{ color: d.isGlobal ? '#9A7A22' : 'var(--navy)' }} />
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{d.name}</span>
+                        {d.ownerId && (
+                          <span
+                            title={d.isGlobal ? 'Shared with the whole organisation' : isOwner ? 'Only visible to you' : `Owned by ${d.ownerName}`}
+                            style={{ fontSize: 10, padding: '2px 8px', borderRadius: 999, background: ownerPill.bg, color: ownerPill.color, border: `1px solid ${ownerPill.border}`, fontWeight: 600, letterSpacing: '0.02em' }}
+                          >
+                            {ownerPill.label}
+                          </span>
+                        )}
+                        {d.addedFromChat && (
+                          <span style={{ fontSize: 10, fontWeight: 500, padding: '2px 8px', borderRadius: 999, background: 'var(--ice-warm)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}>Added from chat</span>
+                        )}
+                      </div>
+                      {d.description && <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4, lineHeight: 1.55 }}>{d.description}</p>}
+                      <div className="flex items-center gap-3 flex-wrap" style={{ marginTop: 8 }}>
+                        <span className="flex items-center gap-1" style={{ fontSize: 11, color: 'var(--text-muted)' }}><FileText size={12} /> {d.fileName}</span>
+                        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{d.fileSize}</span>
+                        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Created {d.createdAt}</span>
+                        {(() => {
+                          // Show folder pill at root view only — inside a folder
+                          // the breadcrumb already tells the user where they are.
+                          if (currentFolderId || !d.folderId) return null;
+                          const f = visibleFolders.find((x) => x.id === d.folderId);
+                          if (!f) return null;
+                          return (
+                            <span
+                              onClick={(e) => { e.stopPropagation(); setCurrentFolderId(f.id); }}
+                              title={`Open folder ${f.name}`}
+                              style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--navy)', cursor: 'pointer', padding: '2px 8px', borderRadius: 999, background: 'rgba(10,36,99,0.06)', border: '1px solid rgba(10,36,99,0.18)' }}
+                            >
+                              <Folder size={11} /> {f.name}
+                            </span>
+                          );
+                        })()}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex flex-col items-end gap-2" style={{ flexShrink: 0 }}>
+                    <div className="flex items-center gap-1">
+                      {onSelect && (
+                        <button onClick={() => onSelect(d)} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '6px 14px', borderRadius: 6, backgroundColor: activeDocument?.id === d.id ? '#5CA868' : 'var(--navy)', color: 'white', border: 'none', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}>
+                          {activeDocument?.id === d.id ? <><CheckCircle size={12} /> Active</> : 'Use'}
+                        </button>
+                      )}
+                      {canEdit && (
+                        <button onClick={() => onEdit(d)} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '6px 11px', borderRadius: 6, backgroundColor: onSelect ? 'transparent' : 'var(--navy)', color: onSelect ? 'var(--navy)' : 'white', border: onSelect ? '1px solid var(--border)' : 'none', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}><Edit3 size={12} /> Edit</button>
+                      )}
+                      {canEdit && (
+                        <button onClick={() => onDelete(d.id)} style={{ padding: 6, borderRadius: 6, background: 'none', border: '1px solid var(--border)', cursor: 'pointer', display: 'flex' }} title="Delete document"><Trash2 size={13} style={{ color: '#C65454' }} /></button>
+                      )}
+                    </div>
+                    {isOrgAdmin && (
+                      <div
+                        onClick={() => onToggleGlobal?.(d.id, !d.isGlobal)}
+                        title={d.isGlobal ? 'Turn off — make personal again' : 'Share with entire organisation'}
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '3px 4px 3px 10px', borderRadius: 999, background: d.isGlobal ? 'rgba(201,168,76,0.12)' : 'var(--ice-warm)', border: '1px solid ' + (d.isGlobal ? 'rgba(201,168,76,0.35)' : 'var(--border)'), cursor: 'pointer', transition: 'all 120ms' }}
+                      >
+                        <span style={{ fontSize: 10, fontWeight: 600, color: d.isGlobal ? '#9A7A22' : 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                          {d.isGlobal ? 'Shared org-wide' : 'Share org-wide'}
+                        </span>
+                        <span style={{ width: 28, height: 16, borderRadius: 999, background: d.isGlobal ? 'var(--navy)' : '#CBD5E1', position: 'relative', transition: 'background 150ms', flexShrink: 0 }}>
+                          <span style={{ position: 'absolute', top: 2, left: d.isGlobal ? 14 : 2, width: 12, height: 12, borderRadius: '50%', background: '#fff', boxShadow: '0 1px 2px rgba(0,0,0,0.2)', transition: 'left 150ms' }} />
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+              );
+            })
+          )}
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 
@@ -4693,7 +4402,7 @@ INSTRUCTIONS:
           is active so the sidebar stays visible but the chat UI is replaced.
           When initialView === 'home' the tile launcher takes over the area
           inside this same shell (top bar + sidebar still rendered). */}
-      <div style={{ flex: 1, display: (showTeamPage || showWorkspacesPanel || showWorkflowsPanel || editingWorkflow || showDocumentVaultPanel || showKnowledgePacksPanel) ? 'none' : 'flex', flexDirection: 'column', minWidth: 0 }}>
+      <div style={{ flex: 1, display: (showTeamPage || showWorkspacesPanel || showWorkflowsPanel || editingWorkflow) ? 'none' : 'flex', flexDirection: 'column', minWidth: 0 }}>
         <TopNav plan={plan} usage={usage} onOpenSidebar={() => setSidebarOpen(true)} />
 
         {initialView === 'home' ? (
