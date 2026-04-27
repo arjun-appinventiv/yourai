@@ -1915,6 +1915,64 @@ function EditKnowledgePackModal({ pack, onClose, onSave }) {
 // Folders are a single-level grouping (no nesting). Root view shows
 // folder tiles + uncategorised docs. Drilling in shows that folder's
 // docs only, with a breadcrumb back to root.
+/* ─── Reusable filter chip with popover (P8 v1) ───
+   Used by the Document Vault toolbar for Date / Uploader / Type / Sort. */
+function FilterChip({ icon: Icon, label, value, isActive, isOpen, onToggle, onClose, options, selectedId, onPick }) {
+  return (
+    <span style={{ position: 'relative' }}>
+      <button
+        onClick={onToggle}
+        style={{
+          display: 'inline-flex', alignItems: 'center', gap: 6,
+          height: 32, padding: '0 12px', borderRadius: 999,
+          border: '1px solid ' + (isActive ? 'var(--navy)' : 'var(--border)'),
+          background: isActive ? 'rgba(10,36,99,0.04)' : '#fff',
+          fontSize: 12, color: 'var(--text-secondary)',
+          cursor: 'pointer', fontFamily: "'DM Sans', sans-serif",
+        }}
+      >
+        <Icon size={12} style={{ color: 'var(--text-muted)' }} />
+        <span style={{ color: 'var(--text-muted)' }}>{label}:</span>
+        <strong style={{ color: isActive ? 'var(--navy)' : 'var(--text-primary)', fontWeight: 500 }}>{value}</strong>
+        <ChevronDown size={11} style={{ color: 'var(--text-muted)' }} />
+      </button>
+      {isOpen && (
+        <>
+          <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 19 }} />
+          <div style={{ position: 'absolute', top: 'calc(100% + 4px)', left: 0, minWidth: 200, background: '#fff', border: '1px solid var(--border)', borderRadius: 8, boxShadow: '0 6px 20px rgba(15,23,42,0.08)', padding: 4, zIndex: 20, maxHeight: 320, overflowY: 'auto' }}>
+            {options.map((o) => {
+              const isSelected = selectedId === o.id;
+              return (
+                <button
+                  key={String(o.id)}
+                  onClick={() => onPick(o.id)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 8,
+                    width: '100%', padding: '8px 10px',
+                    background: 'none', border: 'none',
+                    fontSize: 12, color: 'var(--text-primary)',
+                    cursor: 'pointer', textAlign: 'left', borderRadius: 6,
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(15,23,42,0.04)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = 'none'; }}
+                >
+                  <span style={{ width: 14, display: 'inline-flex', justifyContent: 'center' }}>
+                    {isSelected && <Check size={12} style={{ color: 'var(--navy)' }} />}
+                  </span>
+                  <span style={{ flex: 1 }}>{o.label}</span>
+                  {typeof o.count === 'number' && (
+                    <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>{o.count}</span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </>
+      )}
+    </span>
+  );
+}
+
 function DocumentVaultPanel({
   documents, folders, onClose, onCreateNew, onCreateFolder, onRenameFolder, onDeleteFolder,
   onUploadFolder,
@@ -1932,6 +1990,31 @@ function DocumentVaultPanel({
   const [renameDraft, setRenameDraft] = useState('');
   const [openMenuFor, setOpenMenuFor] = useState(null); // doc id
   const [expandedSet, setExpandedSet] = useState(() => new Set());
+
+  // ─── Find / search filters (P8 v1) ───
+  // Filter chips operate on the same scoped doc set as the table; they
+  // narrow what's rendered without changing the folder tree navigation.
+  // Limit chip in particular handles "biggest file" / "smallest file"
+  // style natural-language queries from the Ask-anything parser.
+  const [dateFilter, setDateFilter]    = useState('any');   // 'any' | '7d' | '30d' | 'year'
+  const [uploaderFilter, setUploaderFilter] = useState(null); // null | userId
+  const [typeFilter, setTypeFilter]    = useState(null);    // null | 'PDF' | 'DOCX' | 'XLSX' | other
+  const [sortBy, setSortBy]            = useState('recent'); // 'recent' | 'name' | 'size-desc' | 'size-asc'
+  const [resultLimit, setResultLimit]  = useState(null);    // null = unlimited
+  const [askQuery, setAskQuery]        = useState('');
+  const [askLoading, setAskLoading]    = useState(false);
+  const [askExplanation, setAskExplanation] = useState('');
+  const [openFilterMenu, setOpenFilterMenu] = useState(null); // 'date' | 'uploader' | 'type' | 'sort' | null
+
+  const clearAllFilters = () => {
+    setDateFilter('any');
+    setUploaderFilter(null);
+    setTypeFilter(null);
+    setSortBy('recent');
+    setResultLimit(null);
+    setAskExplanation('');
+    setAskQuery('');
+  };
 
   // ─── Visibility (role + isGlobal) ───
   const visibleDocs = useMemo(() => {
@@ -2023,15 +2106,89 @@ function DocumentVaultPanel({
     return scopedDocs;
   }, [scopedDocs, currentFolderId]);
 
+  // Owners list (for the Uploader filter dropdown).
+  const docOwners = useMemo(() => {
+    const map = new Map();
+    visibleDocs.forEach((d) => {
+      if (!d.ownerId) return;
+      if (!map.has(d.ownerId)) map.set(d.ownerId, { id: d.ownerId, name: d.ownerName || 'Member', count: 0 });
+      map.get(d.ownerId).count += 1;
+    });
+    return Array.from(map.values()).sort((a, b) => b.count - a.count);
+  }, [visibleDocs]);
+
+  // Helpers used by the chip filters.
+  const parseSizeMb = (s) => {
+    if (!s) return 0;
+    const m = String(s).match(/([\d.]+)\s*(KB|MB|GB)?/i);
+    if (!m) return 0;
+    const n = parseFloat(m[1]);
+    const unit = (m[2] || 'MB').toUpperCase();
+    return unit === 'KB' ? n / 1024 : unit === 'GB' ? n * 1024 : n;
+  };
+  const parseDate = (s) => {
+    if (!s) return 0;
+    const t = Date.parse(s);
+    return Number.isFinite(t) ? t : 0;
+  };
+  const isWithin = (createdAt, period) => {
+    if (period === 'any') return true;
+    const t = parseDate(createdAt);
+    if (!t) return false;
+    const now = Date.now();
+    const day = 24 * 60 * 60 * 1000;
+    if (period === '7d')   return now - t <= 7 * day;
+    if (period === '30d')  return now - t <= 30 * day;
+    if (period === 'year') return now - t <= 365 * day;
+    return true;
+  };
+
   const filteredDocs = useMemo(() => {
-    if (!search.trim()) return folderDocs;
-    const q = search.toLowerCase();
-    return folderDocs.filter((d) =>
-      d.name.toLowerCase().includes(q)
-      || (d.description || '').toLowerCase().includes(q)
-      || (d.fileName || '').toLowerCase().includes(q),
-    );
-  }, [folderDocs, search]);
+    let out = folderDocs;
+
+    // Free-text search
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      out = out.filter((d) =>
+        d.name.toLowerCase().includes(q)
+        || (d.description || '').toLowerCase().includes(q)
+        || (d.fileName || '').toLowerCase().includes(q),
+      );
+    }
+    // Date filter
+    if (dateFilter !== 'any') out = out.filter((d) => isWithin(d.createdAt, dateFilter));
+    // Uploader filter
+    if (uploaderFilter) out = out.filter((d) => d.ownerId === uploaderFilter);
+    // Type filter (matches against the file extension)
+    if (typeFilter) {
+      const target = typeFilter.toLowerCase();
+      out = out.filter((d) => {
+        const fn = (d.fileName || '').toLowerCase();
+        const ext = fn.lastIndexOf('.') !== -1 ? fn.slice(fn.lastIndexOf('.') + 1) : '';
+        return ext === target;
+      });
+    }
+    // Sort
+    if (sortBy === 'name') {
+      out = [...out].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    } else if (sortBy === 'size-desc') {
+      out = [...out].sort((a, b) => parseSizeMb(b.fileSize) - parseSizeMb(a.fileSize));
+    } else if (sortBy === 'size-asc') {
+      out = [...out].sort((a, b) => parseSizeMb(a.fileSize) - parseSizeMb(b.fileSize));
+    } else {
+      // 'recent' — newest first by parsed createdAt
+      out = [...out].sort((a, b) => parseDate(b.createdAt) - parseDate(a.createdAt));
+    }
+    // Limit (used by NL queries like "biggest file" → limit 1)
+    if (resultLimit && resultLimit > 0) out = out.slice(0, resultLimit);
+    return out;
+  }, [folderDocs, search, dateFilter, uploaderFilter, typeFilter, sortBy, resultLimit]);
+
+  const activeFilterCount = (dateFilter !== 'any' ? 1 : 0)
+    + (uploaderFilter ? 1 : 0)
+    + (typeFilter ? 1 : 0)
+    + (sortBy !== 'recent' ? 1 : 0)
+    + (resultLimit ? 1 : 0);
 
   const docCountByFolder = useMemo(() => {
     const map = {};
@@ -2047,6 +2204,89 @@ function DocumentVaultPanel({
 
   // ─── Folder selection / actions ───
   const folderAttachable = typeof onSelectFolder === 'function';
+
+  // ─── "Ask anything" natural-language → filter parser ───
+  // Wendy's killer query: "what is the biggest at-close download I have?"
+  // We POST to /api/chat with a JSON-only schema and a tiny system prompt
+  // that asks the model to map the natural-language query onto the
+  // structured filter shape we already use. If parsing fails or the
+  // model returns garbage, we fall back to using the query as a
+  // free-text search.
+  const handleAskAnything = async () => {
+    const q = askQuery.trim();
+    if (!q || askLoading) return;
+    setAskLoading(true);
+    setAskExplanation('');
+    try {
+      const ownersList = docOwners.map((o) => `${o.name} (id=${o.id})`).join(', ') || '(none)';
+      const systemPrompt = `You translate natural-language document-library queries into a JSON filter object. Output ONLY a single JSON object — no prose, no code fences. Schema:
+{
+  "search": string | null,
+  "dateFilter": "any" | "7d" | "30d" | "year",
+  "uploaderId": string | null,
+  "fileType": "PDF" | "DOCX" | "XLSX" | "TXT" | null,
+  "sortBy": "recent" | "name" | "size-desc" | "size-asc",
+  "limit": number | null,
+  "explanation": string
+}
+
+Available uploaders: ${ownersList}.
+Available file types in this library: PDF, DOCX, XLSX, TXT.
+Today's date: ${new Date().toISOString().slice(0, 10)}.
+
+Rules:
+- If user asks for "biggest" or "largest", set sortBy="size-desc" and limit=1 (or N if explicit).
+- If user asks for "smallest", sortBy="size-asc" and limit=1.
+- If they say "this month" or "past 30 days", dateFilter="30d". "Past week" → "7d". "This year" → "year".
+- If they name an uploader by full or partial name, set uploaderId to the matching id from the list above. If no match, leave null.
+- "Search" is a substring of filenames/descriptions if specific keywords are mentioned (e.g. "NDA", "Acme"). Otherwise null.
+- "explanation" is one short sentence shown to the user describing what you're filtering for.`;
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: q,
+          system: systemPrompt,
+          history: [],
+        }),
+      });
+      if (!response.ok || !response.body) throw new Error(`status ${response.status}`);
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let raw = '';
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        raw += decoder.decode(value, { stream: true });
+      }
+      raw += decoder.decode();
+      // The Edge may return prose around the JSON; extract the first {...} block.
+      const jsonMatch = raw.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) throw new Error('no json');
+      const parsed = JSON.parse(jsonMatch[0]);
+      // Apply
+      if (parsed.search) setSearch(parsed.search); else setSearch('');
+      if (['any', '7d', '30d', 'year'].includes(parsed.dateFilter)) setDateFilter(parsed.dateFilter);
+      else setDateFilter('any');
+      setUploaderFilter(parsed.uploaderId || null);
+      setTypeFilter(parsed.fileType || null);
+      if (['recent', 'name', 'size-desc', 'size-asc'].includes(parsed.sortBy)) setSortBy(parsed.sortBy);
+      else setSortBy('recent');
+      setResultLimit(typeof parsed.limit === 'number' && parsed.limit > 0 ? parsed.limit : null);
+      setAskExplanation(parsed.explanation || '');
+    } catch (_err) {
+      // Fallback: just treat the query as a substring search.
+      setSearch(q);
+      setDateFilter('any');
+      setUploaderFilter(null);
+      setTypeFilter(null);
+      setSortBy('recent');
+      setResultLimit(null);
+      setAskExplanation(`Couldn't parse that as a filter — searching for "${q}" instead.`);
+    } finally {
+      setAskLoading(false);
+    }
+  };
 
   const handleCreateFolderConfirm = () => {
     const name = newFolderName.trim();
@@ -2327,6 +2567,142 @@ function DocumentVaultPanel({
                   <span style={{ color: 'var(--text-muted)' }}>{counts.total} {counts.total === 1 ? 'document' : 'documents'} · {visibleFolders.length} {visibleFolders.length === 1 ? 'folder' : 'folders'}</span>
                 )}
               </div>
+            </div>
+
+            {/* ─── Ask anything (P8 — Wendy's "biggest at-close download" use case) ─── */}
+            <div style={{ maxWidth: 1080, margin: '0 auto', padding: '4px 28px 8px' }}>
+              <div style={{ position: 'relative' }}>
+                <Sparkles size={14} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--gold)' }} />
+                <input
+                  value={askQuery}
+                  onChange={(e) => setAskQuery(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleAskAnything(); }}
+                  placeholder='Ask anything across your library — try "biggest file" or "PDFs uploaded this month"'
+                  disabled={askLoading}
+                  style={{
+                    width: '100%', height: 44,
+                    borderRadius: 12,
+                    border: '1px solid var(--border)',
+                    paddingLeft: 38, paddingRight: 110,
+                    fontSize: 14, outline: 'none',
+                    boxSizing: 'border-box',
+                    fontFamily: "'DM Sans', sans-serif",
+                    background: '#fff',
+                    color: 'var(--text-primary)',
+                    boxShadow: '0 1px 2px rgba(15,23,42,0.04)',
+                  }}
+                />
+                <button
+                  onClick={handleAskAnything}
+                  disabled={askLoading || !askQuery.trim()}
+                  style={{
+                    position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)',
+                    height: 32, padding: '0 14px',
+                    borderRadius: 8, border: 'none',
+                    background: askLoading || !askQuery.trim() ? '#9CA3AF' : 'var(--navy)',
+                    color: '#fff', fontSize: 12, fontWeight: 500,
+                    cursor: askLoading || !askQuery.trim() ? 'not-allowed' : 'pointer',
+                    fontFamily: "'DM Sans', sans-serif",
+                  }}
+                >
+                  {askLoading ? 'Thinking…' : 'Ask'}
+                </button>
+              </div>
+              {askExplanation && (
+                <div style={{ marginTop: 8, padding: '8px 12px', borderRadius: 8, background: 'rgba(201,168,76,0.12)', border: '1px solid rgba(201,168,76,0.35)', fontSize: 12, color: '#7A5C0A', display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Sparkles size={12} style={{ color: 'var(--gold)', flexShrink: 0 }} />
+                  <span style={{ flex: 1 }}>{askExplanation}</span>
+                  <button onClick={() => { clearAllFilters(); }} style={{ background: 'none', border: 'none', padding: 0, fontSize: 11, fontWeight: 500, color: '#7A5C0A', cursor: 'pointer', textDecoration: 'underline', whiteSpace: 'nowrap' }}>Clear</button>
+                </div>
+              )}
+            </div>
+
+            {/* ─── Filter chips row (P8 — Date / Uploader / Type / Sort) ─── */}
+            <div style={{ maxWidth: 1080, margin: '0 auto', padding: '4px 28px 12px', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              {/* Date */}
+              <FilterChip
+                icon={Calendar}
+                label="Date"
+                value={({ any: 'Any time', '7d': 'Past 7 days', '30d': 'Past 30 days', year: 'This year' })[dateFilter]}
+                isActive={dateFilter !== 'any'}
+                isOpen={openFilterMenu === 'date'}
+                onToggle={() => setOpenFilterMenu(openFilterMenu === 'date' ? null : 'date')}
+                onClose={() => setOpenFilterMenu(null)}
+                options={[
+                  { id: 'any',  label: 'Any time' },
+                  { id: '7d',   label: 'Past 7 days' },
+                  { id: '30d',  label: 'Past 30 days' },
+                  { id: 'year', label: 'This year' },
+                ]}
+                selectedId={dateFilter}
+                onPick={(id) => { setDateFilter(id); setOpenFilterMenu(null); }}
+              />
+              {/* Uploader */}
+              <FilterChip
+                icon={User}
+                label="Uploaded by"
+                value={uploaderFilter ? (docOwners.find((o) => o.id === uploaderFilter)?.name || 'Member') : 'Anyone'}
+                isActive={!!uploaderFilter}
+                isOpen={openFilterMenu === 'uploader'}
+                onToggle={() => setOpenFilterMenu(openFilterMenu === 'uploader' ? null : 'uploader')}
+                onClose={() => setOpenFilterMenu(null)}
+                options={[
+                  { id: null, label: 'Anyone', count: visibleDocs.length },
+                  ...docOwners.map((o) => ({ id: o.id, label: o.name, count: o.count })),
+                ]}
+                selectedId={uploaderFilter}
+                onPick={(id) => { setUploaderFilter(id); setOpenFilterMenu(null); }}
+              />
+              {/* Type */}
+              <FilterChip
+                icon={FileText}
+                label="Type"
+                value={typeFilter ? typeFilter.toUpperCase() : 'Any'}
+                isActive={!!typeFilter}
+                isOpen={openFilterMenu === 'type'}
+                onToggle={() => setOpenFilterMenu(openFilterMenu === 'type' ? null : 'type')}
+                onClose={() => setOpenFilterMenu(null)}
+                options={[
+                  { id: null,   label: 'Any type' },
+                  { id: 'pdf',  label: 'PDF' },
+                  { id: 'docx', label: 'DOCX' },
+                  { id: 'xlsx', label: 'XLSX' },
+                  { id: 'txt',  label: 'TXT' },
+                ]}
+                selectedId={typeFilter}
+                onPick={(id) => { setTypeFilter(id); setOpenFilterMenu(null); }}
+              />
+              {/* Sort */}
+              <FilterChip
+                icon={ArrowUp}
+                label="Sort"
+                value={({ recent: 'Recently uploaded', name: 'Name (A→Z)', 'size-desc': 'Largest first', 'size-asc': 'Smallest first' })[sortBy]}
+                isActive={sortBy !== 'recent'}
+                isOpen={openFilterMenu === 'sort'}
+                onToggle={() => setOpenFilterMenu(openFilterMenu === 'sort' ? null : 'sort')}
+                onClose={() => setOpenFilterMenu(null)}
+                options={[
+                  { id: 'recent',    label: 'Recently uploaded' },
+                  { id: 'name',      label: 'Name (A→Z)' },
+                  { id: 'size-desc', label: 'Largest first' },
+                  { id: 'size-asc',  label: 'Smallest first' },
+                ]}
+                selectedId={sortBy}
+                onPick={(id) => { setSortBy(id); setOpenFilterMenu(null); }}
+              />
+              {activeFilterCount > 0 && (
+                <button
+                  onClick={clearAllFilters}
+                  style={{ padding: '6px 10px', borderRadius: 999, border: '1px dashed var(--border)', background: 'transparent', fontSize: 11, color: 'var(--text-muted)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                >
+                  <X size={11} /> Clear filters
+                </button>
+              )}
+              {resultLimit && (
+                <span style={{ display: 'inline-flex', alignItems: 'center', padding: '4px 10px', borderRadius: 999, background: 'rgba(10,36,99,0.06)', color: 'var(--navy)', fontSize: 11, fontWeight: 500 }}>
+                  Top {resultLimit}
+                </span>
+              )}
             </div>
 
             {/* Subfolder chip strip */}
@@ -2952,20 +3328,46 @@ function MessageBubble({ msg }) {
   // button dispatches a window event that ChatView listens for at the
   // top level so MessageBubble doesn't need a callback prop.
   if (msg.isUploadAddedNote) {
+    // Truncate filename with ellipsis but keep the full name on hover
+    // (long PDF names like "[#AULP-4] KFC SPWA _ AMR Login..." were
+    // overflowing the pill and pushing the action onto a second line).
+    const fullName = msg.uploadedFileName || 'doc';
+    const displayName = fullName.length > 38 ? fullName.slice(0, 35) + '…' : fullName;
     return (
       <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16, marginTop: -8 }}>
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 14px', borderRadius: 999, background: '#F0F3F6', border: '1px solid #D6DDE4', maxWidth: 560 }}>
-          <File size={12} style={{ color: '#1E3A8A', flexShrink: 0 }} />
-          <span style={{ fontSize: 12, color: '#1E3A8A', lineHeight: 1.5 }}>
-            Added <strong style={{ fontWeight: 600 }}>{msg.uploadedFileName || 'doc'}</strong>
-            {msg.uploadedDocIndex ? ` as Document ${msg.uploadedDocIndex}` : ''}. New topic?{' '}
-            <button
-              onClick={() => { try { window.dispatchEvent(new CustomEvent('yourai:start-new-chat')); } catch { /* ignore */ } }}
-              style={{ background: 'none', border: 'none', padding: 0, fontSize: 12, fontWeight: 600, color: '#0A2463', cursor: 'pointer', textDecoration: 'underline' }}
-            >
-              Start a new chat →
-            </button>
+        <div
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 10,
+            padding: '7px 14px 7px 12px', borderRadius: 999,
+            background: '#F0F3F6', border: '1px solid #D6DDE4',
+            maxWidth: '90%',
+          }}
+        >
+          {/* Doc icon tile — small navy chip, separates icon from text */}
+          <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 22, height: 22, borderRadius: 6, background: 'rgba(10,36,99,0.08)', flexShrink: 0 }}>
+            <File size={12} style={{ color: '#0A2463' }} />
           </span>
+          {/* Body — single line, ellipsised */}
+          <span
+            title={fullName}
+            style={{ fontSize: 12, color: '#1E3A8A', lineHeight: 1.4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 480 }}
+          >
+            <strong style={{ fontWeight: 600 }}>{displayName}</strong>
+            <span style={{ color: '#5B6877', fontWeight: 400 }}>
+              {msg.uploadedDocIndex ? ` · Document ${msg.uploadedDocIndex}` : ''}
+            </span>
+          </span>
+          {/* Vertical divider */}
+          <span style={{ width: 1, height: 14, background: '#C5CDD7', flexShrink: 0 }} />
+          {/* Action — sits inline on the right, no wrap */}
+          <button
+            onClick={() => { try { window.dispatchEvent(new CustomEvent('yourai:start-new-chat')); } catch { /* ignore */ } }}
+            style={{ background: 'none', border: 'none', padding: 0, fontSize: 12, fontWeight: 500, color: '#0A2463', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}
+            onMouseEnter={(e) => { e.currentTarget.style.textDecoration = 'underline'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.textDecoration = 'none'; }}
+          >
+            New topic? Start fresh →
+          </button>
         </div>
       </div>
     );
