@@ -2117,6 +2117,66 @@ export default function GlobalKnowledgeBase() {
                   }}
                 >{persona.fallbackMessage}</div>
               </div>
+              {/* Per-Persona Response Format Configuration */}
+              <div className="p-5 rounded-xl" style={{ backgroundColor: 'white', border: '1px solid var(--border)' }}>
+                <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center gap-2">
+                    <Users size={16} style={{ color: 'var(--navy)' }} />
+                    <label className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Per-Persona Response Format</label>
+                    <InfoButton title="Per-Persona Format — Tailored Responses by Role">
+                      <InfoSection title="What is this?">
+                        <InfoText>Different users need different kinds of answers. A <strong>Partner</strong> wants executive summaries and risk assessments. A <strong>Paralegal</strong> wants checklists and clear instructions. This section lets you configure how the AI tailors its response format for each user role selected during onboarding.</InfoText>
+                      </InfoSection>
+                      <InfoSection title="How does it work?">
+                        <InfoList items={[
+                          "When a user completes onboarding, they select their role (Step 1)",
+                          "That role is stored in their profile and sent with every message",
+                          "The AI appends the persona-specific modifiers to the system prompt",
+                          "Tone and format rules for the persona override the intent defaults",
+                          "If a persona is disabled, the AI uses the intent defaults instead",
+                        ]} />
+                      </InfoSection>
+                      <InfoSection title="Priority order">
+                        <InfoText>Intent system prompt → Persona prompt modifier → Persona tone → Persona format rules. The persona settings layer ON TOP of the intent — they don't replace it.</InfoText>
+                      </InfoSection>
+                      <InfoExample label="Example">User selects "Paralegal / Legal Assistant" during onboarding → AI uses conversational tone, includes checklists, and explains legal terms — even in Contract Review mode.</InfoExample>
+                    </InfoButton>
+                  </div>
+                  <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{Object.values(personaFormats).filter(p => p.enabled).length} of {USER_PERSONAS.length} active</span>
+                </div>
+                <p className="text-xs mb-4" style={{ color: 'var(--text-muted)' }}>Configure how Alex adapts its response style for each user role. These settings layer on top of the intent-level prompt — they don't replace it.</p>
+
+                <div className="space-y-3">
+                  {USER_PERSONAS.map(up => {
+                    const fmt = personaFormats[up.id];
+                    const Icon = up.icon;
+                    return (
+                      <div key={up.id} className="rounded-xl overflow-hidden" style={{ border: '1px solid var(--border)', opacity: fmt.enabled ? 1 : 0.55 }}>
+                        <div className="flex items-center gap-3 px-4 py-3" style={{ backgroundColor: '#FAFBFC' }}>
+                          <div className="flex items-center justify-center rounded-lg" style={{ width: 32, height: 32, backgroundColor: fmt.enabled ? 'var(--navy)' : 'var(--border)', flexShrink: 0 }}>
+                            <Icon size={16} style={{ color: fmt.enabled ? 'white' : 'var(--text-muted)' }} />
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{up.label}</span>
+                              <span className="px-1.5 py-0.5 rounded text-xs" style={{ backgroundColor: fmt.enabled ? '#E7F3E9' : '#F0F3F6', color: fmt.enabled ? '#5CA868' : 'var(--text-muted)', fontSize: 10, fontWeight: 600 }}>
+                                {fmt.enabled ? 'ACTIVE' : 'OFF'}
+                              </span>
+                              <span className="px-1.5 py-0.5 rounded text-xs" style={{ backgroundColor: 'rgba(10,36,99,0.06)', color: 'var(--navy)', fontSize: 10 }}>
+                                {TONE_OPTIONS.find(t => t.id === fmt.tone)?.label || fmt.tone}
+                              </span>
+                            </div>
+                            <p className="text-xs truncate" style={{ color: 'var(--text-muted)', marginTop: 2 }}>{up.description}</p>
+                          </div>
+                          <span className="flex items-center gap-1 px-2 py-1 rounded text-xs" style={{ backgroundColor: '#F0F3F6', color: 'var(--text-muted)', border: '1px solid var(--border)' }}>
+                            <Lock size={10} /> Read-only
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
 
             {/* Right column — Global Knowledge Documents + Auto-Routing preview */}
