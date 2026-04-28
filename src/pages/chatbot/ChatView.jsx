@@ -853,9 +853,19 @@ function Sidebar({ activeKey, onGoHome, onOpenChat, onOpenPromptTemplates, onOpe
                     <div style={{ fontSize: 12, fontWeight: isActive ? 500 : 400, color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {t.title}
                     </div>
-                    <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>
-                      {t.updatedAt} &middot; {t.messageCount} msgs
-                    </div>
+                    {/* Content-match snippet — only present when the
+                        Search Chats query matched a message body (not the
+                        title). Lets the user see *what* hit so they don't
+                        have to open the thread to find out. */}
+                    {t.searchSnippet ? (
+                      <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1, fontStyle: 'italic', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {t.searchSnippet}
+                      </div>
+                    ) : (
+                      <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>
+                        {t.updatedAt} &middot; {t.messageCount} msgs
+                      </div>
+                    )}
                   </div>
                   {/* Delete — appears on hover */}
                   {isHov && totalThreads > 1 && (
@@ -3938,6 +3948,15 @@ export default function ChatView({ initialView = 'chat' }) {
   const [sessionDocContext, setSessionDocContext] = useState(null); // { name, content } — persisted doc for follow-up questions
   // ─── Intent system state ───
   const [activeIntent, setActiveIntent] = useState(DEFAULT_INTENT);
+  // Tracks whether the user has explicitly chosen the current intent (via
+  // a pill click, dropdown pick, or suggestion-banner accept). When true,
+  // the pre-flight find_document promotion and the General-Chat → specific
+  // auto-switch in sendMessage are skipped — the user's deliberate choice
+  // takes precedence over the keyword detector. Reset only when a new
+  // thread starts or the user picks something new. Without this, picking
+  // "General Chat" explicitly was silently overridden on send and the
+  // collapsed populated-chat pill flipped to a different intent label.
+  const [hasManualIntentPick, setHasManualIntentPick] = useState(false);
   const [isIntentDropdownOpen, setIsIntentDropdownOpen] = useState(false);
   const [suggestedIntent, setSuggestedIntent] = useState(null); // Smart suggestion from keyword detection
   const [suggestedIntents, setSuggestedIntents] = useState([]); // Multiple matches for user to pick
@@ -4043,6 +4062,7 @@ export default function ChatView({ initialView = 'chat' }) {
     setInput('');
     setSessionDocContext(null);
     setActiveIntent(DEFAULT_INTENT);
+    setHasManualIntentPick(false);
     setSuggestedIntent(null);
     setSuggestedIntents([]);
     setDismissedSuggestion(null);
@@ -4156,9 +4176,45 @@ export default function ChatView({ initialView = 'chat' }) {
     }
   }, [threads, activeThreadId]);
 
-  const filteredThreads = threads.filter(t =>
-    !threadSearch || t.title.toLowerCase().includes(threadSearch.toLowerCase()) || t.preview.toLowerCase().includes(threadSearch.toLowerCase())
-  );
+  // Sidebar Search Chats — hybrid match across title/preview AND message
+  // content. Title path stays cheap (no message-store walk); content path
+  // only runs when title misses, so the common no-query case is a no-op.
+  // Content match attaches a `searchSnippet` (~80 chars centred on the
+  // match) so the sidebar row can show *what* matched.
+  const filteredThreads = (() => {
+    if (!threadSearch) return threads;
+    const q = threadSearch.toLowerCase();
+    const SNIPPET_CTX = 30; // chars before / after the match
+    const SNIPPET_MAX = 80;
+    const buildSnippet = (text) => {
+      const idx = text.toLowerCase().indexOf(q);
+      if (idx < 0) return null;
+      const start = Math.max(0, idx - SNIPPET_CTX);
+      const end = Math.min(text.length, idx + q.length + SNIPPET_CTX);
+      let s = text.slice(start, end).replace(/\s+/g, ' ').trim();
+      if (start > 0) s = '…' + s;
+      if (end < text.length) s = s + '…';
+      return s.length > SNIPPET_MAX ? s.slice(0, SNIPPET_MAX - 1) + '…' : s;
+    };
+    return threads.reduce((acc, t) => {
+      const titleHit = (t.title || '').toLowerCase().includes(q);
+      const previewHit = (t.preview || '').toLowerCase().includes(q);
+      if (titleHit || previewHit) { acc.push(t); return acc; }
+      // Active-thread messages are kept in `messages` state; the per-thread
+      // ref lags by one render so we prefer the live state for the active id.
+      const msgs = t.id === activeThreadId
+        ? messages
+        : (threadMessagesRef.current[t.id] || THREAD_MESSAGES[t.id] || []);
+      for (const m of msgs) {
+        const c = m?.content;
+        if (typeof c === 'string' && c.toLowerCase().includes(q)) {
+          acc.push({ ...t, searchSnippet: buildSnippet(c) });
+          return acc;
+        }
+      }
+      return acc;
+    }, []);
+  })();
 
   // Keep per-thread message store in sync as messages change
   useEffect(() => {
@@ -4268,8 +4324,10 @@ export default function ChatView({ initialView = 'chat' }) {
     // Without this, "find Acme MSA" from general chat would still hit the
     // /api/chat fetch path and the LLM would prose-answer instead of
     // rendering the FileResultsCard.
+    // Skipped when the user manually picked General Chat — their explicit
+    // choice wins over keyword detection.
     let intentForFind = activeIntent;
-    if (activeIntent === 'general_chat' && trimmed.length >= 10) {
+    if (!hasManualIntentPick && activeIntent === 'general_chat' && trimmed.length >= 10) {
       const detected = detectIntent(trimmed, 'general_chat');
       if (detected === 'find_document') {
         intentForFind = 'find_document';
@@ -4373,8 +4431,12 @@ export default function ChatView({ initialView = 'chat' }) {
     // If the user is in General Chat but their message clearly matches a specific intent,
     // auto-switch to that intent BEFORE calling the LLM.
     // This is a hard block — not a soft LLM prompt suggestion.
+    // Skipped when the user manually picked General Chat from a pill or
+    // dropdown — keyword detection would otherwise silently override the
+    // deliberate choice and the populated-chat collapsed pill would flip
+    // to a different intent label after send (PM-reported regression).
     let effectiveIntent = activeIntent;
-    if (activeIntent === 'general_chat' && trimmed.length >= 10) {
+    if (!hasManualIntentPick && activeIntent === 'general_chat' && trimmed.length >= 10) {
       const detectedMatch = detectIntent(trimmed, 'general_chat');
       if (detectedMatch) {
         effectiveIntent = detectedMatch;
@@ -4780,7 +4842,7 @@ INSTRUCTIONS:
       const errMsg = { id: Date.now() + 1, sender: 'bot', content: safeMessage, timestamp: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }), sourceBadge: null };
       setMessages((prev) => [...prev, errMsg]);
     }
-  }, [isTyping, showEmptyState, messages, activeKnowledgePack, activeVaultDocument, pendingAttachments, activeThreadId, sessionState, activeIntent, documentVault, vaultFolders]);
+  }, [isTyping, showEmptyState, messages, activeKnowledgePack, activeVaultDocument, pendingAttachments, activeThreadId, sessionState, activeIntent, hasManualIntentPick, documentVault, vaultFolders]);
 
   const SUPPORTED_FILE_EXTENSIONS = [
     '.doc', '.docx', '.ppt', '.pptx', '.xls', '.xlsx',
@@ -5534,7 +5596,7 @@ INSTRUCTIONS:
                 <span>Looks like <strong style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{getIntentLabel(suggestedIntent)}</strong></span>
                 <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
                   <button
-                    onClick={() => { setActiveIntent(suggestedIntent); setSuggestedIntent(null); setSuggestedIntents([]); setDismissedSuggestion(null); }}
+                    onClick={() => { setActiveIntent(suggestedIntent); setHasManualIntentPick(true); setSuggestedIntent(null); setSuggestedIntents([]); setDismissedSuggestion(null); }}
                     style={{ fontSize: 12, padding: '4px 12px', border: '0.5px solid var(--border)', borderRadius: 999, background: 'white', color: 'var(--text-primary)', cursor: 'pointer', whiteSpace: 'nowrap' }}
                   >Yes, switch</button>
                   <button
@@ -5562,7 +5624,7 @@ INSTRUCTIONS:
                   {suggestedIntents.map(m => (
                     <button
                       key={m.intentId}
-                      onClick={() => { setActiveIntent(m.intentId); setSuggestedIntents([]); setSuggestedIntent(null); setDismissedSuggestion(null); }}
+                      onClick={() => { setActiveIntent(m.intentId); setHasManualIntentPick(true); setSuggestedIntents([]); setSuggestedIntent(null); setDismissedSuggestion(null); }}
                       style={{ fontSize: 12, padding: '5px 14px', border: '0.5px solid var(--border)', borderRadius: 999, background: 'white', color: 'var(--text-primary)', cursor: 'pointer', whiteSpace: 'nowrap', fontWeight: 500 }}
                     >{getIntentLabel(m.intentId)}</button>
                   ))}
@@ -5884,6 +5946,7 @@ INSTRUCTIONS:
                                 // one matter). The new intent only affects
                                 // the NEXT message.
                                 setActiveIntent(intent.id);
+                                setHasManualIntentPick(true);
                                 setIsIntentDropdownOpen(false);
                               }}
                               style={{
@@ -6051,6 +6114,7 @@ INSTRUCTIONS:
                         key={pill.id}
                         onClick={() => {
                           setActiveIntent(pill.id);
+                          setHasManualIntentPick(true);
                           if (pill.prefill) {
                             setInput(pill.prefill);
                             if (inputRef.current) inputRef.current.focus();
@@ -6109,7 +6173,7 @@ INSTRUCTIONS:
                             return (
                               <div
                                 key={intent.id}
-                                onClick={() => { setActiveIntent(intent.id); setIsEmptyMoreOpen(false); }}
+                                onClick={() => { setActiveIntent(intent.id); setHasManualIntentPick(true); setIsEmptyMoreOpen(false); }}
                                 style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 14px', cursor: 'pointer', fontSize: 13, color: isCurrent ? 'var(--text-primary)' : 'var(--text-secondary)', fontWeight: isCurrent ? 500 : 400, transition: 'background 100ms' }}
                                 onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--ice-warm)'; }}
                                 onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
