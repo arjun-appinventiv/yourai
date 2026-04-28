@@ -130,15 +130,81 @@ The main `ChatView` fetch was wrapped in a silent try/catch that funnelled every
 ### Sub-agents
 - `.claude/agents/aashna.md` — senior UX designer persona (Linear / Stripe / Vercel background) used for layout / hierarchy / spacing audits. Output format = diagnosis + prioritized fixes + paste-ready Claude Code implementation prompt. Invoked via the general-purpose agent this session; direct invocation after a Claude Code reload.
 
+### Tile-based home (`/chat/home`) — NEW 2026-04-27
+- Login default for non-externals now lands on `/chat/home` (was `/chat`). Externals still land on `/chat/workspaces`.
+- Six tiles, role-aware: General Chat · Workspaces · Document Vault · Workflows · Knowledge Packs · Invite Team. Each tile sets the matching panel's show-flag and (where applicable) navigates.
+- Hero: gold sparkle eyebrow + DM Serif H1 ("Hi {name}, what would you like to do?") + caption pointing to the new sidebar Home button.
+- Tile chrome (per aashna review 2026-04-27): page surface `#F4F5F7` (one step darker than card so the edge has something to push against), card border 1.5px `#DCE0E6`, etched static box-shadow, accent stripe demoted to 2px @ 0.55 opacity that saturates only on hover, hover lifts shadow depth (no border-colour swap — that read as "selected").
+- Implementation: `HomeTileLauncher` component lives inside `ChatView.jsx` and renders when `initialView === 'home'`. The chat-main-area display:none condition gates whichever panel is open.
+
+### Sidebar refresh — NEW 2026-04-27
+- New **Home** entry at the top of the workspace section → `/chat/home`.
+- Old **Dashboard** renamed → **Chat** (now opens `/chat`, the General Chat surface).
+- Active highlight is **dynamic**: `sidebarActiveKey` is derived from `initialView` + the show*Panel flags. Full-page panels (Vault / Packs / Workflows / Workspaces / Team / Prompts / Clients) take precedence over the underlying chat / home. Was previously hard-coded `active: true` on Home and never flipped.
+
+### Onboarding restructure — NEW 2026-04-27 (Wendy P1 + P2)
+- Cut to **two steps: Plan → Payment**. Role / practice area / firm size / primary state collection moved out of the active flow (renderStep1..4 stay defined for an eventual post-onboarding profile nudge). Wendy: "Now do I not trust those numbers because of the answers I gave?"
+- **Invited-user fast path**: `/chat/signup?invited=1&email=...&firm=...` marks the email pre-verified, locks both email and firm name (helper copy: "Set by the colleague who invited you — can't be changed"), skips the survey + payment entirely, lands directly on `/chat/home` with `viaInvite: true` stamped on the user profile.
+
+### Document Vault — full-page two-pane redesign (Aashna review 2026-04-27)
+- Was a 900px centered modal. Now a full-page surface mounted as a flex peer to the chat-main-area (same template as `WorkspacesPage` / `TeamPage`).
+- **Left rail** (280px, fixed): LIBRARY eyebrow → "All documents" pinned row → FOLDERS eyebrow → recursive folder tree with chevron expand/collapse, 16px depth indent, navy-tinted active row. Auto-expands ancestors of the active folder so the tree always reveals where the user is. Sticky "+ New folder" footer.
+- **Main area**: hero (eyebrow VAULT + DM Serif H1 = current folder name, caption walks parent breadcrumb) → sticky 56px toolbar → subfolder chip strip (horizontal pill chips, not a 220px tile grid) → documents table (6 cols at root: Name / Owner / Folder / Size / Modified / Actions; 5 cols inside a folder).
+- Owner pills, "from chat" badges, Edit / Delete / Share-org-wide all collapsed into a row-hover **kebab menu** so the row stays scannable.
+- Empty state: 56px circular icon + serif headline + ghost/primary CTA pair (Upload folder / + Document). Copy varies for root vs in-folder vs no-search-match.
+
+### Document Vault — folders, recursive upload, real content (Wendy P3 / P4 / P5)
+- **Nested folders** (subfolders): `VaultFolder.parentId` (nullable). Tree walk + breadcrumb that walks the parent trail (`All folders › Contracts › Acme Corp › MSA`). Default seed includes `Contracts › Acme Corp › MSA & Schedules` so nesting is visible day-one. Deleting a folder re-parents its direct children to the deleted folder's parent (no orphan subtree).
+- **Recursive folder upload**: new "Upload folder" button uses `webkitdirectory`; walks each `File.webkitRelativePath`, recreates the directory tree, dedupes by name+parent. Toast confirms "Uploaded N files with folder structure preserved".
+- **UI labels**: `+ Folder` / `+ Document` (was "New Folder" / "New Document") per Wendy's "just folders. like an explorer."
+- **Real PDFs as seed docs**: 4 actual PDFs in `public/sample-docs/` (MSA, Employee Handbook, Series B Term Sheet, Schedule A SLAs), generated from `src/data/sampleVaultContent.ts` via `/tmp/gen-sample-pdfs.py` (fpdf2). Each `DEFAULT_DOCUMENT_VAULT` entry now carries `content` (extracted text the AI reads when "Use" is clicked) + `sampleUrl` (the public path to the PDF for download/view). localStorage seed key bumped to `yourai_document_vault_v2` to force re-seed.
+- **EditDocumentModal** folder dropdown shows depth-indented full path (`↳ Acme Corp` under `Contracts`) so a user can pick a nested folder unambiguously.
+
+### Document Vault — Find / Search inside the page (P8 v1 — Option 2)
+- The toolbar **search input is now the dual-purpose Search + Ask-anything bar** — gold sparkle icon, placeholder *"Search or ask — try 'biggest file I have'"*. Plain typing → live substring filter (existing). Pressing Enter or clicking the **Ask ✨** button that appears once you type → routes the query through an LLM-backed NL parser that returns a structured filter JSON (`search`, `dateFilter`, `uploaderId`, `fileType`, `sortBy`, `limit`, `explanation`). The parsed filter is applied to the existing memo. Gold callout below the toolbar shows the model's one-sentence interpretation.
+- **Filter chip row** under the hero: Date · Uploaded by · Type · Sort. Each is a pill with a popover (shared `<FilterChip/>` component). "Clear filters" pill appears when any filter is non-default. "Top N" badge surfaces when the parser set a `limit`.
+- **Today's bug fix**: typing in the bar OR clicking "All documents" in the tree now drops the AI-set transient filters (`resultLimit`, `askExplanation`, sort reset to `recent`). Explicit chip filters (date / uploader / type) stay set. Without this, "biggest file → top 1" stuck even after the user navigated back to All documents.
+- Search currently checks **name + description + fileName** only — NOT content. Adding content is a 1-line change; trade-off documented.
+
+### Knowledge Packs — full-page redesign (Aashna review 2026-04-27)
+- Same outer shell as Vault but the body is a card grid (packs are destinations, not files). PackRow flipped horizontal → **vertical** layout: header row (icon + title + ownership pill + kebab menu) → 2-line description clamp → footer (doc/link counts + share-org-wide toggle + Use button).
+- The "BY OWNER" facet rail moved to a **toolbar dropdown chip** (`Owner: All ▾`) — opens a popover with avatar list + counts. Independent of scope so they compose.
+- Pinned scopes (All / Org-wide / Mine) moved into a **segmented control** in the toolbar.
+- Edit / Delete moved into a row-hover kebab so they don't compete with the primary "Use" CTA.
+
+### Additive uploads — supersedes one-upload-per-chat rule (Wendy P7)
+- Old DEC-095 Option C policy (one upload per conversation, banner-prompt on second) is **gone**. Uploads now flow into `pendingAttachments` mid-thread without blocking.
+- The send pipeline **appends** new docs to `sessionDocContext` rather than replacing. Each new doc is labelled `Document N (added HH:MM): filename.pdf` in the system prompt so the model can disambiguate "originally uploaded" from "added mid-thread".
+- After an additive upload, an **inline system note** appears in the thread:
+  - *"Added contract.pdf · Document 3 — New topic? Start fresh →"*
+  - The "Start fresh" link dispatches a window event (`yourai:start-new-chat`); ChatView listens at the top level and calls `handleNewThread`. Soft escape hatch, no modal.
+- Stale "One attachment per chat" callout removed from the chat empty state and the onboarding payment-confirm screen.
+
+### Doc-inlining for `/api/chat` — bug class fixed today
+- The Edge function only sees `body.message` + `body.history` + `intent`. Attached file text doesn't travel unless we **stitch it INTO the message string** ourselves. Without this, "Read this doc" with an attached PDF surfaced the MISSING_DOCUMENT_HANDLING reply ("upload using the + button…").
+- The send pipeline now builds a merged doc context BEFORE the fetch and prepends `[Documents attached to this conversation]\n…\n\n[User question]\n` to the message. Covers:
+  - new `pendingAttachments` (real file uploads)
+  - `sessionDocContext` (continuing a thread with previously-attached docs)
+  - `activeVaultDocument` (vault doc selected via "Use" — uses the seeded `content` field, falls back to description for user-created vault docs without content)
+  - `activeVaultFolder` (folder attached — concatenates each child's content, capped per-doc)
+- Edge cases handled: extraction in-flight (placeholder line acknowledging the file by name) and empty `trimmed` text (substitutes a default review question so the Edge's `body.message.trim()` length-guard passes).
+
+### Other 2026-04-27 fixes
+- **Dual-panel render bug**: navigating from one full-page panel to another rendered both side-by-side because each open-handler only zeroed a subset of sibling flags. Added a `closeAllPanels()` helper called by every Sidebar + HomeTileLauncher open-handler.
+- **Case Workspaces home tile bug**: home tile's `onOpenWorkspaces` wasn't calling `setShowWorkspacesPanel(true)` before navigate. Same component instance kept the workspaces=false state from `closeAllPanels`. Fixed by setting the flag explicitly.
+- **Sidebar Knowledge Packs link blanked the app**: missing `User` lucide-react import. Caught via CDP click-test → `ReferenceError: User is not defined` in the panel render.
+- **SA Bot Persona cleanup**: removed two unconfirmed wireframe blocks — *Message Routing Flow* and *Per-Persona Response Format*.
+- **Workspaces rename**: `Workspaces → Case Workspaces → Workspaces` (renamed earlier in the day per Wendy's "client files" mental model, then reverted on Arjun's call). Tile description softened to "per-matter workspaces".
+
 ---
 
 ## What's currently in progress
 
-*(Arjun is test-driving — picker, builder, chat, and workspace surfaces. Feedback incoming.)*
+*(Arjun is showing the prod build to the client — Wendy attorney + Ryan Hoke / Robertson — and iterating off their feedback in real time.)*
 
-- **Workflow execution live in prod** — as of 2026-04-24 every step really calls OpenAI via `/api/chat`. Operation prompts received an initial principled tightening on 2026-04-24 (word targets, table syntax, citation hedging, findings/actions distinctness). A second, test-output-driven tightening is still pending Arjun's real-workflow feedback.
-- **Workflows picker + builder UX** redesigned 2026-04-25 from aashna's chat-mode mockup PDFs. Live in prod. Awaiting any further round-by-round feedback.
-- **Card empty-states** (all 7 intent cards) and the Edge `MISSING DOCUMENT HANDLING` branch shipped together 2026-04-25 to fix the "blank card" / "off-topic refusal" failure modes when a document-analysis intent fires without a document. Both layers are needed because the LLM sometimes returns valid empty JSON (caught by the cards) and sometimes prose (caught by the Edge prompt branch).
+- **Wendy's P-list** from the 2026-04-27 client interview is the active driver. Today's session shipped P1, P2, P3, P4, P5, P7 + the Aashna-led full-page redesign of Vault & KP + the Find/Search-in-Vault feature (P8 v1 — Option 2). Backlog: P6 (Workspaces rename — done then reverted, currently *not* renamed), P8.2/P8.3/P8.4 (content RAG, metadata enrichment, large-library indexing), P9 (default state-law KP), P10 (Lexus / West integration), P11 (default-open-within-firm flag flip), P12 (large-file 500-page strategy).
+- **Vault Find search currently grep's name + description + fileName only — NOT content**. Adding `d.content` to the filter is a 1-line change; trade-off is client-side substring across N×100K-char strings gets laggy at scale, so it's deferred until the first user complains or until the backend lands.
+- **Sample seed docs are now real PDFs with extracted content** stamped onto each entry. Future doc additions to the seed need to go through the same pipeline (`/tmp/gen-sample-pdfs.py` reads `src/data/sampleVaultContent.ts`, regenerates `public/sample-docs/*.pdf`).
 
 ---
 
@@ -146,13 +212,20 @@ The main `ChatView` fetch was wrapped in a silent try/catch that funnelled every
 
 Short list of probable next priorities based on today's direction — **user should confirm or reorder**:
 
-1. Second-pass prompt tightening once Arjun shares real test output (the first pass was principled/blind).
-2. **Audit any remaining `callLLM` callers** — confirmed three surfaces fixed (workflowExecutor, WorkspaceChatView, ChatView fallback removed). Need a final grep across `src/` to confirm nothing else still routes through the dead client-side path.
-3. Server-backed favourites (currently localStorage-only → don't sync across devices).
-4. External-user single-workspace auto-redirect (from prior session's punch list).
-5. Reconcile the 3 sources of truth for intents (`intents.ts` / `intentDetector.ts` / `GlobalKnowledgeBase.jsx DEFAULT_INTENTS`).
-6. Migrate the 4 older intent cards (Summary, Comparison, CaseBrief, Research) to `EditorialShell`. Note: empty-states now exist on both shell types, so this is purely visual unification rather than a behaviour fix.
-7. Server-side fix for the JSON-schema-with-no-document failure mode at the Edge — the cards + prompt patches handle it cosmetically, but the Edge could detect "card intent + no doc content in messages" and skip the schema injection entirely, returning prose directly. Cleaner long-term than the two-layer band-aid.
+1. **Vault search → include `d.content` (1-line)** so attorneys can find "force majeure" inside the MSA without it being in the filename. Cheap demo win.
+2. **P9 — default state-law KP** auto-attached based on the user's primary state from onboarding. Simple swap-on-chat-start.
+3. **P11 — default-open-within-firm access flag** for workspaces. Role-based gates stay in the admin panel for compliance, but default flips to "everyone in the firm sees everything".
+4. **P8.3 — metadata enrichment** on uploads: page count (best-effort PDF parse), `lastModifiedAt`, auto-stamp `workspaceId` on workspace-attached docs. Without these, "files over 200 pages" or "files in Acme matter" can't be answered.
+5. **P10 — Lexus / West integration** (Karish to scope). Wendy's pushback: scraping is risky; firms already pay for these. Backend-dependent.
+6. **P12 — large-file strategy** for 500-page PDFs (family-law app-close exports). Auto-chunking + per-case MD summary index. Hog mentioned an open-source memory system for this.
+7. **P8.4 — content semantic search** (pgvector ingestion pipeline). Prerequisite: backend wired.
+8. Second-pass workflow operation prompt tightening once Arjun shares real test output.
+9. Audit any remaining `callLLM` callers (final grep across `src/`).
+10. Server-backed favourites (currently localStorage-only).
+11. External-user single-workspace auto-redirect.
+12. Reconcile the 3 sources of truth for intents (`intents.ts` / `intentDetector.ts` / `GlobalKnowledgeBase.jsx DEFAULT_INTENTS`).
+13. Migrate the 4 older intent cards (Summary / Comparison / CaseBrief / Research) to `EditorialShell`.
+14. Server-side fix for the JSON-schema-with-no-document failure mode at the Edge.
 
 ---
 
@@ -168,6 +241,34 @@ Short list of probable next priorities based on today's direction — **user sho
 ## Recent decisions and why
 
 Reverse chronological. Each entry: *decision — rationale — date*.
+
+- **Vault search lives INSIDE the vault page, not as a new "Find" surface** (2026-04-28) — Aashna's critique: "users who think of vault as 'my folders' shouldn't have to learn a second noun called Find." The toolbar's existing search input was promoted to a dual-purpose Search + Ask-anything bar; filter chips sit below the hero. Zero new sidebar entry, zero new vocabulary. Option 2 in the P8 plan.
+
+- **AI-set transient filters clear on user typing or All-documents click** (2026-04-28) — bug Arjun caught: "biggest file" set `resultLimit=1` + `sortBy=size-desc`; subsequent navigation back to All documents kept those filters silently, so the table showed 1 row while the tab said "All 7". Now typing in the search bar (or clicking All-documents in the tree) drops `resultLimit`, `askExplanation`, and resets `sortBy`. Explicit chip filters (date / uploader / type) stay because those are deliberate user choices.
+
+- **Sample seed vault docs are now actual PDFs with extracted content** (2026-04-27) — Arjun's call: "transform sample files into actual files". Wrote 4 realistic legal docs (MSA, Employee Handbook, Series B Term Sheet, MSA Schedule A) as content strings in `src/data/sampleVaultContent.ts`, regenerated as real PDFs via `/tmp/gen-sample-pdfs.py` (fpdf2), dropped in `public/sample-docs/`. Each `DEFAULT_DOCUMENT_VAULT` entry carries the inline `content` (so the AI reads the full text when "Use" is clicked) plus `sampleUrl` (so future download/view buttons work). Bumped localStorage seed key `yourai_document_vault_v2` to force re-seed.
+
+- **Workspaces ↔ Case Workspaces ↔ Workspaces** (2026-04-27 / 2026-04-28) — Wendy's interview suggested "client files" mental model; renamed sidebar/home-tile/page-headers to "Case Workspaces" early afternoon, then Arjun reverted to plain "Workspaces" same evening. Tile description softened to "per-matter workspaces" to reach Wendy's mental model without forcing the noun.
+
+- **Doc content stitched into the Edge message body** (2026-04-27) — `/api/chat` only sees `body.message` + `body.history` + `intent`. The attached file's extracted text was being computed client-side but only fed to the dead `callLLM` fallback, never to the Edge. Bot saw "Read this doc" with zero document content and hit MISSING_DOCUMENT_HANDLING. New rule: **always inline doc context into the user message** under a `[Documents attached to this conversation]` header before the fetch. Mirrors the pattern WorkspaceChatView already uses. Covers pendingAttachments, sessionDocContext, activeVaultDocument, activeVaultFolder.
+
+- **Additive uploads — supersedes the one-upload-per-chat rule (DEC-095 retired)** (2026-04-27) — Wendy's friction: "even though we upload documents into the vault I still have to attach them to the conversation?" The old block on uploading a second doc mid-thread is gone. New docs APPEND to `sessionDocContext` rather than replace, get labelled `Document N (added HH:MM)` in the system prompt so the model can disambiguate, and an inline system note appears in the thread offering a one-click "Start a new chat →" escape hatch (window event dispatched from the note → ChatView listens at the top level → calls `handleNewThread`). Considered the prompt-yes/no version Arjun proposed and rejected: too much friction in the happy case (most additive uploads ARE related).
+
+- **Tile-based home at `/chat/home`** (2026-04-27) — Wendy: "didn't understand what to do here." Replaces the empty-state-with-prompt-pills as the front door for non-external users. Six role-aware tiles. `HomeTileLauncher` lives inside ChatView and renders when `initialView === 'home'`; the chat-main-area display:none condition gates whichever full-page panel is open. Login default redirected here for non-externals; externals still go to `/chat/workspaces`.
+
+- **Sidebar Home + Chat + dynamic active state** (2026-04-27) — added Home entry at top of workspace section, renamed Dashboard → Chat (matches what end users called it), and made `active` derive from `sidebarActiveKey` (computed from `initialView` + show*Panel flags). Previously the Home item was hard-coded `active: true` and never flipped. Full-page panels (Vault / Packs / Workflows / Workspaces / Team / Prompts / Clients) take precedence over the underlying chat / home in the precedence chain.
+
+- **Onboarding cut to Plan → Payment only; invited-user fast path** (2026-04-27) — Wendy + Ryan call: survey-before-pricing creates a trust problem ("now do I not trust those numbers because of the answers I gave?"). Role / practice / firm-size / state collection moved out of the active flow. Invited users (`?invited=1&email=…&firm=…`) skip OTP, get email + firm name locked, skip survey + payment entirely (org admin already configured), land on `/chat/home`.
+
+- **Document Vault gets nested folders + recursive folder upload + label cleanup** (2026-04-27) — Wendy: "folders and subfolders ... like Explorer." `VaultFolder.parentId` enables nesting; default seed has `Contracts › Acme Corp › MSA & Schedules`. New "Upload folder" button uses `webkitdirectory`; walks `webkitRelativePath` and recreates the tree. Buttons relabelled to `+ Folder` / `+ Document` (was "New Folder" / "New Document"). Deleting a folder re-parents its children to the deleted folder's parent (no orphan subtree).
+
+- **Vault + Knowledge Packs become full-page surfaces (Aashna review)** (2026-04-27) — both panels graduated from 900px modals to full-page two-pane Finder layouts (left rail + main with hero/toolbar/table). Vault rail = recursive folder tree; KP rail = filter facets (now moved to the toolbar dropdown). Aashna's call: "modals are for short blocking decisions; file management is exploration. The 900px chrome was the bottleneck, not the data density."
+
+- **PackRow flipped horizontal → vertical** (2026-04-27) — Aashna fix: at 320px card width the horizontal action cluster ate ~158px and squeezed the description to ~62px ("Standard / NDA / clauses, / review"). Vertical layout: header (icon + title + kebab) → 2-line description clamp → footer (counts + share-toggle + Use). Edit + Delete moved into the kebab so they don't compete with Use.
+
+- **closeAllPanels() helper for full-page panel mutual exclusion** (2026-04-27) — bug Arjun caught: clicking Workflows then Knowledge Packs rendered both side-by-side because each open-handler only zeroed a subset of sibling flags. The helper clears all 8 sibling states in one call; every Sidebar + HomeTileLauncher open-handler calls it before setting its target.
+
+- **SA Bot Persona: removed Message Routing Flow + Per-Persona Response Format** (2026-04-26 / 27) — both were DRAFT wireframe blocks that never reflected production behaviour. Tagged with confidence comments ("3/10, not confirmed by Ryan"). Stripped to keep the panel honest about what's actually wired.
 
 - **Picker is a single unified grid, no Featured/Library section split, no maxWidth cap** (2026-04-25) — aashna's chat-mode mockup showed cards in a single grid that fills the available width. Earlier compromise of `maxWidth: 960` + section headers fought the design at every viewport: 2 cards of cramped 340px on a 1440px screen. New rule: `repeat(auto-fill, minmax(340px, 1fr))`, no cap. Reflows from 3-across at desktop to 2 / 1 naturally.
 
@@ -224,6 +325,10 @@ Reverse chronological. Each entry: *decision — rationale — date*.
 ---
 
 ## Last updated
+
+**2026-04-28** — Reverted "Case Workspaces" → "Workspaces". Removed the stale "One attachment per chat" gold callout from the chat empty state and the onboarding payment-confirm screen (the rule was killed yesterday). Fixed the persistent-filter bug in Vault search: typing in the bar or clicking "All documents" in the tree now drops AI-set transient filters (`resultLimit`, `askExplanation`, sort), while explicit chip filters (date / uploader / type) stay set. Bundle hash on prod: `index-DySlL7FR.js`.
+
+**2026-04-27** — Big day. Six commits ahead of `yourai/main` at peak, before merging in batches. Across the day shipped: nested folders + recursive upload + UI label cleanup in Vault (Wendy P3 / P4 / P5), onboarding restructure + invited-user fast path (P1 / P2), tile-based home at `/chat/home` with role-aware tiles + the sidebar Home button + Dashboard→Chat rename + dynamic active state, full-page two-pane redesign of Vault & Knowledge Packs per Aashna review (left rail + hero + table; kebab menu for row actions; pack cards flipped to vertical), Workspaces ↔ Case Workspaces rename (later reverted), additive uploads with inline "Start fresh →" escape hatch (Wendy P7, supersedes DEC-095), the doc-inlining fix that finally pipes file content into the Edge message body (covers pendingAttachments, sessionDocContext, activeVaultDocument, activeVaultFolder), `closeAllPanels()` helper for full-page panel mutual exclusion, the Vault Find/Search-in-page feature with filter chips + Ask-anything NL parser (P8 v1, Option 2), and **real PDFs as seed vault docs** (4 actual files in `public/sample-docs/` + `content` field stamped on each entry so the AI grounds in the real text). Bumped localStorage seed key to `yourai_document_vault_v2`. Bundle hash on prod: `index-Bk1nY4mu.js`.
 
 **2026-04-25** — Aashna sent two fresh batches of mockup PDFs (picker chat-mode + 8 builder views). Rewrote the **Workflows picker** (single unified grid with no maxWidth cap, AI PIPELINES eyebrow, Running-in pill, restacked StatTiles, underline filter tabs, restored practice-area top stripe, PIPELINE op-icon row) and the **Workflow Builder** end-to-end (centered hero with step-pill indicator, white rounded panel body, navy step-number circles, in-panel CTAs, uppercase mono section labels, warm-beige reference-doc inset). Then fixed three connected runtime issues: (1) all 7 intent cards now render a friendly "No document supplied" empty-state instead of grids of `—` dashes when the LLM returns a schema-shaped envelope with no data; (2) Edge `api/chat.ts` system prompt got a `MISSING DOCUMENT HANDLING` branch so the bot asks for an upload instead of off-topic-refusing legitimate analysis requests; (3) `WorkspaceChatView` was still calling the dead `callLLM` path — routed it through `/api/chat` like everything else. Also cleaned up `ChatView`'s misleading "No LLM backend available" fallback so real Edge errors surface verbatim, dropped vestigial `credentials: 'include'`, added trailing decoder flush. Prod HEAD tracking `yourai/main` — verify with `curl -s https://yourai-black.vercel.app/chat | grep -oE 'index-[A-Za-z0-9_-]+\.js'`.
 
