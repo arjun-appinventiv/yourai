@@ -8,8 +8,7 @@ import {
   LayoutDashboard, Send, MapPin, FileSearch, Lock, X, AlertTriangle, Info, Zap,
   BookOpen, UserPlus, Trash2, Edit3, Copy, Phone, Mail, Briefcase, Hash, Menu,
   Package, Link2, File, Upload, Paperclip, Database, GitBranch, Settings, LogOut,
-  CreditCard, Folder, FolderPlus, ArrowLeft, User, MoreHorizontal, Check,
-  FileCheck, GitCompare, MessageCircle, FolderSearch,
+  CreditCard, Folder, FolderPlus, ArrowLeft, User, MoreHorizontal, Check
 } from 'lucide-react';
 import { useRole } from '../../context/RoleContext';
 import { useAuth } from '../../context/AuthContext';
@@ -48,7 +47,7 @@ import { extractFileText } from '../../lib/file-parser';
 import { trackDocUpload } from '../../lib/auth';
 import { useSessionGuard } from '../../lib/useSessionGuard';
 import { detectIntent, detectAllIntents } from '../../lib/intentDetector';
-import { DEFAULT_INTENT, getIntentLabel } from '../../lib/intents';
+import { INTENTS, DEFAULT_INTENT, getIntentLabel } from '../../lib/intents';
 
 // Removed: MOCK_RESPONSES array — replaced with real streaming fetch to /api/chat
 // See: tech-stack.md — Backend API section
@@ -3630,137 +3629,20 @@ function getSuggestedPrompts(/* profile */) {
     {
       icon: FileSearch,
       title: 'Review a contract',
-      description: 'Flag one-sided provisions, unusual liability caps, and missing protections.',
       prompt: 'Review this contract and flag any one-sided provisions, unusual liability caps, or missing standard protections I should push back on. Structure your response as: 1) high-risk issues, 2) medium-risk issues, 3) recommended redlines.',
     },
     {
       icon: FileText,
       title: 'Summarise a document',
-      description: 'Three-section partner-ready overview: obligations, risks, next steps.',
       prompt: 'Summarise this document in three sections: (1) Key obligations and deadlines, (2) Risk areas and ambiguities, (3) Recommended next steps. Keep each section under 100 words.',
     },
     {
-      icon: Mail,
+      icon: Scale,
       title: 'Draft an email to counsel',
-      description: 'Courteous deadline-extension request, under 120 words.',
       prompt: 'Draft a professional email to opposing counsel requesting a seven-day extension on the upcoming deadline. Keep the tone courteous but firm, under 120 words, and include a brief reason tied to document review workload.',
     },
   ];
 }
-
-/* ─── Capability tile metadata ───
- * Per-intent display metadata for the empty-state capability grid.
- * Descriptions are sourced from docs/extracted/FRD_Intent_Cards.md for the
- * 8 card-rendering intents; prose-rendering intents have hand-written
- * one-liners. Accent tints are solid (not gradients) — the grid uses them
- * for the icon chip background only. Order in this list does NOT determine
- * grid layout — see CAPABILITY_GROUPS below for that.
- */
-const CAPABILITY_META = {
-  document_summarisation: {
-    icon: FileText,
-    accent: '#C9A84C',  // gold
-    tint: 'rgba(201, 168, 76, 0.12)',
-    description: 'Partner-ready overview of one contract, memo, or filing.',
-  },
-  clause_comparison: {
-    icon: GitCompare,
-    accent: '#0B1D3A',  // navy
-    tint: 'rgba(11, 29, 58, 0.08)',
-    description: 'Side-by-side clause-level diff of two documents.',
-  },
-  case_law_analysis: {
-    icon: Scale,
-    accent: '#059669',  // green
-    tint: 'rgba(5, 150, 105, 0.10)',
-    description: 'Brief a court filing or opinion: parties, holding, reasoning.',
-  },
-  legal_research: {
-    icon: BookOpen,
-    accent: '#4338CA',  // indigo
-    tint: 'rgba(67, 56, 202, 0.10)',
-    description: 'Answer a research question against the curated knowledge base.',
-  },
-  risk_assessment: {
-    icon: AlertTriangle,
-    accent: '#C9A84C',  // gold (per FRD)
-    tint: 'rgba(201, 168, 76, 0.12)',
-    description: 'Narrative risk memo with findings grouped by severity.',
-  },
-  clause_analysis: {
-    icon: FileSearch,
-    accent: '#C9A84C',  // gold (per FRD)
-    tint: 'rgba(201, 168, 76, 0.12)',
-    description: 'Clause-by-clause structured breakdown with risk levels.',
-  },
-  timeline_extraction: {
-    icon: Clock,
-    accent: '#C9A84C',  // gold (per FRD)
-    tint: 'rgba(201, 168, 76, 0.12)',
-    description: 'Chronological event list extracted from a document.',
-  },
-  find_document: {
-    icon: FolderSearch,
-    accent: '#0D9488',  // teal
-    tint: 'rgba(13, 148, 136, 0.10)',
-    description: 'Locate a file in your personal vault by name or topic.',
-    vaultOnly: true,
-  },
-  contract_review: {
-    icon: FileCheck,
-    accent: '#0B1D3A',  // navy
-    tint: 'rgba(11, 29, 58, 0.08)',
-    description: 'Flag risky terms, missing protections, and red lines for negotiation.',
-  },
-  document_drafting: {
-    icon: Edit3,
-    accent: '#0B1D3A',  // navy
-    tint: 'rgba(11, 29, 58, 0.08)',
-    description: 'Generate a draft document, clause, or section from your instructions.',
-  },
-  email_letter_drafting: {
-    icon: Mail,
-    accent: '#0B1D3A',  // navy
-    tint: 'rgba(11, 29, 58, 0.08)',
-    description: 'Draft an email or letter to counsel, client, or counterparty.',
-  },
-  legal_qa: {
-    icon: MessageCircle,
-    accent: '#4338CA',  // indigo
-    tint: 'rgba(67, 56, 202, 0.10)',
-    description: 'Direct answer to a specific legal question.',
-  },
-  general_chat: {
-    icon: MessageSquare,
-    accent: '#6B7280',  // gray
-    tint: 'rgba(107, 114, 128, 0.10)',
-    description: 'Open conversation. Use this when no other capability fits.',
-  },
-};
-
-/* Group order for the capability grid. Group labels span the full row;
- * tiles flow into the auto-fill grid in the listed order. The brief
- * spec named only 11 intents in the four groups; email_letter_drafting
- * is folded into Draft & Summarize and legal_qa into Research so all
- * 13 intents from src/lib/intents.ts surface here. */
-const CAPABILITY_GROUPS = [
-  {
-    label: 'ANALYZE',
-    intents: ['clause_analysis', 'clause_comparison', 'risk_assessment', 'case_law_analysis', 'timeline_extraction'],
-  },
-  {
-    label: 'DRAFT & SUMMARIZE',
-    intents: ['document_summarisation', 'contract_review', 'document_drafting', 'email_letter_drafting', 'general_chat'],
-  },
-  {
-    label: 'RESEARCH',
-    intents: ['legal_research', 'legal_qa'],
-  },
-  {
-    label: 'FIND',
-    intents: ['find_document'],
-  },
-];
 
 function PlanAwarenessBadge({ plan, onViewPlans }) {
   if (plan === 'Free') {
@@ -3862,7 +3744,7 @@ function MiniOpPill({ operation }) {
   );
 }
 
-function EmptyState({ profile, plan, onPromptClick, navigate, onViewPlans, workflows = [], totalWorkflowCount = 0, onRunWorkflow, onOpenWorkflowsPanel, activeIntent, onSelectIntent }) {
+function EmptyState({ profile, plan, onPromptClick, navigate, onViewPlans, workflows = [], totalWorkflowCount = 0, onRunWorkflow, onOpenWorkflowsPanel }) {
   // Resolve first name from the signed-up user persisted to localStorage.
   // EmptyState is a standalone component so we can't destructure AuthContext
   // without a hook call — the localStorage lookup is enough for the demo.
@@ -3877,21 +3759,8 @@ function EmptyState({ profile, plan, onPromptClick, navigate, onViewPlans, workf
   const currentUserName = resolvedFirstName || 'there';
   const prompts = getSuggestedPrompts(profile);
 
-  // Tiny mono uppercase section label — reused for QUICK START + group labels.
-  const SectionLabel = ({ children, size = 12, marginBottom = 10 }) => (
-    <div style={{
-      fontFamily: "'IBM Plex Mono', ui-monospace, monospace",
-      fontSize: size,
-      fontWeight: 600,
-      letterSpacing: '0.04em',
-      textTransform: 'uppercase',
-      color: 'var(--text-muted)',
-      marginBottom,
-    }}>{children}</div>
-  );
-
   return (
-    <div className="px-4 sm:px-6" style={{ paddingTop: '10vh', paddingBottom: 12 }}>
+    <div className="px-4 sm:px-6" style={{ paddingTop: '14vh', paddingBottom: 12 }}>
       <div style={{ maxWidth: 880, width: '100%', margin: '0 auto' }}>
         {/* ── Hero (sparkle + heading + subtitle) — one tight unit ── */}
         <div style={{ textAlign: 'center' }}>
@@ -3916,159 +3785,43 @@ function EmptyState({ profile, plan, onPromptClick, navigate, onViewPlans, workf
           </p>
         </div>
 
-        {/* ── QUICK START strip — 3 slim horizontal templates ── */}
-        <div style={{ marginTop: 32 }}>
-          <SectionLabel>QUICK START</SectionLabel>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }} className="quickstart-strip">
-            {prompts.map((p, i) => {
-              const Icon = p.icon;
-              return (
-                <div
-                  key={i}
-                  onClick={() => onPromptClick(p.prompt)}
-                  style={{
-                    height: 72,
-                    display: 'flex', alignItems: 'center', gap: 14,
-                    padding: '0 20px',
-                    background: '#fff',
-                    border: '1px solid #E5E7EB',
-                    borderRadius: 12,
-                    cursor: 'pointer',
-                    transition: 'border-color 0.15s, box-shadow 0.15s, transform 0.15s',
-                  }}
-                  onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--navy)'; e.currentTarget.style.boxShadow = '0 2px 8px rgba(10,36,99,0.05)'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#E5E7EB'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.transform = 'translateY(0)'; }}
-                >
-                  <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'rgba(201, 168, 76, 0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <Icon size={18} color="#C9A84C" />
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 14, fontWeight: 500, color: 'var(--text-primary)', lineHeight: 1.3 }}>{p.title}</div>
-                    <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginTop: 2 }}>
-                      {p.description}
-                    </div>
-                  </div>
+        {/* ── Prompt cards (3-up) ── */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-left" style={{ marginTop: 72 }}>
+          {prompts.map((p, i) => {
+            const Icon = p.icon;
+            return (
+              <div
+                key={i}
+                onClick={() => onPromptClick(p.prompt)}
+                style={{
+                  background: '#fff',
+                  border: '1px solid var(--border)',
+                  borderRadius: 14,
+                  padding: '22px 22px 0',
+                  cursor: 'pointer',
+                  transition: 'border-color 0.15s, box-shadow 0.15s, transform 0.15s',
+                  display: 'flex', flexDirection: 'column',
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#C9A84C'; e.currentTarget.style.boxShadow = '0 6px 18px rgba(10, 36, 99, 0.08)'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.transform = 'translateY(0)'; }}
+              >
+                <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'rgba(201, 168, 76, 0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 14 }}>
+                  <Icon size={22} color="#C9A84C" />
                 </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* ── Capability grid — every intent at a glance ── */}
-        <div style={{ marginTop: 64 }}>
-          <SectionLabel>WHAT WOULD YOU LIKE TO DO?</SectionLabel>
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
-            gap: 16,
-          }}>
-            {CAPABILITY_GROUPS.map((group, gi) => (
-              <React.Fragment key={group.label}>
-                <div style={{ gridColumn: '1 / -1', marginTop: gi === 0 ? 0 : 24 }}>
-                  <div style={{
-                    fontFamily: "'IBM Plex Mono', ui-monospace, monospace",
-                    fontSize: 11,
-                    fontWeight: 600,
-                    letterSpacing: '0.04em',
-                    textTransform: 'uppercase',
-                    color: 'var(--text-muted)',
-                    marginBottom: 8,
-                  }}>{group.label}</div>
+                <div style={{ fontFamily: "'DM Serif Display', serif", fontSize: 17, fontWeight: 400, color: 'var(--navy)', marginBottom: 6, lineHeight: 1.25 }}>{p.title}</div>
+                <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.55, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', marginBottom: 14 }}>{p.prompt}</div>
+                <div style={{ marginTop: 'auto', paddingTop: 10, borderTop: '1px solid #F3F0E8', paddingBottom: 12, fontSize: 11, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 6, fontFamily: "'DM Sans', sans-serif" }}>
+                  <span style={{ fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--navy)' }}>Click to start</span>
+                  <span style={{ color: '#9CA3AF' }}>&rarr;</span>
                 </div>
-                {group.intents.map((intentId) => {
-                  const meta = CAPABILITY_META[intentId];
-                  if (!meta) return null;
-                  const Icon = meta.icon;
-                  const label = getIntentLabel(intentId);
-                  const isActive = activeIntent === intentId;
-                  return (
-                    <div
-                      key={intentId}
-                      role="button"
-                      tabIndex={0}
-                      onClick={() => onSelectIntent && onSelectIntent(intentId)}
-                      onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && onSelectIntent) { e.preventDefault(); onSelectIntent(intentId); } }}
-                      style={{
-                        position: 'relative',
-                        height: 160,
-                        padding: 20,
-                        background: '#fff',
-                        border: '1px solid #E5E7EB',
-                        borderRadius: 12,
-                        cursor: 'pointer',
-                        transition: 'border-color 0.15s, box-shadow 0.15s, transform 0.15s',
-                        display: 'flex', flexDirection: 'column', gap: 12,
-                        boxShadow: isActive ? 'inset 0 0 0 2px var(--navy)' : 'none',
-                        borderColor: isActive ? 'transparent' : '#E5E7EB',
-                      }}
-                      onMouseEnter={(e) => {
-                        if (isActive) return;
-                        e.currentTarget.style.borderColor = 'var(--navy)';
-                        e.currentTarget.style.boxShadow = '0 2px 8px rgba(10,36,99,0.05)';
-                        e.currentTarget.style.transform = 'translateY(-1px)';
-                      }}
-                      onMouseLeave={(e) => {
-                        if (isActive) {
-                          e.currentTarget.style.borderColor = 'transparent';
-                          e.currentTarget.style.boxShadow = 'inset 0 0 0 2px var(--navy)';
-                        } else {
-                          e.currentTarget.style.borderColor = '#E5E7EB';
-                          e.currentTarget.style.boxShadow = 'none';
-                        }
-                        e.currentTarget.style.transform = 'translateY(0)';
-                      }}
-                    >
-                      {isActive && (
-                        <span style={{
-                          position: 'absolute', top: 10, right: 10,
-                          fontFamily: "'IBM Plex Mono', ui-monospace, monospace",
-                          fontSize: 9, fontWeight: 600, letterSpacing: '0.06em',
-                          textTransform: 'uppercase', color: 'var(--navy)',
-                        }}>ACTIVE</span>
-                      )}
-                      <div style={{
-                        width: 28, height: 28, borderRadius: '50%',
-                        background: isActive ? 'var(--navy)' : meta.tint,
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        flexShrink: 0,
-                      }}>
-                        <Icon size={14} color={isActive ? '#fff' : meta.accent} />
-                      </div>
-                      <div style={{
-                        fontFamily: "'DM Sans', sans-serif",
-                        fontSize: 15, fontWeight: 500,
-                        color: 'var(--text-primary)',
-                        lineHeight: 1.3,
-                      }}>{label}</div>
-                      <div style={{
-                        fontFamily: "'DM Sans', sans-serif",
-                        fontSize: 13, color: 'var(--text-muted)',
-                        lineHeight: 1.5,
-                        display: '-webkit-box',
-                        WebkitLineClamp: 2,
-                        WebkitBoxOrient: 'vertical',
-                        overflow: 'hidden',
-                        marginTop: -8,
-                      }}>{meta.description}</div>
-                      {meta.vaultOnly && (
-                        <span style={{
-                          position: 'absolute', bottom: 10, right: 12,
-                          fontFamily: "'IBM Plex Mono', ui-monospace, monospace",
-                          fontSize: 10, fontWeight: 500, letterSpacing: '0.04em',
-                          textTransform: 'uppercase', color: 'var(--text-muted)',
-                        }}>Vault only</span>
-                      )}
-                    </div>
-                  );
-                })}
-              </React.Fragment>
-            ))}
-          </div>
+              </div>
+            );
+          })}
         </div>
 
         {/* ── Favourites row — only renders when there ARE favourites (fill-or-kill) ── */}
         {onOpenWorkflowsPanel && onRunWorkflow && workflows.length > 0 && (
-          <div style={{ marginTop: 24, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <div style={{ marginTop: 18, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
               <Zap size={12} style={{ color: '#C9A84C' }} />
               <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
@@ -4295,14 +4048,15 @@ export default function ChatView({ initialView = 'chat' }) {
   });
   const [sessionDocContext, setSessionDocContext] = useState(null); // { name, content } — persisted doc for follow-up questions
   // ─── Intent system state ───
-  // Active-intent indicator now lives as a dismissible chip inside the
-  // input bar (see render below). The old `isIntentDropdownOpen` /
-  // `isMorePillOpen` states + their refs are retired with the pill row.
   const [activeIntent, setActiveIntent] = useState(DEFAULT_INTENT);
+  const [isIntentDropdownOpen, setIsIntentDropdownOpen] = useState(false);
+  const [isMorePillOpen, setIsMorePillOpen] = useState(false);
   const [suggestedIntent, setSuggestedIntent] = useState(null); // Smart suggestion from keyword detection
   const [suggestedIntents, setSuggestedIntents] = useState([]); // Multiple matches for user to pick
   const [dismissedSuggestion, setDismissedSuggestion] = useState(null);
   const suggestionTimer = useRef(null);
+  const intentDropdownRef = useRef(null);
+  const morePillRef = useRef(null);
   const [streamingContent, setStreamingContent] = useState('');
   // ─── Abort controller for in-flight streams ───
   const streamAbortRef = useRef(null);
@@ -4381,6 +4135,7 @@ export default function ChatView({ initialView = 'chat' }) {
     setSuggestedIntent(null);
     setSuggestedIntents([]);
     setDismissedSuggestion(null);
+    setIsIntentDropdownOpen(false);
     // DEC-093 + DEC-094: New session gets current KB snapshot
     setSessionState({
       sessionKbSnapshotId: `kb-snapshot-${Date.now()}`,
@@ -5445,6 +5200,7 @@ INSTRUCTIONS:
   }, []);
 
   const handleKeyDown = (e) => {
+    if (e.key === 'Escape' && isIntentDropdownOpen) { setIsIntentDropdownOpen(false); return; }
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(input); }
   };
 
@@ -5710,8 +5466,6 @@ INSTRUCTIONS:
               totalWorkflowCount={!isExternalUser ? workflowCount : 0}
               onRunWorkflow={(t) => setRunningPrep(t)}
               onOpenWorkflowsPanel={() => { setShowTeamPage?.(false); setShowWorkspacesPanel?.(false); setShowWorkflowsPanel(true); }}
-              activeIntent={activeIntent}
-              onSelectIntent={(id) => { setActiveIntent(id); if (inputRef.current) inputRef.current.focus(); }}
             />
           ) : (
             <div ref={scrollRef} className="px-3 sm:px-4 md:px-10 py-6" style={{ flex: 1, overflowY: 'auto' }}>
@@ -5863,10 +5617,88 @@ INSTRUCTIONS:
               </div>
             )}
 
-            {/* Intent surface relocated to the capability grid in EmptyState
-                and to a dismissible chip inside the input bar (below). The
-                old pill row + "More" overflow are gone — the grid surfaces
-                all 13 intents at once with no scrolling or dropdown. */}
+            {/* ─── STATE 1: Intent pills above input (empty chat only) ─── */}
+            {/* Shows the 6 most-used intents inline + a "More…" overflow
+                pill that opens a popover with the remaining intents. */}
+            {showEmptyState && (() => {
+              const VISIBLE_INTENTS = INTENTS.slice(0, 6);
+              const OVERFLOW_INTENTS = INTENTS.slice(6);
+              const isActiveInOverflow = OVERFLOW_INTENTS.some(i => i.id === activeIntent);
+              return (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 8, marginBottom: 6, justifyContent: 'center' }}>
+                  {VISIBLE_INTENTS.map(intent => {
+                    const isActive = activeIntent === intent.id;
+                    return (
+                      <button
+                        key={intent.id}
+                        onClick={() => setActiveIntent(intent.id)}
+                        style={{
+                          display: 'inline-flex', alignItems: 'center', gap: 5,
+                          padding: '5px 12px', borderRadius: 999,
+                          fontSize: 12, fontFamily: "'DM Sans', sans-serif",
+                          fontWeight: isActive ? 500 : 400,
+                          border: isActive ? '1px solid var(--navy)' : '1px solid var(--border)',
+                          backgroundColor: isActive ? 'var(--navy)' : 'white',
+                          color: isActive ? '#fff' : 'var(--text-secondary)',
+                          cursor: 'pointer',
+                          transition: 'all 150ms ease',
+                          whiteSpace: 'nowrap',
+                          boxShadow: isActive ? '0 1px 3px rgba(10, 36, 99, 0.14)' : 'none',
+                        }}
+                        onMouseEnter={(e) => { if (!isActive) { e.currentTarget.style.borderColor = 'var(--navy)'; e.currentTarget.style.color = 'var(--navy)'; } }}
+                        onMouseLeave={(e) => { if (!isActive) { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-secondary)'; } }}
+                      >
+                        {intent.label}
+                      </button>
+                    );
+                  })}
+                  {/* More… overflow pill */}
+                  <div style={{ position: 'relative' }} ref={morePillRef}>
+                    <button
+                      onClick={() => setIsMorePillOpen(v => !v)}
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 4,
+                        padding: '5px 12px', borderRadius: 999,
+                        fontSize: 12, fontFamily: "'DM Sans', sans-serif",
+                        fontWeight: isActiveInOverflow ? 500 : 400,
+                        border: isActiveInOverflow ? '1px solid var(--navy)' : '1px solid var(--border)',
+                        backgroundColor: isActiveInOverflow ? 'var(--navy)' : 'white',
+                        color: isActiveInOverflow ? '#fff' : 'var(--text-secondary)',
+                        cursor: 'pointer',
+                        transition: 'all 150ms ease',
+                        whiteSpace: 'nowrap',
+                        boxShadow: isActiveInOverflow ? '0 1px 3px rgba(10, 36, 99, 0.14)' : 'none',
+                      }}
+                    >
+                      {isActiveInOverflow ? getIntentLabel(activeIntent) : 'More'}
+                      <ChevronDown size={11} style={{ transform: isMorePillOpen ? 'rotate(180deg)' : 'none', transition: 'transform 150ms' }} />
+                    </button>
+                    {isMorePillOpen && (
+                      <>
+                        <div onClick={() => setIsMorePillOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 50 }} />
+                        <div style={{ position: 'absolute', bottom: '100%', right: 0, marginBottom: 6, width: 220, backgroundColor: 'white', borderRadius: 12, border: '1px solid var(--border)', boxShadow: '0 8px 24px rgba(0,0,0,0.12)', zIndex: 51, maxHeight: 320, overflowY: 'auto' }}>
+                          {OVERFLOW_INTENTS.map(intent => {
+                            const isCurrent = activeIntent === intent.id;
+                            return (
+                              <div
+                                key={intent.id}
+                                onClick={() => { setActiveIntent(intent.id); setIsMorePillOpen(false); }}
+                                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 14px', cursor: 'pointer', fontSize: 13, color: isCurrent ? 'var(--text-primary)' : 'var(--text-secondary)', fontWeight: isCurrent ? 500 : 400, transition: 'background 100ms' }}
+                                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--ice-warm)'; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+                              >
+                                <span>{intent.label}</span>
+                                {isCurrent && <CheckCircle size={13} style={{ color: 'var(--navy)', flexShrink: 0 }} />}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Mid-conversation switch banner removed — a single thread
                 can mix intents freely; switching is seamless and only
@@ -5930,6 +5762,68 @@ INSTRUCTIONS:
 
             {/* ─── Input bar ─── */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, border: '1.5px solid var(--border)', borderRadius: 24, background: '#fff', minHeight: 48, padding: '8px 8px 8px 12px', opacity: 1 }}>
+              {/* STATE 2: Collapsed intent pill (conversation active) */}
+              {!showEmptyState && (
+                <div style={{ position: 'relative' }} ref={intentDropdownRef}>
+                  <button
+                    onClick={() => setIsIntentDropdownOpen(v => !v)}
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 4,
+                      padding: '4px 10px', borderRadius: 999,
+                      fontSize: 12, fontWeight: 500, fontFamily: "'DM Sans', sans-serif",
+                      border: '1.5px solid var(--text-primary)',
+                      backgroundColor: 'white', color: 'var(--text-primary)',
+                      cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
+                    }}
+                  >
+                    {getIntentLabel(activeIntent)}
+                    <ChevronDown size={12} style={{ transform: isIntentDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 150ms' }} />
+                  </button>
+                  {/* Dropdown — opens UPWARD */}
+                  {isIntentDropdownOpen && (
+                    <>
+                      <div onClick={() => setIsIntentDropdownOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 50 }} />
+                      <div style={{
+                        position: 'absolute', bottom: '100%', left: 0, marginBottom: 6, width: 260,
+                        backgroundColor: 'white', borderRadius: 12, border: '1px solid var(--border)',
+                        boxShadow: '0 8px 24px rgba(0,0,0,0.12)', zIndex: 51,
+                        maxHeight: 320, overflowY: 'auto',
+                      }}>
+                        {INTENTS.map(intent => {
+                          const isCurrent = activeIntent === intent.id;
+                          return (
+                            <div
+                              key={intent.id}
+                              onClick={() => {
+                                // Seamless mid-thread intent switch — no
+                                // "start fresh conversation" interruption.
+                                // A thread can mix intents freely (summary
+                                // → research → draft → comparison, all in
+                                // one matter). The new intent only affects
+                                // the NEXT message.
+                                setActiveIntent(intent.id);
+                                setIsIntentDropdownOpen(false);
+                              }}
+                              style={{
+                                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                padding: '8px 14px', cursor: 'pointer', fontSize: 13,
+                                color: isCurrent ? 'var(--text-primary)' : 'var(--text-secondary)',
+                                fontWeight: isCurrent ? 500 : 400,
+                                backgroundColor: 'transparent', transition: 'background 100ms',
+                              }}
+                              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--ice-warm)'; }}
+                              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+                            >
+                              <span>{intent.label}</span>
+                              {isCurrent && <CheckCircle size={14} style={{ color: 'var(--navy)', flexShrink: 0 }} />}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
               <div style={{ position: 'relative' }}>
                 <div onClick={() => setShowPackPicker(v => !v)} title="Attach files or context" style={{ width: 28, height: 28, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: (activeKnowledgePack || activeVaultDocument || activeVaultFolder) ? 'var(--navy)' : 'var(--text-muted)', background: (activeKnowledgePack || activeVaultDocument || activeVaultFolder) ? 'rgba(10, 36, 99, 0.08)' : 'transparent' }}><Plus size={20} /></div>
                 {showPackPicker && (
@@ -5949,35 +5843,6 @@ INSTRUCTIONS:
                   />
                 )}
               </div>
-              {/* Dismissible active-intent chip — shown for any non-default
-                  intent. Replaces the old pill row + dropdown as the single
-                  visible indicator of active intent. Persists across the
-                  empty state and the populated thread; X resets to General
-                  Chat without re-opening a menu. */}
-              {activeIntent && activeIntent !== DEFAULT_INTENT && (
-                <div style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 6,
-                  padding: '4px 6px 4px 10px', borderRadius: 999,
-                  background: 'var(--navy)', color: '#fff',
-                  fontSize: 12, fontWeight: 500, fontFamily: "'DM Sans', sans-serif",
-                  whiteSpace: 'nowrap', flexShrink: 0,
-                }}>
-                  <span>{getIntentLabel(activeIntent)}</span>
-                  <button
-                    onClick={() => setActiveIntent(DEFAULT_INTENT)}
-                    aria-label="Clear active intent"
-                    style={{
-                      width: 16, height: 16, borderRadius: '50%',
-                      background: 'rgba(255,255,255,0.18)', border: 'none',
-                      color: '#fff', cursor: 'pointer',
-                      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                      padding: 0,
-                    }}
-                  >
-                    <X size={11} />
-                  </button>
-                </div>
-              )}
               <textarea ref={inputRef} className="no-focus-ring" value={input} onChange={(e) => {
                 const val = e.target.value;
                 setInput(val);
