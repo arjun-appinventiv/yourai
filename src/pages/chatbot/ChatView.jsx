@@ -3734,8 +3734,54 @@ function EmptyState() {
   );
 }
 
+/* ═══════════════════ EmptyStateAashna ═══════════════════ */
+/* Aashna's polished P1 hero — mounted only on /chatviewv2 via the
+   `emptyStateVariant="aashna"` prop. Sibling-by-design with EmptyState
+   so a side-by-side A/B is one URL change away. The pill-row, drop-tile
+   and input-row tweaks live in ChatView's main render block keyed off
+   `emptyStateVariant === 'aashna'` (those surfaces aren't owned by this
+   component). */
+function EmptyStateAashna() {
+  const resolvedFirstName = (() => {
+    try {
+      const email = localStorage.getItem('yourai_current_email');
+      if (!email) return '';
+      const registered = JSON.parse(localStorage.getItem('yourai_registered_users') || '{}');
+      return registered[email]?.user?.name || '';
+    } catch { return ''; }
+  })().split(' ')[0];
+  const currentUserName = resolvedFirstName || 'there';
+  return (
+    <div className="px-4 sm:px-6" style={{ paddingTop: '12vh', paddingBottom: 24 }}>
+      <div style={{ maxWidth: 880, width: '100%', margin: '0 auto' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'linear-gradient(135deg, #C9A84C 0%, #E8D48B 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 10px', boxShadow: '0 2px 8px rgba(201, 168, 76, 0.24)' }}>
+            <Sparkles size={17} color="#fff" />
+          </div>
+          <h2
+            className="text-5xl sm:text-6xl"
+            style={{
+              fontFamily: "'DM Serif Display', serif",
+              fontWeight: 400,
+              color: 'var(--navy)',
+              margin: '0 0 10px',
+              lineHeight: 1.08,
+              letterSpacing: '-0.015em',
+            }}
+          >
+            {getGreeting()}, {currentUserName}
+          </h2>
+          <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: 'var(--text-muted)', margin: '0 auto', maxWidth: 520, lineHeight: 1.45 }}>
+            Your AI assistant is ready — start with one of these.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ═══════════════════ ChatView ═══════════════════ */
-export default function ChatView({ initialView = 'chat' }) {
+export default function ChatView({ initialView = 'chat', emptyStateVariant = null }) {
   const navigate = useNavigate();
   const location = useLocation();
   // Role + identity — used for workspace membership filtering in the sidebar
@@ -3788,6 +3834,20 @@ export default function ChatView({ initialView = 'chat' }) {
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [showEmptyState, setShowEmptyState] = useState(true);
+  // Aashna preview — narrow-viewport (<900px caps the pill row at 4) and
+  // mobile (<768px stacks the input row vertically). Tracked unconditionally
+  // so both routes use the same hooks order — only consumed when
+  // emptyStateVariant === 'aashna'. Single resize listener for both.
+  const [isAashnaNarrow, setIsAashnaNarrow] = useState(typeof window !== 'undefined' ? window.innerWidth < 900 : false);
+  const [isAashnaMobile, setIsAashnaMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
+  useEffect(() => {
+    const onResize = () => {
+      setIsAashnaNarrow(window.innerWidth < 900);
+      setIsAashnaMobile(window.innerWidth < 768);
+    };
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
   const [profile, setProfile] = useState(null);
   const [showPlanModal, setShowPlanModal] = useState(false);
   const [knowledgePacks, setKnowledgePacks] = useState(DEFAULT_KNOWLEDGE_PACKS);
@@ -5355,7 +5415,7 @@ INSTRUCTIONS:
           )}
 
           {showEmptyState ? (
-            <EmptyState />
+            emptyStateVariant === 'aashna' ? <EmptyStateAashna /> : <EmptyState />
           ) : (
             <div ref={scrollRef} className="px-3 sm:px-4 md:px-10 py-6" style={{ flex: 1, overflowY: 'auto' }}>
               {/* ─── Persistent Conversation Context Header ─── */}
@@ -5455,7 +5515,7 @@ INSTRUCTIONS:
           )}
 
           {/* Chat input area */}
-          <div className="px-4 sm:px-6" style={{ background: 'transparent', paddingTop: showEmptyState ? 20 : 12, paddingBottom: 12, maxWidth: 880, width: '100%', marginLeft: 'auto', marginRight: 'auto', boxSizing: 'border-box' }}>
+          <div className="px-4 sm:px-6" style={{ background: 'transparent', paddingTop: showEmptyState ? (emptyStateVariant === 'aashna' ? 32 : 20) : 12, paddingBottom: 12, maxWidth: 880, width: '100%', marginLeft: 'auto', marginRight: 'auto', boxSizing: 'border-box' }}>
             {/* Active Knowledge Pack / Vault Document / Vault Folder chips */}
             {(activeKnowledgePack || activeVaultDocument || activeVaultFolder) && (() => {
               const folderDocCount = activeVaultFolder
@@ -5568,14 +5628,18 @@ INSTRUCTIONS:
 
             {showEmptyState ? (
               /* ─── EMPTY-STATE INPUT (big, source dropdown + KP dropdown) ─── */
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, border: '1.5px solid var(--border)', borderRadius: 18, background: '#fff', minHeight: 64, padding: '10px 10px 10px 10px', boxShadow: '0 2px 12px rgba(10, 36, 99, 0.04)' }}>
+              /* aashnaMobile (preview-only) stacks the row vertically <768px so
+                 the source pill, textarea and the KP+send sub-row each get a
+                 full-width line. Default /chat is unchanged. */
+              (() => { const aashnaMobile = emptyStateVariant === 'aashna' && isAashnaMobile; return (
+              <div style={{ display: 'flex', flexDirection: aashnaMobile ? 'column' : 'row', alignItems: aashnaMobile ? 'stretch' : 'center', gap: aashnaMobile ? 10 : 8, border: '1.5px solid var(--border)', borderRadius: 18, background: '#fff', minHeight: 64, padding: '10px 10px 10px 10px', boxShadow: '0 2px 12px rgba(10, 36, 99, 0.04)' }}>
                 {/* Source dropdown — replaces the existing `+` attach.
                     Three options: General Chat, Workspace ▸, YourVault ▸.
                     Workspace ▸ lists user's workspaces; selecting one
                     sets activeWorkspaceForChat (label-only). YourVault ▸
                     lists vault docs; selecting one calls the existing
                     handleSelectVaultDocument(doc). */}
-                <div style={{ position: 'relative', flexShrink: 0 }} ref={sourceMenuRef}>
+                <div style={{ position: 'relative', flexShrink: 0, alignSelf: aashnaMobile ? 'flex-start' : undefined }} ref={sourceMenuRef}>
                   {(() => {
                     let sourceLabel = 'General Chat';
                     if (activeVaultDocument) sourceLabel = activeVaultDocument.name;
@@ -5592,7 +5656,7 @@ INSTRUCTIONS:
                           border: isCustomSource ? '1px solid var(--navy)' : '1px solid var(--border)',
                           backgroundColor: isCustomSource ? 'rgba(10, 36, 99, 0.06)' : '#fff',
                           color: 'var(--navy)',
-                          cursor: 'pointer', whiteSpace: 'nowrap', maxWidth: 180,
+                          cursor: 'pointer', whiteSpace: 'nowrap', maxWidth: aashnaMobile ? 'none' : 180,
                         }}
                       >
                         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sourceLabel}</span>
@@ -5747,11 +5811,19 @@ INSTRUCTIONS:
                   }}
                   onKeyDown={handleKeyDown}
                   placeholder={inputPlaceholder}
-                  rows={1}
-                  style={{ flex: 1, border: 'none', outline: 'none', fontSize: 15, color: 'var(--text-primary)', background: 'transparent', resize: 'none', maxHeight: 140, overflowY: 'auto', lineHeight: '1.5', fontFamily: 'inherit', padding: '8px 6px' }}
-                  onInput={(e) => { e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 140) + 'px'; }}
+                  rows={aashnaMobile ? 3 : 1}
+                  style={aashnaMobile
+                    ? { width: '100%', minHeight: 72, border: 'none', outline: 'none', fontSize: 15, color: 'var(--text-primary)', background: 'transparent', resize: 'none', maxHeight: 200, overflowY: 'auto', lineHeight: '1.5', fontFamily: 'inherit', padding: '8px 6px' }
+                    : { flex: 1, border: 'none', outline: 'none', fontSize: 15, color: 'var(--text-primary)', background: 'transparent', resize: 'none', maxHeight: 140, overflowY: 'auto', lineHeight: '1.5', fontFamily: 'inherit', padding: '8px 6px' }
+                  }
+                  onInput={(e) => { e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, aashnaMobile ? 200 : 140) + 'px'; }}
                 />
 
+                {/* aashnaMobile sub-row groups KP dropdown + send into a right-
+                    aligned line below the textarea. Default /chat keeps the
+                    inline horizontal layout (display: contents collapses the
+                    wrapper). */}
+                <div style={aashnaMobile ? { display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 8 } : { display: 'contents' }}>
                 {/* Knowledge Pack dropdown — between textarea and send. */}
                 <div style={{ position: 'relative', flexShrink: 0 }} ref={kpMenuRef}>
                   <button
@@ -5818,7 +5890,9 @@ INSTRUCTIONS:
                     <div onClick={() => canSend && sendMessage(input)} style={{ width: 40, height: 40, borderRadius: '50%', background: canSend ? 'var(--navy)' : '#9CA3AF', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: canSend ? 'pointer' : 'not-allowed', flexShrink: 0, opacity: canSend ? 1 : 0.6, transition: 'background 150ms, opacity 150ms' }}><ArrowUp size={18} color="#fff" /></div>
                   );
                 })()}
+                </div>
               </div>
+              ); })()
             ) : (
               /* ─── POPULATED-CHAT INPUT (existing — DO NOT alter) ─── */
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, border: '1.5px solid var(--border)', borderRadius: 24, background: '#fff', minHeight: 48, padding: '8px 8px 8px 12px', opacity: 1 }}>
@@ -5958,7 +6032,7 @@ INSTRUCTIONS:
                   if (files.length) handleAttachFiles(files, 'doc');
                 }}
                 style={{
-                  marginTop: 12,
+                  marginTop: emptyStateVariant === 'aashna' ? 28 : 12,
                   border: `1px dashed ${isFileDropHover ? 'var(--navy)' : 'var(--border)'}`,
                   borderRadius: 10,
                   background: isFileDropHover ? 'rgba(10, 36, 99, 0.04)' : 'transparent',
@@ -6002,7 +6076,8 @@ INSTRUCTIONS:
               const reviewPrompt = SUGGESTED.find(p => p.title === 'Review a contract')?.prompt || '';
               const summarisePrompt = SUGGESTED.find(p => p.title === 'Summarise a document')?.prompt || '';
               const draftPrompt = SUGGESTED.find(p => p.title === 'Draft an email to counsel')?.prompt || '';
-              const VISIBLE_PILLS = [
+              const isAashna = emptyStateVariant === 'aashna';
+              const ALL_VISIBLE_PILLS = [
                 { id: 'general_chat', label: 'General Chat', icon: MessageCircle, prefill: null },
                 { id: 'contract_review', label: 'Review a contract', icon: FileSearch, prefill: reviewPrompt },
                 { id: 'document_summarisation', label: 'Summarise a document', icon: FileText, prefill: summarisePrompt },
@@ -6010,11 +6085,15 @@ INSTRUCTIONS:
                 { id: 'legal_research', label: 'Legal Research', icon: Search, prefill: null },
                 { id: 'case_law_analysis', label: 'Case Law Analysis', icon: Scale, prefill: null },
               ];
+              // aashna+narrow caps the visible row at the first 4 pills (General
+              // Chat + the 3 ex-action cards); the trailing two get pushed into
+              // the More-operations overflow alongside the rest of INTENTS.
+              const VISIBLE_PILLS = (isAashna && isAashnaNarrow) ? ALL_VISIBLE_PILLS.slice(0, 4) : ALL_VISIBLE_PILLS;
               const visibleIds = new Set(VISIBLE_PILLS.map(p => p.id));
               const OVERFLOW_INTENTS = INTENTS.filter(i => !visibleIds.has(i.id));
               const isActiveInOverflow = OVERFLOW_INTENTS.some(i => i.id === activeIntent);
               return (
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 18, justifyContent: 'center' }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: isAashna ? 28 : 18, justifyContent: 'center' }}>
                   {VISIBLE_PILLS.map(pill => {
                     const isActive = activeIntent === pill.id;
                     const Icon = pill.icon;
@@ -6035,12 +6114,14 @@ INSTRUCTIONS:
                           fontWeight: isActive ? 500 : 400,
                           height: 36,
                           border: isActive ? '1px solid var(--navy)' : '1px solid var(--border)',
-                          backgroundColor: isActive ? 'var(--navy)' : '#fff',
-                          color: isActive ? '#fff' : 'var(--text-secondary)',
+                          // aashna preview: navy outline + 6% navy tint for "active",
+                          // keeping the send button as the only solid-navy attractor.
+                          backgroundColor: isActive ? (isAashna ? 'rgba(10, 36, 99, 0.06)' : 'var(--navy)') : '#fff',
+                          color: isActive ? (isAashna ? 'var(--navy)' : '#fff') : 'var(--text-secondary)',
                           cursor: 'pointer',
                           transition: 'all 150ms ease',
                           whiteSpace: 'nowrap',
-                          boxShadow: isActive ? '0 1px 3px rgba(10, 36, 99, 0.14)' : 'none',
+                          boxShadow: isActive && !isAashna ? '0 1px 3px rgba(10, 36, 99, 0.14)' : 'none',
                         }}
                         onMouseEnter={(e) => { if (!isActive) { e.currentTarget.style.borderColor = 'var(--navy)'; e.currentTarget.style.color = 'var(--navy)'; } }}
                         onMouseLeave={(e) => { if (!isActive) { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-secondary)'; } }}
@@ -6061,12 +6142,12 @@ INSTRUCTIONS:
                         fontWeight: isActiveInOverflow ? 500 : 400,
                         height: 36,
                         border: isActiveInOverflow ? '1px solid var(--navy)' : '1px solid var(--border)',
-                        backgroundColor: isActiveInOverflow ? 'var(--navy)' : '#fff',
-                        color: isActiveInOverflow ? '#fff' : 'var(--text-secondary)',
+                        backgroundColor: isActiveInOverflow ? (isAashna ? 'rgba(10, 36, 99, 0.06)' : 'var(--navy)') : '#fff',
+                        color: isActiveInOverflow ? (isAashna ? 'var(--navy)' : '#fff') : 'var(--text-secondary)',
                         cursor: 'pointer',
                         transition: 'all 150ms ease',
                         whiteSpace: 'nowrap',
-                        boxShadow: isActiveInOverflow ? '0 1px 3px rgba(10, 36, 99, 0.14)' : 'none',
+                        boxShadow: isActiveInOverflow && !isAashna ? '0 1px 3px rgba(10, 36, 99, 0.14)' : 'none',
                       }}
                     >
                       {isActiveInOverflow ? getIntentLabel(activeIntent) : 'More operations'}
