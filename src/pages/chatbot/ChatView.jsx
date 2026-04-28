@@ -607,7 +607,6 @@ function Sidebar({ activeKey, onGoHome, onOpenChat, onOpenPromptTemplates, onOpe
     // straight into the General Chat surface.
     { id: 'chat', icon: MessageSquare, label: 'Chat', onClick: onOpenChat },
     { id: 'workspaces', icon: Briefcase, label: 'Workspaces', rightText: String(workspaceCount ?? 0), onClick: onOpenWorkspaces },
-    isOrgAdmin && { id: 'clients', icon: Users, label: 'Clients', rightText: String(clientCount), onClick: onOpenClients },
     !isExternalUser && { id: 'invite-team', icon: UserPlus, label: 'Invite Team', rightText: memberCount != null ? String(memberCount) : undefined, onClick: onOpenInviteTeam },
   ].filter(Boolean).map((it) => ({ ...it, active: it.id === activeKey }));
 
@@ -3162,28 +3161,7 @@ function AttachMenu({ activePack, activeDocument, activeFolder, folderDocCount, 
 }
 
 /* ─────────────────── Top Nav ─────────────────── */
-function TopNav({ plan, usage, onOpenSidebar }) {
-  const [showUsagePopover, setShowUsagePopover] = useState(false);
-  const docPct = usage.docs.limit > 0 ? (usage.docs.used / usage.docs.limit) * 100 : 0;
-  const usageColor = docPct >= 95 ? '#C65454' : docPct >= 80 ? '#E8A33D' : 'var(--text-muted)';
-  const usageBorder = docPct >= 95 ? '#F9E7E7' : docPct >= 80 ? '#FBEED5' : 'var(--border)';
-
-  const UsageBar = ({ label, used, limit }) => {
-    const pct = limit > 0 ? Math.min((used / limit) * 100, 100) : 0;
-    const color = pct >= 95 ? '#C65454' : pct >= 80 ? '#E8A33D' : 'var(--navy)';
-    return (
-      <div style={{ marginBottom: 10 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
-          <span style={{ fontSize: 12, color: 'var(--text-primary)' }}>{label}</span>
-          <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{used.toLocaleString()} / {limit.toLocaleString()} ({pct.toFixed(1)}%)</span>
-        </div>
-        <div style={{ height: 4, borderRadius: 4, backgroundColor: 'var(--ice-warm)', overflow: 'hidden' }}>
-          <div style={{ height: '100%', borderRadius: 4, width: `${pct}%`, backgroundColor: color, transition: 'width 0.3s' }} />
-        </div>
-      </div>
-    );
-  };
-
+function TopNav({ onOpenSidebar }) {
   return (
     <div className="px-3 sm:px-4 md:px-6" style={{ height: 50, minHeight: 50, borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff' }}>
       <div className="flex items-center gap-3 md:gap-4">
@@ -3199,49 +3177,6 @@ function TopNav({ plan, usage, onOpenSidebar }) {
         <span className="hidden md:inline-flex" style={{ fontFamily: "'DM Serif Display', serif", fontSize: 15, letterSpacing: '-0.01em' }}>
           <span style={{ color: 'var(--navy)' }}>Your</span><span style={{ color: '#C9A84C' }}>AI</span>
         </span>
-      </div>
-      <div className="flex items-center gap-2 sm:gap-3 md:gap-3">
-        {/* Grouped counter + divider + Main Site */}
-        <div className="flex items-center" style={{ gap: 10 }}>
-          {/* Usage pill */}
-          <div style={{ position: 'relative' }}>
-            <button
-              onClick={() => setShowUsagePopover(!showUsagePopover)}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 4,
-                padding: '3px 10px', borderRadius: 999,
-                backgroundColor: 'var(--ice-warm)', border: `1px solid ${usageBorder}`,
-                fontSize: 11, color: usageColor, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif",
-              }}
-            >
-              {docPct >= 95 && <AlertTriangle size={11} />}
-              {usage.docs.used.toLocaleString()} / {usage.docs.limit.toLocaleString()}<span className="hidden sm:inline"> docs this month</span><span className="sm:hidden"> docs</span>
-            </button>
-            {showUsagePopover && (
-              <>
-                <div onClick={() => setShowUsagePopover(false)} style={{ position: 'fixed', inset: 0, zIndex: 20 }} />
-                <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: 8, width: 300, backgroundColor: 'white', borderRadius: 12, border: '1px solid var(--border)', boxShadow: '0 8px 24px rgba(0,0,0,0.12)', zIndex: 21, padding: 16 }}>
-                  <div style={{ fontFamily: "'DM Serif Display', serif", fontSize: 15, color: 'var(--text-primary)', marginBottom: 12 }}>Your Plan Usage — {plan}</div>
-                  <UsageBar label="Documents" used={usage.docs.used} limit={usage.docs.limit} />
-                  <UsageBar label="Workflows" used={usage.workflows.used} limit={usage.workflows.limit} />
-                  <div style={{ borderTop: '1px solid var(--border)', paddingTop: 10, marginTop: 6 }}>
-                    <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 6 }}>Resets May 1, 2026</div>
-                    <a href="/app/billing" style={{ fontSize: 12, color: 'var(--navy)', textDecoration: 'none', fontWeight: 500 }} onMouseEnter={(e) => e.target.style.textDecoration = 'underline'} onMouseLeave={(e) => e.target.style.textDecoration = 'none'}>View Full Billing →</a>
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
-          {/* Subtle vertical divider between counter and Main Site */}
-          <span className="hidden sm:inline-block" style={{ width: 1, height: 14, background: 'var(--border)', flexShrink: 0 }} />
-          <span className="hidden sm:inline-flex" style={{ fontSize: 12, color: 'var(--text-muted)', cursor: 'pointer' }}>&lt; Main Site</span>
-        </div>
-        {/* Search — far right */}
-        <div className="hidden md:block" style={{ position: 'relative' }}>
-          <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-          <input readOnly placeholder="Search files, knowledge, or conversatio..." style={{ width: 240, height: 34, borderRadius: 8, border: '1px solid var(--border)', paddingLeft: 30, paddingRight: 40, fontSize: 13, color: 'var(--text-secondary)', background: '#fff', outline: 'none' }} />
-          <span style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', fontSize: 11, color: 'var(--text-muted)', background: '#F0F3F6', padding: '2px 6px', borderRadius: 4, fontWeight: 500 }}>{'\u2318'}K</span>
-        </div>
       </div>
     </div>
   );
