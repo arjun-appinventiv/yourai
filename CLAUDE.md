@@ -156,6 +156,7 @@ Files here are context for working on specific features. Reference them with `@.
 Authored feature inventories live in `docs/extracted/`. Each is a comprehensive spec of one module's screens, UI, state, storage keys, hardcoded mocks, and discrepancies. Load when working on that module:
 
 - `docs/extracted/intent-features.md` — Intent system end-to-end (`ChatView`, `WorkspaceChatView`, persona editor, Edge schemas, KP/DV relationship)
+- `docs/extracted/intent-cards.md` — Per-card scope reference for the 8 intent response cards (shell, accent, schema, populated/empty/partial states, edge cases)
 - `docs/extracted/bot-persona-features.md` — SA Bot Persona tab internals
 - `docs/extracted/kb-features.md` — Knowledge Base module
 - `docs/extracted/tenant-features.md` — Tenant Management (SA-side) + Clients (Org-side)

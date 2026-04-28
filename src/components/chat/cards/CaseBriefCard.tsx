@@ -1,10 +1,8 @@
 import React from 'react';
-import CardShell from './CardShell';
-import CardHeader from './CardHeader';
-import CardFooter, { type CardFooterSource } from './CardFooter';
-
-const MONO = "'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace";
-const SERIF = "'DM Serif Display', Georgia, serif";
+import {
+  EditorialShell, EditorialHeader, EditorialFooter,
+  Body, ACCENTS, COLORS, MONO, SERIF,
+} from './EditorialShell';
 
 export interface CaseBriefRow {
   label: string;
@@ -42,39 +40,41 @@ export default function CaseBriefCard({ data }: { data: CaseBriefCardData }) {
   const isEmpty = rows.length === 0 && !hasPrecedence && !data?.caseName && !data?.application;
   if (isEmpty) {
     return (
-      <CardShell accentColor="green">
-        <CardHeader
+      <EditorialShell accentColor={ACCENTS.green}>
+        <EditorialHeader
           intentLabel="Case Law Analysis"
           title="No case document supplied"
           subtitle="Case analysis needs a filing, opinion, or memo"
-          sourcePill={{ label: 'Document', type: 'doc' }}
+          sourcePill={{ label: 'Document', kind: 'doc' }}
         />
-        <div style={{ padding: '28px 28px 32px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <p style={{ fontSize: 15, color: '#374151', lineHeight: 1.7, margin: 0 }}>
+        <div style={{ padding: '26px 32px 28px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <Body>
             Upload a court filing, opinion PDF, or case memo using the <strong>+</strong> button next to the input, then ask again and I'll brief the case with holding, facts, procedural posture, and application to your matter.
-          </p>
-          <p style={{ fontSize: 13, color: '#6B7280', margin: 0, lineHeight: 1.6 }}>
+          </Body>
+          <div style={{ fontSize: 13, color: COLORS.muted, lineHeight: 1.6 }}>
             Looking up a case by name or citation without uploading? Switch the intent pill to <em>Legal Research</em>.
-          </p>
+          </div>
         </div>
-        <CardFooter sourceType="none" sourceName="—" />
-      </CardShell>
+        <EditorialFooter footerText="—" />
+      </EditorialShell>
     );
   }
 
+  const footerText = data?.sourceName ? `Document: ${data.sourceName}` : '—';
+
   return (
-    <CardShell accentColor="green">
-      <CardHeader
+    <EditorialShell accentColor={ACCENTS.green}>
+      <EditorialHeader
         intentLabel="Case Law Analysis"
         title={data?.caseName || 'Untitled case'}
         subtitle={[data?.court, data?.date, data?.subject].filter(Boolean).join(' · ')}
-        sourcePill={{ label: 'Document', type: 'doc' }}
+        sourcePill={{ label: 'Document', kind: 'doc' }}
       />
 
       {/* Grid table */}
       <div style={{ display: 'grid', gridTemplateColumns: '110px 1fr' }}>
         {rows.length === 0 ? (
-          <div style={{ gridColumn: '1 / 3', padding: '24px', fontSize: 15, color: '#4B5563', fontStyle: 'italic', textAlign: 'center' }}>
+          <div style={{ gridColumn: '1 / 3', padding: '24px', fontSize: 14, color: COLORS.muted, fontStyle: 'italic', textAlign: 'center' }}>
             No case details available.
           </div>
         ) : (
@@ -85,17 +85,18 @@ export default function CaseBriefCard({ data }: { data: CaseBriefCardData }) {
                 <div
                   style={{
                     padding: '16px 20px',
-                    borderBottom: isLast ? 'none' : '1px solid #F3F4F6',
+                    borderBottom: isLast ? 'none' : `1px solid ${COLORS.border}`,
                     fontFamily: MONO,
-                    fontSize: 13,
-                    letterSpacing: '0.1em',
+                    fontSize: 11,
+                    letterSpacing: '0.16em',
                     textTransform: 'uppercase',
-                    color: '#4B5563',
-                    background: '#F9FAFB',
-                    borderRight: '1px solid #E4E7EC',
+                    color: COLORS.faint,
+                    background: COLORS.panelBg,
+                    borderRight: `1px solid ${COLORS.border}`,
                     display: 'flex',
                     alignItems: 'flex-start',
                     paddingTop: 18,
+                    fontWeight: 500,
                   }}
                 >
                   {row.label}
@@ -103,10 +104,10 @@ export default function CaseBriefCard({ data }: { data: CaseBriefCardData }) {
                 <div
                   style={{
                     padding: '16px 20px',
-                    borderBottom: isLast ? 'none' : '1px solid #F3F4F6',
+                    borderBottom: isLast ? 'none' : `1px solid ${COLORS.border}`,
                     ...(row.isHolding
-                      ? { fontFamily: SERIF, fontStyle: 'italic', fontSize: 14, color: '#0B1D3A', lineHeight: 1.6 }
-                      : { fontSize: 15, color: '#374151', lineHeight: 1.75 }),
+                      ? { fontFamily: SERIF, fontStyle: 'italic', fontSize: 15, color: COLORS.title, lineHeight: 1.6 }
+                      : { fontSize: 15, color: COLORS.body, lineHeight: 1.75 }),
                   }}
                 >
                   {row.value}
@@ -122,15 +123,16 @@ export default function CaseBriefCard({ data }: { data: CaseBriefCardData }) {
               style={{
                 padding: '16px 20px',
                 fontFamily: MONO,
-                fontSize: 13,
-                letterSpacing: '0.1em',
+                fontSize: 11,
+                letterSpacing: '0.16em',
                 textTransform: 'uppercase',
-                color: '#4B5563',
-                background: '#F9FAFB',
-                borderRight: '1px solid #E4E7EC',
+                color: COLORS.faint,
+                background: COLORS.panelBg,
+                borderRight: `1px solid ${COLORS.border}`,
                 display: 'flex',
                 alignItems: 'flex-start',
                 paddingTop: 18,
+                fontWeight: 500,
               }}
             >
               Precedence
@@ -147,7 +149,7 @@ export default function CaseBriefCard({ data }: { data: CaseBriefCardData }) {
                         style={{
                           display: 'inline-block',
                           fontFamily: MONO,
-                          fontSize: 13,
+                          fontSize: 12,
                           letterSpacing: '0.08em',
                           padding: '3px 10px',
                           borderRadius: 4,
@@ -165,7 +167,7 @@ export default function CaseBriefCard({ data }: { data: CaseBriefCardData }) {
                 </div>
               )}
               {precedence.note && (
-                <div style={{ fontSize: 14, color: '#374151', lineHeight: 1.6, marginTop: 8 }}>
+                <div style={{ fontSize: 14, color: COLORS.body, lineHeight: 1.6, marginTop: 8 }}>
                   {precedence.note}
                 </div>
               )}
@@ -178,7 +180,7 @@ export default function CaseBriefCard({ data }: { data: CaseBriefCardData }) {
       {data?.application ? (
         <div
           style={{
-            padding: '20px 24px',
+            padding: '20px 32px',
             background: '#F0F4FF',
             borderTop: '1px solid #DBEAFE',
           }}
@@ -186,20 +188,21 @@ export default function CaseBriefCard({ data }: { data: CaseBriefCardData }) {
           <div
             style={{
               fontFamily: MONO,
-              fontSize: 13,
-              letterSpacing: '0.12em',
+              fontSize: 11,
+              letterSpacing: '0.16em',
               textTransform: 'uppercase',
-              color: '#0B1D3A',
+              color: COLORS.title,
               marginBottom: 8,
+              fontWeight: 600,
             }}
           >
             Application to Your Matter
           </div>
-          <div style={{ fontSize: 15, color: '#374151', lineHeight: 1.75 }}>{data.application}</div>
+          <div style={{ fontSize: 15, color: COLORS.body, lineHeight: 1.75 }}>{data.application}</div>
         </div>
       ) : null}
 
-      <CardFooter sourceType={(data?.sourceType as CardFooterSource) || 'none'} sourceName={data?.sourceName || '—'} />
-    </CardShell>
+      <EditorialFooter footerText={footerText} />
+    </EditorialShell>
   );
 }
