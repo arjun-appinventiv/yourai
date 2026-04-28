@@ -4241,7 +4241,11 @@ export default function ChatView({ initialView = 'chat' }) {
       window.removeEventListener('yourai:vault-use-doc', onUseDoc);
       window.removeEventListener('yourai:vault-browse', onBrowseVault);
     };
-  }, [documentVault, handleSelectVaultDocument]);
+    // handleSelectVaultDocument is referenced lazily inside onUseDoc;
+    // including it in deps causes a TDZ error because this useEffect
+    // is declared earlier in the component body than the const itself.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [documentVault]);
 
   const handleSwitchThread = useCallback((threadId) => {
     if (threadId === activeThreadId) return;
