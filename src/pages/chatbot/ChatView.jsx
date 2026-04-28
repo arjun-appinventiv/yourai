@@ -3977,6 +3977,15 @@ export default function ChatView({ initialView = 'chat' }) {
   const inputRef = useRef(null);
   // Removed: responseIdx — no longer needed with real LLM responses
 
+  // Auto-resize the chat input whenever `input` changes via setInput
+  // (programmatic changes don't fire onInput). Caps at 140px maxHeight,
+  // matching the textarea's inline cap.
+  useEffect(() => {
+    if (!inputRef.current) return;
+    inputRef.current.style.height = 'auto';
+    inputRef.current.style.height = Math.min(inputRef.current.scrollHeight, 140) + 'px';
+  }, [input]);
+
   const plan = billingData.plan;
   const usage = billingData.usage;
   const docPct = usage.docs.limit > 0 ? (usage.docs.used / usage.docs.limit) * 100 : 0;
@@ -5949,17 +5958,15 @@ INSTRUCTIONS:
                   if (files.length) handleAttachFiles(files, 'doc');
                 }}
                 style={{
-                  marginTop: 16,
+                  marginTop: 12,
                   border: `1px dashed ${isFileDropHover ? 'var(--navy)' : 'var(--border)'}`,
-                  borderRadius: 12,
-                  background: isFileDropHover ? 'rgba(10, 36, 99, 0.04)' : 'var(--ice-warm)',
-                  padding: '20px 16px',
-                  minHeight: 96,
+                  borderRadius: 10,
+                  background: isFileDropHover ? 'rgba(10, 36, 99, 0.04)' : 'transparent',
+                  padding: '10px 14px',
                   display: 'flex',
-                  flexDirection: 'column',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  gap: 4,
+                  gap: 10,
                   cursor: 'pointer',
                   transition: 'border-color 150ms, background 150ms',
                 }}
@@ -5976,14 +5983,12 @@ INSTRUCTIONS:
                     e.target.value = '';
                   }}
                 />
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <Upload size={14} style={{ color: 'var(--navy)' }} />
-                  <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--navy)', fontFamily: "'DM Sans', sans-serif" }}>
-                    Drop files here, or click to upload
-                  </span>
-                </div>
+                <Upload size={13} style={{ color: 'var(--text-muted)' }} />
+                <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', fontFamily: "'DM Sans', sans-serif" }}>
+                  Drop files or click to upload
+                </span>
                 <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: "'DM Sans', sans-serif" }}>
-                  PDF, DOCX, TXT — added to your YourVault automatically
+                  · PDF, DOCX, TXT
                 </span>
               </div>
             )}
@@ -6064,7 +6069,7 @@ INSTRUCTIONS:
                         boxShadow: isActiveInOverflow ? '0 1px 3px rgba(10, 36, 99, 0.14)' : 'none',
                       }}
                     >
-                      {isActiveInOverflow ? getIntentLabel(activeIntent) : 'More'}
+                      {isActiveInOverflow ? getIntentLabel(activeIntent) : 'More operations'}
                       <ChevronDown size={12} style={{ transform: isEmptyMoreOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 150ms' }} />
                     </button>
                     {isEmptyMoreOpen && (
