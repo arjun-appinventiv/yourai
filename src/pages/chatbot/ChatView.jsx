@@ -2707,24 +2707,6 @@ Rules:
                 selectedId={typeFilter}
                 onPick={(id) => { setTypeFilter(id); setOpenFilterMenu(null); }}
               />
-              {/* Sort */}
-              <FilterChip
-                icon={ArrowUp}
-                label="Sort"
-                value={({ recent: 'Recently uploaded', name: 'Name (A→Z)', 'size-desc': 'Largest first', 'size-asc': 'Smallest first' })[sortBy]}
-                isActive={sortBy !== 'recent'}
-                isOpen={openFilterMenu === 'sort'}
-                onToggle={() => setOpenFilterMenu(openFilterMenu === 'sort' ? null : 'sort')}
-                onClose={() => setOpenFilterMenu(null)}
-                options={[
-                  { id: 'recent',    label: 'Recently uploaded' },
-                  { id: 'name',      label: 'Name (A→Z)' },
-                  { id: 'size-desc', label: 'Largest first' },
-                  { id: 'size-asc',  label: 'Smallest first' },
-                ]}
-                selectedId={sortBy}
-                onPick={(id) => { setSortBy(id); setOpenFilterMenu(null); }}
-              />
               {activeFilterCount > 0 && (
                 <button
                   onClick={clearAllFilters}
@@ -2739,48 +2721,6 @@ Rules:
                 </span>
               )}
             </div>
-
-            {/* Subfolder chip strip */}
-            {childFolders.length > 0 && (
-              <div style={{ maxWidth: 1080, margin: '0 auto', padding: '0 28px 16px' }}>
-                <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-muted)', fontFamily: "'IBM Plex Mono', ui-monospace, monospace", marginBottom: 8 }}>
-                  {currentFolderId ? 'Subfolders' : 'Folders'}
-                </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                  {childFolders.map((f) => {
-                    const docCt = docCountByFolder[f.id] || 0;
-                    const isFolderActive = activeFolder?.id === f.id;
-                    return (
-                      <div
-                        key={f.id}
-                        onClick={() => setCurrentFolderId(f.id)}
-                        style={{
-                          display: 'inline-flex', alignItems: 'center', gap: 8,
-                          height: 36, padding: '0 14px', borderRadius: 999,
-                          border: '1px solid var(--border)', background: '#fff',
-                          cursor: 'pointer', transition: 'background 120ms',
-                          fontFamily: "'DM Sans', sans-serif",
-                        }}
-                        onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(10,36,99,0.04)'; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; }}
-                      >
-                        <Folder size={13} style={{ color: f.isGlobal ? '#9A7A22' : 'var(--navy)' }} />
-                        <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-primary)' }}>{f.name}</span>
-                        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{docCt}</span>
-                        {folderAttachable && (
-                          <button
-                            onClick={(e) => { e.stopPropagation(); onSelectFolder(f); }}
-                            style={{ marginLeft: 4, padding: '2px 8px', borderRadius: 4, fontSize: 10, fontWeight: 600, background: isFolderActive ? '#5CA868' : 'var(--navy)', color: '#fff', border: 'none', cursor: 'pointer' }}
-                          >
-                            {isFolderActive ? 'Active' : 'Use'}
-                          </button>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
 
             {/* Documents table */}
             <div style={{ maxWidth: 1080, margin: '0 auto', padding: '8px 28px 48px' }}>
