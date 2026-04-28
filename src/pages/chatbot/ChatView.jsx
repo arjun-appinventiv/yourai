@@ -4395,6 +4395,25 @@ export default function ChatView({ initialView = 'chat' }) {
       for (const p of ['called', 'named', 'titled', 'about', 'for', 'from']) {
         if (q.startsWith(p + ' ')) { q = q.slice(p.length).trim(); break; }
       }
+      // Strip trailing vault-context phrases — "find Series B term sheet
+      // from my document vault" should search for "series b term sheet".
+      // Longest-first so "from my document vault" is consumed before
+      // "from my vault" or "from vault".
+      const FIND_DOC_TRAILING = [
+        'from my document vault', 'from my doc vault', 'from my files',
+        'from the document vault', 'from the doc vault',
+        'in my document vault', 'in my doc vault',
+        'in the document vault', 'in the doc vault',
+        'from my documents', 'from my docs', 'from my vault',
+        'in my documents', 'in my docs', 'in my vault',
+        'from the vault', 'in the vault',
+        'in vault', 'in documents', 'in docs', 'in files',
+        'from vault', 'from documents', 'from docs',
+      ];
+      for (const t of FIND_DOC_TRAILING) {
+        if (q === t) { q = ''; break; }
+        if (q.endsWith(' ' + t)) { q = q.slice(0, q.length - t.length - 1).trim(); break; }
+      }
       return q;
     };
 
