@@ -414,8 +414,8 @@ function HomeTileLauncher({
       meta: 'Open chat', onClick: onOpenChat, accent: '#0A2463',
     },
     {
-      id: 'workspaces', icon: Briefcase, label: 'Case Workspaces',
-      desc: 'Per-case workspaces — each holds its own chats, docs, and runs.',
+      id: 'workspaces', icon: Briefcase, label: 'Workspaces',
+      desc: 'Per-matter workspaces — each holds its own chats, docs, and runs.',
       meta: `${workspaceCount} ${workspaceCount === 1 ? 'workspace' : 'workspaces'}`,
       onClick: onOpenWorkspaces, accent: '#5B21B6',
     },
@@ -606,7 +606,7 @@ function Sidebar({ activeKey, onGoHome, onOpenChat, onOpenPromptTemplates, onOpe
     // "Chat" entry — renamed from the prior "Dashboard" item. Goes
     // straight into the General Chat surface.
     { id: 'chat', icon: MessageSquare, label: 'Chat', onClick: onOpenChat },
-    { id: 'workspaces', icon: Briefcase, label: 'Case Workspaces', rightText: String(workspaceCount ?? 0), onClick: onOpenWorkspaces },
+    { id: 'workspaces', icon: Briefcase, label: 'Workspaces', rightText: String(workspaceCount ?? 0), onClick: onOpenWorkspaces },
     isOrgAdmin && { id: 'clients', icon: Users, label: 'Clients', rightText: String(clientCount), onClick: onOpenClients },
     !isExternalUser && { id: 'invite-team', icon: UserPlus, label: 'Invite Team', rightText: memberCount != null ? String(memberCount) : undefined, onClick: onOpenInviteTeam },
   ].filter(Boolean).map((it) => ({ ...it, active: it.id === activeKey }));

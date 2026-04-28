@@ -91,7 +91,7 @@ export default function WorkspacesPanel({ onClose, onToast }) {
         <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid var(--border)' }}>
           <div className="flex items-center justify-between gap-2">
             <div className="min-w-0">
-              <h3 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 18, color: 'var(--text-primary)', margin: 0 }}>Case Workspaces</h3>
+              <h3 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 18, color: 'var(--text-primary)', margin: 0 }}>Workspaces</h3>
               <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
                 {isOrgAdmin
                   ? `${visible.length} across the organisation`
