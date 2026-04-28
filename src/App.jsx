@@ -104,10 +104,6 @@ export default function App() {
             <Route path="/chat/reset-password" element={<ChatResetPassword />} />
             <Route path="/chat/onboarding" element={<ChatOnboarding />} />
             <Route path="/chat" element={<ChatRoleProvider><ChatView /></ChatRoleProvider>} />
-            {/* PM A/B preview — Aashna's polished empty-state variant. Same ChatView,
-                only the empty-state surface differs. Keep adjacent to /chat so they
-                stay easy to compare side-by-side. */}
-            <Route path="/chatviewv2" element={<ChatRoleProvider><ChatView emptyStateVariant="aashna" /></ChatRoleProvider>} />
             <Route path="/chat/home" element={<ChatRoleProvider><ChatView initialView="home" /></ChatRoleProvider>} />
             <Route path="/chat/workspaces" element={<ChatRoleProvider><ChatView initialView="workspaces" /></ChatRoleProvider>} />
             <Route path="/chat/workspaces/:id" element={<RouteErrorBoundary><ChatRoleProvider><WorkspaceChatView /></ChatRoleProvider></RouteErrorBoundary>} />
