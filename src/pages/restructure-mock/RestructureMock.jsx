@@ -254,7 +254,7 @@ function PillarB() {
               { icon: Users, label: 'Clients' },
               { icon: User, label: 'Invite Team' },
               { divider: true, label: 'Knowledge' },
-              { icon: FolderOpen, label: 'Document vault', highlight: '#FCD34D' },
+              { icon: FolderOpen, label: 'YourVault', highlight: '#FCD34D' },
               { icon: Package, label: 'Knowledge packs', highlight: '#FCD34D' },
               { icon: Zap, label: 'Workflows' },
               { icon: FileText, label: 'Prompt templates' },

@@ -127,7 +127,7 @@ export default function FileResultsCard({ data, onUse, onBrowseVault }: FileResu
         />
         <div style={{ padding: '26px 32px 28px', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 14 }}>
           <Body>
-            You haven't uploaded anything yet. Once you add documents — by attaching a file in chat or via the Document Vault — you'll be able to find them here by name, folder, or description.
+            You haven't uploaded anything yet. Once you add documents — by attaching a file in chat or via YourVault — you'll be able to find them here by name, folder, or description.
           </Body>
           <InlineButton variant="primary" onClick={() => handleBrowse()}>
             Upload a file

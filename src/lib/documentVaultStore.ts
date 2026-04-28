@@ -1,4 +1,4 @@
-// ─── Document Vault persistence ──────────────────────────────────────
+// ─── YourVault persistence ──────────────────────────────────────
 //
 // Tiny helper so ChatView (personal vault panel) and WorkspaceChatView
 // (workspace-chat ad-hoc uploads) can share the same underlying list.

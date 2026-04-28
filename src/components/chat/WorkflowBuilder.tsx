@@ -739,7 +739,7 @@ function StepCard(props: StepCardProps) {
               {/* Tabs */}
               <div style={{ display: 'flex', gap: 4, marginBottom: 12, padding: 4, background: '#fff', borderRadius: 10, border: '1px solid var(--border)' }}>
                 <TabButton label="Upload file"     active={refTab === 'upload'} onClick={() => onSetRefTab('upload')} />
-                <TabButton label="Document Vault"  active={refTab === 'vault'}  onClick={() => onSetRefTab('vault')} />
+                <TabButton label="YourVault"  active={refTab === 'vault'}  onClick={() => onSetRefTab('vault')} />
                 <TabButton label="Knowledge Pack"  active={refTab === 'kp'}     onClick={() => onSetRefTab('kp')} />
               </div>
 
@@ -929,7 +929,7 @@ function VaultTab({ onSelect }: { onSelect: (ref: ReferenceDoc) => void }) {
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Search Document Vault..."
+          placeholder="Search YourVault..."
           style={{ width: '100%', height: 32, borderRadius: 8, border: '1px solid var(--border)', paddingLeft: 30, fontSize: 12, outline: 'none', background: '#fff', boxSizing: 'border-box' }}
         />
       </div>
@@ -1079,7 +1079,7 @@ function visibilitySubtitle(v: WorkflowVisibility): string {
 }
 function refTypeLabel(t: ReferenceDoc['type']): string {
   if (t === 'upload') return 'uploaded file';
-  if (t === 'vault') return 'from Document Vault';
+  if (t === 'vault') return 'from YourVault';
   return 'from Knowledge Pack';
 }
 
