@@ -1,9 +1,8 @@
 import React from 'react';
-import CardShell from './CardShell';
-import CardHeader from './CardHeader';
-import CardFooter, { type CardFooterSource } from './CardFooter';
-
-const MONO = "'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace";
+import {
+  EditorialShell, EditorialHeader, EditorialFooter,
+  Body, ACCENTS, COLORS, MONO,
+} from './EditorialShell';
 
 export type ComparisonVerdict = 'better' | 'worse' | 'neutral';
 
@@ -44,33 +43,35 @@ export default function ComparisonCard({ data }: { data: ComparisonCardData }) {
   const isEmpty = rows.length === 0 && !data?.doc1Name && !data?.doc2Name && !data?.recommendation;
   if (isEmpty) {
     return (
-      <CardShell accentColor="navy">
-        <CardHeader
+      <EditorialShell accentColor={ACCENTS.navy}>
+        <EditorialHeader
           intentLabel="Clause Comparison"
           title="No documents to compare"
           subtitle="Clause comparison needs two documents"
-          sourcePill={{ label: 'Workspace', type: 'workspace' }}
+          sourcePill={{ label: 'Workspace', kind: 'workspace' }}
         />
-        <div style={{ padding: '28px 28px 32px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <p style={{ fontSize: 15, color: '#374151', lineHeight: 1.7, margin: 0 }}>
+        <div style={{ padding: '26px 32px 28px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <Body>
             Upload the two contracts (or memos, or policies) you want to compare using the <strong>+</strong> button next to the input, then ask again and I'll produce the clause-by-clause comparison.
-          </p>
-          <p style={{ fontSize: 13, color: '#6B7280', margin: 0, lineHeight: 1.6 }}>
+          </Body>
+          <div style={{ fontSize: 13, color: COLORS.muted, lineHeight: 1.6 }}>
             If you meant a general question, switch the intent pill above the input to <em>General chat</em> or <em>Legal Q&amp;A</em>.
-          </p>
+          </div>
         </div>
-        <CardFooter sourceType="none" sourceName="—" />
-      </CardShell>
+        <EditorialFooter footerText="—" />
+      </EditorialShell>
     );
   }
 
+  const footerText = data?.sourceName ? `Documents: ${data.sourceName}` : '—';
+
   return (
-    <CardShell accentColor="navy">
-      <CardHeader
+    <EditorialShell accentColor={ACCENTS.navy}>
+      <EditorialHeader
         intentLabel="Clause Comparison"
         title={`${doc1Name} vs ${doc2Name}`}
         subtitle={`${data?.clauseCount ?? rows.length} clauses compared · 2 documents`}
-        sourcePill={{ label: 'Workspace', type: 'workspace' }}
+        sourcePill={{ label: 'Workspace', kind: 'workspace' }}
       />
 
       {/* Column header row */}
@@ -78,17 +79,17 @@ export default function ComparisonCard({ data }: { data: ComparisonCardData }) {
         style={{
           display: 'grid',
           gridTemplateColumns: '130px 1fr 1fr',
-          background: '#0B1D3A',
+          background: COLORS.title,
         }}
       >
         <HeaderCell text="Clause" color="rgba(255,255,255,0.4)" />
-        <HeaderCell text={doc1Name} color="#C9A84C" />
+        <HeaderCell text={doc1Name} color={COLORS.gold} />
         <HeaderCell text={doc2Name} color="rgba(255,255,255,0.4)" last />
       </div>
 
       {/* Rows */}
       {rows.length === 0 ? (
-        <div style={{ padding: '20px 22px', textAlign: 'center', fontSize: 15, color: '#4B5563', fontStyle: 'italic' }}>
+        <div style={{ padding: '20px 32px', textAlign: 'center', fontSize: 14, color: COLORS.muted, fontStyle: 'italic' }}>
           No clauses to compare.
         </div>
       ) : (
@@ -98,20 +99,20 @@ export default function ComparisonCard({ data }: { data: ComparisonCardData }) {
             style={{
               display: 'grid',
               gridTemplateColumns: '130px 1fr 1fr',
-              borderBottom: i === rows.length - 1 ? 'none' : '1px solid #E4E7EC',
+              borderBottom: i === rows.length - 1 ? 'none' : `1px solid ${COLORS.border}`,
             }}
           >
             {/* Clause cell */}
             <div
               style={{
                 padding: '16px',
-                background: '#F9FAFB',
-                borderRight: '1px solid #E4E7EC',
+                background: COLORS.panelBg,
+                borderRight: `1px solid ${COLORS.border}`,
                 fontFamily: MONO,
-                fontSize: 13,
+                fontSize: 12,
                 letterSpacing: '0.1em',
                 textTransform: 'uppercase',
-                color: '#374151',
+                color: COLORS.body,
                 lineHeight: 1.6,
                 display: 'flex',
                 alignItems: 'flex-start',
@@ -130,21 +131,21 @@ export default function ComparisonCard({ data }: { data: ComparisonCardData }) {
       {data?.recommendation ? (
         <div
           style={{
-            padding: '12px 22px',
-            background: '#F8FAFC',
-            borderTop: '1px solid #E4E7EC',
+            padding: '14px 32px',
+            background: COLORS.panelBg,
+            borderTop: `1px solid ${COLORS.border}`,
             fontSize: 14,
-            color: '#374151',
+            color: COLORS.body,
             lineHeight: 1.7,
           }}
         >
-          <span style={{ color: '#0B1D3A', fontWeight: 600 }}>Recommendation — </span>
+          <span style={{ color: COLORS.title, fontWeight: 600 }}>Recommendation — </span>
           {data.recommendation}
         </div>
       ) : null}
 
-      <CardFooter sourceType={(data?.sourceType as CardFooterSource) || 'none'} sourceName={data?.sourceName || '—'} />
-    </CardShell>
+      <EditorialFooter footerText={footerText} />
+    </EditorialShell>
   );
 }
 
@@ -153,7 +154,7 @@ function HeaderCell({ text, color, last }: { text: string; color: string; last?:
     <div
       style={{
         fontFamily: MONO,
-        fontSize: 13,
+        fontSize: 12,
         letterSpacing: '0.14em',
         textTransform: 'uppercase',
         padding: '12px 16px',
@@ -173,14 +174,14 @@ function DataCell({ verdict, text, last }: { verdict: ComparisonVerdict; text: s
       style={{
         padding: '16px',
         background: VERDICT_CELL_BG[verdict],
-        borderRight: last ? 'none' : '1px solid #E4E7EC',
+        borderRight: last ? 'none' : `1px solid ${COLORS.border}`,
       }}
     >
       <span
         style={{
           display: 'inline-flex',
           fontFamily: MONO,
-          fontSize: 13,
+          fontSize: 11,
           letterSpacing: '0.1em',
           textTransform: 'uppercase',
           padding: '2px 8px',
@@ -188,11 +189,12 @@ function DataCell({ verdict, text, last }: { verdict: ComparisonVerdict; text: s
           marginBottom: 7,
           background: pill.bg,
           color: pill.color,
+          fontWeight: 600,
         }}
       >
         {pill.label}
       </span>
-      <div style={{ fontSize: 14, color: '#374151', lineHeight: 1.7 }}>{text || '—'}</div>
+      <div style={{ fontSize: 14, color: COLORS.body, lineHeight: 1.7 }}>{text || '—'}</div>
     </div>
   );
 }

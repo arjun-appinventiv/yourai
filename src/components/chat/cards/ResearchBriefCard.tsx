@@ -1,12 +1,10 @@
 import React, { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
-import CardShell from './CardShell';
-import CardHeader from './CardHeader';
-import CardFooter, { type CardFooterSource } from './CardFooter';
-
-const MONO = "'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace";
-const SERIF = "'DM Serif Display', Georgia, serif";
+import {
+  EditorialShell, EditorialHeader, EditorialFooter,
+  Body, ACCENTS, COLORS, MONO, SERIF,
+} from './EditorialShell';
 
 export interface ResearchSection {
   title: string;
@@ -48,33 +46,35 @@ export default function ResearchBriefCard({ data }: { data: ResearchBriefCardDat
   const isEmpty = sections.length === 0 && !data?.topic;
   if (isEmpty) {
     return (
-      <CardShell accentColor="indigo">
-        <CardHeader
+      <EditorialShell accentColor={ACCENTS.indigo}>
+        <EditorialHeader
           intentLabel="Legal Research"
           title="Not enough to research yet"
           subtitle="The question was too broad for a research brief"
-          sourcePill={{ label: 'Knowledge Base', type: 'kb' }}
+          sourcePill={{ label: 'Knowledge Base', kind: 'kb' }}
         />
-        <div style={{ padding: '28px 28px 32px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <p style={{ fontSize: 15, color: '#374151', lineHeight: 1.7, margin: 0 }}>
+        <div style={{ padding: '26px 32px 28px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <Body>
             Try a more specific question — include the jurisdiction, the legal issue, and (where useful) the type of party or document. For example: <em>"Force majeure precedents in New York commercial leases, 2020–present"</em>.
-          </p>
-          <p style={{ fontSize: 13, color: '#6B7280', margin: 0, lineHeight: 1.6 }}>
+          </Body>
+          <div style={{ fontSize: 13, color: COLORS.muted, lineHeight: 1.6 }}>
             If you have a document you want research anchored to, attach it with the <strong>+</strong> button and ask again.
-          </p>
+          </div>
         </div>
-        <CardFooter sourceType="none" sourceName="—" />
-      </CardShell>
+        <EditorialFooter footerText="—" />
+      </EditorialShell>
     );
   }
 
+  const footerText = data?.sourceName ? `Source: ${data.sourceName}` : 'Source: YourAI knowledge base';
+
   return (
-    <CardShell accentColor="indigo">
-      <CardHeader
+    <EditorialShell accentColor={ACCENTS.indigo}>
+      <EditorialHeader
         intentLabel="Legal Research"
         title={data?.topic || 'Research brief'}
         subtitle={`Jurisdiction: ${data?.jurisdiction || '—'} · Global Knowledge Base`}
-        sourcePill={{ label: 'Knowledge Base', type: 'kb' }}
+        sourcePill={{ label: 'Knowledge Base', kind: 'kb' }}
       />
 
       {/* Stats bar */}
@@ -82,7 +82,7 @@ export default function ResearchBriefCard({ data }: { data: ResearchBriefCardDat
         style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(4, 1fr)',
-          background: '#0B1D3A',
+          background: COLORS.title,
           borderBottom: '1px solid #1E3A5A',
         }}
       >
@@ -94,7 +94,7 @@ export default function ResearchBriefCard({ data }: { data: ResearchBriefCardDat
 
       {/* Collapsible sections */}
       {sections.length === 0 ? (
-        <div style={{ padding: '20px 22px', fontSize: 15, color: '#4B5563', fontStyle: 'italic', textAlign: 'center' }}>
+        <div style={{ padding: '20px 32px', fontSize: 14, color: COLORS.muted, fontStyle: 'italic', textAlign: 'center' }}>
           No research sections available.
         </div>
       ) : (
@@ -104,7 +104,7 @@ export default function ResearchBriefCard({ data }: { data: ResearchBriefCardDat
           return (
             <div
               key={i}
-              style={{ borderBottom: isLastSection ? 'none' : '1px solid #E4E7EC' }}
+              style={{ borderBottom: isLastSection ? 'none' : `1px solid ${COLORS.border}` }}
             >
               <div
                 onClick={() => toggle(i)}
@@ -112,12 +112,12 @@ export default function ResearchBriefCard({ data }: { data: ResearchBriefCardDat
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
-                  padding: '12px 22px',
+                  padding: '12px 32px',
                   cursor: 'pointer',
                   userSelect: 'none',
                   transition: 'background-color 100ms',
                 }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = '#F9FAFB'; }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = COLORS.panelBg; }}
                 onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -126,13 +126,13 @@ export default function ResearchBriefCard({ data }: { data: ResearchBriefCardDat
                       width: 22,
                       height: 22,
                       borderRadius: '50%',
-                      background: '#0B1D3A',
-                      color: '#C9A84C',
+                      background: COLORS.title,
+                      color: COLORS.gold,
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       fontFamily: MONO,
-                      fontSize: 13,
+                      fontSize: 12,
                       fontWeight: 500,
                       flexShrink: 0,
                     }}
@@ -142,11 +142,11 @@ export default function ResearchBriefCard({ data }: { data: ResearchBriefCardDat
                   <span
                     style={{
                       fontFamily: MONO,
-                      fontSize: 12,
-                      letterSpacing: '0.12em',
+                      fontSize: 11,
+                      letterSpacing: '0.16em',
                       textTransform: 'uppercase',
-                      color: '#0B1D3A',
-                      fontWeight: 500,
+                      color: COLORS.title,
+                      fontWeight: 600,
                     }}
                   >
                     {section.title}
@@ -155,7 +155,7 @@ export default function ResearchBriefCard({ data }: { data: ResearchBriefCardDat
                 <ChevronDown
                   size={16}
                   style={{
-                    color: isOpen ? '#0B1D3A' : '#4B5563',
+                    color: isOpen ? COLORS.title : COLORS.muted,
                     transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)',
                     transition: 'transform 200ms, color 200ms',
                   }}
@@ -165,18 +165,19 @@ export default function ResearchBriefCard({ data }: { data: ResearchBriefCardDat
               {isOpen && (
                 <div
                   style={{
-                    padding: '0 22px 16px 54px',
+                    padding: '0 32px 16px 64px',
                     fontSize: 15,
-                    color: '#4B5563',
+                    color: COLORS.body,
                     lineHeight: 1.8,
+                    fontFamily: "'DM Sans', 'Inter', system-ui, sans-serif",
                   }}
                 >
                   {/* content as markdown to preserve light formatting */}
                   <ReactMarkdown
                     components={{
                       p: ({ children }) => <p style={{ margin: '0 0 8px 0' }}>{children}</p>,
-                      strong: ({ children }) => <strong style={{ color: '#0B1D3A', fontWeight: 600 }}>{children}</strong>,
-                      em: ({ children }) => <em style={{ fontFamily: SERIF, fontStyle: 'italic', color: '#0B1D3A' }}>{children}</em>,
+                      strong: ({ children }) => <strong style={{ color: COLORS.title, fontWeight: 600 }}>{children}</strong>,
+                      em: ({ children }) => <em style={{ fontFamily: SERIF, fontStyle: 'italic', color: COLORS.title }}>{children}</em>,
                     }}
                   >
                     {section.content || ''}
@@ -189,7 +190,7 @@ export default function ResearchBriefCard({ data }: { data: ResearchBriefCardDat
                           key={ci}
                           style={{
                             fontFamily: MONO,
-                            fontSize: 13,
+                            fontSize: 12,
                             letterSpacing: '0.06em',
                             padding: '3px 10px',
                             borderRadius: 4,
@@ -208,8 +209,8 @@ export default function ResearchBriefCard({ data }: { data: ResearchBriefCardDat
                     <div
                       style={{
                         marginTop: 12,
-                        fontSize: 13,
-                        color: '#4B5563',
+                        fontSize: 12,
+                        color: COLORS.muted,
                         fontStyle: 'italic',
                         fontFamily: MONO,
                         letterSpacing: '0.03em',
@@ -225,8 +226,8 @@ export default function ResearchBriefCard({ data }: { data: ResearchBriefCardDat
         })
       )}
 
-      <CardFooter sourceType={(data?.sourceType as CardFooterSource) || 'none'} sourceName={data?.sourceName || '—'} />
-    </CardShell>
+      <EditorialFooter footerText={footerText} />
+    </EditorialShell>
   );
 }
 
@@ -243,7 +244,7 @@ function StatCell({ number, label, last }: { number: string | number; label: str
         style={{
           fontFamily: SERIF,
           fontSize: 24,
-          color: '#C9A84C',
+          color: COLORS.gold,
           lineHeight: 1,
           marginBottom: 5,
         }}
@@ -253,10 +254,11 @@ function StatCell({ number, label, last }: { number: string | number; label: str
       <div
         style={{
           fontFamily: MONO,
-          fontSize: 13,
-          letterSpacing: '0.1em',
+          fontSize: 11,
+          letterSpacing: '0.14em',
           textTransform: 'uppercase',
-          color: 'rgba(255,255,255,0.3)',
+          color: 'rgba(255,255,255,0.5)',
+          fontWeight: 500,
         }}
       >
         {label}

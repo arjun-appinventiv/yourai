@@ -1,9 +1,8 @@
 import React from 'react';
-import CardShell from './CardShell';
-import CardHeader, { type SourcePillType } from './CardHeader';
-import CardFooter, { type CardFooterSource } from './CardFooter';
-
-const MONO = "'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace";
+import {
+  EditorialShell, EditorialHeader, EditorialFooter,
+  Body, ACCENTS, COLORS, MONO,
+} from './EditorialShell';
 
 export interface SummaryCardData {
   documentName: string;
@@ -36,45 +35,52 @@ export default function SummaryCard({ data }: { data: SummaryCardData }) {
 
   if (isEmpty) {
     return (
-      <CardShell accentColor="gold">
-        <CardHeader
+      <EditorialShell accentColor={ACCENTS.gold}>
+        <EditorialHeader
           intentLabel="Document Summarisation"
           title="No document supplied"
           subtitle="Summarisation needs a source document"
-          sourcePill={{ label: 'Document', type: 'doc' }}
+          sourcePill={{ label: 'Document', kind: 'doc' }}
         />
-        <div style={{ padding: '28px 28px 32px', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 12 }}>
-          <p style={{ fontSize: 15, color: '#374151', lineHeight: 1.7, margin: 0 }}>
+        <div style={{ padding: '26px 32px 28px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <Body>
             It looks like you asked for a summary but didn't attach a document. Upload a contract, memo, or filing using the <strong>+</strong> button next to the input, then ask again and I'll produce the full summary card.
-          </p>
-          <p style={{ fontSize: 13, color: '#6B7280', margin: 0, lineHeight: 1.6 }}>
+          </Body>
+          <div style={{ fontSize: 13, color: COLORS.muted, lineHeight: 1.6 }}>
             If you meant to ask a general question rather than analyse a document, switch the intent pill above the input to <em>General chat</em> or <em>Legal Q&amp;A</em>.
-          </p>
+          </div>
         </div>
-        <CardFooter sourceType="none" sourceName="—" />
-      </CardShell>
+        <EditorialFooter footerText="—" />
+      </EditorialShell>
     );
   }
 
+  const sourcePillLabel = data?.sourceType === 'kb' ? 'Knowledge Base' : 'Document';
+  const sourcePillKind: 'doc' | 'kb' = data?.sourceType === 'kb' ? 'kb' : 'doc';
+  const footerText = data?.sourceName
+    ? (data.sourceType === 'kb' ? `Source: ${data.sourceName}` : `Document: ${data.sourceName}`)
+    : '—';
+
   return (
-    <CardShell accentColor="gold">
-      <CardHeader
+    <EditorialShell accentColor={ACCENTS.gold}>
+      <EditorialHeader
         intentLabel="Document Summarisation"
         title={data?.documentName || 'Untitled document'}
         subtitle={`${data?.clauseCount ?? 0} clauses · ${data?.fileSize || '—'} · ${data?.date || ''}`}
-        sourcePill={{ label: data?.sourceType === 'kb' ? 'Knowledge Base' : 'Document', type: (data?.sourceType as SourcePillType) || 'doc' }}
+        sourcePill={{ label: sourcePillLabel, kind: sourcePillKind }}
       />
 
-      <div style={{ padding: '20px 22px' }}>
+      <div style={{ padding: '26px 32px 28px' }}>
         {/* Executive summary */}
         <p
           style={{
-            fontSize: 14,
-            color: '#374151',
-            lineHeight: 1.8,
+            fontSize: 15,
+            color: COLORS.body,
+            lineHeight: 1.75,
             margin: 0,
             paddingBottom: 24,
-            borderBottom: '1px solid #E4E7EC',
+            borderBottom: `1px solid ${COLORS.border}`,
+            fontFamily: "'DM Sans', 'Inter', system-ui, sans-serif",
           }}
         >
           {data?.executiveSummary || 'No executive summary available.'}
@@ -100,17 +106,18 @@ export default function SummaryCard({ data }: { data: SummaryCardData }) {
         <div
           style={{
             fontFamily: MONO,
-            fontSize: 13,
-            letterSpacing: '0.12em',
+            fontSize: 11,
+            letterSpacing: '0.18em',
             textTransform: 'uppercase',
-            color: '#4B5563',
+            color: COLORS.faint,
+            fontWeight: 500,
             marginBottom: 12,
           }}
         >
           Key Points
         </div>
         {points.length === 0 ? (
-          <div style={{ fontSize: 15, color: '#4B5563', fontStyle: 'italic' }}>No key points identified.</div>
+          <div style={{ fontSize: 14, color: COLORS.muted, fontStyle: 'italic' }}>No key points identified.</div>
         ) : (
           <div>
             {points.map((p, i) => (
@@ -121,14 +128,14 @@ export default function SummaryCard({ data }: { data: SummaryCardData }) {
                   alignItems: 'flex-start',
                   gap: 14,
                   padding: '12px 0',
-                  borderBottom: i === points.length - 1 ? 'none' : '1px solid #F3F4F6',
+                  borderBottom: i === points.length - 1 ? 'none' : `1px solid ${COLORS.border}`,
                 }}
               >
                 <span
                   style={{
                     fontFamily: MONO,
                     fontSize: 12,
-                    color: '#4B5563',
+                    color: COLORS.muted,
                     width: 18,
                     flexShrink: 0,
                     marginTop: 4,
@@ -136,7 +143,7 @@ export default function SummaryCard({ data }: { data: SummaryCardData }) {
                 >
                   {String(i + 1).padStart(2, '0')}
                 </span>
-                <span style={{ fontSize: 15, color: '#374151', lineHeight: 1.7 }}>{p}</span>
+                <span style={{ fontSize: 15, color: COLORS.body, lineHeight: 1.7 }}>{p}</span>
               </div>
             ))}
           </div>
@@ -150,21 +157,21 @@ export default function SummaryCard({ data }: { data: SummaryCardData }) {
               padding: '14px 18px',
               background: '#FFFBEB',
               border: '1px solid #FDE68A',
-              borderLeft: '3px solid #C9A84C',
+              borderLeft: `3px solid ${COLORS.gold}`,
               borderRadius: 6,
               fontSize: 14,
               color: '#92400E',
               lineHeight: 1.7,
             }}
           >
-            <span style={{ color: '#C9A84C', fontWeight: 600 }}>Needs attention — </span>
+            <span style={{ color: COLORS.gold, fontWeight: 600 }}>Needs attention — </span>
             {data.flag}
           </div>
         ) : null}
       </div>
 
-      <CardFooter sourceType={(data?.sourceType as CardFooterSource) || 'none'} sourceName={data?.sourceName || '—'} />
-    </CardShell>
+      <EditorialFooter footerText={footerText} />
+    </EditorialShell>
   );
 }
 
@@ -172,8 +179,8 @@ function MetaBlock({ label, value }: { label: string; value?: string }) {
   return (
     <div
       style={{
-        background: '#F9FAFB',
-        border: '1px solid #E4E7EC',
+        background: COLORS.panelBg,
+        border: `1px solid ${COLORS.border}`,
         borderRadius: 8,
         padding: '14px 16px',
       }}
@@ -181,11 +188,12 @@ function MetaBlock({ label, value }: { label: string; value?: string }) {
       <div
         style={{
           fontFamily: MONO,
-          fontSize: 13,
-          letterSpacing: '0.12em',
+          fontSize: 11,
+          letterSpacing: '0.16em',
           textTransform: 'uppercase',
-          color: '#C9A84C',
+          color: COLORS.gold,
           marginBottom: 6,
+          fontWeight: 600,
         }}
       >
         {label}
@@ -194,7 +202,7 @@ function MetaBlock({ label, value }: { label: string; value?: string }) {
         style={{
           fontSize: 14,
           fontWeight: 500,
-          color: '#0B1D3A',
+          color: COLORS.title,
           lineHeight: 1.65,
           whiteSpace: 'pre-line',
         }}

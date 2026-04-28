@@ -48,7 +48,17 @@ export const COLORS = {
 
 /* ─── Shell ─── */
 
-export function EditorialShell({ children }: { children: React.ReactNode }) {
+interface EditorialShellProps {
+  children: React.ReactNode;
+  // CSS color string (or gradient). Defaults to gold so existing callers
+  // (Risk / Clause / Timeline) render unchanged. Per-intent accent is
+  // preserved across the unified-shell migration via this prop.
+  accentColor?: string;
+}
+
+const DEFAULT_ACCENT = 'linear-gradient(to right, #C9A84C, #E8C96A)';
+
+export function EditorialShell({ children, accentColor = DEFAULT_ACCENT }: EditorialShellProps) {
   return (
     <div
       style={{
@@ -59,12 +69,21 @@ export function EditorialShell({ children }: { children: React.ReactNode }) {
         overflow: 'hidden',
       }}
     >
-      {/* Gold accent stripe (3px) */}
-      <div style={{ height: 3, background: 'linear-gradient(to right, #C9A84C, #E8C96A)' }} />
+      <div style={{ height: 3, background: accentColor }} />
       {children}
     </div>
   );
 }
+
+/* Per-intent accent palette — keep aligned with the older CardShell map.
+ * Use these tokens at call sites instead of hardcoding hex. */
+export const ACCENTS = {
+  gold:   'linear-gradient(to right, #C9A84C, #E8C96A)',
+  navy:   'linear-gradient(to right, #0B1D3A, #1E3A8A)',
+  green:  'linear-gradient(to right, #059669, #10B981)',
+  indigo: 'linear-gradient(to right, #4338CA, #6366F1)',
+  teal:   'linear-gradient(to right, #0D9488, #14B8A6)',
+} as const;
 
 /* ─── Header ─── */
 

@@ -1,8 +1,9 @@
 import React from 'react';
 import { FileText, ExternalLink, Folder } from 'lucide-react';
-import CardShell from './CardShell';
-import CardHeader from './CardHeader';
-import CardFooter from './CardFooter';
+import {
+  EditorialShell, EditorialHeader, EditorialFooter,
+  Body, ACCENTS, COLORS, MONO,
+} from './EditorialShell';
 
 /**
  * FileResultsCard — vault search results, rendered inline in chat.
@@ -21,7 +22,7 @@ import CardFooter from './CardFooter';
  * cardIntent='find_document' + cardData={ query, results, totalCount }.
  */
 
-const MONO = "'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace";
+const TEAL = '#0D9488';
 
 export interface FileResultRow {
   id: string | number;
@@ -65,6 +66,42 @@ const dispatchBrowse = (prefillQuery?: string) => {
   } catch { /* ignore */ }
 };
 
+// Single shared inline-action button. Variant chooses fill vs outline.
+function InlineButton({
+  variant = 'outline',
+  onClick,
+  children,
+}: {
+  variant?: 'primary' | 'outline';
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  const isPrimary = variant === 'primary';
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 6,
+        padding: isPrimary ? '8px 16px' : '6px 14px',
+        borderRadius: 8,
+        fontSize: 13,
+        fontWeight: 500,
+        background: isPrimary ? TEAL : '#fff',
+        color: isPrimary ? '#fff' : TEAL,
+        border: isPrimary ? 'none' : `1px solid ${TEAL}`,
+        cursor: 'pointer',
+        fontFamily: 'inherit',
+        flexShrink: 0,
+      }}
+    >
+      {children}
+    </button>
+  );
+}
+
 export default function FileResultsCard({ data, onUse, onBrowseVault }: FileResultsCardProps) {
   // Fall back to window events when no explicit callback was provided.
   // Lets the dispatcher (MessageBubble) render this component without
@@ -81,93 +118,75 @@ export default function FileResultsCard({ data, onUse, onBrowseVault }: FileResu
   // Empty vault (no docs at all) takes precedence over "no match".
   if (data?.vaultIsEmpty) {
     return (
-      <CardShell accentColor="teal">
-        <CardHeader
+      <EditorialShell accentColor={ACCENTS.teal}>
+        <EditorialHeader
           intentLabel="Find Document"
           title="Your vault is empty"
           subtitle="Upload your first document to make it searchable"
-          sourcePill={{ label: 'Vault', type: 'doc' }}
+          sourcePill={{ label: 'Vault', kind: 'doc' }}
         />
-        <div style={{ padding: '28px 28px 32px', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 14 }}>
-          <p style={{ fontSize: 15, color: '#374151', lineHeight: 1.7, margin: 0 }}>
+        <div style={{ padding: '26px 32px 28px', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 14 }}>
+          <Body>
             You haven't uploaded anything yet. Once you add documents — by attaching a file in chat or via the Document Vault — you'll be able to find them here by name, folder, or description.
-          </p>
-          {onBrowseVault && (
-            <button
-              type="button"
-              onClick={() => onBrowseVault?.()}
-              style={primaryBtn}
-            >
-              Upload a file
-              <ExternalLink size={13} />
-            </button>
-          )}
+          </Body>
+          <InlineButton variant="primary" onClick={() => handleBrowse()}>
+            Upload a file
+            <ExternalLink size={13} />
+          </InlineButton>
         </div>
-        <CardFooter sourceType="none" sourceName="—" />
-      </CardShell>
+        <EditorialFooter footerText="Personal vault" />
+      </EditorialShell>
     );
   }
 
   if (data?.queryWasStripped || (!query && results.length === 0)) {
     return (
-      <CardShell accentColor="teal">
-        <CardHeader
+      <EditorialShell accentColor={ACCENTS.teal}>
+        <EditorialHeader
           intentLabel="Find Document"
           title="What file are you looking for?"
           subtitle="Try a filename, folder, or topic"
-          sourcePill={{ label: 'Vault', type: 'doc' }}
+          sourcePill={{ label: 'Vault', kind: 'doc' }}
         />
-        <div style={{ padding: '28px 28px 32px', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 14 }}>
-          <p style={{ fontSize: 15, color: '#374151', lineHeight: 1.7, margin: 0 }}>
+        <div style={{ padding: '26px 32px 28px', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 14 }}>
+          <Body>
             Tell me what you're looking for and I'll search your vault. Examples:
-          </p>
-          <ul style={{ margin: 0, paddingLeft: 18, fontSize: 14, color: '#4B5563', lineHeight: 1.8 }}>
+          </Body>
+          <ul style={{ margin: 0, paddingLeft: 18, fontSize: 14, color: COLORS.muted, lineHeight: 1.8 }}>
             <li><em>find Acme MSA</em></li>
             <li><em>where's the NDA template?</em></li>
             <li><em>do I have anything from Globex</em></li>
           </ul>
-          {onBrowseVault && (
-            <button
-              type="button"
-              onClick={() => onBrowseVault?.()}
-              style={ghostBtn}
-            >
-              Browse vault
-              <ExternalLink size={13} />
-            </button>
-          )}
+          <InlineButton onClick={() => handleBrowse()}>
+            Browse vault
+            <ExternalLink size={13} />
+          </InlineButton>
         </div>
-        <CardFooter sourceType="none" sourceName="—" />
-      </CardShell>
+        <EditorialFooter footerText="Personal vault" />
+      </EditorialShell>
     );
   }
 
   if (results.length === 0) {
     return (
-      <CardShell accentColor="teal">
-        <CardHeader
+      <EditorialShell accentColor={ACCENTS.teal}>
+        <EditorialHeader
           intentLabel="Find Document"
           title="No files match"
           subtitle={`Searched for "${query}"`}
-          sourcePill={{ label: 'Vault', type: 'doc' }}
+          sourcePill={{ label: 'Vault', kind: 'doc' }}
         />
-        <div style={{ padding: '28px 28px 32px', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 14 }}>
-          <p style={{ fontSize: 15, color: '#374151', lineHeight: 1.7, margin: 0 }}>
+        <div style={{ padding: '26px 32px 28px', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 14 }}>
+          <Body>
             No files match <strong>"{query}"</strong> in your vault. Try a shorter term or part of a folder name — I search filenames, descriptions, and folder paths.
-          </p>
-          {onBrowseVault && (
-            <button
-              type="button"
-              onClick={() => onBrowseVault?.(query)}
-              style={ghostBtn}
-            >
-              Browse vault
-              <ExternalLink size={13} />
-            </button>
-          )}
+          </Body>
+          <InlineButton onClick={() => handleBrowse(query)}>
+            Browse vault
+            <ExternalLink size={13} />
+          </InlineButton>
         </div>
-        <CardFooter sourceType="none" sourceName="—" />
-      </CardShell>
+        <EditorialFooter footerText="Personal vault" />
+      </EditorialShell>
     );
   }
 
@@ -180,150 +199,102 @@ export default function FileResultsCard({ data, onUse, onBrowseVault }: FileResu
   const headerSubtitle = query ? `Matching "${query}"` : 'All files';
 
   return (
-    <CardShell accentColor="teal">
-      <CardHeader
+    <EditorialShell accentColor={ACCENTS.teal}>
+      <EditorialHeader
         intentLabel="Find Document"
         title={headerTitle}
         subtitle={headerSubtitle}
-        sourcePill={{ label: 'Vault', type: 'doc' }}
+        sourcePill={{ label: 'Vault', kind: 'doc' }}
       />
-      <div style={{ padding: '8px 0' }}>
-        {visible.map((doc, i) => (
-          <div
-            key={doc.id ?? `${doc.name}-${i}`}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 14,
-              padding: '14px 22px',
-              borderBottom: i === visible.length - 1 ? 'none' : '1px solid #F3F4F6',
-            }}
-          >
+      <div style={{ padding: '26px 32px 28px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          {visible.map((doc, i) => (
             <div
+              key={doc.id ?? `${doc.name}-${i}`}
               style={{
-                width: 36, height: 36, borderRadius: 8, flexShrink: 0,
-                background: '#ECFDF5',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 14,
+                padding: '14px 0',
+                borderBottom: i === visible.length - 1 ? 'none' : `1px solid ${COLORS.border}`,
               }}
             >
-              <FileText size={16} color="#0D9488" />
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
               <div
                 style={{
-                  fontSize: 14,
-                  fontWeight: 500,
-                  color: '#0B1D3A',
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  marginBottom: 4,
-                }}
-                title={doc.name}
-              >
-                {doc.name}
-              </div>
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  fontFamily: MONO,
-                  fontSize: 11,
-                  color: '#6B7280',
-                  letterSpacing: '0.04em',
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
+                  width: 36, height: 36, borderRadius: 8, flexShrink: 0,
+                  background: '#ECFDF5',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}
               >
-                {doc.folderPath ? (
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                    <Folder size={11} />
-                    {doc.folderPath}
-                  </span>
-                ) : (
-                  <span style={{ color: '#9CA3AF' }}>Root</span>
-                )}
-                {doc.fileSize && <span>· {doc.fileSize}</span>}
-                {doc.createdAt && <span>· {doc.createdAt}</span>}
+                <FileText size={16} color={TEAL} />
               </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div
+                  style={{
+                    fontSize: 14,
+                    fontWeight: 500,
+                    color: COLORS.title,
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    marginBottom: 4,
+                  }}
+                  title={doc.name}
+                >
+                  {doc.name}
+                </div>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    fontFamily: MONO,
+                    fontSize: 11,
+                    color: COLORS.muted,
+                    letterSpacing: '0.04em',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                  }}
+                >
+                  {doc.folderPath ? (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                      <Folder size={11} />
+                      {doc.folderPath}
+                    </span>
+                  ) : (
+                    <span style={{ color: COLORS.faint }}>Root</span>
+                  )}
+                  {doc.fileSize && <span>· {doc.fileSize}</span>}
+                  {doc.createdAt && <span>· {doc.createdAt}</span>}
+                </div>
+              </div>
+              <InlineButton
+                variant={i === 0 && totalCount === 1 ? 'primary' : 'outline'}
+                onClick={() => handleUse(doc)}
+              >
+                Use
+              </InlineButton>
             </div>
-            <button
-              type="button"
-              onClick={() => onUse?.(doc)}
-              style={i === 0 && totalCount === 1 ? primaryBtn : useBtn}
-            >
-              Use
-            </button>
-          </div>
-        ))}
-      </div>
-      {overflow > 0 && onBrowseVault && (
-        <div
-          style={{
-            display: 'flex', justifyContent: 'flex-end',
-            padding: '12px 22px',
-            borderTop: '1px solid #F3F4F6',
-          }}
-        >
-          <button
-            type="button"
-            onClick={() => onBrowseVault?.(query)}
-            style={ghostBtn}
-          >
-            View all {totalCount} in Vault
-            <ExternalLink size={13} />
-          </button>
+          ))}
         </div>
-      )}
-      <CardFooter sourceType="doc" sourceName={`Personal vault · ${totalCount} ${totalCount === 1 ? 'match' : 'matches'}`} />
-    </CardShell>
+        {overflow > 0 && (
+          <div
+            style={{
+              display: 'flex', justifyContent: 'flex-end',
+              paddingTop: 14,
+              borderTop: `1px solid ${COLORS.border}`,
+              marginTop: 6,
+            }}
+          >
+            <InlineButton onClick={() => handleBrowse(query)}>
+              View all {totalCount} in Vault
+              <ExternalLink size={13} />
+            </InlineButton>
+          </div>
+        )}
+      </div>
+      <EditorialFooter footerText="Personal vault" />
+    </EditorialShell>
   );
 }
-
-// ─── Inline button styles ───────────────────────────────────────────────
-
-const primaryBtn: React.CSSProperties = {
-  display: 'inline-flex',
-  alignItems: 'center',
-  gap: 6,
-  padding: '8px 16px',
-  borderRadius: 8,
-  fontSize: 13,
-  fontWeight: 500,
-  background: '#0D9488',
-  color: '#fff',
-  border: 'none',
-  cursor: 'pointer',
-  fontFamily: 'inherit',
-};
-
-const useBtn: React.CSSProperties = {
-  padding: '6px 14px',
-  borderRadius: 8,
-  fontSize: 12,
-  fontWeight: 500,
-  background: '#fff',
-  color: '#0D9488',
-  border: '1px solid #0D9488',
-  cursor: 'pointer',
-  flexShrink: 0,
-  fontFamily: 'inherit',
-};
-
-const ghostBtn: React.CSSProperties = {
-  display: 'inline-flex',
-  alignItems: 'center',
-  gap: 6,
-  padding: '6px 14px',
-  borderRadius: 8,
-  fontSize: 13,
-  fontWeight: 500,
-  background: 'transparent',
-  color: '#0D9488',
-  border: '1px solid #0D9488',
-  cursor: 'pointer',
-  fontFamily: 'inherit',
-};
-

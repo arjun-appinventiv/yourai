@@ -224,8 +224,7 @@ Short list of probable next priorities based on today's direction — **user sho
 10. Server-backed favourites (currently localStorage-only).
 11. External-user single-workspace auto-redirect.
 12. Reconcile the 3 sources of truth for intents (`intents.ts` / `intentDetector.ts` / `GlobalKnowledgeBase.jsx DEFAULT_INTENTS`).
-13. Migrate the 4 older intent cards (Summary / Comparison / CaseBrief / Research) to `EditorialShell`.
-14. Server-side fix for the JSON-schema-with-no-document failure mode at the Edge.
+13. Server-side fix for the JSON-schema-with-no-document failure mode at the Edge.
 
 ---
 
@@ -325,6 +324,8 @@ Reverse chronological. Each entry: *decision — rationale — date*.
 ---
 
 ## Last updated
+
+**2026-04-28** — Authored `docs/extracted/intent-cards.md`, a per-card scope reference covering all 8 intent-card components (intent ID, trigger, source pill, accent color, shell, data shape, render structure, populated / empty / partial states, edge cases, source files) plus the shared chrome shells. Then unified all 8 cards on a single `EditorialShell` — `SummaryCard` (gold), `ComparisonCard` (navy), `CaseBriefCard` (green), `ResearchBriefCard` (indigo), and `FileResultsCard` (teal) migrated off the older `CardShell` / `CardHeader` / `CardFooter` trio onto `EditorialShell` + `EditorialHeader` + `EditorialFooter`. `EditorialShell` now accepts an `accentColor` prop (defaults to gold so the existing Risk / Clause / Timeline cards render unchanged); per-intent accent tokens exported as `ACCENTS.gold | navy | green | indigo | teal`. Body padding standardised to `26 32 28`, source pill prop renamed `type` → `kind` across migrated cards, footer pattern unified on text-only `EditorialFooter`. FileResultsCard cleanup: dropped the synthetic `Personal vault · N matches` sourceName, dropped the trio of inline button style objects in favour of one shared `InlineButton` component (variant `primary | outline`), unified body padding between empty-state and result-row variants. Deleted `CardShell.tsx` / `CardHeader.tsx` / `CardFooter.tsx` — no remaining importers in the intent-card system. Resolves "What's next #13".
 
 **2026-04-28** — Shipped P8 MVP **find-document intent** for in-chat vault search: explicit "Find Document" pill in the intent dropdown plus keyword auto-switch (find / search / where is / do I have / show me / list, anchored on file/doc/document). New `FileResultsCard` renders state-aware variants (empty vault, empty query, no match, 1 / 2-5 / top 5 of N) with teal accent; ChatView short-circuits the `/api/chat` fetch when the intent fires, runs a substring filter over name + description + fileName + folder breadcrumb across the personal vault, and routes the row `Use` button through the existing `handleSelectVaultDocument` (clean since this morning's bug-fix commit) via window events.
 
