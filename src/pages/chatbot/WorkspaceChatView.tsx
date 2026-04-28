@@ -512,9 +512,9 @@ export default function WorkspaceChatView() {
   const confirmUploadAsEphemeral = () => {
     if (!pendingUpload) return;
     setEphemeralAttachment(pendingUpload);
-    // Persist to the uploader's personal Document Vault with an
+    // Persist to the uploader's personal YourVault with an
     // 'Added from chat' marker. Clients get a durable record of everything
-    // they've uploaded, accessible from the Document Vault panel. Dedupe
+    // they've uploaded, accessible from the YourVault panel. Dedupe
     // is handled inside addVaultDoc (by filename + ownerId).
     const sizeKB = pendingUpload.size < 1024 * 1024
       ? `${(pendingUpload.size / 1024).toFixed(0)} KB`
@@ -1643,12 +1643,12 @@ function ChatUploadScopeModal({ upload, isExternalUser, canAddToWorkspace, onCan
               {isExternalUser && (
                 <div style={{ padding: '12px 14px', borderRadius: 10, background: '#FBEED5', border: '1px solid #F3E2B1', fontSize: 12, color: '#6B4E1F', lineHeight: 1.55 }}>
                   <strong style={{ display: 'block', marginBottom: 4 }}>This file won't be added to the workspace documents.</strong>
-                  It's used in this chat and kept privately in your own Document Vault. If you need it added to the workspace so everyone can reference it, please send it to your workspace admin separately.
+                  It's used in this chat and kept privately in your own YourVault. If you need it added to the workspace so everyone can reference it, please send it to your workspace admin separately.
                 </div>
               )}
               <ScopeChoiceRow
                 title="Use in this chat"
-                subtitle={isExternalUser ? 'Attach the file to this conversation and save it to your personal Document Vault.' : 'Attach the file to this conversation only.'}
+                subtitle={isExternalUser ? 'Attach the file to this conversation and save it to your personal YourVault.' : 'Attach the file to this conversation only.'}
                 primary
                 onClick={onUseInChat}
               />

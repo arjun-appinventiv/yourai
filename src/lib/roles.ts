@@ -185,9 +185,9 @@ export const INVITE_PERMISSION_GROUPS: PermissionGroup[] = [
       },
       {
         permission: PERMISSIONS.MANAGE_DOCUMENT_VAULT,
-        label: 'Manage Document Vault',
+        label: 'Manage YourVault',
         description:
-          'Perform bulk operations across the firm-wide Document Vault — rename, version, or remove documents uploaded by others.',
+          'Perform bulk operations across the firm-wide YourVault — rename, version, or remove documents uploaded by others.',
       },
     ],
   },

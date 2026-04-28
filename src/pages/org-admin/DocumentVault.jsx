@@ -30,7 +30,7 @@ export default function DocumentVault() {
 
   return (
     <div>
-      <PageHeader icon={FileText} title="Document Vault" subtitle="All documents across your workspaces." />
+      <PageHeader icon={FileText} title="YourVault" subtitle="All documents across your workspaces." />
 
       {/* Classification queue banner */}
       {flaggedCount > 0 && (

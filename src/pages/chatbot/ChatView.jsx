@@ -396,7 +396,7 @@ const riskColors = {
 
 /* ─────────────────── Home Tile Launcher ───────────────────
    Decision-page home: a tile per top-level surface (General Chat,
-   Workspaces, Document Vault, Knowledge Packs, Workflows, Invite
+   Workspaces, YourVault, Knowledge Packs, Workflows, Invite
    Team). Replaces the chat empty state when ChatView is mounted with
    `initialView="home"`. Navigates to the matching surface or opens
    the matching panel via the parent. */
@@ -420,7 +420,7 @@ function HomeTileLauncher({
       onClick: onOpenWorkspaces, accent: '#5B21B6',
     },
     !isExternalUser && {
-      id: 'vault', icon: FolderOpen, label: 'Document Vault',
+      id: 'vault', icon: FolderOpen, label: 'YourVault',
       desc: 'Every document you have uploaded — folders, search, attach to chat.',
       meta: `${vaultCount} ${vaultCount === 1 ? 'document' : 'documents'}`,
       onClick: onOpenVault, accent: '#0F2E59',
@@ -612,10 +612,10 @@ function Sidebar({ activeKey, onGoHome, onOpenChat, onOpenPromptTemplates, onOpe
 
   // ─── Knowledge items ───
   // External Users don't see Knowledge Packs or Prompt Templates at all.
-  // Document Vault is visible to everyone (scoping to "own workspace only"
+  // YourVault is visible to everyone (scoping to "own workspace only"
   // for External Users happens inside DocumentVaultPanel — Part 4).
   const knowledgeItems = [
-    { id: 'document-vault', icon: FolderOpen, label: 'Document vault', rightText: String(vaultCount), onClick: onOpenDocumentVault },
+    { id: 'document-vault', icon: FolderOpen, label: 'YourVault', rightText: String(vaultCount), onClick: onOpenDocumentVault },
     !isExternalUser && { id: 'knowledge-packs', icon: Package, label: 'Knowledge packs', rightText: String(packCount), onClick: onOpenKnowledgePacks },
     !isExternalUser && { id: 'workflows', icon: Zap, label: 'Workflows', rightText: workflowCount != null ? String(workflowCount) : undefined, onClick: onOpenWorkflows },
     !isExternalUser && { id: 'prompt-templates', icon: FileText, label: 'Prompt templates', rightText: String(promptCount), onClick: onOpenPromptTemplates },
@@ -1925,7 +1925,7 @@ function EditKnowledgePackModal({ pack, onClose, onSave }) {
   );
 }
 
-/* ─────────────────── Document Vault Panel ─────────────────── */
+/* ─────────────────── YourVault Panel ─────────────────── */
 // Same visibility rules as Knowledge Packs:
 //   Org Admin      — sees every doc; inline Share org-wide toggle on each row
 //   Internal User  — own docs + all org-wide docs
@@ -1935,7 +1935,7 @@ function EditKnowledgePackModal({ pack, onClose, onSave }) {
 // folder tiles + uncategorised docs. Drilling in shows that folder's
 // docs only, with a breadcrumb back to root.
 /* ─── Reusable filter chip with popover (P8 v1) ───
-   Used by the Document Vault toolbar for Date / Uploader / Type / Sort. */
+   Used by the YourVault toolbar for Date / Uploader / Type / Sort. */
 function FilterChip({ icon: Icon, label, value, isActive, isOpen, onToggle, onClose, options, selectedId, onPick }) {
   return (
     <span style={{ position: 'relative' }}>
@@ -2398,9 +2398,11 @@ Rules:
     : { title: 'Build your firm’s library', body: 'Drop a folder or upload your first document.' };
 
   // Grid template depends on whether we're in a folder (no Folder column).
+  // At root view, Folder is the primary (leading) column — case-file first
+  // mental model. Inside a folder we keep the original 5-col layout.
   const gridCols = currentFolderId
     ? 'minmax(280px, 2fr) 140px 80px 120px 96px'
-    : 'minmax(280px, 2fr) 140px 160px 80px 120px 96px';
+    : '180px minmax(260px, 2fr) 140px 80px 120px 96px';
 
   return (
     <div style={{ flex: 1, minWidth: 0, height: '100vh', overflow: 'hidden', background: '#FBFAF7', display: 'flex', flexDirection: 'column' }}>
@@ -2425,7 +2427,7 @@ Rules:
         >
           <ArrowLeft size={13} /> Back to chat
         </button>
-        <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: "'IBM Plex Mono', ui-monospace, monospace", letterSpacing: '0.08em', textTransform: 'uppercase' }}>Document Vault</span>
+        <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: "'IBM Plex Mono', ui-monospace, monospace", letterSpacing: '0.08em', textTransform: 'uppercase' }}>YourVault</span>
       </div>
 
       {/* Body — left rail + main pane */}
@@ -2608,7 +2610,7 @@ Rules:
                 <span style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: "'IBM Plex Mono', ui-monospace, monospace", letterSpacing: '0.1em', textTransform: 'uppercase' }}>Vault</span>
               </div>
               <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 30, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.02em', lineHeight: 1.2 }}>
-                {currentFolder ? currentFolder.name : 'Document Vault'}
+                {currentFolder ? currentFolder.name : 'YourVault'}
               </h1>
               {/* Caption / breadcrumb */}
               <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 8, lineHeight: 1.6, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
@@ -2813,9 +2815,9 @@ Rules:
                     borderBottom: '1px solid var(--border)',
                     background: '#FAFBFC',
                   }}>
+                    {!currentFolderId && <div>Folder</div>}
                     <div>Name</div>
                     <div>Owner</div>
-                    {!currentFolderId && <div>Folder</div>}
                     <div style={{ textAlign: 'right' }}>Size</div>
                     <div>Modified</div>
                     <div></div>
@@ -2845,6 +2847,21 @@ Rules:
                         onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; }}
                         onClick={() => { if (onSelect) onSelect(d); }}
                       >
+                        {/* FOLDER (primary, bold — case-file mental model) */}
+                        {!currentFolderId && (
+                          <div style={{ minWidth: 0 }}>
+                            {docFolder ? (
+                              <button
+                                onClick={(e) => { e.stopPropagation(); setCurrentFolderId(docFolder.id); }}
+                                style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: 0, fontFamily: "'DM Sans', sans-serif", fontSize: 14, fontWeight: 600, color: 'var(--navy)', background: 'none', border: 'none', cursor: 'pointer', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' }}
+                              >
+                                <Folder size={13} /> {docFolder.name}
+                              </button>
+                            ) : (
+                              <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 14, fontWeight: 600, color: 'var(--text-muted)' }}>—</span>
+                            )}
+                          </div>
+                        )}
                         {/* NAME */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
                           <div style={{ width: 32, height: 32, borderRadius: 8, background: 'var(--ice-warm)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -2860,21 +2877,6 @@ Rules:
                         </div>
                         {/* OWNER */}
                         <div style={{ fontSize: 12, color: ownerColor, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{ownerLabel}</div>
-                        {/* FOLDER */}
-                        {!currentFolderId && (
-                          <div style={{ minWidth: 0 }}>
-                            {docFolder ? (
-                              <button
-                                onClick={(e) => { e.stopPropagation(); setCurrentFolderId(docFolder.id); }}
-                                style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: 0, fontSize: 12, color: 'var(--navy)', background: 'none', border: 'none', cursor: 'pointer', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' }}
-                              >
-                                <Folder size={11} /> {docFolder.name}
-                              </button>
-                            ) : (
-                              <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>—</span>
-                            )}
-                          </div>
-                        )}
                         {/* SIZE */}
                         <div style={{ fontSize: 12, color: 'var(--text-muted)', textAlign: 'right' }}>{d.fileSize || '—'}</div>
                         {/* MODIFIED */}
@@ -2994,16 +2996,6 @@ function EditDocumentModal({ document: docItem, onClose, onSave, folders = [], d
 
         <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div>
-            <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Document name *</label>
-            <input value={name} onChange={e => setName(e.target.value)} placeholder="e.g., Master Services Agreement — Acme Corp" style={inputStyle} />
-          </div>
-
-          <div>
-            <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Description</label>
-            <textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="Short description of this document..." rows={2} style={{ ...inputStyle, height: 'auto', padding: '10px 12px', resize: 'vertical', lineHeight: 1.5 }} />
-          </div>
-
-          <div>
             <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Folder</label>
             <select
               value={folderId || ''}
@@ -3046,6 +3038,16 @@ function EditDocumentModal({ document: docItem, onClose, onSave, folders = [], d
                 });
               })()}
             </select>
+          </div>
+
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Document name *</label>
+            <input value={name} onChange={e => setName(e.target.value)} placeholder="e.g., Master Services Agreement — Acme Corp" style={inputStyle} />
+          </div>
+
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Description</label>
+            <textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="Short description of this document..." rows={2} style={{ ...inputStyle, height: 'auto', padding: '10px 12px', resize: 'vertical', lineHeight: 1.5 }} />
           </div>
 
           <div>
@@ -3138,7 +3140,7 @@ function AttachMenu({ activePack, activeDocument, activeFolder, folderDocCount, 
 
         <MenuItem
           icon={FolderOpen}
-          label={activeDocument ? `Doc: ${activeDocument.name}` : 'Document Vault'}
+          label={activeDocument ? `Doc: ${activeDocument.name}` : 'YourVault'}
           subtitle={activeDocument ? 'Attached as context' : 'Select a saved document'}
           onClick={onOpenDocumentVault}
           active={!!activeDocument}
@@ -4984,8 +4986,8 @@ INSTRUCTIONS:
       });
     }
 
-    // ─── Auto-add to Document Vault ───────────────────────────────────
-    // When a file is attached via chat, persist it to the Document Vault.
+    // ─── Auto-add to YourVault ───────────────────────────────────
+    // When a file is attached via chat, persist it to YourVault.
     // The file's own name is used as both the vault entry name and the
     // fileName (no separate "Description" prompt — that's only asked for
     // direct vault uploads). Dedupe by fileName so re-attaching the same
@@ -6068,7 +6070,7 @@ INSTRUCTIONS:
         />
       )}
 
-      {/* Document Vault Panel */}
+      {/* YourVault Panel */}
       {showDocumentVaultPanel && (
         <DocumentVaultPanel
           documents={documentVault}

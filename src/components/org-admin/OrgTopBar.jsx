@@ -13,7 +13,7 @@ const pageConfig = {
   '/app/dashboard':        { title: 'Dashboard',        icon: LayoutDashboard },
   '/app/workspaces':       { title: 'Workspaces',       icon: Briefcase },
   '/app/clients':          { title: 'Clients',          icon: Users },
-  '/app/vault':            { title: 'Document Vault',   icon: FileText },
+  '/app/vault':            { title: 'YourVault',   icon: FileText },
   '/app/workflows':        { title: 'Workflows',        icon: Workflow },
   '/app/knowledge-packs':  { title: 'Knowledge Packs',  icon: Database },
   '/app/prompt-templates': { title: 'Prompt Templates', icon: Sparkles },
