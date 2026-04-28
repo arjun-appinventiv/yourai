@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import {
-  CheckCircle, MessageSquare, Clock, Share2, Grid3X3, Calendar, Users,
+  CheckCircle, MessageSquare, MessageCircle, Clock, Share2, Grid3X3, Calendar, Users,
   FolderOpen, ChevronDown, ChevronRight, MoreVertical, Plus, Download,
   Search, Bell, ArrowUp, Shield, Sparkles, FileText, Building2, Scale,
   LayoutDashboard, Send, MapPin, FileSearch, Lock, X, AlertTriangle, Info, Zap,
@@ -3686,7 +3686,7 @@ function MiniOpPill({ operation }) {
   );
 }
 
-function EmptyState({ profile, plan, onPromptClick, navigate, onViewPlans, workflows = [], totalWorkflowCount = 0, onRunWorkflow, onOpenWorkflowsPanel }) {
+function EmptyState() {
   // Resolve first name from the signed-up user persisted to localStorage.
   // EmptyState is a standalone component so we can't destructure AuthContext
   // without a hook call — the localStorage lookup is enough for the demo.
@@ -3699,12 +3699,15 @@ function EmptyState({ profile, plan, onPromptClick, navigate, onViewPlans, workf
     } catch { return ''; }
   })().split(' ')[0];
   const currentUserName = resolvedFirstName || 'there';
-  const prompts = getSuggestedPrompts(profile);
 
+  // Hero only — input, drop tile and merged icon-pill row are rendered
+  // by ChatView's main render below, so they sit inside the same column
+  // and pick up the live state (input, attachments, dropdowns) without
+  // prop-drilling. Reduced padding-top from 14vh to 8vh to make room
+  // for the now-prominent input directly under the hero.
   return (
-    <div className="px-4 sm:px-6" style={{ paddingTop: '14vh', paddingBottom: 12 }}>
+    <div className="px-4 sm:px-6" style={{ paddingTop: '8vh', paddingBottom: 4 }}>
       <div style={{ maxWidth: 880, width: '100%', margin: '0 auto' }}>
-        {/* ── Hero (sparkle + heading + subtitle) — one tight unit ── */}
         <div style={{ textAlign: 'center' }}>
           <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'linear-gradient(135deg, #C9A84C 0%, #E8D48B 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 10px', boxShadow: '0 2px 8px rgba(201, 168, 76, 0.24)' }}>
             <Sparkles size={17} color="#fff" />
@@ -3726,74 +3729,6 @@ function EmptyState({ profile, plan, onPromptClick, navigate, onViewPlans, workf
             Your AI assistant is ready — start with one of these.
           </p>
         </div>
-
-        {/* ── Prompt cards (3-up) ── */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-left" style={{ marginTop: 72 }}>
-          {prompts.map((p, i) => {
-            const Icon = p.icon;
-            return (
-              <div
-                key={i}
-                onClick={() => onPromptClick(p.prompt)}
-                style={{
-                  background: '#fff',
-                  border: '1px solid var(--border)',
-                  borderRadius: 14,
-                  padding: '22px 22px 0',
-                  cursor: 'pointer',
-                  transition: 'border-color 0.15s, box-shadow 0.15s, transform 0.15s',
-                  display: 'flex', flexDirection: 'column',
-                }}
-                onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#C9A84C'; e.currentTarget.style.boxShadow = '0 6px 18px rgba(10, 36, 99, 0.08)'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.transform = 'translateY(0)'; }}
-              >
-                <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'rgba(201, 168, 76, 0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 14 }}>
-                  <Icon size={22} color="#C9A84C" />
-                </div>
-                <div style={{ fontFamily: "'DM Serif Display', serif", fontSize: 17, fontWeight: 400, color: 'var(--navy)', marginBottom: 6, lineHeight: 1.25 }}>{p.title}</div>
-                <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.55, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', marginBottom: 14 }}>{p.prompt}</div>
-                <div style={{ marginTop: 'auto', paddingTop: 10, borderTop: '1px solid #F3F0E8', paddingBottom: 12, fontSize: 11, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 6, fontFamily: "'DM Sans', sans-serif" }}>
-                  <span style={{ fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--navy)' }}>Click to start</span>
-                  <span style={{ color: '#9CA3AF' }}>&rarr;</span>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* ── Favourites row — only renders when there ARE favourites (fill-or-kill) ── */}
-        {onOpenWorkflowsPanel && onRunWorkflow && workflows.length > 0 && (
-          <div style={{ marginTop: 18, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-              <Zap size={12} style={{ color: '#C9A84C' }} />
-              <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                Favourites
-              </span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', flex: 1, minWidth: 0 }}>
-              {workflows.slice(0, 4).map((w) => (
-                <button
-                  key={w.id}
-                  onClick={() => onRunWorkflow(w)}
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 12px', borderRadius: 999, fontSize: 12, fontWeight: 500, border: '1px solid rgba(201, 168, 76, 0.35)', background: 'rgba(201, 168, 76, 0.08)', color: 'var(--navy)', cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: "'DM Sans', sans-serif" }}
-                  onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#C9A84C'; e.currentTarget.style.background = 'rgba(201, 168, 76, 0.14)'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(201, 168, 76, 0.35)'; e.currentTarget.style.background = 'rgba(201, 168, 76, 0.08)'; }}
-                >
-                  {w.name}
-                </button>
-              ))}
-            </div>
-            <button
-              onClick={onOpenWorkflowsPanel}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: 'var(--navy)', fontWeight: 500, flexShrink: 0, fontFamily: "'DM Sans', sans-serif" }}
-              onMouseEnter={(e) => { e.currentTarget.style.textDecoration = 'underline'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.textDecoration = 'none'; }}
-            >
-              {totalWorkflowCount > 0 ? `View all ${totalWorkflowCount} →` : 'Browse all →'}
-            </button>
-          </div>
-        )}
-
       </div>
     </div>
   );
@@ -3992,14 +3927,32 @@ export default function ChatView({ initialView = 'chat' }) {
   // ─── Intent system state ───
   const [activeIntent, setActiveIntent] = useState(DEFAULT_INTENT);
   const [isIntentDropdownOpen, setIsIntentDropdownOpen] = useState(false);
-  const [isMorePillOpen, setIsMorePillOpen] = useState(false);
   const [suggestedIntent, setSuggestedIntent] = useState(null); // Smart suggestion from keyword detection
   const [suggestedIntents, setSuggestedIntents] = useState([]); // Multiple matches for user to pick
   const [dismissedSuggestion, setDismissedSuggestion] = useState(null);
   const suggestionTimer = useRef(null);
   const intentDropdownRef = useRef(null);
-  const morePillRef = useRef(null);
   const [streamingContent, setStreamingContent] = useState('');
+  // ─── Empty-state source / KP / pill-more dropdowns (Apr 2026 redesign) ───
+  // The redesigned empty state replaces the `+` attach button with a
+  // Source pill (General Chat / Workspace / YourVault) and adds a
+  // Knowledge Pack pill between the textarea and the send button.
+  // The merged icon-pill row gets its own More overflow dropdown.
+  const [isSourceMenuOpen, setIsSourceMenuOpen] = useState(false);
+  const [isSourceWorkspaceSubOpen, setIsSourceWorkspaceSubOpen] = useState(false);
+  const [isSourceVaultSubOpen, setIsSourceVaultSubOpen] = useState(false);
+  const [isKpMenuOpen, setIsKpMenuOpen] = useState(false);
+  const [isEmptyMoreOpen, setIsEmptyMoreOpen] = useState(false);
+  const [isFileDropHover, setIsFileDropHover] = useState(false);
+  // Workspace association for this chat — set via the Source dropdown.
+  // No prior state existed for "this chat is in workspace X" outside the
+  // /chat/workspaces/:id route; this is a pure label for the empty-state
+  // source pill until a real binding lands.
+  const [activeWorkspaceForChat, setActiveWorkspaceForChat] = useState(null);
+  const sourceMenuRef = useRef(null);
+  const kpMenuRef = useRef(null);
+  const emptyMoreRef = useRef(null);
+  const dropFileInputRef = useRef(null);
   // ─── Abort controller for in-flight streams ───
   const streamAbortRef = useRef(null);
   // ─── Session Guard (block detection + idle timeout) ───
@@ -4042,11 +3995,6 @@ export default function ChatView({ initialView = 'chat' }) {
   useEffect(() => { scrollToBottom(); }, [messages, isTyping, streamingContent, scrollToBottom]);
 
   const inputPlaceholder = 'Ask anything about your documents or Alaska law…';
-
-  const handlePromptClick = useCallback((promptText) => {
-    setInput(promptText);
-    if (inputRef.current) inputRef.current.focus();
-  }, []);
 
   // ─── Chat Thread handlers ───
   const handleNewThread = useCallback(() => {
@@ -5398,17 +5346,7 @@ INSTRUCTIONS:
           )}
 
           {showEmptyState ? (
-            <EmptyState
-              profile={profile}
-              plan={plan}
-              onPromptClick={handlePromptClick}
-              navigate={navigate}
-              onViewPlans={() => setShowPlanModal(true)}
-              workflows={!isExternalUser ? (listFavouriteTemplatesForUser(currentUserId, currentRole) || []).filter(t => t.status === 'active').slice(0, 6) : []}
-              totalWorkflowCount={!isExternalUser ? workflowCount : 0}
-              onRunWorkflow={(t) => setRunningPrep(t)}
-              onOpenWorkflowsPanel={() => { setShowTeamPage?.(false); setShowWorkspacesPanel?.(false); setShowWorkflowsPanel(true); }}
-            />
+            <EmptyState />
           ) : (
             <div ref={scrollRef} className="px-3 sm:px-4 md:px-10 py-6" style={{ flex: 1, overflowY: 'auto' }}>
               {/* ─── Persistent Conversation Context Header ─── */}
@@ -5559,89 +5497,6 @@ INSTRUCTIONS:
               </div>
             )}
 
-            {/* ─── STATE 1: Intent pills above input (empty chat only) ─── */}
-            {/* Shows the 6 most-used intents inline + a "More…" overflow
-                pill that opens a popover with the remaining intents. */}
-            {showEmptyState && (() => {
-              const VISIBLE_INTENTS = INTENTS.slice(0, 6);
-              const OVERFLOW_INTENTS = INTENTS.slice(6);
-              const isActiveInOverflow = OVERFLOW_INTENTS.some(i => i.id === activeIntent);
-              return (
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 8, marginBottom: 6, justifyContent: 'center' }}>
-                  {VISIBLE_INTENTS.map(intent => {
-                    const isActive = activeIntent === intent.id;
-                    return (
-                      <button
-                        key={intent.id}
-                        onClick={() => setActiveIntent(intent.id)}
-                        style={{
-                          display: 'inline-flex', alignItems: 'center', gap: 5,
-                          padding: '5px 12px', borderRadius: 999,
-                          fontSize: 12, fontFamily: "'DM Sans', sans-serif",
-                          fontWeight: isActive ? 500 : 400,
-                          border: isActive ? '1px solid var(--navy)' : '1px solid var(--border)',
-                          backgroundColor: isActive ? 'var(--navy)' : 'white',
-                          color: isActive ? '#fff' : 'var(--text-secondary)',
-                          cursor: 'pointer',
-                          transition: 'all 150ms ease',
-                          whiteSpace: 'nowrap',
-                          boxShadow: isActive ? '0 1px 3px rgba(10, 36, 99, 0.14)' : 'none',
-                        }}
-                        onMouseEnter={(e) => { if (!isActive) { e.currentTarget.style.borderColor = 'var(--navy)'; e.currentTarget.style.color = 'var(--navy)'; } }}
-                        onMouseLeave={(e) => { if (!isActive) { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-secondary)'; } }}
-                      >
-                        {intent.label}
-                      </button>
-                    );
-                  })}
-                  {/* More… overflow pill */}
-                  <div style={{ position: 'relative' }} ref={morePillRef}>
-                    <button
-                      onClick={() => setIsMorePillOpen(v => !v)}
-                      style={{
-                        display: 'inline-flex', alignItems: 'center', gap: 4,
-                        padding: '5px 12px', borderRadius: 999,
-                        fontSize: 12, fontFamily: "'DM Sans', sans-serif",
-                        fontWeight: isActiveInOverflow ? 500 : 400,
-                        border: isActiveInOverflow ? '1px solid var(--navy)' : '1px solid var(--border)',
-                        backgroundColor: isActiveInOverflow ? 'var(--navy)' : 'white',
-                        color: isActiveInOverflow ? '#fff' : 'var(--text-secondary)',
-                        cursor: 'pointer',
-                        transition: 'all 150ms ease',
-                        whiteSpace: 'nowrap',
-                        boxShadow: isActiveInOverflow ? '0 1px 3px rgba(10, 36, 99, 0.14)' : 'none',
-                      }}
-                    >
-                      {isActiveInOverflow ? getIntentLabel(activeIntent) : 'More'}
-                      <ChevronDown size={11} style={{ transform: isMorePillOpen ? 'rotate(180deg)' : 'none', transition: 'transform 150ms' }} />
-                    </button>
-                    {isMorePillOpen && (
-                      <>
-                        <div onClick={() => setIsMorePillOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 50 }} />
-                        <div style={{ position: 'absolute', bottom: '100%', right: 0, marginBottom: 6, width: 220, backgroundColor: 'white', borderRadius: 12, border: '1px solid var(--border)', boxShadow: '0 8px 24px rgba(0,0,0,0.12)', zIndex: 51, maxHeight: 320, overflowY: 'auto' }}>
-                          {OVERFLOW_INTENTS.map(intent => {
-                            const isCurrent = activeIntent === intent.id;
-                            return (
-                              <div
-                                key={intent.id}
-                                onClick={() => { setActiveIntent(intent.id); setIsMorePillOpen(false); }}
-                                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 14px', cursor: 'pointer', fontSize: 13, color: isCurrent ? 'var(--text-primary)' : 'var(--text-secondary)', fontWeight: isCurrent ? 500 : 400, transition: 'background 100ms' }}
-                                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--ice-warm)'; }}
-                                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
-                              >
-                                <span>{intent.label}</span>
-                                {isCurrent && <CheckCircle size={13} style={{ color: 'var(--navy)', flexShrink: 0 }} />}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </>
-                    )}
-                  </div>
-                </div>
-              );
-            })()}
-
             {/* Mid-conversation switch banner removed — a single thread
                 can mix intents freely; switching is seamless and only
                 affects the next message. */}
@@ -5702,10 +5557,263 @@ INSTRUCTIONS:
                 toggle is needed here. The Case / General toggle lives inside
                 WorkspaceChatView where it belongs. */}
 
-            {/* ─── Input bar ─── */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, border: '1.5px solid var(--border)', borderRadius: 24, background: '#fff', minHeight: 48, padding: '8px 8px 8px 12px', opacity: 1 }}>
-              {/* STATE 2: Collapsed intent pill (conversation active) */}
-              {!showEmptyState && (
+            {showEmptyState ? (
+              /* ─── EMPTY-STATE INPUT (big, source dropdown + KP dropdown) ─── */
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, border: '1.5px solid var(--border)', borderRadius: 18, background: '#fff', minHeight: 64, padding: '10px 10px 10px 10px', boxShadow: '0 2px 12px rgba(10, 36, 99, 0.04)' }}>
+                {/* Source dropdown — replaces the existing `+` attach.
+                    Three options: General Chat, Workspace ▸, YourVault ▸.
+                    Workspace ▸ lists user's workspaces; selecting one
+                    sets activeWorkspaceForChat (label-only). YourVault ▸
+                    lists vault docs; selecting one calls the existing
+                    handleSelectVaultDocument(doc). */}
+                <div style={{ position: 'relative', flexShrink: 0 }} ref={sourceMenuRef}>
+                  {(() => {
+                    let sourceLabel = 'General Chat';
+                    if (activeVaultDocument) sourceLabel = activeVaultDocument.name;
+                    else if (activeWorkspaceForChat) sourceLabel = activeWorkspaceForChat.name;
+                    const isCustomSource = !!(activeVaultDocument || activeWorkspaceForChat);
+                    return (
+                      <button
+                        onClick={() => { setIsSourceMenuOpen(v => !v); setIsSourceWorkspaceSubOpen(false); setIsSourceVaultSubOpen(false); }}
+                        title="Choose chat source"
+                        style={{
+                          display: 'inline-flex', alignItems: 'center', gap: 4,
+                          padding: '6px 10px', borderRadius: 999,
+                          fontSize: 12, fontFamily: "'DM Sans', sans-serif", fontWeight: 500,
+                          border: isCustomSource ? '1px solid var(--navy)' : '1px solid var(--border)',
+                          backgroundColor: isCustomSource ? 'rgba(10, 36, 99, 0.06)' : '#fff',
+                          color: 'var(--navy)',
+                          cursor: 'pointer', whiteSpace: 'nowrap', maxWidth: 180,
+                        }}
+                      >
+                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sourceLabel}</span>
+                        <ChevronDown size={12} style={{ transform: isSourceMenuOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 150ms', flexShrink: 0 }} />
+                      </button>
+                    );
+                  })()}
+                  {isSourceMenuOpen && (
+                    <>
+                      <div onClick={() => { setIsSourceMenuOpen(false); setIsSourceWorkspaceSubOpen(false); setIsSourceVaultSubOpen(false); }} style={{ position: 'fixed', inset: 0, zIndex: 50 }} />
+                      <div style={{ position: 'absolute', bottom: 'calc(100% + 6px)', left: 0, width: 260, backgroundColor: '#fff', borderRadius: 12, border: '1px solid var(--border)', boxShadow: '0 12px 32px rgba(0,0,0,0.14)', zIndex: 51, overflow: 'hidden' }}>
+                        {/* General Chat */}
+                        <div
+                          onClick={() => {
+                            // Clear any workspace association / active vault doc / active folder.
+                            setActiveWorkspaceForChat(null);
+                            setActiveVaultDocument(null);
+                            setActiveVaultFolder(null);
+                            setActiveKnowledgePack(null);
+                            setIsSourceMenuOpen(false);
+                          }}
+                          style={{ padding: '10px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10, borderBottom: '1px solid var(--border)' }}
+                          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--ice-warm)'; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+                        >
+                          <MessageCircle size={14} style={{ color: 'var(--navy)' }} />
+                          <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>General Chat</span>
+                          {!activeVaultDocument && !activeWorkspaceForChat && (
+                            <Check size={13} style={{ color: 'var(--navy)', marginLeft: 'auto' }} />
+                          )}
+                        </div>
+                        {/* Workspace ▸ */}
+                        <div
+                          onClick={() => { setIsSourceWorkspaceSubOpen(v => !v); setIsSourceVaultSubOpen(false); }}
+                          style={{ padding: '10px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10, borderBottom: '1px solid var(--border)', backgroundColor: isSourceWorkspaceSubOpen ? 'var(--ice-warm)' : 'transparent' }}
+                          onMouseEnter={(e) => { if (!isSourceWorkspaceSubOpen) e.currentTarget.style.backgroundColor = 'var(--ice-warm)'; }}
+                          onMouseLeave={(e) => { if (!isSourceWorkspaceSubOpen) e.currentTarget.style.backgroundColor = 'transparent'; }}
+                        >
+                          <Briefcase size={14} style={{ color: 'var(--navy)' }} />
+                          <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>Workspace</span>
+                          <ChevronRight size={13} style={{ color: 'var(--text-muted)', marginLeft: 'auto', transform: isSourceWorkspaceSubOpen ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 150ms' }} />
+                        </div>
+                        {isSourceWorkspaceSubOpen && (() => {
+                          const wsList = (() => {
+                            try { return listWorkspacesForUser(currentUserId, currentRole) || []; } catch { return []; }
+                          })();
+                          if (wsList.length === 0) {
+                            return <div style={{ padding: '10px 14px 10px 36px', fontSize: 12, color: 'var(--text-muted)', borderBottom: '1px solid var(--border)' }}>No workspaces yet.</div>;
+                          }
+                          return (
+                            <div style={{ maxHeight: 220, overflowY: 'auto', borderBottom: '1px solid var(--border)' }}>
+                              {wsList.map((ws) => {
+                                const isCurrent = activeWorkspaceForChat?.id === ws.id;
+                                return (
+                                  <div
+                                    key={ws.id}
+                                    onClick={() => {
+                                      setActiveWorkspaceForChat({ id: ws.id, name: ws.name });
+                                      setActiveVaultDocument(null);
+                                      setActiveVaultFolder(null);
+                                      setIsSourceMenuOpen(false);
+                                      setIsSourceWorkspaceSubOpen(false);
+                                    }}
+                                    style={{ padding: '8px 14px 8px 36px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: isCurrent ? 'var(--navy)' : 'var(--text-secondary)', fontWeight: isCurrent ? 500 : 400 }}
+                                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--ice-warm)'; }}
+                                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+                                  >
+                                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ws.name}</span>
+                                    {isCurrent && <Check size={12} style={{ color: 'var(--navy)', marginLeft: 'auto', flexShrink: 0 }} />}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          );
+                        })()}
+                        {/* YourVault ▸ */}
+                        <div
+                          onClick={() => { setIsSourceVaultSubOpen(v => !v); setIsSourceWorkspaceSubOpen(false); }}
+                          style={{ padding: '10px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10, backgroundColor: isSourceVaultSubOpen ? 'var(--ice-warm)' : 'transparent' }}
+                          onMouseEnter={(e) => { if (!isSourceVaultSubOpen) e.currentTarget.style.backgroundColor = 'var(--ice-warm)'; }}
+                          onMouseLeave={(e) => { if (!isSourceVaultSubOpen) e.currentTarget.style.backgroundColor = 'transparent'; }}
+                        >
+                          <FolderOpen size={14} style={{ color: 'var(--navy)' }} />
+                          <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>YourVault</span>
+                          <ChevronRight size={13} style={{ color: 'var(--text-muted)', marginLeft: 'auto', transform: isSourceVaultSubOpen ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 150ms' }} />
+                        </div>
+                        {isSourceVaultSubOpen && (
+                          documentVault.length === 0 ? (
+                            <div style={{ padding: '10px 14px 10px 36px', fontSize: 12, color: 'var(--text-muted)' }}>Vault is empty.</div>
+                          ) : (
+                            <div style={{ maxHeight: 220, overflowY: 'auto' }}>
+                              {documentVault.map((doc) => {
+                                const isCurrent = activeVaultDocument?.id === doc.id;
+                                return (
+                                  <div
+                                    key={doc.id}
+                                    onClick={() => {
+                                      handleSelectVaultDocument(doc);
+                                      setActiveWorkspaceForChat(null);
+                                      setIsSourceMenuOpen(false);
+                                      setIsSourceVaultSubOpen(false);
+                                    }}
+                                    style={{ padding: '8px 14px 8px 36px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: isCurrent ? 'var(--navy)' : 'var(--text-secondary)', fontWeight: isCurrent ? 500 : 400 }}
+                                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--ice-warm)'; }}
+                                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+                                  >
+                                    <File size={11} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+                                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{doc.name}</span>
+                                    {isCurrent && <Check size={12} style={{ color: 'var(--navy)', marginLeft: 'auto', flexShrink: 0 }} />}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )
+                        )}
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {/* Textarea — flex 1, larger styling for empty-state. */}
+                <textarea
+                  ref={inputRef}
+                  className="no-focus-ring"
+                  value={input}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setInput(val);
+                    clearTimeout(suggestionTimer.current);
+                    if (val.trim().length < 10) {
+                      setSuggestedIntent(null);
+                      setSuggestedIntents([]);
+                      return;
+                    }
+                    suggestionTimer.current = setTimeout(() => {
+                      const allMatches = detectAllIntents(val);
+                      const relevant = allMatches.filter(m => m.intentId !== activeIntent && m.intentId !== dismissedSuggestion);
+                      if (relevant.length === 0) {
+                        setSuggestedIntent(null);
+                        setSuggestedIntents([]);
+                        return;
+                      }
+                      if (relevant.length >= 2 && relevant[0].matchCount === relevant[1].matchCount) {
+                        const tied = relevant.filter(m => m.matchCount === relevant[0].matchCount);
+                        setSuggestedIntents(tied);
+                        setSuggestedIntent(null);
+                      } else {
+                        setSuggestedIntent(relevant[0].intentId);
+                        setSuggestedIntents([]);
+                      }
+                    }, 600);
+                  }}
+                  onKeyDown={handleKeyDown}
+                  placeholder={inputPlaceholder}
+                  rows={1}
+                  style={{ flex: 1, border: 'none', outline: 'none', fontSize: 15, color: 'var(--text-primary)', background: 'transparent', resize: 'none', maxHeight: 140, overflowY: 'auto', lineHeight: '1.5', fontFamily: 'inherit', padding: '8px 6px' }}
+                  onInput={(e) => { e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 140) + 'px'; }}
+                />
+
+                {/* Knowledge Pack dropdown — between textarea and send. */}
+                <div style={{ position: 'relative', flexShrink: 0 }} ref={kpMenuRef}>
+                  <button
+                    onClick={() => setIsKpMenuOpen(v => !v)}
+                    title="Pick a Knowledge Pack"
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 4,
+                      padding: '6px 10px', borderRadius: 999,
+                      fontSize: 12, fontFamily: "'DM Sans', sans-serif", fontWeight: 500,
+                      border: activeKnowledgePack ? '1px solid var(--navy)' : '1px solid var(--border)',
+                      backgroundColor: activeKnowledgePack ? 'rgba(10, 36, 99, 0.06)' : '#fff',
+                      color: 'var(--navy)',
+                      cursor: 'pointer', whiteSpace: 'nowrap', maxWidth: 160,
+                    }}
+                  >
+                    <Package size={12} style={{ flexShrink: 0 }} />
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {activeKnowledgePack ? activeKnowledgePack.name : 'No pack'}
+                    </span>
+                    <ChevronDown size={12} style={{ transform: isKpMenuOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 150ms', flexShrink: 0 }} />
+                  </button>
+                  {isKpMenuOpen && (
+                    <>
+                      <div onClick={() => setIsKpMenuOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 50 }} />
+                      <div style={{ position: 'absolute', bottom: 'calc(100% + 6px)', right: 0, width: 240, backgroundColor: '#fff', borderRadius: 12, border: '1px solid var(--border)', boxShadow: '0 12px 32px rgba(0,0,0,0.14)', zIndex: 51, overflow: 'hidden', maxHeight: 320, overflowY: 'auto' }}>
+                        <div
+                          onClick={() => { setActiveKnowledgePack(null); setIsKpMenuOpen(false); }}
+                          style={{ padding: '10px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, borderBottom: '1px solid var(--border)' }}
+                          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--ice-warm)'; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+                        >
+                          <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>No pack</span>
+                          {!activeKnowledgePack && <Check size={13} style={{ color: 'var(--navy)', marginLeft: 'auto' }} />}
+                        </div>
+                        {knowledgePacks.length === 0 ? (
+                          <div style={{ padding: '10px 14px', fontSize: 12, color: 'var(--text-muted)' }}>No knowledge packs yet.</div>
+                        ) : (
+                          knowledgePacks.map((pack) => {
+                            const isCurrent = activeKnowledgePack?.id === pack.id;
+                            return (
+                              <div
+                                key={pack.id}
+                                onClick={() => { handleSelectKnowledgePack(pack); setIsKpMenuOpen(false); }}
+                                style={{ padding: '8px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: isCurrent ? 'var(--navy)' : 'var(--text-secondary)', fontWeight: isCurrent ? 500 : 400 }}
+                                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--ice-warm)'; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+                              >
+                                <Package size={11} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+                                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{pack.name}</span>
+                                {isCurrent && <Check size={12} style={{ color: 'var(--navy)', marginLeft: 'auto', flexShrink: 0 }} />}
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {/* Send button — circular, navy, right edge. */}
+                {(() => {
+                  const canSend = (input.trim() || pendingAttachments.length > 0) && !isTyping;
+                  return (
+                    <div onClick={() => canSend && sendMessage(input)} style={{ width: 40, height: 40, borderRadius: '50%', background: canSend ? 'var(--navy)' : '#9CA3AF', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: canSend ? 'pointer' : 'not-allowed', flexShrink: 0, opacity: canSend ? 1 : 0.6, transition: 'background 150ms, opacity 150ms' }}><ArrowUp size={18} color="#fff" /></div>
+                  );
+                })()}
+              </div>
+            ) : (
+              /* ─── POPULATED-CHAT INPUT (existing — DO NOT alter) ─── */
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, border: '1.5px solid var(--border)', borderRadius: 24, background: '#fff', minHeight: 48, padding: '8px 8px 8px 12px', opacity: 1 }}>
+                {/* STATE 2: Collapsed intent pill (conversation active) */}
                 <div style={{ position: 'relative' }} ref={intentDropdownRef}>
                   <button
                     onClick={() => setIsIntentDropdownOpen(v => !v)}
@@ -5765,64 +5873,228 @@ INSTRUCTIONS:
                     </>
                   )}
                 </div>
-              )}
-              <div style={{ position: 'relative' }}>
-                <div onClick={() => setShowPackPicker(v => !v)} title="Attach files or context" style={{ width: 28, height: 28, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: (activeKnowledgePack || activeVaultDocument || activeVaultFolder) ? 'var(--navy)' : 'var(--text-muted)', background: (activeKnowledgePack || activeVaultDocument || activeVaultFolder) ? 'rgba(10, 36, 99, 0.08)' : 'transparent' }}><Plus size={20} /></div>
-                {showPackPicker && (
-                  <AttachMenu
-                    activePack={activeKnowledgePack}
-                    activeDocument={activeVaultDocument}
-                    activeFolder={activeVaultFolder}
-                    folderDocCount={activeVaultFolder ? documentVault.filter((d) => d.folderId === activeVaultFolder.id).length : 0}
-                    onClose={() => setShowPackPicker(false)}
-                    onAttachFiles={(files, kind) => { handleAttachFiles(files, kind); setShowPackPicker(false); }}
-                    onOpenKnowledgePacks={() => { setShowPackPicker(false); setShowKnowledgePacksPanel(true); }}
-                    onOpenDocumentVault={() => { setShowPackPicker(false); setVaultPanelFolderMode(false); setShowDocumentVaultPanel(true); }}
-                    onOpenDocumentVaultForFolder={() => { setShowPackPicker(false); setVaultPanelFolderMode(true); setShowDocumentVaultPanel(true); }}
-                    onClearPack={() => { setActiveKnowledgePack(null); }}
-                    onClearDocument={() => { setActiveVaultDocument(null); }}
-                    onClearFolder={() => { setActiveVaultFolder(null); }}
-                  />
-                )}
-              </div>
-              <textarea ref={inputRef} className="no-focus-ring" value={input} onChange={(e) => {
-                const val = e.target.value;
-                setInput(val);
-                // Smart intent suggestion — debounce 600ms
-                clearTimeout(suggestionTimer.current);
-                if (val.trim().length < 10) {
-                  setSuggestedIntent(null);
-                  setSuggestedIntents([]);
-                  return;
-                }
-                suggestionTimer.current = setTimeout(() => {
-                  const allMatches = detectAllIntents(val);
-                  // Filter out current intent and dismissed suggestions
-                  const relevant = allMatches.filter(m => m.intentId !== activeIntent && m.intentId !== dismissedSuggestion);
-
-                  if (relevant.length === 0) {
+                <div style={{ position: 'relative' }}>
+                  <div onClick={() => setShowPackPicker(v => !v)} title="Attach files or context" style={{ width: 28, height: 28, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: (activeKnowledgePack || activeVaultDocument || activeVaultFolder) ? 'var(--navy)' : 'var(--text-muted)', background: (activeKnowledgePack || activeVaultDocument || activeVaultFolder) ? 'rgba(10, 36, 99, 0.08)' : 'transparent' }}><Plus size={20} /></div>
+                  {showPackPicker && (
+                    <AttachMenu
+                      activePack={activeKnowledgePack}
+                      activeDocument={activeVaultDocument}
+                      activeFolder={activeVaultFolder}
+                      folderDocCount={activeVaultFolder ? documentVault.filter((d) => d.folderId === activeVaultFolder.id).length : 0}
+                      onClose={() => setShowPackPicker(false)}
+                      onAttachFiles={(files, kind) => { handleAttachFiles(files, kind); setShowPackPicker(false); }}
+                      onOpenKnowledgePacks={() => { setShowPackPicker(false); setShowKnowledgePacksPanel(true); }}
+                      onOpenDocumentVault={() => { setShowPackPicker(false); setVaultPanelFolderMode(false); setShowDocumentVaultPanel(true); }}
+                      onOpenDocumentVaultForFolder={() => { setShowPackPicker(false); setVaultPanelFolderMode(true); setShowDocumentVaultPanel(true); }}
+                      onClearPack={() => { setActiveKnowledgePack(null); }}
+                      onClearDocument={() => { setActiveVaultDocument(null); }}
+                      onClearFolder={() => { setActiveVaultFolder(null); }}
+                    />
+                  )}
+                </div>
+                <textarea ref={inputRef} className="no-focus-ring" value={input} onChange={(e) => {
+                  const val = e.target.value;
+                  setInput(val);
+                  // Smart intent suggestion — debounce 600ms
+                  clearTimeout(suggestionTimer.current);
+                  if (val.trim().length < 10) {
                     setSuggestedIntent(null);
                     setSuggestedIntents([]);
                     return;
                   }
+                  suggestionTimer.current = setTimeout(() => {
+                    const allMatches = detectAllIntents(val);
+                    // Filter out current intent and dismissed suggestions
+                    const relevant = allMatches.filter(m => m.intentId !== activeIntent && m.intentId !== dismissedSuggestion);
 
-                  // If top 2+ intents have the same score, show multi-pick
-                  if (relevant.length >= 2 && relevant[0].matchCount === relevant[1].matchCount) {
-                    const tied = relevant.filter(m => m.matchCount === relevant[0].matchCount);
-                    setSuggestedIntents(tied);
-                    setSuggestedIntent(null);
-                  } else {
-                    // Clear winner — single suggestion
-                    setSuggestedIntent(relevant[0].intentId);
-                    setSuggestedIntents([]);
-                  }
-                }, 600);
-              }} onKeyDown={handleKeyDown} placeholder={inputPlaceholder} rows={1} style={{ flex: 1, border: 'none', outline: 'none', fontSize: 14, color: 'var(--text-primary)', background: 'transparent', resize: 'none', maxHeight: 120, overflowY: 'auto', lineHeight: '1.5', fontFamily: 'inherit' }} onInput={(e) => { e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px'; }} />
-              {(() => { const canSend = (input.trim() || pendingAttachments.length > 0) && !isTyping; return (
-              <div onClick={() => canSend && sendMessage(input)} style={{ width: 32, height: 32, borderRadius: '50%', background: canSend ? 'var(--navy)' : '#9CA3AF', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: canSend ? 'pointer' : 'not-allowed', flexShrink: 0, opacity: canSend ? 1 : 0.6, transition: 'background 150ms, opacity 150ms' }}><ArrowUp size={16} color="#fff" /></div>
-              ); })()}
-            </div>
-            <div style={{ textAlign: 'center', fontSize: 11, color: 'var(--text-muted)', marginTop: 6, lineHeight: 1.45 }}>
+                    if (relevant.length === 0) {
+                      setSuggestedIntent(null);
+                      setSuggestedIntents([]);
+                      return;
+                    }
+
+                    // If top 2+ intents have the same score, show multi-pick
+                    if (relevant.length >= 2 && relevant[0].matchCount === relevant[1].matchCount) {
+                      const tied = relevant.filter(m => m.matchCount === relevant[0].matchCount);
+                      setSuggestedIntents(tied);
+                      setSuggestedIntent(null);
+                    } else {
+                      // Clear winner — single suggestion
+                      setSuggestedIntent(relevant[0].intentId);
+                      setSuggestedIntents([]);
+                    }
+                  }, 600);
+                }} onKeyDown={handleKeyDown} placeholder={inputPlaceholder} rows={1} style={{ flex: 1, border: 'none', outline: 'none', fontSize: 14, color: 'var(--text-primary)', background: 'transparent', resize: 'none', maxHeight: 120, overflowY: 'auto', lineHeight: '1.5', fontFamily: 'inherit' }} onInput={(e) => { e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px'; }} />
+                {(() => { const canSend = (input.trim() || pendingAttachments.length > 0) && !isTyping; return (
+                <div onClick={() => canSend && sendMessage(input)} style={{ width: 32, height: 32, borderRadius: '50%', background: canSend ? 'var(--navy)' : '#9CA3AF', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: canSend ? 'pointer' : 'not-allowed', flexShrink: 0, opacity: canSend ? 1 : 0.6, transition: 'background 150ms, opacity 150ms' }}><ArrowUp size={16} color="#fff" /></div>
+                ); })()}
+              </div>
+            )}
+
+            {/* ─── Drop-files tile (empty state only) ─── */}
+            {/* Routes through the existing additive-upload pipeline by
+                calling handleAttachFiles(files, 'doc') — same downstream
+                as the `+ attach` button: pendingAttachments, sessionDocContext,
+                vault auto-add. After upload, the standard pending-attachment
+                chip row above renders the new entries. */}
+            {showEmptyState && pendingAttachments.length === 0 && (
+              <div
+                onClick={() => dropFileInputRef.current?.click()}
+                onDragOver={(e) => { e.preventDefault(); if (!isFileDropHover) setIsFileDropHover(true); }}
+                onDragLeave={(e) => { e.preventDefault(); setIsFileDropHover(false); }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setIsFileDropHover(false);
+                  const files = Array.from(e.dataTransfer?.files || []);
+                  if (files.length) handleAttachFiles(files, 'doc');
+                }}
+                style={{
+                  marginTop: 16,
+                  border: `1px dashed ${isFileDropHover ? 'var(--navy)' : 'var(--border)'}`,
+                  borderRadius: 12,
+                  background: isFileDropHover ? 'rgba(10, 36, 99, 0.04)' : 'var(--ice-warm)',
+                  padding: '20px 16px',
+                  minHeight: 96,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 4,
+                  cursor: 'pointer',
+                  transition: 'border-color 150ms, background 150ms',
+                }}
+              >
+                <input
+                  ref={dropFileInputRef}
+                  type="file"
+                  accept=".pdf,.doc,.docx,.txt,.rtf,.odt,.xls,.xlsx,.csv,.ppt,.pptx,.ods,.odp,.pages,.numbers,.key,.html,.htm,.xml,.json"
+                  multiple
+                  style={{ display: 'none' }}
+                  onChange={(e) => {
+                    const files = Array.from(e.target.files || []);
+                    if (files.length) handleAttachFiles(files, 'doc');
+                    e.target.value = '';
+                  }}
+                />
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Upload size={14} style={{ color: 'var(--navy)' }} />
+                  <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--navy)', fontFamily: "'DM Sans', sans-serif" }}>
+                    Drop files here, or click to upload
+                  </span>
+                </div>
+                <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: "'DM Sans', sans-serif" }}>
+                  PDF, DOCX, TXT — added to your YourVault automatically
+                </span>
+              </div>
+            )}
+
+            {/* ─── Merged icon-pill row (empty state only) ─── */}
+            {/* Replaces the old 3 prompt cards + plain text intent pills.
+                Order: General Chat (default) → 3 ex-action cards (with
+                pre-fill prompts) → 2 more intents (no pre-fill) → More ▾. */}
+            {showEmptyState && (() => {
+              const SUGGESTED = getSuggestedPrompts();
+              const reviewPrompt = SUGGESTED.find(p => p.title === 'Review a contract')?.prompt || '';
+              const summarisePrompt = SUGGESTED.find(p => p.title === 'Summarise a document')?.prompt || '';
+              const draftPrompt = SUGGESTED.find(p => p.title === 'Draft an email to counsel')?.prompt || '';
+              const VISIBLE_PILLS = [
+                { id: 'general_chat', label: 'General Chat', icon: MessageCircle, prefill: null },
+                { id: 'contract_review', label: 'Review a contract', icon: FileSearch, prefill: reviewPrompt },
+                { id: 'document_summarisation', label: 'Summarise a document', icon: FileText, prefill: summarisePrompt },
+                { id: 'email_letter_drafting', label: 'Draft an email', icon: Mail, prefill: draftPrompt },
+                { id: 'legal_research', label: 'Legal Research', icon: Search, prefill: null },
+                { id: 'case_law_analysis', label: 'Case Law Analysis', icon: Scale, prefill: null },
+              ];
+              const visibleIds = new Set(VISIBLE_PILLS.map(p => p.id));
+              const OVERFLOW_INTENTS = INTENTS.filter(i => !visibleIds.has(i.id));
+              const isActiveInOverflow = OVERFLOW_INTENTS.some(i => i.id === activeIntent);
+              return (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 18, justifyContent: 'center' }}>
+                  {VISIBLE_PILLS.map(pill => {
+                    const isActive = activeIntent === pill.id;
+                    const Icon = pill.icon;
+                    return (
+                      <button
+                        key={pill.id}
+                        onClick={() => {
+                          setActiveIntent(pill.id);
+                          if (pill.prefill) {
+                            setInput(pill.prefill);
+                            if (inputRef.current) inputRef.current.focus();
+                          }
+                        }}
+                        style={{
+                          display: 'inline-flex', alignItems: 'center', gap: 6,
+                          padding: '8px 14px', borderRadius: 999,
+                          fontSize: 13, fontFamily: "'DM Sans', sans-serif",
+                          fontWeight: isActive ? 500 : 400,
+                          height: 36,
+                          border: isActive ? '1px solid var(--navy)' : '1px solid var(--border)',
+                          backgroundColor: isActive ? 'var(--navy)' : '#fff',
+                          color: isActive ? '#fff' : 'var(--text-secondary)',
+                          cursor: 'pointer',
+                          transition: 'all 150ms ease',
+                          whiteSpace: 'nowrap',
+                          boxShadow: isActive ? '0 1px 3px rgba(10, 36, 99, 0.14)' : 'none',
+                        }}
+                        onMouseEnter={(e) => { if (!isActive) { e.currentTarget.style.borderColor = 'var(--navy)'; e.currentTarget.style.color = 'var(--navy)'; } }}
+                        onMouseLeave={(e) => { if (!isActive) { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-secondary)'; } }}
+                      >
+                        <Icon size={14} style={{ flexShrink: 0 }} />
+                        {pill.label}
+                      </button>
+                    );
+                  })}
+                  {/* More ▾ overflow pill — opens dropdown listing remaining intents. */}
+                  <div style={{ position: 'relative' }} ref={emptyMoreRef}>
+                    <button
+                      onClick={() => setIsEmptyMoreOpen(v => !v)}
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 4,
+                        padding: '8px 14px', borderRadius: 999,
+                        fontSize: 13, fontFamily: "'DM Sans', sans-serif",
+                        fontWeight: isActiveInOverflow ? 500 : 400,
+                        height: 36,
+                        border: isActiveInOverflow ? '1px solid var(--navy)' : '1px solid var(--border)',
+                        backgroundColor: isActiveInOverflow ? 'var(--navy)' : '#fff',
+                        color: isActiveInOverflow ? '#fff' : 'var(--text-secondary)',
+                        cursor: 'pointer',
+                        transition: 'all 150ms ease',
+                        whiteSpace: 'nowrap',
+                        boxShadow: isActiveInOverflow ? '0 1px 3px rgba(10, 36, 99, 0.14)' : 'none',
+                      }}
+                    >
+                      {isActiveInOverflow ? getIntentLabel(activeIntent) : 'More'}
+                      <ChevronDown size={12} style={{ transform: isEmptyMoreOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 150ms' }} />
+                    </button>
+                    {isEmptyMoreOpen && (
+                      <>
+                        <div onClick={() => setIsEmptyMoreOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 50 }} />
+                        <div style={{ position: 'absolute', top: 'calc(100% + 6px)', right: 0, width: 240, backgroundColor: '#fff', borderRadius: 12, border: '1px solid var(--border)', boxShadow: '0 8px 24px rgba(0,0,0,0.12)', zIndex: 51, maxHeight: 320, overflowY: 'auto' }}>
+                          {OVERFLOW_INTENTS.map(intent => {
+                            const isCurrent = activeIntent === intent.id;
+                            return (
+                              <div
+                                key={intent.id}
+                                onClick={() => { setActiveIntent(intent.id); setIsEmptyMoreOpen(false); }}
+                                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 14px', cursor: 'pointer', fontSize: 13, color: isCurrent ? 'var(--text-primary)' : 'var(--text-secondary)', fontWeight: isCurrent ? 500 : 400, transition: 'background 100ms' }}
+                                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--ice-warm)'; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+                              >
+                                <span>{intent.label}</span>
+                                {isCurrent && <CheckCircle size={13} style={{ color: 'var(--navy)', flexShrink: 0 }} />}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
+
+            <div style={{ textAlign: 'center', fontSize: 11, color: 'var(--text-muted)', marginTop: showEmptyState ? 18 : 6, lineHeight: 1.45 }}>
               YourAI may produce inaccurate information. Always verify critical outputs. <strong>Private &amp; encrypted.</strong>
             </div>
           </div>
