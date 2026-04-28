@@ -152,10 +152,44 @@ export const INTENT_DEFAULTS: Record<string, IntentConfig> = {
     custom_instruction: '',
     response_format: 'structured_sections',
   },
+  // Vault-search intent. Client-only — no LLM round-trip. Keywords combine
+  // an action verb (find / search / where / do I have / show me / list)
+  // with a noun anchor (file / files / doc / docs / document / documents)
+  // so we don't false-positive on generic prose like "find a precedent".
+  find_document: {
+    keywords: [
+      'find file', 'find files', 'find a file', 'find my file', 'find the file',
+      'find doc', 'find docs', 'find a doc', 'find my doc', 'find the doc',
+      'find document', 'find documents', 'find a document', 'find my document', 'find the document',
+      'search for file', 'search for files', 'search for doc', 'search for docs',
+      'search for document', 'search for documents', 'search my files', 'search my docs',
+      'search my documents', 'search the vault',
+      'where is the file', 'where is the doc', 'where is the document',
+      'where is my file', 'where is my doc', 'where is my document',
+      "where's the file", "where's the doc", "where's the document",
+      "where's my file", "where's my doc", "where's my document",
+      'do i have a file', 'do i have any file', 'do i have any files',
+      'do i have a doc', 'do i have any doc', 'do i have any docs',
+      'do i have a document', 'do i have any document', 'do i have any documents',
+      'show me the file', 'show me the doc', 'show me the document',
+      'show me my files', 'show me my docs', 'show me my documents',
+      'list my files', 'list my docs', 'list my documents',
+      'list the files', 'list the docs', 'list the documents',
+      'what files', 'what docs', 'what documents',
+      'in my vault', 'in the vault', 'from my vault', 'in vault',
+    ],
+    opening_behaviour: 'start_immediately',
+    custom_instruction: '',
+    response_format: 'structured_sections',
+  },
 };
 
-// Priority order — legal_qa checked LAST as fallback
+// Priority order — legal_qa checked LAST as fallback.
+// find_document sits high so vault-search keyword anchors ("find file",
+// "where's my doc", "do I have any documents") don't get drowned by
+// the "what is" / "explain" patterns that legal_qa also matches.
 const PRIORITY_ORDER = [
+  'find_document',
   'contract_review',
   'timeline_extraction',
   'clause_analysis',

@@ -4122,8 +4122,6 @@ export default function ChatView({ initialView = 'chat' }) {
   const suggestionTimer = useRef(null);
   const intentDropdownRef = useRef(null);
   const morePillRef = useRef(null);
-  const [showDocVersionBanner, setShowDocVersionBanner] = useState(false);
-  const [pendingNewDoc, setPendingNewDoc] = useState(null); // holds the new doc until user decides
   const [streamingContent, setStreamingContent] = useState('');
   // ─── Abort controller for in-flight streams ───
   const streamAbortRef = useRef(null);
@@ -4209,8 +4207,6 @@ export default function ChatView({ initialView = 'chat' }) {
       sessionDocId: null,
       sessionStartTime: new Date().toISOString(),
     });
-    setShowDocVersionBanner(false);
-    setPendingNewDoc(null);
   }, [activeThreadId, messages]);
 
   // Listen for the inline upload-added note's "Start a new chat" click.
@@ -4221,6 +4217,31 @@ export default function ChatView({ initialView = 'chat' }) {
     window.addEventListener('yourai:start-new-chat', handler);
     return () => window.removeEventListener('yourai:start-new-chat', handler);
   }, [handleNewThread]);
+
+  // FileResultsCard ("find_document" intent) actions — same window-event
+  // pattern as the upload-added note above so we don't thread callbacks
+  // through MessageBubble → IntentCard → FileResultsCard.
+  useEffect(() => {
+    const onUseDoc = (e) => {
+      const doc = e?.detail?.doc;
+      if (!doc) return;
+      // The card row carries a slim shape; resolve back to the full
+      // vault entry (with `content`, `sampleUrl`, etc) so handleSelect
+      // attaches the real document context to the next send.
+      const full = documentVault.find((d) => String(d.id) === String(doc.id)) || doc;
+      handleSelectVaultDocument(full);
+    };
+    const onBrowseVault = () => {
+      closeAllPanels();
+      setShowDocumentVaultPanel(true);
+    };
+    window.addEventListener('yourai:vault-use-doc', onUseDoc);
+    window.addEventListener('yourai:vault-browse', onBrowseVault);
+    return () => {
+      window.removeEventListener('yourai:vault-use-doc', onUseDoc);
+      window.removeEventListener('yourai:vault-browse', onBrowseVault);
+    };
+  }, [documentVault, handleSelectVaultDocument]);
 
   const handleSwitchThread = useCallback((threadId) => {
     if (threadId === activeThreadId) return;
@@ -4328,6 +4349,142 @@ export default function ChatView({ initialView = 'chat' }) {
       setMessages((prev) => [...prev, userMsg, botMsg]);
       setInput('');
       if (inputRef.current) inputRef.current.style.height = 'auto';
+      return;
+    }
+
+    // ─── find_document — client-only vault search ──────────────────────
+    // Short-circuit before any /api/chat fetch: the FileResultsCard
+    // renders entirely from local state. Detection is two-layer — an
+    // explicit "Find document" pill AND keyword auto-switch from
+    // general_chat (handled below) — so by the time we get here the
+    // active intent already reflects user intent.
+    const FIND_DOC_TRIGGER_PREFIXES = [
+      // Order: longest-first so "where is" beats "where" if we extend.
+      'where is the', "where's the", 'where is my', "where's my", 'where is', "where's",
+      'do i have any', 'do i have a', 'do i have',
+      'show me my', 'show me the', 'show me',
+      'list my', 'list the', 'list',
+      'what files', 'what docs', 'what documents',
+      'search for', 'search my', 'search the', 'search',
+      'find my', 'find the', 'find a', 'find any', 'find',
+    ];
+    const FIND_DOC_TRIGGER_ARTICLES = ['the', 'a', 'an', 'my', 'any'];
+    // Noun anchors stripped after the verb so "find file Acme" → "Acme".
+    const FIND_DOC_TRIGGER_NOUNS = ['files', 'file', 'docs', 'doc', 'documents', 'document'];
+    const stripFindDocTriggers = (msg) => {
+      let q = (msg || '').trim().toLowerCase();
+      // Drop trailing punctuation so "find Acme MSA?" matches.
+      q = q.replace(/[?!.,;:]+$/g, '').trim();
+      for (const t of FIND_DOC_TRIGGER_PREFIXES) {
+        if (q === t) { q = ''; break; }
+        if (q.startsWith(t + ' ')) { q = q.slice(t.length).trim(); break; }
+      }
+      for (const a of FIND_DOC_TRIGGER_ARTICLES) {
+        if (q === a) { q = ''; break; }
+        if (q.startsWith(a + ' ')) { q = q.slice(a.length).trim(); break; }
+      }
+      for (const n of FIND_DOC_TRIGGER_NOUNS) {
+        if (q === n) { q = ''; break; }
+        if (q.startsWith(n + ' ')) { q = q.slice(n.length).trim(); break; }
+      }
+      // "called X" / "named X" / "about X" — drop the leading particle.
+      for (const p of ['called', 'named', 'titled', 'about', 'for', 'from']) {
+        if (q.startsWith(p + ' ')) { q = q.slice(p.length).trim(); break; }
+      }
+      return q;
+    };
+
+    // Pre-flight: if user is in general_chat but the message keyword-matches
+    // find_document, auto-switch HERE so the short-circuit below fires.
+    // Without this, "find Acme MSA" from general chat would still hit the
+    // /api/chat fetch path and the LLM would prose-answer instead of
+    // rendering the FileResultsCard.
+    let intentForFind = activeIntent;
+    if (activeIntent === 'general_chat' && trimmed.length >= 10) {
+      const detected = detectIntent(trimmed, 'general_chat');
+      if (detected === 'find_document') {
+        intentForFind = 'find_document';
+        setActiveIntent('find_document');
+      }
+    }
+
+    if (intentForFind === 'find_document') {
+      if (showEmptyState) setShowEmptyState(false);
+      const rawQuery = trimmed;
+      const q = stripFindDocTriggers(rawQuery);
+
+      // Walk the folder parent chain to build a breadcrumb the user can
+      // recognise. Same separator as the EditDocumentModal dropdown.
+      const folderById = new Map(vaultFolders.map((f) => [f.id, f]));
+      const folderPathFor = (folderId) => {
+        if (!folderId) return '';
+        const trail = [];
+        let cur = folderById.get(folderId);
+        let guard = 0;
+        while (cur && guard++ < 32) {
+          trail.unshift(cur.name);
+          cur = cur.parentId ? folderById.get(cur.parentId) : null;
+        }
+        return trail.join(' › ');
+      };
+
+      let matches = [];
+      if (q && documentVault.length > 0) {
+        matches = documentVault.filter((d) => {
+          const name = (d.name || '').toLowerCase();
+          const desc = (d.description || '').toLowerCase();
+          const fname = (d.fileName || '').toLowerCase();
+          const fpath = folderPathFor(d.folderId).toLowerCase();
+          return (
+            name.includes(q) ||
+            desc.includes(q) ||
+            fname.includes(q) ||
+            (fpath && fpath.includes(q))
+          );
+        });
+      }
+
+      const resultRows = matches.slice(0, 5).map((d) => ({
+        id: d.id,
+        name: d.name,
+        fileName: d.fileName,
+        fileSize: d.fileSize,
+        createdAt: d.createdAt,
+        folderPath: folderPathFor(d.folderId),
+        description: d.description,
+      }));
+
+      const ts = new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+      const userMsg = {
+        id: Date.now(),
+        sender: 'user',
+        content: rawQuery,
+        timestamp: ts,
+        attachments: pendingAttachments,
+      };
+      const botMsg = {
+        id: Date.now() + 1,
+        sender: 'bot',
+        content: '',
+        intent: 'find_document',
+        cardData: {
+          query: q,
+          rawQuery,
+          results: resultRows,
+          totalCount: matches.length,
+          vaultIsEmpty: documentVault.length === 0,
+          queryWasStripped: !q && rawQuery.length > 0,
+        },
+        timestamp: ts,
+        sourceBadge: null,
+      };
+      setMessages((prev) => [...prev, userMsg, botMsg]);
+      setInput('');
+      setSuggestedIntent(null);
+      setSuggestedIntents([]);
+      setDismissedSuggestion(null);
+      if (inputRef.current) inputRef.current.style.height = 'auto';
+      setPendingAttachments([]);
       return;
     }
 
@@ -4754,7 +4911,7 @@ INSTRUCTIONS:
       const errMsg = { id: Date.now() + 1, sender: 'bot', content: safeMessage, timestamp: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }), sourceBadge: null };
       setMessages((prev) => [...prev, errMsg]);
     }
-  }, [isTyping, showEmptyState, messages, activeKnowledgePack, activeVaultDocument, pendingAttachments, activeThreadId, sessionState, activeIntent]);
+  }, [isTyping, showEmptyState, messages, activeKnowledgePack, activeVaultDocument, pendingAttachments, activeThreadId, sessionState, activeIntent, documentVault, vaultFolders]);
 
   const SUPPORTED_FILE_EXTENSIONS = [
     '.doc', '.docx', '.ppt', '.pptx', '.xls', '.xlsx',
@@ -4850,9 +5007,8 @@ INSTRUCTIONS:
       // Drop the inline notice into the chat thread immediately so
       // the user sees the "new topic? start fresh" affordance before
       // they hit send. The note is a styled system message; clicking
-      // its "Start a new chat" link calls handleNewThread (which
-      // carries the just-attached doc into the new thread via
-      // pendingNewDoc / pendingAttachments — see handleNewThread).
+      // its "Start a new chat" link dispatches yourai:start-new-chat,
+      // which the top-level listener (handleNewThread) handles.
       const baseCount = sessionDocContext?.docNames?.length || sessionDocContext?.docCount || 0;
       newAtts.forEach((a, i) => {
         const indexLabel = baseCount + i + 1;
@@ -4917,74 +5073,29 @@ INSTRUCTIONS:
     }
   };
 
-  // DEC-095: Handler for mid-session document version banner
-  const handleDocVersionChoice = useCallback((choice) => {
-    if (choice === 'new') {
-      // Start new conversation with the new document
-      // DEC-095: Clear messages, reset session, new session_doc_id
-      setMessages([]);
-      setShowEmptyState(true);
-      setSessionDocContext(null);
-      setSessionState({
-        sessionKbSnapshotId: `kb-snapshot-${Date.now()}`, // DEC-093 + DEC-094: New session gets current KB
-        sessionDocId: `doc-${Date.now()}`,
-        sessionStartTime: new Date().toISOString(),
-      });
-      if (pendingNewDoc?.kind === 'vault' && pendingNewDoc?.vaultDoc) {
-        // Vault document — set as active context, not as pending attachment
-        setActiveVaultDocument(pendingNewDoc.vaultDoc);
-      } else if (pendingNewDoc) {
-        setPendingAttachments([pendingNewDoc]);
-        // Auto-add to Document Vault (dedupe by fileName)
-        setDocumentVault(prev => {
-          if (prev.some(d => d.fileName === pendingNewDoc.name)) return prev;
-          return [{
-            id: Date.now() + 1000,
-            name: pendingNewDoc.name,
-            description: '',
-            fileName: pendingNewDoc.name,
-            fileSize: pendingNewDoc.size ? `${(pendingNewDoc.size / (1024 * 1024)).toFixed(1)} MB` : '—',
-            createdAt: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-            addedFromChat: true,
-          }, ...prev];
-        });
-      }
-      setActiveKnowledgePack(null);
-      if (!pendingNewDoc?.vaultDoc) setActiveVaultDocument(null);
-      setInput('');
-      // Update thread
-      const newThread = {
-        id: `thread-${Date.now()}`,
-        title: pendingNewDoc ? `New: ${pendingNewDoc.name}` : 'New Conversation',
-        preview: 'Started with updated document',
-        updatedAt: 'Just now',
-        messageCount: 0,
-        isActive: true,
-      };
-      setThreads(prev => [newThread, ...prev.map(t => ({ ...t, isActive: false }))]);
-      setActiveThreadId(newThread.id);
-    } else {
-      // Continue with original — dismiss banner, doc saved but not used in this session
-      // DEC-095: session_doc_id unchanged, new doc saved to storage but not active
-    }
-    setShowDocVersionBanner(false);
-    setPendingNewDoc(null);
-  }, [pendingNewDoc]);
-
   const removeAttachment = (id) => {
     setPendingAttachments(prev => prev.filter(a => a.id !== id));
   };
 
-  // Guard: switching vault doc or knowledge pack mid-session triggers new-convo banner
   const handleSelectVaultDocument = useCallback((doc) => {
-    if (sessionDocContext) {
-      // Docs already sent — changing context requires new conversation
-      setPendingNewDoc({ id: Date.now(), name: doc.name, kind: 'vault', vaultDoc: doc });
-      setShowDocVersionBanner(true);
-      return;
-    }
     setActiveVaultDocument(doc);
     setActiveVaultFolder(null); // mutually exclusive
+    if (sessionDocContext) {
+      // Mid-thread: drop the same inline-note affordance as additive uploads
+      // so picking a vault doc behaves consistently with attaching a fresh
+      // upload — soft "new topic? start a new chat" escape hatch instead of
+      // a blocking banner.
+      setMessages((prev) => [...prev, {
+        id: Date.now() + 0.1,
+        sender: 'bot',
+        isSystemNote: true,
+        isUploadAddedNote: true,
+        uploadedFileName: doc.name,
+        content: `Used **${doc.name}** from your vault — New topic? **[Start a new chat →]**`,
+        timestamp: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
+        sourceBadge: null,
+      }]);
+    }
   }, [sessionDocContext]);
 
   // Folder attach: mutually exclusive with single-doc attach.
@@ -5496,59 +5607,6 @@ INSTRUCTIONS:
             </div>
           )}
 
-          {/* DEC-095: Mid-session document version banner — Scenario 3, Option C */}
-          {/* See knowledge-pack-strategy.md — "User's Uploaded Document Updated Mid-Conversation" */}
-          {/* CONFIDENCE: 8/10 — Confirmed by Arjun (PM). Aligns with session isolation principle. */}
-          {/* NOT dismissible by X — user MUST choose one of the two options */}
-          {showDocVersionBanner && (
-            <div className="px-3 sm:px-4 md:px-10" style={{ paddingTop: 8, paddingBottom: 0 }}>
-              <div style={{
-                display: 'flex', alignItems: 'flex-start', gap: 12,
-                padding: '14px 18px', borderRadius: 12,
-                background: '#FBEED5', border: '1px solid #E8A33D',
-                boxShadow: '0 1px 3px rgba(245, 158, 11, 0.15)',
-              }}>
-                <AlertTriangle size={18} style={{ color: '#E8A33D', flexShrink: 0, marginTop: 2 }} />
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: '#E8A33D', marginBottom: 6 }}>
-                    Only one attachment per chat
-                  </div>
-                  <div style={{ fontSize: 12, color: '#A16207', marginBottom: 10, lineHeight: 1.7 }}>
-                    You've already attached a document to this conversation, and only one attachment is allowed per chat. This keeps answers accurate — Alex won't mix facts from different files or carry over assumptions that don't apply.
-                  </div>
-                  <div style={{ fontSize: 12, color: '#A16207', marginBottom: 14, lineHeight: 1.7 }}>
-                    To use your new document, start a fresh chat. Or keep the current document and continue here.
-                  </div>
-                  {pendingNewDoc && (
-                    <div style={{ fontSize: 12, fontWeight: 600, color: '#E8A33D', marginBottom: 14, padding: '8px 12px', background: 'rgba(217, 119, 6, 0.08)', borderRadius: 8, display: 'inline-block' }}>
-                      {pendingNewDoc.name}
-                    </div>
-                  )}
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <button
-                      onClick={() => handleDocVersionChoice('new')}
-                      style={{
-                        padding: '8px 20px', borderRadius: 8, fontSize: 12, fontWeight: 600,
-                        background: '#E8A33D', color: '#fff', border: 'none', cursor: 'pointer',
-                      }}
-                    >
-                      Start fresh with new document
-                    </button>
-                    <button
-                      onClick={() => handleDocVersionChoice('continue')}
-                      style={{
-                        padding: '8px 20px', borderRadius: 8, fontSize: 12, fontWeight: 600,
-                        background: '#fff', color: '#E8A33D', border: '1px solid #E8A33D', cursor: 'pointer',
-                      }}
-                    >
-                      Keep current document
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
           {/* Chat input area */}
           <div className="px-4 sm:px-6" style={{ background: 'transparent', paddingTop: showEmptyState ? 20 : 12, paddingBottom: 12, maxWidth: 880, width: '100%', marginLeft: 'auto', marginRight: 'auto', boxSizing: 'border-box' }}>
             {/* Active Knowledge Pack / Vault Document / Vault Folder chips */}
@@ -5690,7 +5748,7 @@ INSTRUCTIONS:
 
             {/* ─── Smart intent suggestion banner (Banner A) ─── */}
             {/* Single intent suggestion */}
-            {suggestedIntent && !suggestedIntents.length && !showDocVersionBanner && (
+            {suggestedIntent && !suggestedIntents.length && (
               <div style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
                 padding: '10px 14px', marginBottom: 6, borderRadius: 12,
@@ -5712,7 +5770,7 @@ INSTRUCTIONS:
             )}
 
             {/* Multi-intent suggestion — user picks from tied matches */}
-            {suggestedIntents.length >= 2 && !showDocVersionBanner && (
+            {suggestedIntents.length >= 2 && (
               <div style={{
                 padding: '10px 14px', marginBottom: 6, borderRadius: 12,
                 backgroundColor: 'var(--ice-warm)', border: '0.5px solid var(--border)',

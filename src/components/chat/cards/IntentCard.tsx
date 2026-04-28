@@ -6,6 +6,7 @@ import ResearchBriefCard, { type ResearchBriefCardData } from './ResearchBriefCa
 import RiskMemoCard, { type RiskMemoCardData } from './RiskMemoCard';
 import ClauseAnalysisCard, { type ClauseAnalysisCardData } from './ClauseAnalysisCard';
 import TimelineCard, { type TimelineCardData } from './TimelineCard';
+import FileResultsCard, { type FileResultsCardData, type FileResultRow } from './FileResultsCard';
 
 /**
  * IntentCard — dispatches to the correct card component based on the
@@ -20,7 +21,8 @@ export type CardIntent =
   | 'legal_research'
   | 'risk_assessment'
   | 'clause_analysis'
-  | 'timeline_extraction';
+  | 'timeline_extraction'
+  | 'find_document';
 
 export const CARD_INTENTS: CardIntent[] = [
   'document_summarisation',
@@ -30,6 +32,7 @@ export const CARD_INTENTS: CardIntent[] = [
   'risk_assessment',
   'clause_analysis',
   'timeline_extraction',
+  'find_document',
 ];
 
 export function isCardIntent(intent: string | undefined | null): intent is CardIntent {
@@ -55,9 +58,12 @@ export function tryParseCardData(raw: string | undefined | null): any | null {
 interface IntentCardProps {
   intent: CardIntent;
   data: unknown;
+  // find_document-only callbacks. Other card intents ignore these.
+  onUseDoc?: (doc: FileResultRow) => void;
+  onBrowseVault?: (prefillQuery?: string) => void;
 }
 
-export default function IntentCard({ intent, data }: IntentCardProps): React.ReactElement | null {
+export default function IntentCard({ intent, data, onUseDoc, onBrowseVault }: IntentCardProps): React.ReactElement | null {
   if (!data || typeof data !== 'object') return null;
 
   switch (intent) {
@@ -75,6 +81,8 @@ export default function IntentCard({ intent, data }: IntentCardProps): React.Rea
       return <ClauseAnalysisCard data={data as ClauseAnalysisCardData} />;
     case 'timeline_extraction':
       return <TimelineCard data={data as TimelineCardData} />;
+    case 'find_document':
+      return <FileResultsCard data={data as FileResultsCardData} onUse={onUseDoc} onBrowseVault={onBrowseVault} />;
     default:
       return null;
   }
