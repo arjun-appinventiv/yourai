@@ -4218,6 +4218,31 @@ export default function ChatView({ initialView = 'chat' }) {
     return () => window.removeEventListener('yourai:start-new-chat', handler);
   }, [handleNewThread]);
 
+  // FileResultsCard ("find_document" intent) actions — same window-event
+  // pattern as the upload-added note above so we don't thread callbacks
+  // through MessageBubble → IntentCard → FileResultsCard.
+  useEffect(() => {
+    const onUseDoc = (e) => {
+      const doc = e?.detail?.doc;
+      if (!doc) return;
+      // The card row carries a slim shape; resolve back to the full
+      // vault entry (with `content`, `sampleUrl`, etc) so handleSelect
+      // attaches the real document context to the next send.
+      const full = documentVault.find((d) => String(d.id) === String(doc.id)) || doc;
+      handleSelectVaultDocument(full);
+    };
+    const onBrowseVault = () => {
+      closeAllPanels();
+      setShowDocumentVaultPanel(true);
+    };
+    window.addEventListener('yourai:vault-use-doc', onUseDoc);
+    window.addEventListener('yourai:vault-browse', onBrowseVault);
+    return () => {
+      window.removeEventListener('yourai:vault-use-doc', onUseDoc);
+      window.removeEventListener('yourai:vault-browse', onBrowseVault);
+    };
+  }, [documentVault, handleSelectVaultDocument]);
+
   const handleSwitchThread = useCallback((threadId) => {
     if (threadId === activeThreadId) return;
     // Save current thread messages before switching
@@ -4324,6 +4349,142 @@ export default function ChatView({ initialView = 'chat' }) {
       setMessages((prev) => [...prev, userMsg, botMsg]);
       setInput('');
       if (inputRef.current) inputRef.current.style.height = 'auto';
+      return;
+    }
+
+    // ─── find_document — client-only vault search ──────────────────────
+    // Short-circuit before any /api/chat fetch: the FileResultsCard
+    // renders entirely from local state. Detection is two-layer — an
+    // explicit "Find document" pill AND keyword auto-switch from
+    // general_chat (handled below) — so by the time we get here the
+    // active intent already reflects user intent.
+    const FIND_DOC_TRIGGER_PREFIXES = [
+      // Order: longest-first so "where is" beats "where" if we extend.
+      'where is the', "where's the", 'where is my', "where's my", 'where is', "where's",
+      'do i have any', 'do i have a', 'do i have',
+      'show me my', 'show me the', 'show me',
+      'list my', 'list the', 'list',
+      'what files', 'what docs', 'what documents',
+      'search for', 'search my', 'search the', 'search',
+      'find my', 'find the', 'find a', 'find any', 'find',
+    ];
+    const FIND_DOC_TRIGGER_ARTICLES = ['the', 'a', 'an', 'my', 'any'];
+    // Noun anchors stripped after the verb so "find file Acme" → "Acme".
+    const FIND_DOC_TRIGGER_NOUNS = ['files', 'file', 'docs', 'doc', 'documents', 'document'];
+    const stripFindDocTriggers = (msg) => {
+      let q = (msg || '').trim().toLowerCase();
+      // Drop trailing punctuation so "find Acme MSA?" matches.
+      q = q.replace(/[?!.,;:]+$/g, '').trim();
+      for (const t of FIND_DOC_TRIGGER_PREFIXES) {
+        if (q === t) { q = ''; break; }
+        if (q.startsWith(t + ' ')) { q = q.slice(t.length).trim(); break; }
+      }
+      for (const a of FIND_DOC_TRIGGER_ARTICLES) {
+        if (q === a) { q = ''; break; }
+        if (q.startsWith(a + ' ')) { q = q.slice(a.length).trim(); break; }
+      }
+      for (const n of FIND_DOC_TRIGGER_NOUNS) {
+        if (q === n) { q = ''; break; }
+        if (q.startsWith(n + ' ')) { q = q.slice(n.length).trim(); break; }
+      }
+      // "called X" / "named X" / "about X" — drop the leading particle.
+      for (const p of ['called', 'named', 'titled', 'about', 'for', 'from']) {
+        if (q.startsWith(p + ' ')) { q = q.slice(p.length).trim(); break; }
+      }
+      return q;
+    };
+
+    // Pre-flight: if user is in general_chat but the message keyword-matches
+    // find_document, auto-switch HERE so the short-circuit below fires.
+    // Without this, "find Acme MSA" from general chat would still hit the
+    // /api/chat fetch path and the LLM would prose-answer instead of
+    // rendering the FileResultsCard.
+    let intentForFind = activeIntent;
+    if (activeIntent === 'general_chat' && trimmed.length >= 10) {
+      const detected = detectIntent(trimmed, 'general_chat');
+      if (detected === 'find_document') {
+        intentForFind = 'find_document';
+        setActiveIntent('find_document');
+      }
+    }
+
+    if (intentForFind === 'find_document') {
+      if (showEmptyState) setShowEmptyState(false);
+      const rawQuery = trimmed;
+      const q = stripFindDocTriggers(rawQuery);
+
+      // Walk the folder parent chain to build a breadcrumb the user can
+      // recognise. Same separator as the EditDocumentModal dropdown.
+      const folderById = new Map(vaultFolders.map((f) => [f.id, f]));
+      const folderPathFor = (folderId) => {
+        if (!folderId) return '';
+        const trail = [];
+        let cur = folderById.get(folderId);
+        let guard = 0;
+        while (cur && guard++ < 32) {
+          trail.unshift(cur.name);
+          cur = cur.parentId ? folderById.get(cur.parentId) : null;
+        }
+        return trail.join(' › ');
+      };
+
+      let matches = [];
+      if (q && documentVault.length > 0) {
+        matches = documentVault.filter((d) => {
+          const name = (d.name || '').toLowerCase();
+          const desc = (d.description || '').toLowerCase();
+          const fname = (d.fileName || '').toLowerCase();
+          const fpath = folderPathFor(d.folderId).toLowerCase();
+          return (
+            name.includes(q) ||
+            desc.includes(q) ||
+            fname.includes(q) ||
+            (fpath && fpath.includes(q))
+          );
+        });
+      }
+
+      const resultRows = matches.slice(0, 5).map((d) => ({
+        id: d.id,
+        name: d.name,
+        fileName: d.fileName,
+        fileSize: d.fileSize,
+        createdAt: d.createdAt,
+        folderPath: folderPathFor(d.folderId),
+        description: d.description,
+      }));
+
+      const ts = new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+      const userMsg = {
+        id: Date.now(),
+        sender: 'user',
+        content: rawQuery,
+        timestamp: ts,
+        attachments: pendingAttachments,
+      };
+      const botMsg = {
+        id: Date.now() + 1,
+        sender: 'bot',
+        content: '',
+        intent: 'find_document',
+        cardData: {
+          query: q,
+          rawQuery,
+          results: resultRows,
+          totalCount: matches.length,
+          vaultIsEmpty: documentVault.length === 0,
+          queryWasStripped: !q && rawQuery.length > 0,
+        },
+        timestamp: ts,
+        sourceBadge: null,
+      };
+      setMessages((prev) => [...prev, userMsg, botMsg]);
+      setInput('');
+      setSuggestedIntent(null);
+      setSuggestedIntents([]);
+      setDismissedSuggestion(null);
+      if (inputRef.current) inputRef.current.style.height = 'auto';
+      setPendingAttachments([]);
       return;
     }
 
@@ -4750,7 +4911,7 @@ INSTRUCTIONS:
       const errMsg = { id: Date.now() + 1, sender: 'bot', content: safeMessage, timestamp: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }), sourceBadge: null };
       setMessages((prev) => [...prev, errMsg]);
     }
-  }, [isTyping, showEmptyState, messages, activeKnowledgePack, activeVaultDocument, pendingAttachments, activeThreadId, sessionState, activeIntent]);
+  }, [isTyping, showEmptyState, messages, activeKnowledgePack, activeVaultDocument, pendingAttachments, activeThreadId, sessionState, activeIntent, documentVault, vaultFolders]);
 
   const SUPPORTED_FILE_EXTENSIONS = [
     '.doc', '.docx', '.ppt', '.pptx', '.xls', '.xlsx',

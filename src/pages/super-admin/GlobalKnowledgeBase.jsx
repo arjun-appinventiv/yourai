@@ -229,6 +229,18 @@ export default function GlobalKnowledgeBase() {
       custom_instruction: '',
 
     },
+    {
+      id: 13,
+      label: 'Find Document',
+      description: 'Activated when the user asks to find or search a document in their personal vault by filename or folder.',
+      systemPrompt: "You help users locate documents in their personal vault. This intent is handled client-side via filename/folder substring search — no LLM round-trip. The chat surface short-circuits before the model sees the message and renders a FileResultsCard with the matches.",
+      tonePrompt: "Not applicable — this intent renders a results card, not LLM prose.",
+      enabled: true,
+      keywords: ['find file', 'find document', 'find documents', 'search for file', 'search for document', "where's the file", "where's my doc", 'do I have any document', 'show me my files', 'list my documents', 'what files', 'what documents'],
+      opening_behaviour: 'start_immediately',
+      custom_instruction: '',
+
+    },
   ];
 
   const DEFAULT_PERSONA = {
