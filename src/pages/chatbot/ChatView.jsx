@@ -6063,15 +6063,12 @@ INSTRUCTIONS:
                           fontWeight: isActive ? 500 : 400,
                           height: 36,
                           border: isActive ? '1px solid var(--navy)' : '1px solid var(--border)',
-                          // Active = navy outline + 6% navy tint; the send
-                          // button stays the only solid-navy attractor on
-                          // the empty-state surface.
-                          backgroundColor: isActive ? 'rgba(10, 36, 99, 0.06)' : '#fff',
-                          color: isActive ? 'var(--navy)' : 'var(--text-secondary)',
+                          backgroundColor: isActive ? 'var(--navy)' : '#fff',
+                          color: isActive ? '#fff' : 'var(--text-secondary)',
                           cursor: 'pointer',
                           transition: 'all 150ms ease',
                           whiteSpace: 'nowrap',
-                          boxShadow: 'none',
+                          boxShadow: isActive ? '0 1px 3px rgba(10, 36, 99, 0.14)' : 'none',
                         }}
                         onMouseEnter={(e) => { if (!isActive) { e.currentTarget.style.borderColor = 'var(--navy)'; e.currentTarget.style.color = 'var(--navy)'; } }}
                         onMouseLeave={(e) => { if (!isActive) { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-secondary)'; } }}
