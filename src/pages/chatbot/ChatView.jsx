@@ -5536,133 +5536,159 @@ INSTRUCTIONS:
               /* <768px stacks the row vertically so the source pill, textarea
                  and the KP+send sub-row each get a full-width line. */
               <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'stretch' : 'center', gap: isMobile ? 10 : 8, border: '1.5px solid var(--border)', borderRadius: 18, background: '#fff', minHeight: 64, padding: '10px 10px 10px 10px', boxShadow: '0 2px 12px rgba(10, 36, 99, 0.04)' }}>
-                {/* Two YourVault affordances — different mental models:
-                    ┌──────────────────────────┬─────────────────────────────┐
-                    │ 🔍 Search my docs (toggle) │ 📁 From YourVault (picker) │
-                    │ AI auto-retrieves relevant │ User picks a specific doc  │
-                    │ docs at send time          │ to pin to this chat        │
-                    └──────────────────────────┴─────────────────────────────┘
-                    Both reach the same corpus. Pick the verb when you don't
-                    know which doc has the answer; pick the specific doc when
-                    you do. */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, alignSelf: isMobile ? 'flex-start' : undefined }}>
-                  <button
-                    onClick={() => setSearchMyDocs(v => !v)}
-                    title={searchMyDocs ? 'AI is also searching your saved documents' : 'Toggle: also search across your saved documents'}
-                    style={{
-                      display: 'inline-flex', alignItems: 'center', gap: 6,
-                      padding: '6px 12px', borderRadius: 999,
-                      fontSize: 12, fontFamily: "'DM Sans', sans-serif", fontWeight: 500,
-                      border: searchMyDocs ? '1px solid var(--navy)' : '1px solid var(--border)',
-                      backgroundColor: searchMyDocs ? 'var(--navy)' : '#fff',
-                      color: searchMyDocs ? '#fff' : 'var(--text-secondary)',
-                      cursor: 'pointer', whiteSpace: 'nowrap',
-                      transition: 'all 150ms ease',
-                    }}
-                  >
-                    <Search size={13} style={{ flexShrink: 0 }} />
-                    <span>Search my docs</span>
-                  </button>
-                  {/* From YourVault — explicit attach. Searchable popover
-                      anchored to a folder-icon button. NOT the prior submenu
-                      shape — type-ahead handles libraries past 100 docs. */}
-                  <div style={{ position: 'relative' }} ref={vaultAttachRef}>
-                    <button
-                      onClick={() => setIsVaultAttachOpen(v => !v)}
-                      title="Attach a document from YourVault"
-                      style={{
-                        display: 'inline-flex', alignItems: 'center', gap: 6,
-                        padding: '6px 10px', borderRadius: 999,
-                        fontSize: 12, fontFamily: "'DM Sans', sans-serif", fontWeight: 500,
-                        border: activeVaultDocument ? '1px solid var(--navy)' : '1px solid var(--border)',
-                        backgroundColor: activeVaultDocument ? 'rgba(10, 36, 99, 0.06)' : '#fff',
-                        color: 'var(--text-secondary)',
-                        cursor: 'pointer', whiteSpace: 'nowrap',
-                        transition: 'all 150ms ease',
-                      }}
-                    >
-                      <FolderOpen size={13} style={{ flexShrink: 0, color: 'var(--navy)' }} />
-                      <span style={{ color: activeVaultDocument ? 'var(--navy)' : 'var(--text-secondary)', maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {activeVaultDocument ? activeVaultDocument.name : 'From YourVault'}
-                      </span>
-                      <ChevronDown size={12} style={{ flexShrink: 0, transform: isVaultAttachOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 150ms' }} />
-                    </button>
-                    {isVaultAttachOpen && (() => {
-                      const q = vaultAttachQuery.trim().toLowerCase();
-                      const filtered = q
-                        ? documentVault.filter(d => `${d.name || ''} ${d.description || ''} ${d.fileName || ''}`.toLowerCase().includes(q))
-                        : documentVault;
-                      return (
-                        <>
-                          <div onClick={() => { setIsVaultAttachOpen(false); setVaultAttachQuery(''); }} style={{ position: 'fixed', inset: 0, zIndex: 50 }} />
-                          <div style={{ position: 'absolute', bottom: 'calc(100% + 6px)', left: 0, width: 320, backgroundColor: '#fff', borderRadius: 12, border: '1px solid var(--border)', boxShadow: '0 12px 32px rgba(0,0,0,0.14)', zIndex: 51, overflow: 'hidden', display: 'flex', flexDirection: 'column', maxHeight: 380 }}>
-                            {documentVault.length > 5 && (
-                              <div style={{ padding: '8px 10px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
-                                <input
-                                  autoFocus
-                                  type="text"
-                                  value={vaultAttachQuery}
-                                  onChange={(e) => setVaultAttachQuery(e.target.value)}
-                                  placeholder="Search YourVault…"
-                                  style={{ width: '100%', padding: '6px 10px', borderRadius: 8, border: '1px solid var(--border)', fontSize: 12, fontFamily: 'inherit', outline: 'none' }}
-                                  onClick={(e) => e.stopPropagation()}
-                                />
-                              </div>
-                            )}
-                            <div style={{ flex: 1, overflowY: 'auto' }}>
-                              {activeVaultDocument && (
-                                <div
-                                  onClick={() => { setActiveVaultDocument(null); setIsVaultAttachOpen(false); setVaultAttachQuery(''); }}
-                                  style={{ padding: '10px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, borderBottom: '1px solid var(--border)' }}
-                                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--ice-warm)'; }}
-                                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
-                                >
-                                  <X size={12} style={{ color: 'var(--text-muted)' }} />
-                                  <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Detach <strong style={{ color: 'var(--text-primary)' }}>{activeVaultDocument.name}</strong></span>
-                                </div>
-                              )}
-                              {documentVault.length === 0 ? (
-                                <div style={{ padding: '14px', fontSize: 12, color: 'var(--text-muted)', textAlign: 'center' }}>YourVault is empty. Drop a file below to populate it.</div>
-                              ) : filtered.length === 0 ? (
-                                <div style={{ padding: '14px', fontSize: 12, color: 'var(--text-muted)', textAlign: 'center' }}>No documents match "{vaultAttachQuery}".</div>
-                              ) : (
-                                filtered.map((doc) => {
-                                  const isCurrent = activeVaultDocument?.id === doc.id;
-                                  const folder = doc.folderId ? vaultFolders.find(f => f.id === doc.folderId) : null;
-                                  return (
-                                    <div
-                                      key={doc.id}
-                                      onClick={() => { handleSelectVaultDocument(doc); setIsVaultAttachOpen(false); setVaultAttachQuery(''); }}
-                                      style={{ padding: '8px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: isCurrent ? 'var(--navy)' : 'var(--text-secondary)', fontWeight: isCurrent ? 500 : 400 }}
-                                      onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--ice-warm)'; }}
-                                      onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
-                                    >
-                                      <File size={11} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
-                                      <div style={{ flex: 1, minWidth: 0 }}>
-                                        <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{doc.name}</div>
-                                        {folder && (
-                                          <div style={{ fontSize: 10, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{folder.name}</div>
-                                        )}
-                                      </div>
-                                      {isCurrent && <Check size={12} style={{ color: 'var(--navy)', flexShrink: 0 }} />}
-                                    </div>
-                                  );
-                                })
-                              )}
+                {/* Attach (+) dropdown — both YourVault modes in one popover.
+                    Top: "Search my docs" toggle row (AI auto-retrieves).
+                    Below: searchable picker (user pins a specific doc).
+                    Button is a simple "+" icon (default) or "+ N attached"
+                    when something's active — keeps the row uncluttered when
+                    nothing's set. */}
+                <div style={{ position: 'relative', flexShrink: 0, alignSelf: isMobile ? 'flex-start' : undefined }} ref={vaultAttachRef}>
+                  {(() => {
+                    const isActive = !!(activeVaultDocument || searchMyDocs);
+                    // Compact label: just "+" by default, "+ Attached" with
+                    // a navy ring when anything is active. The popover
+                    // shows the actual state — button stays terse.
+                    return (
+                      <button
+                        onClick={() => setIsVaultAttachOpen(v => !v)}
+                        title="Attach a document or search across YourVault"
+                        style={{
+                          display: 'inline-flex', alignItems: 'center', gap: 4,
+                          padding: '6px 12px', borderRadius: 999,
+                          fontSize: 12, fontFamily: "'DM Sans', sans-serif", fontWeight: 500,
+                          border: isActive ? '1px solid var(--navy)' : '1px solid var(--border)',
+                          backgroundColor: isActive ? 'rgba(10, 36, 99, 0.06)' : '#fff',
+                          color: 'var(--navy)',
+                          cursor: 'pointer', whiteSpace: 'nowrap',
+                          transition: 'all 150ms ease',
+                        }}
+                      >
+                        <Plus size={14} style={{ flexShrink: 0 }} />
+                        {isActive && <span>Attached</span>}
+                        <ChevronDown size={12} style={{ flexShrink: 0, transform: isVaultAttachOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 150ms' }} />
+                      </button>
+                    );
+                  })()}
+                  {isVaultAttachOpen && (() => {
+                    const q = vaultAttachQuery.trim().toLowerCase();
+                    const filtered = q
+                      ? documentVault.filter(d => `${d.name || ''} ${d.description || ''} ${d.fileName || ''}`.toLowerCase().includes(q))
+                      : documentVault;
+                    return (
+                      <>
+                        <div onClick={() => { setIsVaultAttachOpen(false); setVaultAttachQuery(''); }} style={{ position: 'fixed', inset: 0, zIndex: 50 }} />
+                        <div style={{ position: 'absolute', bottom: 'calc(100% + 6px)', left: 0, width: 340, backgroundColor: '#fff', borderRadius: 12, border: '1px solid var(--border)', boxShadow: '0 12px 32px rgba(0,0,0,0.14)', zIndex: 51, overflow: 'hidden', display: 'flex', flexDirection: 'column', maxHeight: 460 }}>
+                          {/* ─── Toggle row ─── */}
+                          <div
+                            onClick={() => setSearchMyDocs(v => !v)}
+                            style={{
+                              padding: '12px 14px', cursor: 'pointer',
+                              display: 'flex', alignItems: 'center', gap: 10,
+                              borderBottom: '1px solid var(--border)',
+                              background: searchMyDocs ? 'rgba(10, 36, 99, 0.04)' : 'transparent',
+                              transition: 'background 100ms',
+                            }}
+                            onMouseEnter={(e) => { if (!searchMyDocs) e.currentTarget.style.backgroundColor = 'var(--ice-warm)'; }}
+                            onMouseLeave={(e) => { if (!searchMyDocs) e.currentTarget.style.backgroundColor = 'transparent'; }}
+                          >
+                            <Search size={15} style={{ color: 'var(--navy)', flexShrink: 0 }} />
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>Search my docs</div>
+                              <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 1 }}>AI finds relevant docs across your library.</div>
                             </div>
-                            <div
-                              onClick={() => { setIsVaultAttachOpen(false); setVaultAttachQuery(''); closeAllPanels(); setShowDocumentVaultPanel(true); }}
-                              style={{ padding: '8px 14px', cursor: 'pointer', borderTop: '1px solid var(--border)', fontSize: 11, color: 'var(--text-secondary)', textAlign: 'center', flexShrink: 0 }}
-                              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--ice-warm)'; }}
-                              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
-                            >
-                              Open YourVault →
+                            {/* Mini toggle switch */}
+                            <div style={{
+                              width: 28, height: 16, borderRadius: 999,
+                              background: searchMyDocs ? 'var(--navy)' : '#D9DCE2',
+                              position: 'relative', flexShrink: 0,
+                              transition: 'background 150ms ease',
+                            }}>
+                              <div style={{
+                                width: 12, height: 12, borderRadius: '50%',
+                                background: '#fff', position: 'absolute', top: 2,
+                                left: searchMyDocs ? 14 : 2,
+                                transition: 'left 150ms ease',
+                                boxShadow: '0 1px 2px rgba(0,0,0,0.2)',
+                              }} />
                             </div>
                           </div>
-                        </>
-                      );
-                    })()}
-                  </div>
+                          {/* ─── Eyebrow divider for the picker section ─── */}
+                          <div style={{
+                            padding: '10px 14px 4px', flexShrink: 0,
+                            fontSize: 10, color: 'var(--text-muted)',
+                            fontFamily: "'IBM Plex Mono', ui-monospace, monospace",
+                            letterSpacing: '0.12em', textTransform: 'uppercase',
+                          }}>
+                            From your vault
+                          </div>
+                          {/* ─── Search input ─── */}
+                          {documentVault.length > 5 && (
+                            <div style={{ padding: '4px 10px 8px', flexShrink: 0 }}>
+                              <input
+                                type="text"
+                                value={vaultAttachQuery}
+                                onChange={(e) => setVaultAttachQuery(e.target.value)}
+                                placeholder="Search YourVault…"
+                                style={{ width: '100%', padding: '6px 10px', borderRadius: 8, border: '1px solid var(--border)', fontSize: 12, fontFamily: 'inherit', outline: 'none' }}
+                                onClick={(e) => e.stopPropagation()}
+                              />
+                            </div>
+                          )}
+                          {/* ─── Doc list ─── */}
+                          <div style={{ flex: 1, overflowY: 'auto', borderTop: '1px solid var(--border)' }}>
+                            {activeVaultDocument && (
+                              <div
+                                onClick={() => { setActiveVaultDocument(null); }}
+                                style={{ padding: '10px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, borderBottom: '1px solid var(--border)', background: 'rgba(10, 36, 99, 0.04)' }}
+                                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--ice-warm)'; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'rgba(10, 36, 99, 0.04)'; }}
+                              >
+                                <X size={12} style={{ color: 'var(--text-muted)' }} />
+                                <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Detach <strong style={{ color: 'var(--text-primary)' }}>{activeVaultDocument.name}</strong></span>
+                              </div>
+                            )}
+                            {documentVault.length === 0 ? (
+                              <div style={{ padding: '14px', fontSize: 12, color: 'var(--text-muted)', textAlign: 'center' }}>YourVault is empty. Drop a file below to populate it.</div>
+                            ) : filtered.length === 0 ? (
+                              <div style={{ padding: '14px', fontSize: 12, color: 'var(--text-muted)', textAlign: 'center' }}>No documents match "{vaultAttachQuery}".</div>
+                            ) : (
+                              filtered.map((doc) => {
+                                const isCurrent = activeVaultDocument?.id === doc.id;
+                                const folder = doc.folderId ? vaultFolders.find(f => f.id === doc.folderId) : null;
+                                return (
+                                  <div
+                                    key={doc.id}
+                                    onClick={() => { handleSelectVaultDocument(doc); setIsVaultAttachOpen(false); setVaultAttachQuery(''); }}
+                                    style={{ padding: '8px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: isCurrent ? 'var(--navy)' : 'var(--text-secondary)', fontWeight: isCurrent ? 500 : 400 }}
+                                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--ice-warm)'; }}
+                                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+                                  >
+                                    <File size={11} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                      <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{doc.name}</div>
+                                      {folder && (
+                                        <div style={{ fontSize: 10, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{folder.name}</div>
+                                      )}
+                                    </div>
+                                    {isCurrent && <Check size={12} style={{ color: 'var(--navy)', flexShrink: 0 }} />}
+                                  </div>
+                                );
+                              })
+                            )}
+                          </div>
+                          {/* ─── Footer link ─── */}
+                          <div
+                            onClick={() => { setIsVaultAttachOpen(false); setVaultAttachQuery(''); closeAllPanels(); setShowDocumentVaultPanel(true); }}
+                            style={{ padding: '8px 14px', cursor: 'pointer', borderTop: '1px solid var(--border)', fontSize: 11, color: 'var(--text-secondary)', textAlign: 'center', flexShrink: 0 }}
+                            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--ice-warm)'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+                          >
+                            Open YourVault →
+                          </div>
+                        </div>
+                      </>
+                    );
+                  })()}
                 </div>
 
                 {/* Textarea — flex 1, larger styling for empty-state. */}
