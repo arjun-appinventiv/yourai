@@ -3815,14 +3815,11 @@ export default function ChatView({ initialView = 'chat' }) {
   const suggestionTimer = useRef(null);
   const intentDropdownRef = useRef(null);
   const [streamingContent, setStreamingContent] = useState('');
-  // ─── Empty-state Search-my-docs / KP / pill-more controls ───
-  // The prior "Search Within" scope dropdown (File Search / YourVault /
-  // Workspaces) was simplified to a single verb toggle: "Search my docs"
-  // (off by default; on = also retrieve from YourVault for the next send).
-  // The "scope" abstraction was a leap of faith — verb on a button avoids
-  // it. Workspaces moved out of this control entirely; it lives in the
-  // sidebar where navigation belongs.
-  const [searchMyDocs, setSearchMyDocs] = useState(false);
+  // ─── Empty-state Attach / KP / pill-more controls ───
+  // The empty-state input has a single "+" attach dropdown that opens a
+  // searchable YourVault picker. The earlier "Search my docs" auto-retrieve
+  // toggle was removed — users want to find a specific doc and attach it,
+  // not toggle an abstract AI search mode. KP dropdown is alongside.
   const [isKpMenuOpen, setIsKpMenuOpen] = useState(false);
   // Search inside the KP / YourVault pickers — both pickers use the same
   // search-first pattern to handle libraries that grow past ~10 items.
@@ -4374,47 +4371,7 @@ export default function ChatView({ initialView = 'chat' }) {
       });
     }
 
-    // ─── "Search my docs" toggle: client-side relevance retrieval ───
-    // When the user flipped Search my docs ON and didn't explicitly attach
-    // anything, pick top-N vault docs that overlap with the question and
-    // inline them so the model has something to ground in. Token-overlap
-    // ranking is a stand-in until the pgvector RAG pipeline lands (see
-    // .claude-context/vault-content-rag-plan.md). Confidentiality note:
-    // reads only from documentVault (the user's own corpus), never workspace
-    // docs — cross-matter search would be a confidentiality footgun.
-    let vaultScopeContext = '';
-    if (searchMyDocs && !mergedDocContent && !activeVaultDocument && !activeVaultFolder && documentVault.length > 0 && trimmed) {
-      const STOP = new Set(['the','a','an','and','or','but','of','to','in','for','on','at','by','with','as','is','are','was','were','be','been','being','have','has','had','do','does','did','this','that','these','those','it','its','my','your','our','their','what','which','who','whom','when','where','why','how','if','then','than','so','also','about']);
-      const qTokens = trimmed.toLowerCase().match(/[a-z0-9]{3,}/g) || [];
-      const qSet = qTokens.filter(t => !STOP.has(t));
-      if (qSet.length > 0) {
-        const scored = documentVault.map((d) => {
-          const hay = `${d.name || ''}\n${d.description || ''}\n${d.fileName || ''}\n${d.content || ''}`.toLowerCase();
-          let score = 0;
-          for (const t of qSet) {
-            // Substring count gives a cheap relevance signal — exact word
-            // matches in `name`/`fileName` are weighted by capping content
-            // hits separately so a single long doc doesn't dominate.
-            const re = new RegExp(`\\b${t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'g');
-            const m = hay.match(re);
-            if (m) score += Math.min(m.length, 8);
-          }
-          return { doc: d, score };
-        }).filter(s => s.score > 0).sort((a, b) => b.score - a.score).slice(0, 5);
-        if (scored.length > 0) {
-          const PER_DOC_CAP = 6000;
-          vaultScopeContext = `--- YourVault scope: top ${scored.length} matching document${scored.length === 1 ? '' : 's'} ---\n` +
-            scored.map(({ doc }) => {
-              const txt = (doc.content || '').slice(0, PER_DOC_CAP);
-              return txt
-                ? `\n## ${doc.name}\n${txt}${doc.content && doc.content.length > PER_DOC_CAP ? '\n[... truncated ...]' : ''}`
-                : `\n[${doc.name}]${doc.description ? `: ${doc.description}` : ''}`;
-            }).join('\n');
-        }
-      }
-    }
-
-    // ─── Also include vault-selection context (Use button on a Doc / Folder) ───
+    // ─── Vault-selection context (Use button on a Doc / Folder) ───
     // These don't go through pendingAttachments — they're set as
     // activeVaultDocument / activeVaultFolder. Without this branch the
     // Edge would think no doc is attached when the user picked one
@@ -5536,22 +5493,17 @@ INSTRUCTIONS:
               /* <768px stacks the row vertically so the source pill, textarea
                  and the KP+send sub-row each get a full-width line. */
               <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'stretch' : 'center', gap: isMobile ? 10 : 8, border: '1.5px solid var(--border)', borderRadius: 18, background: '#fff', minHeight: 64, padding: '10px 10px 10px 10px', boxShadow: '0 2px 12px rgba(10, 36, 99, 0.04)' }}>
-                {/* Attach (+) dropdown — both YourVault modes in one popover.
-                    Top: "Search my docs" toggle row (AI auto-retrieves).
-                    Below: searchable picker (user pins a specific doc).
-                    Button is a simple "+" icon (default) or "+ N attached"
-                    when something's active — keeps the row uncluttered when
-                    nothing's set. */}
+                {/* Attach (+) dropdown — opens a searchable YourVault picker.
+                    User searches by name, picks a doc to pin to this chat.
+                    Button is "+" by default, "+ Attached" with navy ring when
+                    a doc is pinned. */}
                 <div style={{ position: 'relative', flexShrink: 0, alignSelf: isMobile ? 'flex-start' : undefined }} ref={vaultAttachRef}>
                   {(() => {
-                    const isActive = !!(activeVaultDocument || searchMyDocs);
-                    // Compact label: just "+" by default, "+ Attached" with
-                    // a navy ring when anything is active. The popover
-                    // shows the actual state — button stays terse.
+                    const isActive = !!activeVaultDocument;
                     return (
                       <button
                         onClick={() => setIsVaultAttachOpen(v => !v)}
-                        title="Attach a document or search across YourVault"
+                        title="Attach a document from YourVault"
                         style={{
                           display: 'inline-flex', alignItems: 'center', gap: 4,
                           padding: '6px 12px', borderRadius: 999,
@@ -5578,41 +5530,7 @@ INSTRUCTIONS:
                       <>
                         <div onClick={() => { setIsVaultAttachOpen(false); setVaultAttachQuery(''); }} style={{ position: 'fixed', inset: 0, zIndex: 50 }} />
                         <div style={{ position: 'absolute', bottom: 'calc(100% + 6px)', left: 0, width: 340, backgroundColor: '#fff', borderRadius: 12, border: '1px solid var(--border)', boxShadow: '0 12px 32px rgba(0,0,0,0.14)', zIndex: 51, overflow: 'hidden', display: 'flex', flexDirection: 'column', maxHeight: 460 }}>
-                          {/* ─── Toggle row ─── */}
-                          <div
-                            onClick={() => setSearchMyDocs(v => !v)}
-                            style={{
-                              padding: '12px 14px', cursor: 'pointer',
-                              display: 'flex', alignItems: 'center', gap: 10,
-                              borderBottom: '1px solid var(--border)',
-                              background: searchMyDocs ? 'rgba(10, 36, 99, 0.04)' : 'transparent',
-                              transition: 'background 100ms',
-                            }}
-                            onMouseEnter={(e) => { if (!searchMyDocs) e.currentTarget.style.backgroundColor = 'var(--ice-warm)'; }}
-                            onMouseLeave={(e) => { if (!searchMyDocs) e.currentTarget.style.backgroundColor = 'transparent'; }}
-                          >
-                            <Search size={15} style={{ color: 'var(--navy)', flexShrink: 0 }} />
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                              <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>Search my docs</div>
-                              <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 1 }}>AI finds relevant docs across your library.</div>
-                            </div>
-                            {/* Mini toggle switch */}
-                            <div style={{
-                              width: 28, height: 16, borderRadius: 999,
-                              background: searchMyDocs ? 'var(--navy)' : '#D9DCE2',
-                              position: 'relative', flexShrink: 0,
-                              transition: 'background 150ms ease',
-                            }}>
-                              <div style={{
-                                width: 12, height: 12, borderRadius: '50%',
-                                background: '#fff', position: 'absolute', top: 2,
-                                left: searchMyDocs ? 14 : 2,
-                                transition: 'left 150ms ease',
-                                boxShadow: '0 1px 2px rgba(0,0,0,0.2)',
-                              }} />
-                            </div>
-                          </div>
-                          {/* ─── Eyebrow divider for the picker section ─── */}
+                          {/* ─── Eyebrow + always-on search input ─── */}
                           <div style={{
                             padding: '10px 14px 4px', flexShrink: 0,
                             fontSize: 10, color: 'var(--text-muted)',
@@ -5621,19 +5539,17 @@ INSTRUCTIONS:
                           }}>
                             From your vault
                           </div>
-                          {/* ─── Search input ─── */}
-                          {documentVault.length > 5 && (
-                            <div style={{ padding: '4px 10px 8px', flexShrink: 0 }}>
-                              <input
-                                type="text"
-                                value={vaultAttachQuery}
-                                onChange={(e) => setVaultAttachQuery(e.target.value)}
-                                placeholder="Search YourVault…"
-                                style={{ width: '100%', padding: '6px 10px', borderRadius: 8, border: '1px solid var(--border)', fontSize: 12, fontFamily: 'inherit', outline: 'none' }}
-                                onClick={(e) => e.stopPropagation()}
-                              />
-                            </div>
-                          )}
+                          <div style={{ padding: '4px 10px 8px', flexShrink: 0 }}>
+                            <input
+                              autoFocus
+                              type="text"
+                              value={vaultAttachQuery}
+                              onChange={(e) => setVaultAttachQuery(e.target.value)}
+                              placeholder="Search YourVault…"
+                              style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', fontSize: 13, fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box' }}
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                          </div>
                           {/* ─── Doc list ─── */}
                           <div style={{ flex: 1, overflowY: 'auto', borderTop: '1px solid var(--border)' }}>
                             {activeVaultDocument && (
