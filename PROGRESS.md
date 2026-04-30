@@ -206,6 +206,25 @@ The main `ChatView` fetch was wrapped in a silent try/catch that funnelled every
 - **Pre-fill auto-grow fix**: clicking an action pill calls `setInput(promptText)` which doesn't fire the textarea's `onInput` handler, so the existing auto-grow logic never recalculated and long pre-filled prompts clipped at one row. Fix: a `useEffect` watching `input` resizes the textarea to `scrollHeight` (capped at 140 px to match the inline cap). See CLAUDE.md gotcha for the broader rule.
 - **Intent-pick override fix**: clicking an action pill on the empty state didn't reflect in the populated chat's collapsed intent pill after sending. Two auto-switch paths inside `sendMessage` (find_document pre-flight at ~line 4330, hard-intent guardrail at ~line 4439) silently overwrote the user's deliberate selection whenever `activeIntent === 'general_chat'`. Fix: a new `hasManualIntentPick` flag — both auto-switch paths now gate on `!hasManualIntentPick && activeIntent === 'general_chat' && …`. Flag is set wherever the user explicitly picks (empty-state merged pill row, More-overflow dropdown, populated-chat collapsed pill dropdown, suggestion-banner single accept, suggestion-banner multi-pick) and cleared in `handleNewThread`. See CLAUDE.md gotcha for the rule.
 
+### Search-first pickers — KP + YourVault attach (2026-04-30 evening, late)
+Two pickers were called out for the same scaling failure ("what if there are so many KPs, this is bad" + earlier "where is YourVault?"). Standardised on a single search-first pattern that scales past 100 items:
+- **Sticky search input at the top** of the popover (only renders when the library has >5 items — small libraries don't need it)
+- **Filtered list below** (substring match on name + description, case-insensitive)
+- **Manage / Open footer** that routes to the full page for power-user operations (create / edit / delete)
+- **Clear-on-close** so re-opening doesn't show a stale query
+
+Applied to:
+- **KP dropdown** (`No pack ▾`) — same shape as before but with sticky search + footer link to Knowledge Packs page
+- **From YourVault picker** (NEW) — paired with the Search my docs toggle on the empty-state input. Verb-led button shape, navy fill on active, label flips from "From YourVault" → the attached doc name when set. Lists each vault doc with its folder breadcrumb subtitle. First row when a doc is attached: a "Detach X" row to clear the selection. Click → routes through `handleSelectVaultDocument` → sets `activeVaultDocument` → existing `sendMessage` path inlines the doc's full content.
+
+Two YourVault affordances now coexist by mental model:
+| Affordance | When | Behaviour |
+|---|---|---|
+| 🔍 Search my docs (toggle) | "I don't know which doc has the answer" | AI runs token-overlap retrieval, picks top-5 |
+| 📁 From YourVault (picker) | "I know exactly which doc I want" | User pins one specific doc; AI uses only that |
+
+Both reach the same corpus — the choice is between AI-picks vs user-picks.
+
 ### "Search my docs" toggle replaces Search Within dropdown (2026-04-30 evening)
 The three-scope Search Within dropdown (File Search / YourVault / Workspaces) shipped earlier this evening was simplified again the same hour. PM read: "📁 YourVault — so complicated." The "scope" mental model is too abstract for attorneys; users overlap it confusingly with the drop zone. Replaced with a single verb toggle:
 - **🔍 Search my docs** — outlined pill (off, default) → navy-filled pill (on). When ON, the YourVault retrieval branch in `sendMessage` runs (token-overlap relevance across name + description + fileName + content, top-5 docs, 6 K char cap) and inlines matches into the next send. When OFF, behaviour is exactly today's File Search (chat with whatever's attached).
