@@ -271,7 +271,7 @@ export default function SignUp() {
           } catch { /* ignore */ }
         }
         claimSession(email);
-        navigate(isInvited ? '/chat/home' : '/chat/onboarding', { replace: true });
+        navigate(isInvited ? '/chat' : '/chat/onboarding', { replace: true });
       } else {
         setError(result.error || 'Sign up failed. Please try again.');
         setLoading(false);

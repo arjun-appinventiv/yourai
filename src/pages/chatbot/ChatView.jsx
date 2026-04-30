@@ -394,152 +394,6 @@ const riskColors = {
   LOW: { bg: '#F0F3F6', text: '#1E3A8A' },
 };
 
-/* ─────────────────── Home Tile Launcher ───────────────────
-   Decision-page home: a tile per top-level surface (General Chat,
-   Workspaces, YourVault, Knowledge Packs, Workflows, Invite
-   Team). Replaces the chat empty state when ChatView is mounted with
-   `initialView="home"`. Navigates to the matching surface or opens
-   the matching panel via the parent. */
-function HomeTileLauncher({
-  navigate, onOpenChat, onOpenWorkspaces, onOpenWorkflows, onOpenVault, onOpenPacks, onOpenInviteTeam,
-  isOrgAdmin, isExternalUser, displayName,
-  workspaceCount = 0, workflowCount = 0, vaultCount = 0, packCount = 0, memberCount = null,
-}) {
-  // Compose the tile list based on role. External users only see
-  // General Chat + their workspaces; everyone else sees the full set.
-  const allTiles = [
-    {
-      id: 'chat', icon: MessageSquare, label: 'General Chat',
-      desc: 'Ask any legal question or work with an uploaded document.',
-      meta: 'Open chat', onClick: onOpenChat, accent: '#0A2463',
-    },
-    {
-      id: 'workspaces', icon: Briefcase, label: 'Workspaces',
-      desc: 'Per-matter workspaces — each holds its own chats, docs, and runs.',
-      meta: `${workspaceCount} ${workspaceCount === 1 ? 'workspace' : 'workspaces'}`,
-      onClick: onOpenWorkspaces, accent: '#5B21B6',
-    },
-    !isExternalUser && {
-      id: 'vault', icon: FolderOpen, label: 'YourVault',
-      desc: 'Every document you have uploaded — folders, search, attach to chat.',
-      meta: `${vaultCount} ${vaultCount === 1 ? 'document' : 'documents'}`,
-      onClick: onOpenVault, accent: '#0F2E59',
-    },
-    !isExternalUser && {
-      id: 'workflows', icon: Zap, label: 'Workflows',
-      desc: 'Run multi-step AI pipelines — review, compare, generate reports.',
-      meta: `${workflowCount} ${workflowCount === 1 ? 'template' : 'templates'}`,
-      onClick: onOpenWorkflows, accent: '#9A3412',
-    },
-    !isExternalUser && {
-      id: 'packs', icon: Package, label: 'Knowledge Packs',
-      desc: 'Saved bundles of docs you can attach to a chat in one click.',
-      meta: `${packCount} ${packCount === 1 ? 'pack' : 'packs'}`,
-      onClick: onOpenPacks, accent: '#5CA868',
-    },
-    !isExternalUser && {
-      id: 'invite', icon: UserPlus, label: 'Invite Team',
-      desc: 'Add colleagues — they sign in via an emailed link, no setup.',
-      meta: memberCount != null ? `${memberCount} ${memberCount === 1 ? 'member' : 'members'}` : 'Invite via email',
-      onClick: onOpenInviteTeam, accent: '#9333EA',
-    },
-  ].filter(Boolean);
-
-  // Surface treatment per aashna review (Apr 2026): page sits one step
-  // darker than the card so a 1.5px border has something to push against;
-  // accent stripe demoted to a hover signal so peer tiles don't fragment
-  // into a colour-coded carnival; hover relies on shadow depth, not a
-  // borderColor swap (a navy border reads as "selected", not "hoverable").
-  const STATIC_SHADOW = '0 1px 0 #FFFFFF inset, 0 1px 2px rgba(15,23,42,0.04)';
-  const HOVER_SHADOW  = '0 1px 0 #FFFFFF inset, 0 4px 12px rgba(15,23,42,0.08)';
-
-  return (
-    <div style={{ flex: 1, overflowY: 'auto', background: '#F4F5F7', padding: '40px 32px 64px' }}>
-      <div style={{ maxWidth: 1080, margin: '0 auto' }}>
-        {/* Hero */}
-        <div style={{ marginBottom: 48 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-            <Sparkles size={14} style={{ color: 'var(--gold)' }} />
-            <span style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: "'IBM Plex Mono', ui-monospace, monospace", letterSpacing: '0.1em', textTransform: 'uppercase' }}>Home</span>
-          </div>
-          <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 30, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.02em' }}>
-            Hi {displayName.charAt(0).toUpperCase() + displayName.slice(1)}, what would you like to do?
-          </h1>
-          <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.6, marginTop: 8 }}>
-            Pick a starting point. You can always come back here from the <strong>Home</strong> button in the sidebar.
-          </p>
-        </div>
-
-        {/* Tile grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(296px, 1fr))', gap: 16 }}>
-          {allTiles.map((t) => {
-            const Icon = t.icon;
-            return (
-              <button
-                key={t.id}
-                onClick={t.onClick}
-                style={{
-                  textAlign: 'left',
-                  padding: '20px 20px',
-                  borderRadius: 12,
-                  border: '1.5px solid #DCE0E6',
-                  background: '#fff',
-                  cursor: 'pointer',
-                  transition: 'box-shadow 180ms ease, transform 180ms ease',
-                  fontFamily: 'inherit',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 12,
-                  minHeight: 168,
-                  position: 'relative',
-                  overflow: 'hidden',
-                  boxShadow: STATIC_SHADOW,
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.boxShadow = HOVER_SHADOW;
-                  e.currentTarget.style.transform = 'translateY(-1px)';
-                  const stripe = e.currentTarget.querySelector('[data-tile-stripe]');
-                  if (stripe) stripe.style.opacity = '1';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.boxShadow = STATIC_SHADOW;
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  const stripe = e.currentTarget.querySelector('[data-tile-stripe]');
-                  if (stripe) stripe.style.opacity = '0.55';
-                }}
-              >
-                {/* Top accent stripe — demoted: 2px and at 0.55 opacity by
-                    default, lifts to full saturation on hover. Reactive
-                    accent, not identity. */}
-                <span data-tile-stripe style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: t.accent, opacity: 0.55, transition: 'opacity 180ms ease' }} />
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 }}>
-                  <div style={{ width: 38, height: 38, borderRadius: 10, background: 'var(--ice-warm)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <Icon size={18} style={{ color: 'var(--navy)' }} />
-                  </div>
-                  <ArrowRight size={16} style={{ color: 'var(--text-muted)' }} />
-                </div>
-                <div>
-                  <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 4 }}>{t.label}</div>
-                  <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.55, margin: 0, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{t.desc}</p>
-                </div>
-                {/* Footer divider lighter than the outer card edge so the
-                    container shape stays intact (outer line must always
-                    be the strongest line on the card). */}
-                <div style={{ marginTop: 'auto', paddingTop: 12, borderTop: '1px solid #EEF0F3', fontSize: 11, color: 'var(--text-muted)', fontFamily: "'IBM Plex Mono', ui-monospace, monospace", letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-                  {t.meta}
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ArrowRight isn't in the lucide import group above; alias to ChevronRight.
-// (Existing imports already include UserPlus, so it can be used directly.)
-const ArrowRight = ChevronRight;
 
 
 /* ─────────────────── Sidebar ─────────────────── */
@@ -547,7 +401,7 @@ const ArrowRight = ChevronRight;
    Layout structure confirmed by Arjun. Not signed off by Ryan.
    All existing nav items preserved — reorganised only. */
 
-function Sidebar({ activeKey, onGoHome, onOpenChat, onOpenPromptTemplates, onOpenClients, onOpenKnowledgePacks, onOpenDocumentVault, onOpenInviteTeam, onOpenAuditLogs, onOpenBilling, onOpenWorkspaces, onOpenWorkflows, promptCount, clientCount, packCount, vaultCount, memberCount, workspaceCount, workflowCount, isOpen, onClose, threads, activeThreadId, onSwitchThread, onNewThread, onDeleteThread, threadSearch, onThreadSearchChange, onSignOut, runningWorkflow, onViewRunning }) {
+function Sidebar({ activeKey, onOpenChat, onOpenPromptTemplates, onOpenClients, onOpenKnowledgePacks, onOpenDocumentVault, onOpenInviteTeam, onOpenAuditLogs, onOpenBilling, onOpenWorkspaces, onOpenWorkflows, promptCount, clientCount, packCount, vaultCount, memberCount, workspaceCount, workflowCount, isOpen, onClose, threads, activeThreadId, onSwitchThread, onNewThread, onDeleteThread, threadSearch, onThreadSearchChange, onSignOut, runningWorkflow, onViewRunning }) {
   // Role + permission gating — every nav item decides visibility via hasPermission
   // rather than by comparing role strings directly. See src/lib/roles.ts.
   const { hasPermission, isOrgAdmin, isExternalUser } = useRole();
@@ -599,12 +453,9 @@ function Sidebar({ activeKey, onGoHome, onOpenChat, onOpenPromptTemplates, onOpe
   //      "ask your admin to add people" state rather than a dead link)
   //   + New chat is rendered separately in Zone 2 (visible to all)
   const workspaceItems = [
-    // Home tile launcher — entry point to the home decision page. Visible
-    // to everyone; renamed from "Dashboard" per attorney feedback that
-    // "Dashboard" was opaque. Routes to /chat/home regardless of role.
-    { id: 'home', icon: LayoutDashboard, label: 'Home', onClick: onGoHome },
-    // "Chat" entry — renamed from the prior "Dashboard" item. Goes
-    // straight into the General Chat surface.
+    // "Chat" entry — direct link to General Chat, the post-login default
+    // surface. (The former tile-based Home page was retired in favour of
+    // landing users directly in chat.)
     { id: 'chat', icon: MessageSquare, label: 'Chat', onClick: onOpenChat },
     { id: 'workspaces', icon: Briefcase, label: 'Workspaces', rightText: String(workspaceCount ?? 0), onClick: onOpenWorkspaces },
     !isExternalUser && { id: 'invite-team', icon: UserPlus, label: 'Invite Team', rightText: memberCount != null ? String(memberCount) : undefined, onClick: onOpenInviteTeam },
@@ -3964,21 +3815,21 @@ export default function ChatView({ initialView = 'chat' }) {
   const suggestionTimer = useRef(null);
   const intentDropdownRef = useRef(null);
   const [streamingContent, setStreamingContent] = useState('');
-  // ─── Empty-state source / KP / pill-more dropdowns (Apr 2026 redesign) ───
-  // The redesigned empty state replaces the `+` attach button with a
-  // Source pill (General Chat / Workspace / YourVault) and adds a
-  // Knowledge Pack pill between the textarea and the send button.
-  // The merged icon-pill row gets its own More overflow dropdown.
+  // ─── Empty-state Search Within / KP / pill-more dropdowns ───
+  // Search Within (File Search / YourVault / Workspaces) replaced the prior
+  // per-item Source dropdown — the old "Workspace ▸" / "YourVault ▸" submenus
+  // had to enumerate every workspace / every vault doc, which broke at scale
+  // (30+ matters, 100+ docs). The new dropdown picks a *scope* instead of a
+  // specific item; specific docs reach the conversation via the persistent
+  // drop zone (inline pills). Single state machine: `searchScope` is one of
+  // 'files' | 'vault' | 'workspaces'.
+  const [searchScope, setSearchScope] = useState('files');
   const [isSourceMenuOpen, setIsSourceMenuOpen] = useState(false);
-  const [isSourceWorkspaceSubOpen, setIsSourceWorkspaceSubOpen] = useState(false);
-  const [isSourceVaultSubOpen, setIsSourceVaultSubOpen] = useState(false);
   const [isKpMenuOpen, setIsKpMenuOpen] = useState(false);
   const [isEmptyMoreOpen, setIsEmptyMoreOpen] = useState(false);
   const [isFileDropHover, setIsFileDropHover] = useState(false);
-  // Workspace association for this chat — set via the Source dropdown.
-  // No prior state existed for "this chat is in workspace X" outside the
-  // /chat/workspaces/:id route; this is a pure label for the empty-state
-  // source pill until a real binding lands.
+  // Workspace association — kept for the AttachMenu / vault-doc "Use" path
+  // and for downstream label-only metadata. Not driven by Search Within.
   const [activeWorkspaceForChat, setActiveWorkspaceForChat] = useState(null);
   const sourceMenuRef = useRef(null);
   const kpMenuRef = useRef(null);
@@ -4518,6 +4369,46 @@ export default function ChatView({ initialView = 'chat' }) {
       });
     }
 
+    // ─── YourVault scope: client-side relevance retrieval ───
+    // When the user picked the YourVault scope and didn't explicitly attach
+    // anything, pick top-N vault docs that overlap with the question and
+    // inline them so the model has something to ground in. Token-overlap
+    // ranking is a stand-in until the pgvector RAG pipeline lands (see
+    // .claude-context/vault-content-rag-plan.md). Confidentiality note: the
+    // user's own vault is private to them — this scope only reads from
+    // documentVault, never workspace docs.
+    let vaultScopeContext = '';
+    if (searchScope === 'vault' && !mergedDocContent && !activeVaultDocument && !activeVaultFolder && documentVault.length > 0 && trimmed) {
+      const STOP = new Set(['the','a','an','and','or','but','of','to','in','for','on','at','by','with','as','is','are','was','were','be','been','being','have','has','had','do','does','did','this','that','these','those','it','its','my','your','our','their','what','which','who','whom','when','where','why','how','if','then','than','so','also','about']);
+      const qTokens = trimmed.toLowerCase().match(/[a-z0-9]{3,}/g) || [];
+      const qSet = qTokens.filter(t => !STOP.has(t));
+      if (qSet.length > 0) {
+        const scored = documentVault.map((d) => {
+          const hay = `${d.name || ''}\n${d.description || ''}\n${d.fileName || ''}\n${d.content || ''}`.toLowerCase();
+          let score = 0;
+          for (const t of qSet) {
+            // Substring count gives a cheap relevance signal — exact word
+            // matches in `name`/`fileName` are weighted by capping content
+            // hits separately so a single long doc doesn't dominate.
+            const re = new RegExp(`\\b${t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'g');
+            const m = hay.match(re);
+            if (m) score += Math.min(m.length, 8);
+          }
+          return { doc: d, score };
+        }).filter(s => s.score > 0).sort((a, b) => b.score - a.score).slice(0, 5);
+        if (scored.length > 0) {
+          const PER_DOC_CAP = 6000;
+          vaultScopeContext = `--- YourVault scope: top ${scored.length} matching document${scored.length === 1 ? '' : 's'} ---\n` +
+            scored.map(({ doc }) => {
+              const txt = (doc.content || '').slice(0, PER_DOC_CAP);
+              return txt
+                ? `\n## ${doc.name}\n${txt}${doc.content && doc.content.length > PER_DOC_CAP ? '\n[... truncated ...]' : ''}`
+                : `\n[${doc.name}]${doc.description ? `: ${doc.description}` : ''}`;
+            }).join('\n');
+        }
+      }
+    }
+
     // ─── Also include vault-selection context (Use button on a Doc / Folder) ───
     // These don't go through pendingAttachments — they're set as
     // activeVaultDocument / activeVaultFolder. Without this branch the
@@ -4550,10 +4441,10 @@ export default function ChatView({ initialView = 'chat' }) {
         }).join('\n');
     }
 
-    // Final assembly — use whichever context source has content. Real
-    // uploads (pendingAttachments → mergedDocContent) take precedence
-    // over vault selections so we don't double-stack.
-    const effectiveDocContext = mergedDocContent || vaultSelectionContext;
+    // Final assembly — use whichever context source has content. Precedence:
+    //   real uploads (mergedDocContent) → explicit vault Use (vaultSelectionContext)
+    //   → YourVault scope retrieval (vaultScopeContext). We never stack.
+    const effectiveDocContext = mergedDocContent || vaultSelectionContext || vaultScopeContext;
 
     // (b) When user sends purely an attachment with no typed text, substitute a default question so the Edge guard passes.
     const effectiveQuestion = trimmed || (effectiveDocContext ? 'Please review the attached document(s) and summarise what you find.' : '');
@@ -4958,28 +4849,38 @@ INSTRUCTIONS:
     }
 
     // ─── Auto-add to YourVault ───────────────────────────────────
-    // When a file is attached via chat, persist it to YourVault.
-    // The file's own name is used as both the vault entry name and the
-    // fileName (no separate "Description" prompt — that's only asked for
+    // When a file is attached via chat, persist it to YourVault. The
+    // fileName (no separate "Description" — that prompt only fires for
     // direct vault uploads). Dedupe by fileName so re-attaching the same
-    // file doesn't create duplicate vault entries.
+    // file doesn't create duplicates. We also remember each file's vault
+    // entry ID in `vaultIdByFileName` so the extraction step (below) can
+    // backfill the `content` field — without that, YourVault-scope search
+    // would never find chat-attached docs.
+    const vaultIdByFileName = new Map();
     if (kind === 'doc') {
       const createdAt = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-      setDocumentVault(prev => {
-        const existingNames = new Set(prev.map(d => d.fileName));
-        const additions = files
-          .filter(f => !existingNames.has(f.name))
-          .map((f, i) => ({
-            id: Date.now() + 1000 + i,
-            name: f.name,
-            description: '',
-            fileName: f.name,
-            fileSize: `${(f.size / (1024 * 1024)).toFixed(1)} MB`,
-            createdAt,
-            addedFromChat: true,
-          }));
-        return additions.length > 0 ? [...additions, ...prev] : prev;
+      const existingByName = new Map(documentVault.map(d => [d.fileName, d.id]));
+      const additions = [];
+      files.forEach((f, i) => {
+        if (existingByName.has(f.name)) {
+          vaultIdByFileName.set(f.name, existingByName.get(f.name));
+          return;
+        }
+        const id = Date.now() + 1000 + i;
+        vaultIdByFileName.set(f.name, id);
+        additions.push({
+          id,
+          name: f.name,
+          description: '',
+          fileName: f.name,
+          fileSize: `${(f.size / (1024 * 1024)).toFixed(1)} MB`,
+          createdAt,
+          addedFromChat: true,
+        });
       });
+      if (additions.length > 0) {
+        setDocumentVault(prev => [...additions, ...prev]);
+      }
     }
 
     // Track document uploads for usage stats
@@ -4987,13 +4888,23 @@ INSTRUCTIONS:
       const userEmail = localStorage.getItem('yourai_current_email');
       if (userEmail) files.forEach(() => trackDocUpload(userEmail));
     }
-    // Extract text content from doc files using RAG file parser
+    // Extract text content from doc files using the RAG file parser. Two
+    // sinks for the extracted text: (1) `pendingAttachments` so this send
+    // can inline it; (2) the matching YourVault entry so future YourVault-
+    // scope retrieval can find it. Vault content is only backfilled if the
+    // entry didn't already have it (don't overwrite a richer prior copy).
     if (kind === 'doc') {
       files.forEach((file, i) => {
         extractFileText(file).then(({ text }) => {
           setPendingAttachments(prev => prev.map(a =>
             a.id === newAtts[i].id ? { ...a, content: text } : a
           ));
+          const vaultId = vaultIdByFileName.get(file.name);
+          if (vaultId && text) {
+            setDocumentVault(prev => prev.map(d =>
+              d.id === vaultId && !d.content ? { ...d, content: text } : d
+            ));
+          }
         }).catch((err) => {
           console.error('File extraction failed:', err);
           setPendingAttachments(prev => prev.map(a =>
@@ -5324,7 +5235,6 @@ INSTRUCTIONS:
     if (showKnowledgePacksPanel) return 'knowledge-packs';
     if (showPromptPanel) return 'prompt-templates';
     if (showClientsPanel) return 'clients';
-    if (initialView === 'home') return 'home';
     return 'chat';
   })();
 
@@ -5333,7 +5243,6 @@ INSTRUCTIONS:
       {idleWarning}
       <Sidebar
         activeKey={sidebarActiveKey}
-        onGoHome={() => { closeAllPanels(); setSidebarOpen(false); navigate('/chat/home'); }}
         onOpenChat={() => { closeAllPanels(); setSidebarOpen(false); navigate('/chat'); }}
         onOpenPromptTemplates={() => { closeAllPanels(); setShowPromptPanel(true); setSidebarOpen(false); }}
         onOpenClients={() => { closeAllPanels(); setShowClientsPanel(true); setSidebarOpen(false); }}
@@ -5377,35 +5286,12 @@ INSTRUCTIONS:
         onThreadSearchChange={setThreadSearch}
         onSignOut={async () => { await session.signOut(); navigate('/chat/login'); }}
       />
-      {/* Chat main area — hidden when a full-page view (Team or Workspaces)
-          is active so the sidebar stays visible but the chat UI is replaced.
-          When initialView === 'home' the tile launcher takes over the area
-          inside this same shell (top bar + sidebar still rendered). */}
+      {/* Chat main area — hidden when a full-page panel (Team / Workspaces /
+          Workflows / Vault / Knowledge Packs / Workflow Builder) is active
+          so the sidebar stays visible but the chat UI is replaced. */}
       <div style={{ flex: 1, display: (showTeamPage || showWorkspacesPanel || showWorkflowsPanel || editingWorkflow || showDocumentVaultPanel || showKnowledgePacksPanel) ? 'none' : 'flex', flexDirection: 'column', minWidth: 0 }}>
         <TopNav plan={plan} usage={usage} onOpenSidebar={() => setSidebarOpen(true)} />
 
-        {initialView === 'home' ? (
-          <HomeTileLauncher
-            navigate={navigate}
-            onOpenChat={() => { closeAllPanels(); navigate('/chat'); }}
-            // Workspaces lives at its own route — set the panel flag
-            // explicitly because the route change alone doesn't re-init
-            // showWorkspacesPanel state on a same-component re-render.
-            onOpenWorkspaces={() => { closeAllPanels(); setShowWorkspacesPanel(true); navigate('/chat/workspaces'); }}
-            onOpenWorkflows={() => { closeAllPanels(); setShowWorkflowsPanel(true); }}
-            onOpenVault={() => { closeAllPanels(); setShowDocumentVaultPanel(true); }}
-            onOpenPacks={() => { closeAllPanels(); setShowKnowledgePacksPanel(true); }}
-            onOpenInviteTeam={() => { closeAllPanels(); setShowTeamPage(true); }}
-            isOrgAdmin={isOrgAdmin}
-            isExternalUser={isExternalUser}
-            displayName={(operator?.name || (typeof window !== 'undefined' ? localStorage.getItem('yourai_current_email') : '') || 'there').split('@')[0]}
-            workspaceCount={visibleWorkspaceCount}
-            workflowCount={workflowCount}
-            vaultCount={documentVault.length}
-            packCount={knowledgePacks.length}
-            memberCount={teamMemberCount}
-          />
-        ) : (
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#FAFBFC', minHeight: 0 }}>
           {/* Document limit banners */}
           {docPct >= 100 && (
@@ -5645,148 +5531,106 @@ INSTRUCTIONS:
               /* <768px stacks the row vertically so the source pill, textarea
                  and the KP+send sub-row each get a full-width line. */
               <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'stretch' : 'center', gap: isMobile ? 10 : 8, border: '1.5px solid var(--border)', borderRadius: 18, background: '#fff', minHeight: 64, padding: '10px 10px 10px 10px', boxShadow: '0 2px 12px rgba(10, 36, 99, 0.04)' }}>
-                {/* Source dropdown — replaces the existing `+` attach.
-                    Three options: General Chat, Workspace ▸, YourVault ▸.
-                    Workspace ▸ lists user's workspaces; selecting one
-                    sets activeWorkspaceForChat (label-only). YourVault ▸
-                    lists vault docs; selecting one calls the existing
-                    handleSelectVaultDocument(doc). */}
+                {/* Search Within dropdown — bounded set of three scopes:
+                    File Search (current chat attachments) / YourVault
+                    (private corpus search) / Workspaces (shared org content).
+                    Replaces the prior per-item Source dropdown to avoid the
+                    listing problem at 30+ workspaces or 100+ vault docs.
+                    Specific items reach the chat via the drop zone (inline
+                    pills) — never via this dropdown. */}
                 <div style={{ position: 'relative', flexShrink: 0, alignSelf: isMobile ? 'flex-start' : undefined }} ref={sourceMenuRef}>
                   {(() => {
-                    let sourceLabel = 'General Chat';
-                    if (activeVaultDocument) sourceLabel = activeVaultDocument.name;
-                    else if (activeWorkspaceForChat) sourceLabel = activeWorkspaceForChat.name;
-                    const isCustomSource = !!(activeVaultDocument || activeWorkspaceForChat);
+                    const SCOPE_META = {
+                      files:      { Icon: Search,     label: 'File Search' },
+                      vault:      { Icon: FolderOpen, label: 'YourVault' },
+                      workspaces: { Icon: Briefcase,  label: 'Workspaces' },
+                    };
+                    const cur = SCOPE_META[searchScope] || SCOPE_META.files;
+                    const CurIcon = cur.Icon;
                     return (
                       <button
-                        onClick={() => { setIsSourceMenuOpen(v => !v); setIsSourceWorkspaceSubOpen(false); setIsSourceVaultSubOpen(false); }}
-                        title="Choose chat source"
+                        onClick={() => setIsSourceMenuOpen(v => !v)}
+                        title="Choose what the AI searches across"
                         style={{
-                          display: 'inline-flex', alignItems: 'center', gap: 4,
-                          padding: '6px 10px', borderRadius: 999,
+                          display: 'inline-flex', alignItems: 'center', gap: 6,
+                          padding: '6px 12px', borderRadius: 999,
                           fontSize: 12, fontFamily: "'DM Sans', sans-serif", fontWeight: 500,
-                          border: isCustomSource ? '1px solid var(--navy)' : '1px solid var(--border)',
-                          backgroundColor: isCustomSource ? 'rgba(10, 36, 99, 0.06)' : '#fff',
+                          border: '1px solid var(--navy)',
+                          backgroundColor: '#fff',
                           color: 'var(--navy)',
-                          cursor: 'pointer', whiteSpace: 'nowrap', maxWidth: isMobile ? 'none' : 180,
+                          cursor: 'pointer', whiteSpace: 'nowrap', maxWidth: isMobile ? 'none' : 200,
                         }}
                       >
-                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sourceLabel}</span>
+                        <CurIcon size={13} style={{ flexShrink: 0 }} />
+                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cur.label}</span>
                         <ChevronDown size={12} style={{ transform: isSourceMenuOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 150ms', flexShrink: 0 }} />
                       </button>
                     );
                   })()}
-                  {isSourceMenuOpen && (
-                    <>
-                      <div onClick={() => { setIsSourceMenuOpen(false); setIsSourceWorkspaceSubOpen(false); setIsSourceVaultSubOpen(false); }} style={{ position: 'fixed', inset: 0, zIndex: 50 }} />
-                      <div style={{ position: 'absolute', bottom: 'calc(100% + 6px)', left: 0, width: 260, backgroundColor: '#fff', borderRadius: 12, border: '1px solid var(--border)', boxShadow: '0 12px 32px rgba(0,0,0,0.14)', zIndex: 51, overflow: 'hidden' }}>
-                        {/* General Chat */}
-                        <div
-                          onClick={() => {
-                            // Clear any workspace association / active vault doc / active folder.
-                            setActiveWorkspaceForChat(null);
-                            setActiveVaultDocument(null);
-                            setActiveVaultFolder(null);
-                            setActiveKnowledgePack(null);
-                            setIsSourceMenuOpen(false);
-                          }}
-                          style={{ padding: '10px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10, borderBottom: '1px solid var(--border)' }}
-                          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--ice-warm)'; }}
-                          onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
-                        >
-                          <MessageCircle size={14} style={{ color: 'var(--navy)' }} />
-                          <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>General Chat</span>
-                          {!activeVaultDocument && !activeWorkspaceForChat && (
-                            <Check size={13} style={{ color: 'var(--navy)', marginLeft: 'auto' }} />
-                          )}
-                        </div>
-                        {/* Workspace ▸ */}
-                        <div
-                          onClick={() => { setIsSourceWorkspaceSubOpen(v => !v); setIsSourceVaultSubOpen(false); }}
-                          style={{ padding: '10px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10, borderBottom: '1px solid var(--border)', backgroundColor: isSourceWorkspaceSubOpen ? 'var(--ice-warm)' : 'transparent' }}
-                          onMouseEnter={(e) => { if (!isSourceWorkspaceSubOpen) e.currentTarget.style.backgroundColor = 'var(--ice-warm)'; }}
-                          onMouseLeave={(e) => { if (!isSourceWorkspaceSubOpen) e.currentTarget.style.backgroundColor = 'transparent'; }}
-                        >
-                          <Briefcase size={14} style={{ color: 'var(--navy)' }} />
-                          <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>Workspace</span>
-                          <ChevronRight size={13} style={{ color: 'var(--text-muted)', marginLeft: 'auto', transform: isSourceWorkspaceSubOpen ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 150ms' }} />
-                        </div>
-                        {isSourceWorkspaceSubOpen && (() => {
-                          const wsList = (() => {
-                            try { return listWorkspacesForUser(currentUserId, currentRole) || []; } catch { return []; }
-                          })();
-                          if (wsList.length === 0) {
-                            return <div style={{ padding: '10px 14px 10px 36px', fontSize: 12, color: 'var(--text-muted)', borderBottom: '1px solid var(--border)' }}>No workspaces yet.</div>;
-                          }
-                          return (
-                            <div style={{ maxHeight: 220, overflowY: 'auto', borderBottom: '1px solid var(--border)' }}>
-                              {wsList.map((ws) => {
-                                const isCurrent = activeWorkspaceForChat?.id === ws.id;
-                                return (
-                                  <div
-                                    key={ws.id}
-                                    onClick={() => {
-                                      setActiveWorkspaceForChat({ id: ws.id, name: ws.name });
-                                      setActiveVaultDocument(null);
-                                      setActiveVaultFolder(null);
-                                      setIsSourceMenuOpen(false);
-                                      setIsSourceWorkspaceSubOpen(false);
-                                    }}
-                                    style={{ padding: '8px 14px 8px 36px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: isCurrent ? 'var(--navy)' : 'var(--text-secondary)', fontWeight: isCurrent ? 500 : 400 }}
-                                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--ice-warm)'; }}
-                                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
-                                  >
-                                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ws.name}</span>
-                                    {isCurrent && <Check size={12} style={{ color: 'var(--navy)', marginLeft: 'auto', flexShrink: 0 }} />}
+                  {isSourceMenuOpen && (() => {
+                    const SCOPE_OPTIONS = [
+                      { id: 'files',      Icon: Search,     label: 'File Search', desc: 'Attached files in this chat — fastest, most precise.' },
+                      { id: 'vault',      Icon: FolderOpen, label: 'YourVault',   desc: 'Your full private corpus across folders and matters.' },
+                      { id: 'workspaces', Icon: Briefcase,  label: 'Workspaces',  desc: 'Shared org content across all workspaces you can access.' },
+                    ];
+                    return (
+                      <>
+                        <div onClick={() => setIsSourceMenuOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 50 }} />
+                        <div style={{ position: 'absolute', bottom: 'calc(100% + 6px)', left: 0, width: 320, backgroundColor: '#fff', borderRadius: 14, border: '1px solid var(--border)', boxShadow: '0 12px 32px rgba(0,0,0,0.14)', zIndex: 51, overflow: 'hidden' }}>
+                          <div style={{ padding: '10px 16px 6px', fontSize: 10, color: 'var(--text-muted)', fontFamily: "'IBM Plex Mono', ui-monospace, monospace", letterSpacing: '0.12em', textTransform: 'uppercase', borderBottom: '1px solid var(--border)' }}>
+                            Search Within
+                          </div>
+                          {SCOPE_OPTIONS.map((opt) => {
+                            const Icon = opt.Icon;
+                            const isCurrent = searchScope === opt.id;
+                            // Workspaces scope: routes the user into the
+                            // Workspaces page so they can pick one (workspace
+                            // chats RAG within their own corpus). Cross-
+                            // workspace search from /chat is a confidentiality
+                            // footgun for law firms — strict scoping per
+                            // matter is the right default.
+                            const onClick = () => {
+                              if (opt.id === 'workspaces') {
+                                setIsSourceMenuOpen(false);
+                                closeAllPanels();
+                                setShowWorkspacesPanel(true);
+                                navigate('/chat/workspaces');
+                                return;
+                              }
+                              setSearchScope(opt.id);
+                              // Switching to a non-files scope clears any
+                              // active vault-doc / folder selection so the
+                              // scope's behaviour drives the next send,
+                              // not stale per-item attachments.
+                              if (opt.id !== 'files') {
+                                setActiveVaultDocument(null);
+                                setActiveVaultFolder(null);
+                              }
+                              setIsSourceMenuOpen(false);
+                            };
+                            return (
+                              <div
+                                key={opt.id}
+                                onClick={onClick}
+                                style={{ padding: '12px 16px', cursor: 'pointer', display: 'flex', alignItems: 'flex-start', gap: 12, background: isCurrent ? 'rgba(217, 167, 75, 0.10)' : 'transparent', transition: 'background 100ms' }}
+                                onMouseEnter={(e) => { if (!isCurrent) e.currentTarget.style.backgroundColor = 'var(--ice-warm)'; }}
+                                onMouseLeave={(e) => { if (!isCurrent) e.currentTarget.style.backgroundColor = 'transparent'; }}
+                              >
+                                <Icon size={16} style={{ color: 'var(--navy)', flexShrink: 0, marginTop: 2 }} />
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                                    <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{opt.label}</span>
+                                    {isCurrent && <Check size={14} style={{ color: 'var(--gold)', flexShrink: 0 }} />}
                                   </div>
-                                );
-                              })}
-                            </div>
-                          );
-                        })()}
-                        {/* YourVault ▸ */}
-                        <div
-                          onClick={() => { setIsSourceVaultSubOpen(v => !v); setIsSourceWorkspaceSubOpen(false); }}
-                          style={{ padding: '10px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10, backgroundColor: isSourceVaultSubOpen ? 'var(--ice-warm)' : 'transparent' }}
-                          onMouseEnter={(e) => { if (!isSourceVaultSubOpen) e.currentTarget.style.backgroundColor = 'var(--ice-warm)'; }}
-                          onMouseLeave={(e) => { if (!isSourceVaultSubOpen) e.currentTarget.style.backgroundColor = 'transparent'; }}
-                        >
-                          <FolderOpen size={14} style={{ color: 'var(--navy)' }} />
-                          <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>YourVault</span>
-                          <ChevronRight size={13} style={{ color: 'var(--text-muted)', marginLeft: 'auto', transform: isSourceVaultSubOpen ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 150ms' }} />
+                                  <p style={{ margin: '2px 0 0', fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.45 }}>{opt.desc}</p>
+                                </div>
+                              </div>
+                            );
+                          })}
                         </div>
-                        {isSourceVaultSubOpen && (
-                          documentVault.length === 0 ? (
-                            <div style={{ padding: '10px 14px 10px 36px', fontSize: 12, color: 'var(--text-muted)' }}>Vault is empty.</div>
-                          ) : (
-                            <div style={{ maxHeight: 220, overflowY: 'auto' }}>
-                              {documentVault.map((doc) => {
-                                const isCurrent = activeVaultDocument?.id === doc.id;
-                                return (
-                                  <div
-                                    key={doc.id}
-                                    onClick={() => {
-                                      handleSelectVaultDocument(doc);
-                                      setActiveWorkspaceForChat(null);
-                                      setIsSourceMenuOpen(false);
-                                      setIsSourceVaultSubOpen(false);
-                                    }}
-                                    style={{ padding: '8px 14px 8px 36px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: isCurrent ? 'var(--navy)' : 'var(--text-secondary)', fontWeight: isCurrent ? 500 : 400 }}
-                                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--ice-warm)'; }}
-                                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
-                                  >
-                                    <File size={11} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
-                                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{doc.name}</span>
-                                    {isCurrent && <Check size={12} style={{ color: 'var(--navy)', marginLeft: 'auto', flexShrink: 0 }} />}
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          )
-                        )}
-                      </div>
-                    </>
-                  )}
+                      </>
+                    );
+                  })()}
                 </div>
 
                 {/* Textarea — flex 1, larger styling for empty-state. */}
@@ -6026,13 +5870,19 @@ INSTRUCTIONS:
               </div>
             )}
 
-            {/* ─── Drop-files tile (empty state only) ─── */}
-            {/* Routes through the existing additive-upload pipeline by
-                calling handleAttachFiles(files, 'doc') — same downstream
-                as the `+ attach` button: pendingAttachments, sessionDocContext,
-                vault auto-add. After upload, the standard pending-attachment
-                chip row above renders the new entries. */}
-            {showEmptyState && pendingAttachments.length === 0 && (
+            {/* ─── Drop-files tile — persists across the conversation ───
+                Files attached via this zone flow through `handleAttachFiles`,
+                which: appends to `pendingAttachments` (chip row above the
+                input), inlines into the next send's `[Documents attached]`
+                header, and auto-saves the file into YourVault so it lives
+                in the user's corpus after the chat ends. The chip row
+                handles removal via the X button on each pill — no separate
+                affordance needed here. */}
+            {(() => {
+              const labelText = pendingAttachments.length > 0
+                ? `Add another file (${pendingAttachments.length} attached)`
+                : 'Drop files or click to upload';
+              return (
               <div
                 onClick={() => dropFileInputRef.current?.click()}
                 onDragOver={(e) => { e.preventDefault(); if (!isFileDropHover) setIsFileDropHover(true); }}
@@ -6044,11 +5894,11 @@ INSTRUCTIONS:
                   if (files.length) handleAttachFiles(files, 'doc');
                 }}
                 style={{
-                  marginTop: 28,
+                  marginTop: showEmptyState ? 28 : 8,
                   border: `1px dashed ${isFileDropHover ? 'var(--navy)' : 'var(--border)'}`,
                   borderRadius: 10,
                   background: isFileDropHover ? 'rgba(10, 36, 99, 0.04)' : 'transparent',
-                  padding: '10px 14px',
+                  padding: showEmptyState ? '10px 14px' : '6px 12px',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -6071,13 +5921,16 @@ INSTRUCTIONS:
                 />
                 <Upload size={13} style={{ color: 'var(--text-muted)' }} />
                 <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', fontFamily: "'DM Sans', sans-serif" }}>
-                  Drop files or click to upload
+                  {labelText}
                 </span>
-                <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: "'DM Sans', sans-serif" }}>
-                  · PDF, DOCX, TXT
-                </span>
+                {showEmptyState && (
+                  <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: "'DM Sans', sans-serif" }}>
+                    · PDF, DOCX, TXT · saved to YourVault
+                  </span>
+                )}
               </div>
-            )}
+              );
+            })()}
 
             {/* ─── Merged icon-pill row (empty state only) ─── */}
             {/* Replaces the old 3 prompt cards + plain text intent pills.
@@ -6196,7 +6049,6 @@ INSTRUCTIONS:
             </div>
           </div>
         </div>
-        )}
       </div>
 
       {/* ─── Workflow Run Panel — docked to the right of the chat.
