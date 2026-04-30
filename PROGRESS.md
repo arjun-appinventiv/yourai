@@ -206,6 +206,25 @@ The main `ChatView` fetch was wrapped in a silent try/catch that funnelled every
 - **Pre-fill auto-grow fix**: clicking an action pill calls `setInput(promptText)` which doesn't fire the textarea's `onInput` handler, so the existing auto-grow logic never recalculated and long pre-filled prompts clipped at one row. Fix: a `useEffect` watching `input` resizes the textarea to `scrollHeight` (capped at 140 px to match the inline cap). See CLAUDE.md gotcha for the broader rule.
 - **Intent-pick override fix**: clicking an action pill on the empty state didn't reflect in the populated chat's collapsed intent pill after sending. Two auto-switch paths inside `sendMessage` (find_document pre-flight at ~line 4330, hard-intent guardrail at ~line 4439) silently overwrote the user's deliberate selection whenever `activeIntent === 'general_chat'`. Fix: a new `hasManualIntentPick` flag — both auto-switch paths now gate on `!hasManualIntentPick && activeIntent === 'general_chat' && …`. Flag is set wherever the user explicitly picks (empty-state merged pill row, More-overflow dropdown, populated-chat collapsed pill dropdown, suggestion-banner single accept, suggestion-banner multi-pick) and cleared in `handleNewThread`. See CLAUDE.md gotcha for the rule.
 
+### "Search my docs" toggle replaces Search Within dropdown (2026-04-30 evening)
+The three-scope Search Within dropdown (File Search / YourVault / Workspaces) shipped earlier this evening was simplified again the same hour. PM read: "📁 YourVault — so complicated." The "scope" mental model is too abstract for attorneys; users overlap it confusingly with the drop zone. Replaced with a single verb toggle:
+- **🔍 Search my docs** — outlined pill (off, default) → navy-filled pill (on). When ON, the YourVault retrieval branch in `sendMessage` runs (token-overlap relevance across name + description + fileName + content, top-5 docs, 6 K char cap) and inlines matches into the next send. When OFF, behaviour is exactly today's File Search (chat with whatever's attached).
+- **Workspaces moved out of the chat-input control entirely.** It lives in the sidebar as plain navigation — that's where users go to switch matters. Removing it from the chat input deletes the "what does Workspaces mean here?" cognitive load.
+- State: `searchScope: 'files' | 'vault' | 'workspaces'` retired; replaced with `searchMyDocs: boolean`. Old plumbing (`isSourceMenuOpen`, `sourceMenuRef`, `SCOPE_META`, `SCOPE_OPTIONS`) deleted.
+- Default is OFF — most chats are about an attached file, not a vault search. The toggle is one click away when needed.
+
+### Intent dropdowns — verb buckets (2026-04-30 evening)
+Both intent dropdowns (the populated-chat collapsed-pill dropdown + the empty-state "More operations" overflow) were a flat list of 13 intents, mixed verbs and nouns. Reorganised into four verb-led buckets with uppercase mono section headers (matching the existing dropdown chrome):
+- **DEFAULT** — General Chat
+- **ASK & RESEARCH** — Legal Q&A, Legal Research, Case Law Analysis, Find Document
+- **ANALYZE** — Contract Review, Clause Analysis, Clause Comparison, Risk Assessment, Document Summarisation, Timeline
+- **DRAFT** — Document Drafting, Email & Letter Drafting
+
+`INTENT_BUCKETS` + `groupIntentsByBucket()` exported from `src/lib/intents.ts` so both dropdowns render from the same source. Empty buckets are filtered out — the More overflow shows only the buckets that contain non-pill intents (DEFAULT auto-disappears since General Chat is always a top-level pill on the empty state).
+
+### Textarea scrollbar artefact suppressed (2026-04-30 evening)
+A persistent vertical scrollbar appeared between the chat textarea and the KP dropdown on macOS systems with "Always show scrollbars" enabled, even at empty content. Fixed via two CSS rules on the existing `no-focus-ring` class: `::-webkit-scrollbar { width: 0 }` and `scrollbar-width: none`. Scroll still works (mouse-wheel + arrow keys) when content overflows the maxHeight cap; only the visual track is hidden.
+
 ### Tile-based home retired — General Chat is the landing surface (2026-04-30)
 - The `/chat/home` tile launcher screen (six tiles: General Chat / Workspaces / YourVault / Workflows / Knowledge Packs / Invite Team) was removed. Non-external users now land directly on `/chat` (General Chat); externals still go to `/chat/workspaces`. The empty-state pill row + Search Within dropdown surface the same entry points the tiles used to without an extra click.
 - Touchpoints: `App.jsx` route deleted; `RouteTitle.jsx` entry deleted; `Login.jsx` / `SignUp.jsx` / `Onboarding.jsx` post-flow navigates updated; `ChatView.jsx` lost its `HomeTileLauncher` function (~140 lines), the `ArrowRight` lucide alias, the sidebar Home item + `onGoHome` prop, the `initialView === 'home'` branch in `sidebarActiveKey`, and the conditional render block.
