@@ -48,10 +48,11 @@ export default function Login() {
   const getRedirectTarget = (user) => {
     const candidate = searchParams.get('redirect') || '';
     const isExternal = user?.tenantRole === 'EXTERNAL_USER';
-    // Internal users now land on the tile-based decision home so the
-    // attorney sees a "what would you like to do" picker rather than
-    // an empty chat. Externals still land on their workspace list.
-    const defaultTarget = isExternal ? '/chat/workspaces' : '/chat/home';
+    // Internal users land directly on General Chat — the prior tile-based
+    // home page was retired in favour of the chat empty state, which now
+    // surfaces all the same entry points (intent pills + Source dropdown).
+    // Externals still land on their workspace list.
+    const defaultTarget = isExternal ? '/chat/workspaces' : '/chat';
     if (!candidate) return defaultTarget;
     if (!candidate.startsWith('/') || candidate.startsWith('//')) return defaultTarget;
     // Externals can only land on workspace routes via deep link; if they have

@@ -362,9 +362,9 @@ export default function Onboarding() {
         }
       } catch { /* localStorage sync failed — non-critical */ }
 
-      navigate('/chat/home');
+      navigate('/chat');
     } catch {
-      navigate('/chat/home');
+      navigate('/chat');
     }
   };
 

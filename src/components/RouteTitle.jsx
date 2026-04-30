@@ -60,7 +60,6 @@ const ROUTE_TITLES = [
   { match: (p) => p === '/chat/onboarding',        title: 'Welcome' },
   { match: (p) => p.startsWith('/chat/workspaces/'), title: 'Workspace' },
   { match: (p) => p === '/chat/workspaces',        title: 'Workspaces' },
-  { match: (p) => p === '/chat/home',              title: 'Home' },
   { match: (p) => p === '/chat',                   title: 'Chat' },
 ];
 
