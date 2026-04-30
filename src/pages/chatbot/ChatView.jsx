@@ -47,7 +47,7 @@ import { extractFileText } from '../../lib/file-parser';
 import { trackDocUpload } from '../../lib/auth';
 import { useSessionGuard } from '../../lib/useSessionGuard';
 import { detectIntent, detectAllIntents } from '../../lib/intentDetector';
-import { INTENTS, DEFAULT_INTENT, getIntentLabel } from '../../lib/intents';
+import { INTENTS, DEFAULT_INTENT, getIntentLabel, groupIntentsByBucket } from '../../lib/intents';
 
 // Removed: MOCK_RESPONSES array — replaced with real streaming fetch to /api/chat
 // See: tech-stack.md — Backend API section
@@ -3815,23 +3815,20 @@ export default function ChatView({ initialView = 'chat' }) {
   const suggestionTimer = useRef(null);
   const intentDropdownRef = useRef(null);
   const [streamingContent, setStreamingContent] = useState('');
-  // ─── Empty-state Search Within / KP / pill-more dropdowns ───
-  // Search Within (File Search / YourVault / Workspaces) replaced the prior
-  // per-item Source dropdown — the old "Workspace ▸" / "YourVault ▸" submenus
-  // had to enumerate every workspace / every vault doc, which broke at scale
-  // (30+ matters, 100+ docs). The new dropdown picks a *scope* instead of a
-  // specific item; specific docs reach the conversation via the persistent
-  // drop zone (inline pills). Single state machine: `searchScope` is one of
-  // 'files' | 'vault' | 'workspaces'.
-  const [searchScope, setSearchScope] = useState('files');
-  const [isSourceMenuOpen, setIsSourceMenuOpen] = useState(false);
+  // ─── Empty-state Search-my-docs / KP / pill-more controls ───
+  // The prior "Search Within" scope dropdown (File Search / YourVault /
+  // Workspaces) was simplified to a single verb toggle: "Search my docs"
+  // (off by default; on = also retrieve from YourVault for the next send).
+  // The "scope" abstraction was a leap of faith — verb on a button avoids
+  // it. Workspaces moved out of this control entirely; it lives in the
+  // sidebar where navigation belongs.
+  const [searchMyDocs, setSearchMyDocs] = useState(false);
   const [isKpMenuOpen, setIsKpMenuOpen] = useState(false);
   const [isEmptyMoreOpen, setIsEmptyMoreOpen] = useState(false);
   const [isFileDropHover, setIsFileDropHover] = useState(false);
   // Workspace association — kept for the AttachMenu / vault-doc "Use" path
-  // and for downstream label-only metadata. Not driven by Search Within.
+  // and for downstream label-only metadata.
   const [activeWorkspaceForChat, setActiveWorkspaceForChat] = useState(null);
-  const sourceMenuRef = useRef(null);
   const kpMenuRef = useRef(null);
   const emptyMoreRef = useRef(null);
   const dropFileInputRef = useRef(null);
@@ -4369,16 +4366,16 @@ export default function ChatView({ initialView = 'chat' }) {
       });
     }
 
-    // ─── YourVault scope: client-side relevance retrieval ───
-    // When the user picked the YourVault scope and didn't explicitly attach
+    // ─── "Search my docs" toggle: client-side relevance retrieval ───
+    // When the user flipped Search my docs ON and didn't explicitly attach
     // anything, pick top-N vault docs that overlap with the question and
     // inline them so the model has something to ground in. Token-overlap
     // ranking is a stand-in until the pgvector RAG pipeline lands (see
-    // .claude-context/vault-content-rag-plan.md). Confidentiality note: the
-    // user's own vault is private to them — this scope only reads from
-    // documentVault, never workspace docs.
+    // .claude-context/vault-content-rag-plan.md). Confidentiality note:
+    // reads only from documentVault (the user's own corpus), never workspace
+    // docs — cross-matter search would be a confidentiality footgun.
     let vaultScopeContext = '';
-    if (searchScope === 'vault' && !mergedDocContent && !activeVaultDocument && !activeVaultFolder && documentVault.length > 0 && trimmed) {
+    if (searchMyDocs && !mergedDocContent && !activeVaultDocument && !activeVaultFolder && documentVault.length > 0 && trimmed) {
       const STOP = new Set(['the','a','an','and','or','but','of','to','in','for','on','at','by','with','as','is','are','was','were','be','been','being','have','has','had','do','does','did','this','that','these','those','it','its','my','your','our','their','what','which','who','whom','when','where','why','how','if','then','than','so','also','about']);
       const qTokens = trimmed.toLowerCase().match(/[a-z0-9]{3,}/g) || [];
       const qSet = qTokens.filter(t => !STOP.has(t));
@@ -5531,106 +5528,30 @@ INSTRUCTIONS:
               /* <768px stacks the row vertically so the source pill, textarea
                  and the KP+send sub-row each get a full-width line. */
               <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'stretch' : 'center', gap: isMobile ? 10 : 8, border: '1.5px solid var(--border)', borderRadius: 18, background: '#fff', minHeight: 64, padding: '10px 10px 10px 10px', boxShadow: '0 2px 12px rgba(10, 36, 99, 0.04)' }}>
-                {/* Search Within dropdown — bounded set of three scopes:
-                    File Search (current chat attachments) / YourVault
-                    (private corpus search) / Workspaces (shared org content).
-                    Replaces the prior per-item Source dropdown to avoid the
-                    listing problem at 30+ workspaces or 100+ vault docs.
-                    Specific items reach the chat via the drop zone (inline
-                    pills) — never via this dropdown. */}
-                <div style={{ position: 'relative', flexShrink: 0, alignSelf: isMobile ? 'flex-start' : undefined }} ref={sourceMenuRef}>
-                  {(() => {
-                    const SCOPE_META = {
-                      files:      { Icon: Search,     label: 'File Search' },
-                      vault:      { Icon: FolderOpen, label: 'YourVault' },
-                      workspaces: { Icon: Briefcase,  label: 'Workspaces' },
-                    };
-                    const cur = SCOPE_META[searchScope] || SCOPE_META.files;
-                    const CurIcon = cur.Icon;
-                    return (
-                      <button
-                        onClick={() => setIsSourceMenuOpen(v => !v)}
-                        title="Choose what the AI searches across"
-                        style={{
-                          display: 'inline-flex', alignItems: 'center', gap: 6,
-                          padding: '6px 12px', borderRadius: 999,
-                          fontSize: 12, fontFamily: "'DM Sans', sans-serif", fontWeight: 500,
-                          border: '1px solid var(--navy)',
-                          backgroundColor: '#fff',
-                          color: 'var(--navy)',
-                          cursor: 'pointer', whiteSpace: 'nowrap', maxWidth: isMobile ? 'none' : 200,
-                        }}
-                      >
-                        <CurIcon size={13} style={{ flexShrink: 0 }} />
-                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cur.label}</span>
-                        <ChevronDown size={12} style={{ transform: isSourceMenuOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 150ms', flexShrink: 0 }} />
-                      </button>
-                    );
-                  })()}
-                  {isSourceMenuOpen && (() => {
-                    const SCOPE_OPTIONS = [
-                      { id: 'files',      Icon: Search,     label: 'File Search', desc: 'Attached files in this chat — fastest, most precise.' },
-                      { id: 'vault',      Icon: FolderOpen, label: 'YourVault',   desc: 'Your full private corpus across folders and matters.' },
-                      { id: 'workspaces', Icon: Briefcase,  label: 'Workspaces',  desc: 'Shared org content across all workspaces you can access.' },
-                    ];
-                    return (
-                      <>
-                        <div onClick={() => setIsSourceMenuOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 50 }} />
-                        <div style={{ position: 'absolute', bottom: 'calc(100% + 6px)', left: 0, width: 320, backgroundColor: '#fff', borderRadius: 14, border: '1px solid var(--border)', boxShadow: '0 12px 32px rgba(0,0,0,0.14)', zIndex: 51, overflow: 'hidden' }}>
-                          <div style={{ padding: '10px 16px 6px', fontSize: 10, color: 'var(--text-muted)', fontFamily: "'IBM Plex Mono', ui-monospace, monospace", letterSpacing: '0.12em', textTransform: 'uppercase', borderBottom: '1px solid var(--border)' }}>
-                            Search Within
-                          </div>
-                          {SCOPE_OPTIONS.map((opt) => {
-                            const Icon = opt.Icon;
-                            const isCurrent = searchScope === opt.id;
-                            // Workspaces scope: routes the user into the
-                            // Workspaces page so they can pick one (workspace
-                            // chats RAG within their own corpus). Cross-
-                            // workspace search from /chat is a confidentiality
-                            // footgun for law firms — strict scoping per
-                            // matter is the right default.
-                            const onClick = () => {
-                              if (opt.id === 'workspaces') {
-                                setIsSourceMenuOpen(false);
-                                closeAllPanels();
-                                setShowWorkspacesPanel(true);
-                                navigate('/chat/workspaces');
-                                return;
-                              }
-                              setSearchScope(opt.id);
-                              // Switching to a non-files scope clears any
-                              // active vault-doc / folder selection so the
-                              // scope's behaviour drives the next send,
-                              // not stale per-item attachments.
-                              if (opt.id !== 'files') {
-                                setActiveVaultDocument(null);
-                                setActiveVaultFolder(null);
-                              }
-                              setIsSourceMenuOpen(false);
-                            };
-                            return (
-                              <div
-                                key={opt.id}
-                                onClick={onClick}
-                                style={{ padding: '12px 16px', cursor: 'pointer', display: 'flex', alignItems: 'flex-start', gap: 12, background: isCurrent ? 'rgba(217, 167, 75, 0.10)' : 'transparent', transition: 'background 100ms' }}
-                                onMouseEnter={(e) => { if (!isCurrent) e.currentTarget.style.backgroundColor = 'var(--ice-warm)'; }}
-                                onMouseLeave={(e) => { if (!isCurrent) e.currentTarget.style.backgroundColor = 'transparent'; }}
-                              >
-                                <Icon size={16} style={{ color: 'var(--navy)', flexShrink: 0, marginTop: 2 }} />
-                                <div style={{ flex: 1, minWidth: 0 }}>
-                                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                                    <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{opt.label}</span>
-                                    {isCurrent && <Check size={14} style={{ color: 'var(--gold)', flexShrink: 0 }} />}
-                                  </div>
-                                  <p style={{ margin: '2px 0 0', fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.45 }}>{opt.desc}</p>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </>
-                    );
-                  })()}
+                {/* Search-my-docs toggle — verb on a button, not a noun in
+                    a dropdown. OFF = chat with whatever you've attached.
+                    ON = AI also searches YourVault for relevant docs and
+                    inlines them into the next send. Replaces the prior
+                    "Search Within" scope dropdown. Workspaces moved to the
+                    sidebar as plain navigation. */}
+                <div style={{ flexShrink: 0, alignSelf: isMobile ? 'flex-start' : undefined }}>
+                  <button
+                    onClick={() => setSearchMyDocs(v => !v)}
+                    title={searchMyDocs ? 'AI is also searching your saved documents' : 'Toggle: also search across your saved documents'}
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 6,
+                      padding: '6px 12px', borderRadius: 999,
+                      fontSize: 12, fontFamily: "'DM Sans', sans-serif", fontWeight: 500,
+                      border: searchMyDocs ? '1px solid var(--navy)' : '1px solid var(--border)',
+                      backgroundColor: searchMyDocs ? 'var(--navy)' : '#fff',
+                      color: searchMyDocs ? '#fff' : 'var(--text-secondary)',
+                      cursor: 'pointer', whiteSpace: 'nowrap',
+                      transition: 'all 150ms ease',
+                    }}
+                  >
+                    <Search size={13} style={{ flexShrink: 0 }} />
+                    <span>Search my docs</span>
+                  </button>
                 </div>
 
                 {/* Textarea — flex 1, larger styling for empty-state. */}
@@ -5775,39 +5696,50 @@ INSTRUCTIONS:
                         position: 'absolute', bottom: '100%', left: 0, marginBottom: 6, width: 260,
                         backgroundColor: 'white', borderRadius: 12, border: '1px solid var(--border)',
                         boxShadow: '0 8px 24px rgba(0,0,0,0.12)', zIndex: 51,
-                        maxHeight: 320, overflowY: 'auto',
+                        maxHeight: 360, overflowY: 'auto',
                       }}>
-                        {INTENTS.map(intent => {
-                          const isCurrent = activeIntent === intent.id;
-                          return (
-                            <div
-                              key={intent.id}
-                              onClick={() => {
-                                // Seamless mid-thread intent switch — no
-                                // "start fresh conversation" interruption.
-                                // A thread can mix intents freely (summary
-                                // → research → draft → comparison, all in
-                                // one matter). The new intent only affects
-                                // the NEXT message.
-                                setActiveIntent(intent.id);
-                                setHasManualIntentPick(true);
-                                setIsIntentDropdownOpen(false);
-                              }}
-                              style={{
-                                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                                padding: '8px 14px', cursor: 'pointer', fontSize: 13,
-                                color: isCurrent ? 'var(--text-primary)' : 'var(--text-secondary)',
-                                fontWeight: isCurrent ? 500 : 400,
-                                backgroundColor: 'transparent', transition: 'background 100ms',
-                              }}
-                              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--ice-warm)'; }}
-                              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
-                            >
-                              <span>{intent.label}</span>
-                              {isCurrent && <CheckCircle size={14} style={{ color: 'var(--navy)', flexShrink: 0 }} />}
-                            </div>
-                          );
-                        })}
+                        {groupIntentsByBucket(INTENTS.map(i => i.id)).map((bucket, bucketIdx) => (
+                          <div key={bucket.label}>
+                            <div style={{
+                              padding: '10px 14px 4px',
+                              fontSize: 10, color: 'var(--text-muted)',
+                              fontFamily: "'IBM Plex Mono', ui-monospace, monospace",
+                              letterSpacing: '0.12em', textTransform: 'uppercase',
+                              borderTop: bucketIdx === 0 ? 'none' : '1px solid var(--border)',
+                            }}>{bucket.label}</div>
+                            {bucket.intents.map(intent => {
+                              const isCurrent = activeIntent === intent.id;
+                              return (
+                                <div
+                                  key={intent.id}
+                                  onClick={() => {
+                                    // Seamless mid-thread intent switch — no
+                                    // "start fresh conversation" interruption.
+                                    // A thread can mix intents freely (summary
+                                    // → research → draft → comparison, all in
+                                    // one matter). The new intent only affects
+                                    // the NEXT message.
+                                    setActiveIntent(intent.id);
+                                    setHasManualIntentPick(true);
+                                    setIsIntentDropdownOpen(false);
+                                  }}
+                                  style={{
+                                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                    padding: '8px 14px', cursor: 'pointer', fontSize: 13,
+                                    color: isCurrent ? 'var(--text-primary)' : 'var(--text-secondary)',
+                                    fontWeight: isCurrent ? 500 : 400,
+                                    backgroundColor: 'transparent', transition: 'background 100ms',
+                                  }}
+                                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--ice-warm)'; }}
+                                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+                                >
+                                  <span>{intent.label}</span>
+                                  {isCurrent && <CheckCircle size={14} style={{ color: 'var(--navy)', flexShrink: 0 }} />}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ))}
                       </div>
                     </>
                   )}
@@ -6020,22 +5952,33 @@ INSTRUCTIONS:
                     {isEmptyMoreOpen && (
                       <>
                         <div onClick={() => setIsEmptyMoreOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 50 }} />
-                        <div style={{ position: 'absolute', top: 'calc(100% + 6px)', right: 0, width: 240, backgroundColor: '#fff', borderRadius: 12, border: '1px solid var(--border)', boxShadow: '0 8px 24px rgba(0,0,0,0.12)', zIndex: 51, maxHeight: 320, overflowY: 'auto' }}>
-                          {OVERFLOW_INTENTS.map(intent => {
-                            const isCurrent = activeIntent === intent.id;
-                            return (
-                              <div
-                                key={intent.id}
-                                onClick={() => { setActiveIntent(intent.id); setHasManualIntentPick(true); setIsEmptyMoreOpen(false); }}
-                                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 14px', cursor: 'pointer', fontSize: 13, color: isCurrent ? 'var(--text-primary)' : 'var(--text-secondary)', fontWeight: isCurrent ? 500 : 400, transition: 'background 100ms' }}
-                                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--ice-warm)'; }}
-                                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
-                              >
-                                <span>{intent.label}</span>
-                                {isCurrent && <CheckCircle size={13} style={{ color: 'var(--navy)', flexShrink: 0 }} />}
-                              </div>
-                            );
-                          })}
+                        <div style={{ position: 'absolute', top: 'calc(100% + 6px)', right: 0, width: 240, backgroundColor: '#fff', borderRadius: 12, border: '1px solid var(--border)', boxShadow: '0 8px 24px rgba(0,0,0,0.12)', zIndex: 51, maxHeight: 360, overflowY: 'auto' }}>
+                          {groupIntentsByBucket(OVERFLOW_INTENTS.map(i => i.id)).map((bucket, bucketIdx) => (
+                            <div key={bucket.label}>
+                              <div style={{
+                                padding: '10px 14px 4px',
+                                fontSize: 10, color: 'var(--text-muted)',
+                                fontFamily: "'IBM Plex Mono', ui-monospace, monospace",
+                                letterSpacing: '0.12em', textTransform: 'uppercase',
+                                borderTop: bucketIdx === 0 ? 'none' : '1px solid var(--border)',
+                              }}>{bucket.label}</div>
+                              {bucket.intents.map(intent => {
+                                const isCurrent = activeIntent === intent.id;
+                                return (
+                                  <div
+                                    key={intent.id}
+                                    onClick={() => { setActiveIntent(intent.id); setHasManualIntentPick(true); setIsEmptyMoreOpen(false); }}
+                                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 14px', cursor: 'pointer', fontSize: 13, color: isCurrent ? 'var(--text-primary)' : 'var(--text-secondary)', fontWeight: isCurrent ? 500 : 400, transition: 'background 100ms' }}
+                                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--ice-warm)'; }}
+                                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+                                  >
+                                    <span>{intent.label}</span>
+                                    {isCurrent && <CheckCircle size={13} style={{ color: 'var(--navy)', flexShrink: 0 }} />}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          ))}
                         </div>
                       </>
                     )}

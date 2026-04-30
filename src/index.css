@@ -94,6 +94,13 @@ textarea.no-focus-ring:focus {
   box-shadow: none !important;
   outline: none !important;
 }
+/* Visually-hidden scrollbar — used on the chat-input textareas where the
+   parent already constrains height via the onInput auto-grow handler. The
+   scrollbar still works (mouse-wheel + arrow keys) but the always-on track
+   that macOS shows under "Always" scrollbar mode is suppressed so the input
+   row reads as clean. */
+.no-focus-ring::-webkit-scrollbar { width: 0; height: 0; }
+.no-focus-ring { scrollbar-width: none; }
 
 @keyframes toast-in {
   from { opacity: 0; transform: translateY(20px); }
