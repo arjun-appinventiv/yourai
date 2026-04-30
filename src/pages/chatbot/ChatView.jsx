@@ -5792,11 +5792,12 @@ INSTRUCTIONS:
                         {groupIntentsByBucket(INTENTS.map(i => i.id)).map((bucket, bucketIdx) => (
                           <div key={bucket.label}>
                             <div style={{
-                              padding: '10px 14px 4px',
-                              fontSize: 10, color: 'var(--text-muted)',
+                              padding: '12px 14px 6px',
+                              fontSize: 11, color: 'var(--text-primary)', fontWeight: 700,
                               fontFamily: "'IBM Plex Mono', ui-monospace, monospace",
-                              letterSpacing: '0.12em', textTransform: 'uppercase',
+                              letterSpacing: '0.14em', textTransform: 'uppercase',
                               borderTop: bucketIdx === 0 ? 'none' : '1px solid var(--border)',
+                              background: bucketIdx === 0 ? 'transparent' : 'rgba(10, 36, 99, 0.02)',
                             }}>{bucket.label}</div>
                             {bucket.intents.map(intent => {
                               const isCurrent = activeIntent === intent.id;
@@ -6047,11 +6048,12 @@ INSTRUCTIONS:
                           {groupIntentsByBucket(OVERFLOW_INTENTS.map(i => i.id)).map((bucket, bucketIdx) => (
                             <div key={bucket.label}>
                               <div style={{
-                                padding: '10px 14px 4px',
-                                fontSize: 10, color: 'var(--text-muted)',
+                                padding: '12px 14px 6px',
+                                fontSize: 11, color: 'var(--text-primary)', fontWeight: 700,
                                 fontFamily: "'IBM Plex Mono', ui-monospace, monospace",
-                                letterSpacing: '0.12em', textTransform: 'uppercase',
+                                letterSpacing: '0.14em', textTransform: 'uppercase',
                                 borderTop: bucketIdx === 0 ? 'none' : '1px solid var(--border)',
+                                background: bucketIdx === 0 ? 'transparent' : 'rgba(10, 36, 99, 0.02)',
                               }}>{bucket.label}</div>
                               {bucket.intents.map(intent => {
                                 const isCurrent = activeIntent === intent.id;
