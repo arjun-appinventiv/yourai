@@ -3824,12 +3824,20 @@ export default function ChatView({ initialView = 'chat' }) {
   // sidebar where navigation belongs.
   const [searchMyDocs, setSearchMyDocs] = useState(false);
   const [isKpMenuOpen, setIsKpMenuOpen] = useState(false);
+  // Search inside the KP / YourVault pickers — both pickers use the same
+  // search-first pattern to handle libraries that grow past ~10 items.
+  // State is local to each picker (clears on close so re-opening doesn't
+  // surface a stale query).
+  const [kpQuery, setKpQuery] = useState('');
+  const [isVaultAttachOpen, setIsVaultAttachOpen] = useState(false);
+  const [vaultAttachQuery, setVaultAttachQuery] = useState('');
   const [isEmptyMoreOpen, setIsEmptyMoreOpen] = useState(false);
   const [isFileDropHover, setIsFileDropHover] = useState(false);
   // Workspace association — kept for the AttachMenu / vault-doc "Use" path
   // and for downstream label-only metadata.
   const [activeWorkspaceForChat, setActiveWorkspaceForChat] = useState(null);
   const kpMenuRef = useRef(null);
+  const vaultAttachRef = useRef(null);
   const emptyMoreRef = useRef(null);
   const dropFileInputRef = useRef(null);
   // ─── Abort controller for in-flight streams ───
@@ -5528,13 +5536,16 @@ INSTRUCTIONS:
               /* <768px stacks the row vertically so the source pill, textarea
                  and the KP+send sub-row each get a full-width line. */
               <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'stretch' : 'center', gap: isMobile ? 10 : 8, border: '1.5px solid var(--border)', borderRadius: 18, background: '#fff', minHeight: 64, padding: '10px 10px 10px 10px', boxShadow: '0 2px 12px rgba(10, 36, 99, 0.04)' }}>
-                {/* Search-my-docs toggle — verb on a button, not a noun in
-                    a dropdown. OFF = chat with whatever you've attached.
-                    ON = AI also searches YourVault for relevant docs and
-                    inlines them into the next send. Replaces the prior
-                    "Search Within" scope dropdown. Workspaces moved to the
-                    sidebar as plain navigation. */}
-                <div style={{ flexShrink: 0, alignSelf: isMobile ? 'flex-start' : undefined }}>
+                {/* Two YourVault affordances — different mental models:
+                    ┌──────────────────────────┬─────────────────────────────┐
+                    │ 🔍 Search my docs (toggle) │ 📁 From YourVault (picker) │
+                    │ AI auto-retrieves relevant │ User picks a specific doc  │
+                    │ docs at send time          │ to pin to this chat        │
+                    └──────────────────────────┴─────────────────────────────┘
+                    Both reach the same corpus. Pick the verb when you don't
+                    know which doc has the answer; pick the specific doc when
+                    you do. */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, alignSelf: isMobile ? 'flex-start' : undefined }}>
                   <button
                     onClick={() => setSearchMyDocs(v => !v)}
                     title={searchMyDocs ? 'AI is also searching your saved documents' : 'Toggle: also search across your saved documents'}
@@ -5552,6 +5563,106 @@ INSTRUCTIONS:
                     <Search size={13} style={{ flexShrink: 0 }} />
                     <span>Search my docs</span>
                   </button>
+                  {/* From YourVault — explicit attach. Searchable popover
+                      anchored to a folder-icon button. NOT the prior submenu
+                      shape — type-ahead handles libraries past 100 docs. */}
+                  <div style={{ position: 'relative' }} ref={vaultAttachRef}>
+                    <button
+                      onClick={() => setIsVaultAttachOpen(v => !v)}
+                      title="Attach a document from YourVault"
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 6,
+                        padding: '6px 10px', borderRadius: 999,
+                        fontSize: 12, fontFamily: "'DM Sans', sans-serif", fontWeight: 500,
+                        border: activeVaultDocument ? '1px solid var(--navy)' : '1px solid var(--border)',
+                        backgroundColor: activeVaultDocument ? 'rgba(10, 36, 99, 0.06)' : '#fff',
+                        color: 'var(--text-secondary)',
+                        cursor: 'pointer', whiteSpace: 'nowrap',
+                        transition: 'all 150ms ease',
+                      }}
+                    >
+                      <FolderOpen size={13} style={{ flexShrink: 0, color: 'var(--navy)' }} />
+                      <span style={{ color: activeVaultDocument ? 'var(--navy)' : 'var(--text-secondary)', maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {activeVaultDocument ? activeVaultDocument.name : 'From YourVault'}
+                      </span>
+                      <ChevronDown size={12} style={{ flexShrink: 0, transform: isVaultAttachOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 150ms' }} />
+                    </button>
+                    {isVaultAttachOpen && (() => {
+                      const q = vaultAttachQuery.trim().toLowerCase();
+                      const filtered = q
+                        ? documentVault.filter(d => `${d.name || ''} ${d.description || ''} ${d.fileName || ''}`.toLowerCase().includes(q))
+                        : documentVault;
+                      return (
+                        <>
+                          <div onClick={() => { setIsVaultAttachOpen(false); setVaultAttachQuery(''); }} style={{ position: 'fixed', inset: 0, zIndex: 50 }} />
+                          <div style={{ position: 'absolute', bottom: 'calc(100% + 6px)', left: 0, width: 320, backgroundColor: '#fff', borderRadius: 12, border: '1px solid var(--border)', boxShadow: '0 12px 32px rgba(0,0,0,0.14)', zIndex: 51, overflow: 'hidden', display: 'flex', flexDirection: 'column', maxHeight: 380 }}>
+                            {documentVault.length > 5 && (
+                              <div style={{ padding: '8px 10px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
+                                <input
+                                  autoFocus
+                                  type="text"
+                                  value={vaultAttachQuery}
+                                  onChange={(e) => setVaultAttachQuery(e.target.value)}
+                                  placeholder="Search YourVault…"
+                                  style={{ width: '100%', padding: '6px 10px', borderRadius: 8, border: '1px solid var(--border)', fontSize: 12, fontFamily: 'inherit', outline: 'none' }}
+                                  onClick={(e) => e.stopPropagation()}
+                                />
+                              </div>
+                            )}
+                            <div style={{ flex: 1, overflowY: 'auto' }}>
+                              {activeVaultDocument && (
+                                <div
+                                  onClick={() => { setActiveVaultDocument(null); setIsVaultAttachOpen(false); setVaultAttachQuery(''); }}
+                                  style={{ padding: '10px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, borderBottom: '1px solid var(--border)' }}
+                                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--ice-warm)'; }}
+                                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+                                >
+                                  <X size={12} style={{ color: 'var(--text-muted)' }} />
+                                  <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Detach <strong style={{ color: 'var(--text-primary)' }}>{activeVaultDocument.name}</strong></span>
+                                </div>
+                              )}
+                              {documentVault.length === 0 ? (
+                                <div style={{ padding: '14px', fontSize: 12, color: 'var(--text-muted)', textAlign: 'center' }}>YourVault is empty. Drop a file below to populate it.</div>
+                              ) : filtered.length === 0 ? (
+                                <div style={{ padding: '14px', fontSize: 12, color: 'var(--text-muted)', textAlign: 'center' }}>No documents match "{vaultAttachQuery}".</div>
+                              ) : (
+                                filtered.map((doc) => {
+                                  const isCurrent = activeVaultDocument?.id === doc.id;
+                                  const folder = doc.folderId ? vaultFolders.find(f => f.id === doc.folderId) : null;
+                                  return (
+                                    <div
+                                      key={doc.id}
+                                      onClick={() => { handleSelectVaultDocument(doc); setIsVaultAttachOpen(false); setVaultAttachQuery(''); }}
+                                      style={{ padding: '8px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: isCurrent ? 'var(--navy)' : 'var(--text-secondary)', fontWeight: isCurrent ? 500 : 400 }}
+                                      onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--ice-warm)'; }}
+                                      onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+                                    >
+                                      <File size={11} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+                                      <div style={{ flex: 1, minWidth: 0 }}>
+                                        <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{doc.name}</div>
+                                        {folder && (
+                                          <div style={{ fontSize: 10, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{folder.name}</div>
+                                        )}
+                                      </div>
+                                      {isCurrent && <Check size={12} style={{ color: 'var(--navy)', flexShrink: 0 }} />}
+                                    </div>
+                                  );
+                                })
+                              )}
+                            </div>
+                            <div
+                              onClick={() => { setIsVaultAttachOpen(false); setVaultAttachQuery(''); closeAllPanels(); setShowDocumentVaultPanel(true); }}
+                              style={{ padding: '8px 14px', cursor: 'pointer', borderTop: '1px solid var(--border)', fontSize: 11, color: 'var(--text-secondary)', textAlign: 'center', flexShrink: 0 }}
+                              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--ice-warm)'; }}
+                              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+                            >
+                              Open YourVault →
+                            </div>
+                          </div>
+                        </>
+                      );
+                    })()}
+                  </div>
                 </div>
 
                 {/* Textarea — flex 1, larger styling for empty-state. */}
@@ -5622,42 +5733,80 @@ INSTRUCTIONS:
                     </span>
                     <ChevronDown size={12} style={{ transform: isKpMenuOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 150ms', flexShrink: 0 }} />
                   </button>
-                  {isKpMenuOpen && (
+                  {isKpMenuOpen && (() => {
+                    // Search-first picker — typing narrows the visible packs
+                    // so the dropdown stays usable past 10 / 20 / 100 packs.
+                    // Substring match on name + description, case-insensitive.
+                    const q = kpQuery.trim().toLowerCase();
+                    const filteredPacks = q
+                      ? knowledgePacks.filter(p => `${p.name || ''} ${p.description || ''}`.toLowerCase().includes(q))
+                      : knowledgePacks;
+                    return (
                     <>
-                      <div onClick={() => setIsKpMenuOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 50 }} />
-                      <div style={{ position: 'absolute', bottom: 'calc(100% + 6px)', right: 0, width: 240, backgroundColor: '#fff', borderRadius: 12, border: '1px solid var(--border)', boxShadow: '0 12px 32px rgba(0,0,0,0.14)', zIndex: 51, overflow: 'hidden', maxHeight: 320, overflowY: 'auto' }}>
+                      <div onClick={() => { setIsKpMenuOpen(false); setKpQuery(''); }} style={{ position: 'fixed', inset: 0, zIndex: 50 }} />
+                      <div style={{ position: 'absolute', bottom: 'calc(100% + 6px)', right: 0, width: 280, backgroundColor: '#fff', borderRadius: 12, border: '1px solid var(--border)', boxShadow: '0 12px 32px rgba(0,0,0,0.14)', zIndex: 51, overflow: 'hidden', display: 'flex', flexDirection: 'column', maxHeight: 360 }}>
+                        {/* Sticky search header — only renders when there are
+                            enough packs to bother filtering. */}
+                        {knowledgePacks.length > 5 && (
+                          <div style={{ padding: '8px 10px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
+                            <input
+                              autoFocus
+                              type="text"
+                              value={kpQuery}
+                              onChange={(e) => setKpQuery(e.target.value)}
+                              placeholder="Search packs…"
+                              style={{ width: '100%', padding: '6px 10px', borderRadius: 8, border: '1px solid var(--border)', fontSize: 12, fontFamily: 'inherit', outline: 'none' }}
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                          </div>
+                        )}
+                        <div style={{ flex: 1, overflowY: 'auto' }}>
+                          <div
+                            onClick={() => { setActiveKnowledgePack(null); setIsKpMenuOpen(false); setKpQuery(''); }}
+                            style={{ padding: '10px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, borderBottom: '1px solid var(--border)' }}
+                            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--ice-warm)'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+                          >
+                            <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>No pack</span>
+                            {!activeKnowledgePack && <Check size={13} style={{ color: 'var(--navy)', marginLeft: 'auto' }} />}
+                          </div>
+                          {knowledgePacks.length === 0 ? (
+                            <div style={{ padding: '10px 14px', fontSize: 12, color: 'var(--text-muted)' }}>No knowledge packs yet.</div>
+                          ) : filteredPacks.length === 0 ? (
+                            <div style={{ padding: '10px 14px', fontSize: 12, color: 'var(--text-muted)' }}>No packs match "{kpQuery}".</div>
+                          ) : (
+                            filteredPacks.map((pack) => {
+                              const isCurrent = activeKnowledgePack?.id === pack.id;
+                              return (
+                                <div
+                                  key={pack.id}
+                                  onClick={() => { handleSelectKnowledgePack(pack); setIsKpMenuOpen(false); setKpQuery(''); }}
+                                  style={{ padding: '8px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: isCurrent ? 'var(--navy)' : 'var(--text-secondary)', fontWeight: isCurrent ? 500 : 400 }}
+                                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--ice-warm)'; }}
+                                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+                                >
+                                  <Package size={11} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+                                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{pack.name}</span>
+                                  {isCurrent && <Check size={12} style={{ color: 'var(--navy)', marginLeft: 'auto', flexShrink: 0 }} />}
+                                </div>
+                              );
+                            })
+                          )}
+                        </div>
+                        {/* Footer: link to the full Knowledge Packs page for
+                            users who want to manage / create packs. */}
                         <div
-                          onClick={() => { setActiveKnowledgePack(null); setIsKpMenuOpen(false); }}
-                          style={{ padding: '10px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, borderBottom: '1px solid var(--border)' }}
+                          onClick={() => { setIsKpMenuOpen(false); setKpQuery(''); closeAllPanels(); setShowKnowledgePacksPanel(true); }}
+                          style={{ padding: '8px 14px', cursor: 'pointer', borderTop: '1px solid var(--border)', fontSize: 11, color: 'var(--text-secondary)', textAlign: 'center', flexShrink: 0 }}
                           onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--ice-warm)'; }}
                           onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
                         >
-                          <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>No pack</span>
-                          {!activeKnowledgePack && <Check size={13} style={{ color: 'var(--navy)', marginLeft: 'auto' }} />}
+                          Manage knowledge packs →
                         </div>
-                        {knowledgePacks.length === 0 ? (
-                          <div style={{ padding: '10px 14px', fontSize: 12, color: 'var(--text-muted)' }}>No knowledge packs yet.</div>
-                        ) : (
-                          knowledgePacks.map((pack) => {
-                            const isCurrent = activeKnowledgePack?.id === pack.id;
-                            return (
-                              <div
-                                key={pack.id}
-                                onClick={() => { handleSelectKnowledgePack(pack); setIsKpMenuOpen(false); }}
-                                style={{ padding: '8px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: isCurrent ? 'var(--navy)' : 'var(--text-secondary)', fontWeight: isCurrent ? 500 : 400 }}
-                                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--ice-warm)'; }}
-                                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
-                              >
-                                <Package size={11} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
-                                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{pack.name}</span>
-                                {isCurrent && <Check size={12} style={{ color: 'var(--navy)', marginLeft: 'auto', flexShrink: 0 }} />}
-                              </div>
-                            );
-                          })
-                        )}
                       </div>
                     </>
-                  )}
+                    );
+                  })()}
                 </div>
 
                 {/* Send button — circular, navy, right edge. */}
