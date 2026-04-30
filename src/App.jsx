@@ -104,6 +104,9 @@ export default function App() {
             <Route path="/chat/reset-password" element={<ChatResetPassword />} />
             <Route path="/chat/onboarding" element={<ChatOnboarding />} />
             <Route path="/chat" element={<ChatRoleProvider><ChatView /></ChatRoleProvider>} />
+            {/* /chat/home was retired 2026-04-30 — redirect any stale bookmarks
+                to the new landing surface so they don't render a blank page. */}
+            <Route path="/chat/home" element={<Navigate to="/chat" replace />} />
             <Route path="/chat/workspaces" element={<ChatRoleProvider><ChatView initialView="workspaces" /></ChatRoleProvider>} />
             <Route path="/chat/workspaces/:id" element={<RouteErrorBoundary><ChatRoleProvider><WorkspaceChatView /></ChatRoleProvider></RouteErrorBoundary>} />
             <Route path="/mock/restructure" element={<RestructureMock />} />
