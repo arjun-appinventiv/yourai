@@ -4294,35 +4294,62 @@ export default function ChatView({ initialView = 'chat' }) {
     const trimmed = (text || '').trim();
     if ((!trimmed && pendingAttachments.length === 0) || isTyping) return;
 
-    // ─── Greeting + card-intent shortcut ────────────────────────────────
+    // ─── Chit-chat + card-intent shortcut ───────────────────────────────
     // When a user picks a card intent (clause_comparison, risk_assessment,
-    // …) and types a short greeting like "hi" with no document attached,
-    // the Edge would force JSON via response_format and emit an empty
-    // schema envelope — the card empty-state would then render. That's
-    // technically correct but reads as "the bot ignored my hello." User
-    // ask: chit-chat warmly and tell me what to upload.
+    // …) and types a chit-chat message ("hi", "how are you", "what can
+    // you do") with no document attached, the Edge would force JSON via
+    // response_format and emit an empty schema envelope — the card
+    // empty-state would then render. That's technically correct but
+    // reads as "the bot ignored my hello." User ask: chit-chat warmly
+    // and tell me what to upload.
     //
-    // Detection: ≤ 30 chars AND matches a greeting pattern (or no real
-    // verbs / questions). Card intent. No pendingAttachments / vault doc /
+    // Detection — match if EITHER:
+    //   (a) the message hits a known chit-chat regex (hi, hello, how are
+    //       you, what can you do, thanks, ok, etc.), OR
+    //   (b) the message is short (≤ 60 chars) AND contains no document-
+    //       analysis verb (analyse, review, summarise, find, compare,
+    //       extract, identify, list, search, draft, generate).
+    // Plus: card intent active. No pendingAttachments / vault doc /
     // vault folder. We inject a tailored prose reply and skip the Edge
     // round-trip entirely.
-    const GREETING_RE = /^(hi+|hey+|hello+|yo+|hola|sup|good\s*(morning|afternoon|evening)|gm|ga|ge|howdy|greetings?|ok+|okay|thanks?|thank\s*you|thx|ty|cool|nice|got\s*it)[!.,\s]*$/i;
-    const isGreeting = trimmed.length <= 30 && GREETING_RE.test(trimmed.replace(/[.!?]+$/g, '').trim());
+    const CHIT_CHAT_RE = /^(hi+|hey+|hello+|yo+|hola|sup|good\s*(morning|afternoon|evening|night|day)|gm|ga|ge|howdy|greetings?|ok+|okay|thanks?|thank\s*you|thx|ty|cool|nice|got\s*it|how\s*('?s|\s*is|\s*are)\s*(you|it|things|going|life)?|how\s*r\s*u|how\s*you\s*doing|how\s*do\s*you\s*do|whats?\s*up|wassup|what\s*('?s|\s*is)\s*new|tell\s*me\s*about\s*yourself|who\s*are\s*you|what\s*('?s|\s*is)\s*your\s*name|what\s*can\s*you\s*do|what\s*do\s*you\s*do|help|\?+|nice\s*to\s*meet\s*you|pleased\s*to\s*meet\s*you|good\s*to\s*meet\s*you|nm|nothing\s*much|fine|good|great|lol|haha|hmm|umm)[!.,?\s]*$/i;
+    const ANALYSIS_VERBS = /\b(analyse|analyze|review|summari[sz]e|summary|find|search|locate|where(\s+is|\s+are)|list|show|compare|comparison|contrast|extract|identify|draft|write|generate|produce|create|build|assess|evaluate|check|audit|examine|inspect|read|process|parse|breakdown|deconstruct|interpret|explain\s+(this|the|that|my|these|those|provision|clause|section|paragraph|terms?)|risk|liability|obligation|provision|clause|paragraph|section|jurisdiction|case|holding|ruling|precedent|citation|memo|report|brief|deadline|timeline|date)\b/i;
+    const stripped = trimmed.replace(/[.!?]+$/g, '').trim();
+    const isChitChat = CHIT_CHAT_RE.test(stripped)
+      || (stripped.length <= 60 && !ANALYSIS_VERBS.test(stripped));
     const hasAnyDoc = pendingAttachments.length > 0
       || !!activeVaultDocument || !!activeVaultFolder
       || !!(sessionDocContext?.docNames || []).length;
-    if (isGreeting && isCardIntent(activeIntent) && !hasAnyDoc) {
-      const INTENT_GREETING_REPLIES = {
-        document_summarisation: "Hi! I can summarise documents — upload one using the **+** button and I'll break it down by key obligations, risk areas, and next steps.",
-        clause_comparison:      "Hi! I do clause-by-clause comparisons. Upload **two** documents (NDAs, agreements, redlines) using the **+** button and I'll lay them side-by-side with deltas highlighted.",
-        case_law_analysis:      "Hi! I can analyse case law. Upload the cited decision (or paste the citation) and I'll pull facts, holding, reasoning, and disposition.",
-        legal_research:         "Hi! I can run a research brief. Tell me what legal question you're researching — issue, jurisdiction, fact pattern — and I'll pull authorities and key holdings.",
-        risk_assessment:        "Hi! I can do a risk assessment. Upload the contract (or memo / lease / agreement) using the **+** button and I'll flag findings by severity with mitigations.",
-        clause_analysis:        "Hi! I can analyse clauses. Upload the contract using the **+** button and I'll grade each clause by risk priority with quoted language.",
-        timeline_extraction:    "Hi! I can extract timelines. Upload a document (or paste dated content) and I'll build a chronological timeline of every dated event.",
-        find_document:          "Hi! I can find documents in YourVault. Tell me what you're looking for — by name, file type, or what's inside.",
+    if (isChitChat && isCardIntent(activeIntent) && !hasAnyDoc) {
+      // Per-intent description body — what this mode does + what to upload.
+      const INTENT_BODIES = {
+        document_summarisation: "I can summarise documents — upload one using the **+** button and I'll break it down by key obligations, risk areas, and next steps.",
+        clause_comparison:      "I do clause-by-clause comparisons. Upload **two** documents (NDAs, agreements, redlines) using the **+** button and I'll lay them side-by-side with deltas highlighted.",
+        case_law_analysis:      "I can analyse case law. Upload the cited decision (or paste the citation) and I'll pull facts, holding, reasoning, and disposition.",
+        legal_research:         "I can run a research brief. Tell me what legal question you're researching — issue, jurisdiction, fact pattern — and I'll pull authorities and key holdings.",
+        risk_assessment:        "I can do a risk assessment. Upload the contract (or memo / lease / agreement) using the **+** button and I'll flag findings by severity with mitigations.",
+        clause_analysis:        "I can analyse clauses. Upload the contract using the **+** button and I'll grade each clause by risk priority with quoted language.",
+        timeline_extraction:    "I can extract timelines. Upload a document (or paste dated content) and I'll build a chronological timeline of every dated event.",
+        find_document:          "I can find documents in YourVault. Tell me what you're looking for — by name, file type, or what's inside.",
       };
-      const reply = INTENT_GREETING_REPLIES[activeIntent] || "Hi! Tell me what you'd like to do — upload a document, ask a legal question, or pick a different mode.";
+      // Acknowledgement varies by chit-chat type so a follow-up message
+      // doesn't read like a copy-paste of the first reply.
+      let prefix = 'Hi! ';
+      if (/how\s*('?s|\s*is|\s*are)\s*(you|it|things|going|life)|how\s*r\s*u|how\s*you\s*doing|how\s*do\s*you\s*do/i.test(stripped)) {
+        prefix = "Doing well, thanks for asking! ";
+      } else if (/what\s*can\s*you\s*do|what\s*do\s*you\s*do|tell\s*me\s*about\s*yourself|who\s*are\s*you|what\s*('?s|\s*is)\s*your\s*name/i.test(stripped)) {
+        prefix = "Happy to help — ";
+      } else if (/thanks?|thank\s*you|thx|^ty[!.,\s]*$/i.test(stripped)) {
+        prefix = "You're welcome! Whenever you're ready: ";
+      } else if (/help|\?+/i.test(stripped) && stripped.length <= 10) {
+        prefix = "Sure thing — ";
+      } else if (/whats?\s*up|wassup|sup/i.test(stripped)) {
+        prefix = "Hey! ";
+      } else if (/(good|fine|great|nm|nothing\s*much|lol|haha|cool|nice|got\s*it|hmm|umm)[!.,\s]*$/i.test(stripped)) {
+        prefix = "Got it. Whenever you're ready — ";
+      }
+      const body = INTENT_BODIES[activeIntent] || "tell me what you'd like to do — upload a document, ask a legal question, or pick a different mode.";
+      const reply = prefix + body;
       if (showEmptyState) setShowEmptyState(false);
       const userMsg = { id: Date.now(), sender: 'user', content: trimmed, timestamp: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) };
       const botMsg  = { id: Date.now() + 1, sender: 'bot', content: reply, timestamp: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }), sourceBadge: null };
