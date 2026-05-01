@@ -13,7 +13,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   Briefcase, Plus, Search, Users as UsersIcon, FileText, Clock, X,
-  ChevronLeft, ChevronRight, Check, UploadCloud, Trash2, ArrowLeft,
+  ChevronLeft, ChevronRight, ChevronDown, Check, UploadCloud, Trash2, ArrowLeft,
+  Scale, Landmark, Globe, Building2, FileSignature, AlertTriangle,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useRole } from '../../context/RoleContext';
@@ -52,6 +53,107 @@ const fileSize = (bytes: number): string => {
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 };
 
+/* ─── Practice-area derivation ─────────────────────────────────────────────
+ * Workspace data has no `practiceArea` field, so we infer it from the name
+ * for the new card chrome (icon tile + accent + uppercase pill). Mapping is
+ * keyword-driven: "v." / "trial" → LITIGATION, "trust" / "estate" →
+ * TRUST & ESTATE, etc. External-member presence overrides to EXTERNAL when
+ * no other signal fires.
+ */
+type PracticeAreaKey = 'LITIGATION' | 'TRUST_ESTATE' | 'CORPORATE' | 'EMPLOYMENT' | 'EXTERNAL' | 'GENERAL';
+
+const PRACTICE_META: Record<PracticeAreaKey, { label: string; color: string; bg: string; icon: React.ComponentType<{ size?: number; style?: React.CSSProperties }> }> = {
+  LITIGATION:    { label: 'LITIGATION',    color: '#5B21B6', bg: '#EFE7FF', icon: Scale },
+  TRUST_ESTATE:  { label: 'TRUST & ESTATE', color: '#0F766E', bg: '#D1F1EE', icon: Landmark },
+  CORPORATE:     { label: 'CORPORATE',     color: '#1E3A8A', bg: '#DCE5FA', icon: Building2 },
+  EMPLOYMENT:    { label: 'EMPLOYMENT',    color: '#9A3412', bg: '#FCE5D5', icon: FileSignature },
+  EXTERNAL:      { label: 'EXTERNAL',      color: '#92740B', bg: '#FBEED5', icon: Globe },
+  GENERAL:       { label: 'GENERAL',       color: '#475569', bg: '#E5E7EB', icon: Briefcase },
+};
+
+function inferPracticeArea(ws: Workspace): PracticeAreaKey {
+  // If the workspace was created with an explicit category, prefer it —
+  // user-picked categories are the source of truth.
+  if (ws.category && PRACTICE_META[ws.category as PracticeAreaKey]) {
+    return ws.category as PracticeAreaKey;
+  }
+  // Fallback for older mock workspaces without a category.
+  const n = (ws.name || '').toLowerCase();
+  if (/(\bv\.|\bvs\.|trial|litig|dispute|complaint)/.test(n)) return 'LITIGATION';
+  if (/(trust|estate|probate|will|inherit)/.test(n)) return 'TRUST_ESTATE';
+  if (/(m&a|merger|acquisition|deal|corp|series\s+[a-z]\b|ipo|venture)/.test(n)) return 'CORPORATE';
+  if (/(employ|hr|wage|hiring|terminat)/.test(n)) return 'EMPLOYMENT';
+  const hasExternal = (ws.members || []).some((m) => m.role === 'external_user');
+  if (hasExternal) return 'EXTERNAL';
+  return 'GENERAL';
+}
+
+/* ─── Status derivation ───────────────────────────────────────────────────
+ * "Status must answer ready for what" (designer note). We derive from the
+ * documents:
+ *   - some processing → "Needs review: N processing" (yellow)
+ *   - all ready, has external members → "Ready: N shared" (green)
+ *   - all ready, internal only → "Ready: N indexed" (green)
+ */
+type WorkspaceStatus = { kind: 'review' | 'ready_shared' | 'ready_indexed' | 'empty'; label: string; color: string; bg: string };
+
+function inferStatus(ws: Workspace): WorkspaceStatus {
+  const docs = ws.documents || [];
+  const total = docs.length;
+  const processing = docs.filter((d) => d.status === 'processing').length;
+  const ready = docs.filter((d) => d.status === 'ready').length;
+  const hasExternal = (ws.members || []).some((m) => m.role === 'external_user');
+  if (total === 0) return { kind: 'empty', label: 'No documents yet',  color: '#475569', bg: '#F1F5F9' };
+  if (processing > 0) return { kind: 'review', label: `Needs review: ${processing} processing`, color: '#92740B', bg: '#FBEED5' };
+  if (hasExternal) return { kind: 'ready_shared', label: `Ready: ${ready} shared`, color: '#166534', bg: '#DCFCE7' };
+  return { kind: 'ready_indexed', label: `Ready: ${ready} indexed`, color: '#166534', bg: '#DCFCE7' };
+}
+
+function inferAccess(ws: Workspace): { label: string; isExternal: boolean } {
+  const hasExternal = (ws.members || []).some((m) => m.role === 'external_user');
+  return hasExternal
+    ? { label: 'External (client)', isExternal: true }
+    : { label: 'Internal only',     isExternal: false };
+}
+
+/* ─── Status filter options ───────────────────────────────────────────────
+ * Drives the toolbar Status dropdown. Each option matches against the
+ * derived `inferStatus().kind`.
+ */
+const STATUS_FILTERS: { value: string; label: string }[] = [
+  { value: 'all',           label: 'All' },
+  { value: 'ready_indexed', label: 'Ready (indexed)' },
+  { value: 'ready_shared',  label: 'Ready (shared)' },
+  { value: 'review',        label: 'Needs review' },
+  { value: 'empty',         label: 'No documents' },
+];
+
+const TYPE_FILTERS: { value: string; label: string }[] = [
+  { value: 'all', label: 'All' },
+  ...Object.entries(PRACTICE_META).map(([key, meta]) => ({ value: key, label: meta.label })),
+];
+
+const SORT_OPTIONS: { value: string; label: string }[] = [
+  { value: 'recent',   label: 'Recent' },
+  { value: 'name',     label: 'Name (A → Z)' },
+  { value: 'docs',     label: 'Most documents' },
+  { value: 'members',  label: 'Most members' },
+];
+
+/* ─── Workspace categories — also surface as quick-create chips in the
+ *  "Create from category" footer. Picking a chip pre-fills Step 1 of the
+ *  Create modal with that category. The user can still change the
+ *  category in the modal before continuing.
+ */
+const WORKSPACE_CATEGORIES: { id: PracticeAreaKey; label: string; icon: React.ComponentType<{ size?: number; style?: React.CSSProperties }>; accent: string }[] = [
+  { id: 'LITIGATION',   label: 'Litigation Matter', icon: Scale,         accent: '#5B21B6' },
+  { id: 'CORPORATE',    label: 'M&A Deal',          icon: Building2,     accent: '#1E3A8A' },
+  { id: 'TRUST_ESTATE', label: 'Trust & Estate',    icon: Landmark,      accent: '#0F766E' },
+  { id: 'EMPLOYMENT',   label: 'Employment',        icon: FileSignature, accent: '#9A3412' },
+  { id: 'EXTERNAL',     label: 'Client Portal',     icon: Globe,         accent: '#92740B' },
+  { id: 'GENERAL',      label: 'General',           icon: Briefcase,     accent: '#475569' },
+];
+
 /* ─── Page ─── */
 export interface WorkspacesPageProps {
   onBack: () => void;
@@ -69,6 +171,13 @@ export default function WorkspacesPage({ onBack, onOpenWorkspace, onToast }: Wor
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [search, setSearch] = useState('');
   const [creating, setCreating] = useState(false);
+  // Optional pre-selected category for the Create modal — set when the
+  // user clicks one of the "Create from category" chips in the footer.
+  // Modal still requires the user to confirm the category before Continue.
+  const [presetCategory, setPresetCategory] = useState<PracticeAreaKey | null>(null);
+  // Toolbar filters
+  const [typeFilter, setTypeFilter] = useState<string>('all');
+  const [sortBy, setSortBy] = useState<string>('recent');
 
   useEffect(() => {
     seedWorkspacesIfEmpty(MOCK_WORKSPACES);
@@ -82,18 +191,32 @@ export default function WorkspacesPage({ onBack, onOpenWorkspace, onToast }: Wor
   const canCreate = isOrgAdmin || hasPermission(PERMISSIONS.CREATE_WORKSPACE);
 
   const filtered = useMemo(() => {
-    if (!search.trim()) return workspaces;
-    const q = search.toLowerCase();
-    return workspaces.filter((w) =>
-      w.name.toLowerCase().includes(q) ||
-      (w.description || '').toLowerCase().includes(q),
-    );
-  }, [workspaces, search]);
+    let list = workspaces;
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      list = list.filter((w) =>
+        w.name.toLowerCase().includes(q) ||
+        (w.description || '').toLowerCase().includes(q) ||
+        (w.documents || []).some((d) => d.name.toLowerCase().includes(q)) ||
+        (w.members || []).some((m) => m.name.toLowerCase().includes(q) || m.email.toLowerCase().includes(q)),
+      );
+    }
+    if (typeFilter !== 'all') {
+      list = list.filter((w) => inferPracticeArea(w) === typeFilter);
+    }
+    list = [...list];
+    if (sortBy === 'name') list.sort((a, b) => a.name.localeCompare(b.name));
+    else if (sortBy === 'docs') list.sort((a, b) => (b.documents?.length || 0) - (a.documents?.length || 0));
+    else if (sortBy === 'members') list.sort((a, b) => (b.members?.length || 0) - (a.members?.length || 0));
+    else list.sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
+    return list;
+  }, [workspaces, search, typeFilter, sortBy]);
 
-  const handleCreate = (draft: { name: string; description: string; members: WorkspaceMember[]; documents: WorkspaceDoc[] }) => {
+  const handleCreate = (draft: { name: string; description: string; category: PracticeAreaKey; members: WorkspaceMember[]; documents: WorkspaceDoc[] }) => {
     const ws = createWorkspace({
       name: draft.name,
       description: draft.description,
+      category: draft.category,
       createdBy: currentUserId,
       createdByName: currentUserName,
       createdByEmail: currentUserEmail,
@@ -102,18 +225,20 @@ export default function WorkspacesPage({ onBack, onOpenWorkspace, onToast }: Wor
       documents: draft.documents,
     });
     setCreating(false);
+    setPresetCategory(null);
     refresh();
     onToast?.(`${ws.name} workspace created`);
     onOpenWorkspace(ws.id);
   };
 
+  const filtersActive = typeFilter !== 'all' || sortBy !== 'recent';
+
   return (
     <div style={{ flex: 1, minWidth: 0, height: '100vh', overflowY: 'auto', background: '#FBFAF7' }}>
-      {/* Page header */}
-      <div style={{ borderBottom: '1px solid var(--border)', background: '#fff' }}>
-        <div style={{ maxWidth: 1080, margin: '0 auto', padding: '24px 32px 20px' }}>
-          {/* 'Back to chat' only makes sense for users who have a personal
-              chat to return to. Externals live entirely inside workspaces. */}
+      {/* Page hero — designer note: "Boundary: say exactly what belongs in
+          a workspace: docs, chats, members, templates, AI context." */}
+      <div style={{ background: '#fff', borderBottom: '1px solid var(--border)' }}>
+        <div style={{ maxWidth: 1180, margin: '0 auto', padding: '28px 36px 24px' }}>
           {!isExternalUser && (
             <button
               onClick={onBack}
@@ -124,22 +249,21 @@ export default function WorkspacesPage({ onBack, onOpenWorkspace, onToast }: Wor
               <ArrowLeft size={13} /> Back to chat
             </button>
           )}
-          <div className="flex items-end justify-between gap-4 flex-wrap" style={{ marginTop: 10 }}>
-            <div style={{ minWidth: 0 }}>
-              <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 28, color: 'var(--text-primary)', margin: 0, lineHeight: 1.2 }}>
-                Workspaces
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 24, flexWrap: 'wrap', marginTop: 10 }}>
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 36, color: 'var(--navy)', margin: 0, lineHeight: 1.15, letterSpacing: '-0.01em' }}>
+                One workspace per matter
               </h1>
-              <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 6, lineHeight: 1.5, maxWidth: 560 }}>
-                {workspaces.length} workspace{workspaces.length !== 1 ? 's' : ''}
-                {isOrgAdmin ? ' across the organisation' : ' you can access'}.
+              <p style={{ fontSize: 14, color: 'var(--text-muted)', marginTop: 10, lineHeight: 1.55, maxWidth: 720 }}>
+                Each workspace holds documents, chats, and team for one case, deal, or engagement.
               </p>
             </div>
             {canCreate && (
               <button
                 onClick={() => setCreating(true)}
-                style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '10px 18px', borderRadius: 10, backgroundColor: 'var(--navy)', color: 'white', border: 'none', fontSize: 13, fontWeight: 500, cursor: 'pointer', boxShadow: '0 1px 2px rgba(10,36,99,0.15)' }}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '12px 20px', borderRadius: 12, backgroundColor: 'var(--navy)', color: 'white', border: 'none', fontSize: 13, fontWeight: 500, cursor: 'pointer', boxShadow: '0 1px 2px rgba(10,36,99,0.15)' }}
               >
-                <Briefcase size={14} /> New Workspace
+                <Plus size={14} /> New Workspace
               </button>
             )}
           </div>
@@ -147,29 +271,41 @@ export default function WorkspacesPage({ onBack, onOpenWorkspace, onToast }: Wor
       </div>
 
       {/* List area */}
-      <div style={{ maxWidth: 1080, margin: '0 auto', padding: '24px 32px 48px' }}>
-        {/* Search */}
-        <div style={{ position: 'relative', marginBottom: 20 }}>
-          <Search size={14} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search workspaces..."
-            style={{ width: '100%', height: 40, borderRadius: 10, border: '1px solid var(--border)', paddingLeft: 36, fontSize: 13, outline: 'none', boxSizing: 'border-box', fontFamily: "'DM Sans', sans-serif", background: '#fff' }}
-          />
+      <div style={{ maxWidth: 1180, margin: '0 auto', padding: '24px 36px 48px' }}>
+        {/* Toolbar: search + filters */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 22, flexWrap: 'wrap' }}>
+          <div style={{ position: 'relative', flex: '1 1 320px', minWidth: 260 }}>
+            <Search size={14} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search workspaces by matter, client, member, or document…"
+              style={{ width: '100%', height: 44, borderRadius: 12, border: '1px solid var(--border)', paddingLeft: 38, paddingRight: 14, fontSize: 13, outline: 'none', boxSizing: 'border-box', fontFamily: "'DM Sans', sans-serif", background: '#fff' }}
+            />
+          </div>
+          <FilterChip label="Category" value={TYPE_FILTERS.find((o) => o.value === typeFilter)?.label || 'All'} options={TYPE_FILTERS} onChange={setTypeFilter} />
+          <FilterChip label="Sort"     value={SORT_OPTIONS.find((o) => o.value === sortBy)?.label || 'Recent'} options={SORT_OPTIONS} onChange={setSortBy} />
+          {filtersActive && (
+            <button
+              onClick={() => { setTypeFilter('all'); setSortBy('recent'); }}
+              style={{ background: 'none', border: 'none', padding: '6px 8px', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 12 }}
+            >
+              Clear filters
+            </button>
+          )}
         </div>
 
         {filtered.length === 0 ? (
           <EmptyState
-            searchActive={!!search.trim()}
+            searchActive={!!search.trim() || filtersActive}
             canCreate={canCreate}
             onCreate={() => setCreating(true)}
           />
         ) : (
           <div
             style={{
-              display: 'grid', gap: 16,
-              gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
+              display: 'grid', gap: 18,
+              gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))',
             }}
           >
             {filtered.map((w) => (
@@ -181,6 +317,46 @@ export default function WorkspacesPage({ onBack, onOpenWorkspace, onToast }: Wor
             ))}
           </div>
         )}
+
+        {/* Create-from-category footer — categories double as quick-create
+            entry points. Picking one pre-fills the Category field in the
+            Create modal; user can still change it before Continue. */}
+        {canCreate && (
+          <div style={{
+            marginTop: 36, padding: '20px 22px', borderRadius: 14,
+            border: '1px solid var(--border)', background: '#fff',
+            display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap',
+          }}>
+            <div style={{ display: 'flex', flexDirection: 'column', minWidth: 220 }}>
+              <span style={{ fontFamily: "'DM Serif Display', serif", fontSize: 18, color: 'var(--navy)' }}>Create from category</span>
+              <span style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>Pick the category that fits the matter, then fill in the details.</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginLeft: 'auto' }}>
+              {WORKSPACE_CATEGORIES.map((t) => {
+                const Icon = t.icon;
+                return (
+                  <button
+                    key={t.id}
+                    onClick={() => { setPresetCategory(t.id); setCreating(true); }}
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 8,
+                      padding: '9px 14px', borderRadius: 10,
+                      border: '1px solid var(--border)', background: '#fff',
+                      fontSize: 13, fontFamily: "'DM Sans', sans-serif", fontWeight: 500,
+                      color: 'var(--text-primary)', cursor: 'pointer',
+                      transition: 'all 150ms ease',
+                    }}
+                    onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--navy)'; }}
+                    onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border)'; }}
+                  >
+                    <Icon size={14} style={{ color: t.accent }} />
+                    {t.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
 
       {creating && (
@@ -189,9 +365,67 @@ export default function WorkspacesPage({ onBack, onOpenWorkspace, onToast }: Wor
           currentUserName={currentUserName}
           currentUserEmail={currentUserEmail}
           isOrgAdmin={isOrgAdmin}
-          onClose={() => setCreating(false)}
+          presetCategory={presetCategory}
+          onClose={() => { setCreating(false); setPresetCategory(null); }}
           onCreate={handleCreate}
         />
+      )}
+    </div>
+  );
+}
+
+/* ─── FilterChip — toolbar dropdown shared by Type / Status / Sort ─── */
+function FilterChip({ label, value, options, onChange }: {
+  label: string;
+  value: string;
+  options: { value: string; label: string }[];
+  onChange: (val: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div style={{ position: 'relative' }}>
+      <button
+        onClick={() => setOpen((v) => !v)}
+        style={{
+          display: 'inline-flex', alignItems: 'center', gap: 8,
+          padding: '10px 14px', borderRadius: 12,
+          border: '1px solid var(--border)', background: '#fff',
+          fontSize: 13, fontFamily: "'DM Sans', sans-serif", fontWeight: 500,
+          color: 'var(--text-primary)', cursor: 'pointer', whiteSpace: 'nowrap',
+        }}
+      >
+        <span style={{ color: 'var(--text-muted)' }}>{label}:</span>
+        <span>{value}</span>
+        <ChevronDown size={12} style={{ transform: open ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 150ms' }} />
+      </button>
+      {open && (
+        <>
+          <div onClick={() => setOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 50 }} />
+          <div style={{
+            position: 'absolute', top: 'calc(100% + 6px)', left: 0, minWidth: 220,
+            background: '#fff', borderRadius: 12, border: '1px solid var(--border)',
+            boxShadow: '0 12px 32px rgba(0,0,0,0.14)', zIndex: 51, overflow: 'hidden',
+          }}>
+            {options.map((opt) => (
+              <div
+                key={opt.value}
+                onClick={() => { onChange(opt.value); setOpen(false); }}
+                style={{
+                  padding: '10px 14px', cursor: 'pointer', fontSize: 13,
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  color: opt.label === value ? 'var(--text-primary)' : 'var(--text-secondary)',
+                  fontWeight: opt.label === value ? 500 : 400,
+                  background: opt.label === value ? 'var(--ice-warm)' : 'transparent',
+                }}
+                onMouseEnter={(e) => { if (opt.label !== value) (e.currentTarget as HTMLDivElement).style.backgroundColor = 'var(--ice-warm)'; }}
+                onMouseLeave={(e) => { if (opt.label !== value) (e.currentTarget as HTMLDivElement).style.backgroundColor = 'transparent'; }}
+              >
+                <span>{opt.label}</span>
+                {opt.label === value && <Check size={13} style={{ color: 'var(--navy)' }} />}
+              </div>
+            ))}
+          </div>
+        </>
       )}
     </div>
   );
@@ -232,25 +466,27 @@ function EmptyState({ searchActive, canCreate, onCreate }: { searchActive: boole
   );
 }
 
-/* ─── Workspace card ─── */
+/* ─── Workspace card — designer mockup chrome ─────────────────────────── */
 function WorkspaceCard({ workspace, onClick }: { workspace: Workspace; onClick: () => void }) {
   const { documents, members } = workspace;
-  const readyCount = documents.filter((d) => d.status === 'ready').length;
-  const processingCount = documents.filter((d) => d.status === 'processing').length;
+  const practice = inferPracticeArea(workspace);
+  const meta = PRACTICE_META[practice];
+  const Icon = meta.icon;
+  const access = inferAccess(workspace);
 
   return (
     <div
       onClick={onClick}
       style={{
-        padding: '18px 20px', borderRadius: 14, border: '1px solid var(--border)',
-        background: '#fff', cursor: 'pointer',
-        transition: 'all 0.15s', minHeight: 180,
-        display: 'flex', flexDirection: 'column',
+        padding: '20px 22px', borderRadius: 16,
+        border: '1px solid var(--border)', background: '#fff',
+        cursor: 'pointer', transition: 'all 0.15s',
+        display: 'flex', flexDirection: 'column', gap: 14,
       }}
       onMouseEnter={(e) => {
         const el = e.currentTarget as HTMLDivElement;
         el.style.borderColor = 'var(--navy)';
-        el.style.boxShadow = '0 4px 18px rgba(10,36,99,0.08)';
+        el.style.boxShadow = '0 6px 20px rgba(10,36,99,0.08)';
         el.style.transform = 'translateY(-1px)';
       }}
       onMouseLeave={(e) => {
@@ -260,84 +496,97 @@ function WorkspaceCard({ workspace, onClick }: { workspace: Workspace; onClick: 
         el.style.transform = 'translateY(0)';
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 8 }}>
-        <div style={{ width: 38, height: 38, borderRadius: 10, background: 'var(--ice-warm)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-          <Briefcase size={18} style={{ color: 'var(--navy)' }} />
+      {/* Icon tile (left) + practice-area pill (right) */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+        <div style={{
+          width: 42, height: 42, borderRadius: 11,
+          background: meta.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+        }}>
+          <Icon size={20} style={{ color: meta.color }} />
         </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--navy)', lineHeight: 1.3 }}>{workspace.name}</div>
-          <div
-            style={{
-              fontSize: 12, color: 'var(--text-muted)', marginTop: 4,
-              display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
-              overflow: 'hidden', textOverflow: 'ellipsis', lineHeight: 1.5,
-            }}
-          >
-            {workspace.description || <span style={{ fontStyle: 'italic' }}>No description.</span>}
-          </div>
+        <span style={{
+          padding: '4px 10px', borderRadius: 6,
+          background: meta.bg, color: meta.color,
+          fontSize: 10, fontWeight: 700, fontFamily: "'IBM Plex Mono', ui-monospace, monospace",
+          letterSpacing: '0.12em', textTransform: 'uppercase',
+        }}>{meta.label}</span>
+      </div>
+
+      {/* Title + description */}
+      <div>
+        <div style={{ fontFamily: "'DM Serif Display', serif", fontSize: 22, color: 'var(--navy)', lineHeight: 1.2, letterSpacing: '-0.01em' }}>
+          {workspace.name}
+        </div>
+        <div style={{
+          fontSize: 13, color: 'var(--text-muted)', marginTop: 8,
+          display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
+          overflow: 'hidden', textOverflow: 'ellipsis', lineHeight: 1.55,
+        }}>
+          {workspace.description || <span style={{ fontStyle: 'italic' }}>No description.</span>}
         </div>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 'auto', paddingTop: 14 }}>
-        <span className="flex items-center gap-1" style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+      {/* Meta row */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14, fontSize: 11, color: 'var(--text-muted)' }}>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
           <UsersIcon size={12} /> {members.length} member{members.length !== 1 ? 's' : ''}
         </span>
-        <span className="flex items-center gap-1" style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
           <FileText size={12} /> {documents.length} doc{documents.length !== 1 ? 's' : ''}
         </span>
-        <span className="flex items-center gap-1" style={{ fontSize: 11, color: 'var(--text-muted)', marginLeft: 'auto' }}>
-          <Clock size={12} /> Created {relativeFrom(workspace.createdAt)}
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginLeft: 'auto' }}>
+          <Clock size={12} /> Active {relativeFrom(workspace.createdAt)}
         </span>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
-        {/* Member avatars */}
+      {/* Member avatar stack */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <div style={{ display: 'flex' }}>
-          {members.slice(0, 4).map((m, i) => (
+          {members.slice(0, 3).map((m, i) => (
             <div
               key={m.userId}
               title={m.name}
               style={{
-                width: 24, height: 24, borderRadius: '50%',
-                background: '#F0F3F6', color: '#1E3A8A',
+                width: 26, height: 26, borderRadius: '50%',
+                background: '#E5E7F2', color: 'var(--navy)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontSize: 10, fontWeight: 600,
                 border: '2px solid #fff',
                 marginLeft: i === 0 ? 0 : -6,
-                zIndex: 4 - i,
+                zIndex: 3 - i,
               }}
             >
               {initialsOf(m.name)}
             </div>
           ))}
-          {members.length > 4 && (
+          {members.length > 3 && (
             <div
               style={{
-                width: 24, height: 24, borderRadius: '50%',
-                background: 'var(--ice-warm)', color: 'var(--text-secondary)',
+                width: 26, height: 26, borderRadius: '50%',
+                background: '#E5E7F2', color: 'var(--text-secondary)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 9, fontWeight: 600,
+                fontSize: 10, fontWeight: 600,
                 border: '2px solid #fff',
                 marginLeft: -6,
               }}
             >
-              +{members.length - 4}
+              +{members.length - 3}
             </div>
           )}
         </div>
-
-        {/* Doc status pill */}
-        {documents.length > 0 && (
-          processingCount > 0 ? (
-            <span style={{ fontSize: 10, padding: '3px 10px', borderRadius: 999, background: '#FBEED5', color: '#E8A33D', fontWeight: 500, marginLeft: 'auto' }}>
-              {processingCount} Processing
-            </span>
-          ) : (
-            <span style={{ fontSize: 10, padding: '3px 10px', borderRadius: 999, background: '#E7F3E9', color: '#5CA868', fontWeight: 500, marginLeft: 'auto' }}>
-              {readyCount} Ready
-            </span>
-          )
+        {/* External-access warning — designer note inline next to the avatar
+            stack so users see it before drilling in. */}
+        {access.isExternal && (
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginLeft: 'auto', fontSize: 11, color: '#9A3412', fontWeight: 500 }}>
+            <AlertTriangle size={12} /> Client has access
+          </span>
         )}
+      </div>
+
+      {/* Access label */}
+      <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--text-muted)' }}>
+        {access.isExternal ? <Globe size={12} /> : <Check size={12} />}
+        Access: {access.label}
       </div>
     </div>
   );
@@ -349,18 +598,25 @@ interface CreateModalProps {
   currentUserName: string;
   currentUserEmail: string;
   isOrgAdmin: boolean;
+  /** Pre-fill the Category dropdown when the user came in via the
+   *  "Create from category" footer. User can still change it. */
+  presetCategory?: PracticeAreaKey | null;
   onClose: () => void;
-  onCreate: (draft: { name: string; description: string; members: WorkspaceMember[]; documents: WorkspaceDoc[] }) => void;
+  onCreate: (draft: { name: string; description: string; category: PracticeAreaKey; members: WorkspaceMember[]; documents: WorkspaceDoc[] }) => void;
 }
 
-function CreateWorkspaceModal({ currentUserId, currentUserName, currentUserEmail, isOrgAdmin, onClose, onCreate }: CreateModalProps) {
+function CreateWorkspaceModal({ currentUserId, currentUserName, currentUserEmail, isOrgAdmin, presetCategory, onClose, onCreate }: CreateModalProps) {
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  // Category — required. Defaults to the preset (if user came in via a
+  // footer chip) or null. Continue is disabled until both name + category
+  // are set.
+  const [category, setCategory] = useState<PracticeAreaKey | null>(presetCategory || null);
   const [members, setMembers] = useState<WorkspaceMember[]>([]);
   const [docs, setDocs] = useState<WorkspaceDoc[]>([]);
 
-  const canNext1 = name.trim().length > 0;
+  const canNext1 = name.trim().length > 0 && !!category;
 
   const goNext = () => { if (step < 3) setStep((s) => (s + 1) as 1 | 2 | 3); };
   const goBack = () => { if (step > 1) setStep((s) => (s - 1) as 1 | 2 | 3); };
@@ -414,6 +670,8 @@ function CreateWorkspaceModal({ currentUserId, currentUserName, currentUserEmail
               setName={setName}
               description={description}
               setDescription={setDescription}
+              category={category}
+              setCategory={setCategory}
             />
           )}
           {step === 2 && (
@@ -447,7 +705,7 @@ function CreateWorkspaceModal({ currentUserId, currentUserName, currentUserEmail
           <div className="flex items-center gap-2">
             {step >= 2 && (
               <button
-                onClick={step === 3 ? () => onCreate({ name, description, members, documents: docs }) : goNext}
+                onClick={step === 3 ? () => category && onCreate({ name, description, category, members, documents: docs }) : goNext}
                 style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid var(--border)', background: 'white', fontSize: 13, cursor: 'pointer', color: 'var(--text-muted)' }}
               >
                 Skip for now
@@ -468,8 +726,9 @@ function CreateWorkspaceModal({ currentUserId, currentUserName, currentUserEmail
               </button>
             ) : (
               <button
-                onClick={() => onCreate({ name, description, members, documents: docs })}
-                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 20px', borderRadius: 8, border: 'none', background: 'var(--navy)', color: 'white', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}
+                onClick={() => category && onCreate({ name, description, category, members, documents: docs })}
+                disabled={!category}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 20px', borderRadius: 8, border: 'none', background: category ? 'var(--navy)' : '#9CA3AF', color: 'white', fontSize: 13, fontWeight: 500, cursor: category ? 'pointer' : 'not-allowed' }}
               >
                 <Briefcase size={13} /> Create Workspace
               </button>
@@ -482,10 +741,19 @@ function CreateWorkspaceModal({ currentUserId, currentUserName, currentUserEmail
 }
 
 /* ─── Step 1: Details ─── */
-function StepDetails({ name, setName, description, setDescription }: { name: string; setName: (v: string) => void; description: string; setDescription: (v: string) => void }) {
+function StepDetails({ name, setName, description, setDescription, category, setCategory }: {
+  name: string;
+  setName: (v: string) => void;
+  description: string;
+  setDescription: (v: string) => void;
+  category: PracticeAreaKey | null;
+  setCategory: (v: PracticeAreaKey) => void;
+}) {
   const [nameError, setNameError] = useState('');
+  const [catOpen, setCatOpen] = useState(false);
   const inputStyle: React.CSSProperties = { width: '100%', height: 40, border: '1px solid var(--border)', borderRadius: 8, padding: '0 12px', fontSize: 13, outline: 'none', boxSizing: 'border-box', fontFamily: "'DM Sans', sans-serif" };
   const labelStyle: React.CSSProperties = { fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 };
+  const currentCat = category ? WORKSPACE_CATEGORIES.find((c) => c.id === category) : null;
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <div>
@@ -502,6 +770,70 @@ function StepDetails({ name, setName, description, setDescription }: { name: str
           <span style={{ fontSize: 11, color: '#C65454' }}>{nameError}</span>
           <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{name.length}/100</span>
         </div>
+      </div>
+      {/* Category — required. Drives the card chrome accent + filtering. */}
+      <div>
+        <label style={labelStyle}>
+          Category <span style={{ color: '#C65454' }}>*</span>
+        </label>
+        <div style={{ position: 'relative' }}>
+          <button
+            type="button"
+            onClick={() => setCatOpen((v) => !v)}
+            style={{ ...inputStyle, display: 'inline-flex', alignItems: 'center', gap: 8, justifyContent: 'space-between', cursor: 'pointer', textAlign: 'left', background: '#fff' }}
+          >
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+              {currentCat ? (
+                <>
+                  {React.createElement(currentCat.icon, { size: 14, style: { color: currentCat.accent } })}
+                  <span>{currentCat.label}</span>
+                </>
+              ) : (
+                <span style={{ color: 'var(--text-muted)' }}>Select a category…</span>
+              )}
+            </span>
+            <ChevronDown size={14} style={{ color: 'var(--text-muted)', transform: catOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 150ms' }} />
+          </button>
+          {catOpen && (
+            <>
+              <div onClick={() => setCatOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 75 }} />
+              <div style={{
+                position: 'absolute', top: 'calc(100% + 6px)', left: 0, right: 0,
+                background: '#fff', borderRadius: 10,
+                border: '1px solid var(--border)', boxShadow: '0 12px 32px rgba(0,0,0,0.14)',
+                zIndex: 76, overflow: 'hidden', maxHeight: 280, overflowY: 'auto',
+              }}>
+                {WORKSPACE_CATEGORIES.map((c) => {
+                  const Icon = c.icon;
+                  const isCurrent = category === c.id;
+                  return (
+                    <div
+                      key={c.id}
+                      onClick={() => { setCategory(c.id); setCatOpen(false); }}
+                      style={{
+                        padding: '10px 14px', cursor: 'pointer',
+                        display: 'flex', alignItems: 'center', gap: 10,
+                        background: isCurrent ? 'rgba(10, 36, 99, 0.04)' : 'transparent',
+                        fontSize: 13, color: 'var(--text-primary)',
+                      }}
+                      onMouseEnter={(e) => { if (!isCurrent) (e.currentTarget as HTMLDivElement).style.backgroundColor = 'var(--ice-warm)'; }}
+                      onMouseLeave={(e) => { if (!isCurrent) (e.currentTarget as HTMLDivElement).style.backgroundColor = 'transparent'; }}
+                    >
+                      <Icon size={14} style={{ color: c.accent }} />
+                      <span style={{ flex: 1 }}>{c.label}</span>
+                      {isCurrent && <Check size={13} style={{ color: 'var(--navy)' }} />}
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          )}
+        </div>
+        {!category && (
+          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
+            Required — pick what kind of matter this is.
+          </div>
+        )}
       </div>
       <div>
         <label style={labelStyle}>Description</label>

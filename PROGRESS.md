@@ -432,6 +432,60 @@ Reverse chronological. Each entry: *decision — rationale — date*.
 
 ## Last updated
 
+**2026-05-01** — Major designer-led UX refresh across chat surfaces, Workspaces page, and YourVault page. Designer brief came in as 6 mockup screens; implemented to match. Two `do-not-reintroduce` items were consciously reversed (the designer addressed the original objections with explanatory subtitles + a persistent "Current search:" breadcrumb).
+
+**Chat empty state**:
+- New subtitle: "Start with a question, or add documents for context."
+- Single input box: textarea on top + 4-pill row beneath divider (`+ Attach` / Intent / Search Within / Pack)
+- Status line below: `Using {intent} · {scope} · {pack} pack` (gold for pack)
+- Optional box: `Optional · Upload files | Source: ▼ | Pack: ▼` + Quick starts row (Review contract / Summarize / Draft email + More >)
+- Drop tile + merged pill row removed in empty state — Quick Starts row replaces them (More button opens a verb-bucketed overflow popover via `emptyMoreRef` / `isEmptyMoreOpen`)
+
+**Chat populated state**:
+- Gold "Current search:" breadcrumb above the input box (`Current search: attached chat files · {pack name}`)
+- Bottom controls row: `+` attach + Search Within left, pack pill (when active) + intent pill + send right
+- Intent pill carries a bucket-colored dot prefix (DEFAULT gray / ASK & RESEARCH blue / ANALYZE gold / DRAFT green)
+
+**Search Within scope dropdown** (`SearchScopePill` in `ChatView.jsx`):
+- 3 options: File Search / YourVault / Workspaces, each with one-line subtitle
+- Picking YourVault opens a real **doc-picker modal** (search input + list + "Use in chat" CTA per row + "Open YourVault →" footer) via `isVaultPickerModalOpen` state
+- Picking Workspaces is visual-only — no retrieval wired (matter-privilege footgun would resurface if it did)
+- Each input row (empty-state pill row, Optional row, populated-chat) gets its own `isOpen` state (`isScopeOpenInput` / `isScopeOpenOptional`) so two popovers can't render simultaneously
+
+**Intent dropdown**:
+- Selected intent now shows a one-line subtitle ("how it changes the prompt") at the bottom of the dropdown via the new `INTENT_DESCRIPTIONS` map in `src/lib/intents.ts`
+- Bucket section headers carry a colored dot via `BUCKET_COLORS` (DEFAULT/ASK & RESEARCH/ANALYZE/DRAFT)
+- Selected intent pill in the input box carries the same bucket-colored dot prefix
+
+**Knowledge Pack picker — switched from dropdown to modal**:
+- All three pack pills now open a full modal (search input + list with "Use" CTA + "No pack" row + "Manage knowledge packs →" footer) via `isPackPickerModalOpen`
+- Mirrors the YourVault picker modal exactly — consistent picker pattern
+
+**Workspaces page**:
+- Hero: "One workspace per matter" + "Each workspace holds documents, chats, and team for one case, deal, or engagement."
+- Toolbar: search by matter / client / member / document + Category filter + Sort + Clear filters
+- Cards: practice-area icon tile + uppercase pill (LITIGATION / TRUST & ESTATE / CORPORATE / EMPLOYMENT / EXTERNAL / GENERAL — pulled from `workspace.category` if set, else inferred from name keywords); DM Serif title; members + docs + active row; avatar stack; "Client has access" warning when external members present; Access label
+- **Status badge ("Ready: N indexed/shared" / "Needs review: N processing") removed from cards** per PM call — was visual noise; the warning row already conveys access risk
+- **Status filter chip removed from toolbar** — left Type (renamed Category) + Sort
+- **"Create from category" footer** with 6 chips (Litigation Matter / M&A Deal / Trust & Estate / Employment / Client Portal / General) — clicking pre-fills the Category dropdown in the Create modal
+- **Category is required** on the Create Workspace modal Step 1 — Continue is disabled until both `name` AND `category` are set; new `category: WorkspaceCategory` field on `Workspace` type in `src/lib/workspace.ts`
+
+**YourVault page** (`DocumentVaultPanel`):
+- Hero: "Ask across your documents" + subtitle (when at root); folder name + breadcrumb when inside a folder
+- Upload (outline) + New Document (navy) buttons top-right of hero
+- Big rounded gold-bordered Ask-anything bar with sparkle + ⌘K shortcut + example sub-text ("e.g., 'find indemnification clauses across Acme contracts'")
+- Step-numbered toolbar: `1. Visualize` (List/Grid toggle — visual only) · `{N} docs` context · `3. Refine` (collapses Date/Uploader/Type/Sort chips behind a dropdown — chips render only when `openFilterMenu === 'refine'`) · `4. Move` ("Drag a doc into chat" hint)
+- Existing Org-Admin scope tabs (All / Org-wide / Mine) preserved as a slim strip above hero
+- Inspect right rail (selected-doc detail panel) NOT yet shipped — deferred follow-up
+
+**Known regressions / scope cuts**:
+- Vault `+` attach button is back as a small icon-only pill in both empty-state and populated-chat input rows; opens the YourVault picker modal
+- Workspace `inferStatus()` and `STATUS_FILTERS` constants are dead code (still in `WorkspacesPage.tsx`, harmless)
+- YourVault Inspect rail (selected-doc details panel from designer mockup 5) deferred
+- Workspaces scope option in SearchScopePill is visual-only — no cross-workspace retrieval
+
+**Bundle deployed**: TBD (this commit). Production URL: `https://yourai-black.vercel.app/chat`. Verify post-deploy with `curl -s https://yourai-black.vercel.app/chat | grep -oE 'index-[A-Za-z0-9_-]+\.js'`.
+
 **2026-04-30 (evening, into 2026-05-01)** — One long iterative session on the chat empty-state input and intent dropdowns; eight prod deploys. Final shipped state on `yourai/main`:
 
 - **Tile-based home retired**: `/chat/home` deleted; non-external users land directly on `/chat` (General Chat); externals still go to `/chat/workspaces`. `<Navigate to="/chat" replace>` route catches stale bookmarks. `HomeTileLauncher` (~140 lines) + `ArrowRight` alias + sidebar Home item + `onGoHome` prop + `initialView === 'home'` branch + conditional render block all deleted from ChatView.
