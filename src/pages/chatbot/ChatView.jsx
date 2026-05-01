@@ -3523,9 +3523,10 @@ function getScopeOption(id) {
 // + label + one-line subtitle. Per designer note: "Source dropdown is a
 // scope switch, not another start point."
 //
-// Picking "YourVault" sets scope='vault' AND fires `onPickVault()` so the
-// parent can open the existing vault doc picker (because users expect a
-// modal/popover that lets them choose which doc to attach).
+// Picking "YourVault" fires `onPickVault()` to open the doc-picker modal
+// WITHOUT pre-committing scope='vault' — the parent commits scope only
+// when the user actually attaches a doc. (Closing the modal without a
+// pick reverts to the previous scope.) Same logic for "Workspaces".
 function SearchScopePill({ scope, isOpen, setIsOpen, setScope, scopeRef, openUpward = true, compact = false, onPickVault, onPickWorkspaces }) {
   const current = getScopeOption(scope);
   const CurrentIcon = current.icon;
@@ -3570,10 +3571,19 @@ function SearchScopePill({ scope, isOpen, setIsOpen, setScope, scopeRef, openUpw
                 <div
                   key={opt.id}
                   onClick={() => {
-                    setScope(opt.id);
                     setIsOpen(false);
-                    if (opt.id === 'vault' && onPickVault) onPickVault();
-                    if (opt.id === 'workspaces' && onPickWorkspaces) onPickWorkspaces();
+                    if (opt.id === 'vault' && onPickVault) {
+                      // Don't commit scope until the modal returns with a pick.
+                      // The parent commits via setSearchScope('vault') from inside
+                      // the modal's "Use in chat" handler.
+                      onPickVault();
+                      return;
+                    }
+                    if (opt.id === 'workspaces' && onPickWorkspaces) {
+                      onPickWorkspaces();
+                      return;
+                    }
+                    setScope(opt.id);
                   }}
                   style={{
                     display: 'flex', alignItems: 'flex-start', gap: 10,
@@ -4610,9 +4620,11 @@ export default function ChatView({ initialView = 'chat' }) {
     }
 
     // Final assembly — use whichever context source has content. Precedence:
-    //   real uploads (mergedDocContent) → explicit vault Use (vaultSelectionContext)
-    //   → YourVault scope retrieval (vaultScopeContext). We never stack.
-    const effectiveDocContext = mergedDocContent || vaultSelectionContext || vaultScopeContext;
+    //   real uploads (mergedDocContent) → explicit vault Use (vaultSelectionContext).
+    // The earlier `vaultScopeContext` token-overlap retrieval is retired
+    // (ref: CLAUDE.md gotcha #14). Don't reintroduce; if "search across
+    // all my docs" comes back, ship as silent retrieval with citations.
+    const effectiveDocContext = mergedDocContent || vaultSelectionContext;
 
     // (b) When user sends purely an attachment with no typed text, substitute a default question so the Edge guard passes.
     const effectiveQuestion = trimmed || (effectiveDocContext ? 'Please review the attached document(s) and summarise what you find.' : '');
@@ -6035,14 +6047,31 @@ INSTRUCTIONS:
                       color: 'var(--text-muted)', fontWeight: 600, marginBottom: 10,
                     }}>Quick starts</div>
                     {(() => {
-                      const SUGGESTED = getSuggestedPrompts();
-                      const reviewPrompt = SUGGESTED.find(p => p.title === 'Review a contract')?.prompt || '';
-                      const summarisePrompt = SUGGESTED.find(p => p.title === 'Summarise a document')?.prompt || '';
-                      const draftPrompt = SUGGESTED.find(p => p.title === 'Draft an email to counsel')?.prompt || '';
+                      // Prefills inlined here (used to use SUGGESTED.find()
+                      // by title, but title-string drift was the source of
+                      // a regression where the send button stayed disabled
+                      // after a Quick Start click — find returned undefined,
+                      // setInput never fired, input stayed empty, canSend
+                      // false. Inline strings remove that indirection.
                       const QUICK = [
-                        { id: 'contract_review',       label: 'Review contract', icon: FileSearch, prefill: reviewPrompt },
-                        { id: 'document_summarisation', label: 'Summarize',       icon: FileText,   prefill: summarisePrompt },
-                        { id: 'email_letter_drafting', label: 'Draft email',     icon: Mail,       prefill: draftPrompt },
+                        {
+                          id: 'contract_review',
+                          label: 'Review contract',
+                          icon: FileSearch,
+                          prefill: 'Review this contract and flag any one-sided provisions, unusual liability caps, or missing standard protections I should push back on. Structure your response as: 1) high-risk issues, 2) medium-risk issues, 3) recommended redlines.',
+                        },
+                        {
+                          id: 'document_summarisation',
+                          label: 'Summarize',
+                          icon: FileText,
+                          prefill: 'Summarise this document in three sections: (1) Key obligations and deadlines, (2) Risk areas and ambiguities, (3) Recommended next steps. Keep each section under 100 words.',
+                        },
+                        {
+                          id: 'email_letter_drafting',
+                          label: 'Draft email',
+                          icon: Mail,
+                          prefill: 'Draft a professional email to opposing counsel requesting a seven-day extension on the upcoming deadline. Keep the tone courteous but firm, under 120 words, and include a brief reason tied to document review workload.',
+                        },
                       ];
                       return (
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
@@ -6649,7 +6678,7 @@ INSTRUCTIONS:
                     return (
                       <div
                         key={doc.id}
-                        onClick={() => { handleSelectVaultDocument(doc); setIsVaultPickerModalOpen(false); setVaultPickerQuery(''); }}
+                        onClick={() => { handleSelectVaultDocument(doc); setSearchScope('vault'); setIsVaultPickerModalOpen(false); setVaultPickerQuery(''); }}
                         style={{
                           padding: '12px 24px', cursor: 'pointer',
                           display: 'flex', alignItems: 'center', gap: 12,
@@ -6670,7 +6699,7 @@ INSTRUCTIONS:
                           </div>
                         </div>
                         <button
-                          onClick={(e) => { e.stopPropagation(); handleSelectVaultDocument(doc); setIsVaultPickerModalOpen(false); setVaultPickerQuery(''); }}
+                          onClick={(e) => { e.stopPropagation(); handleSelectVaultDocument(doc); setSearchScope('vault'); setIsVaultPickerModalOpen(false); setVaultPickerQuery(''); }}
                           style={{ padding: '7px 14px', borderRadius: 8, background: 'var(--navy)', color: '#fff', border: 'none', fontSize: 12, fontWeight: 500, cursor: 'pointer', flexShrink: 0 }}
                         >
                           {isCurrent ? 'Attached' : 'Use in chat'}
