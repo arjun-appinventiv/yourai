@@ -14,9 +14,11 @@
  *   borderLeft, scrollable body.
  */
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { X, Maximize2, Minimize2, Copy, Check } from 'lucide-react';
-import IntentCard, { isCardIntent } from './cards/IntentCard';
+import ReactMarkdown from 'react-markdown';
+import { isCardIntent } from './cards/IntentCard';
+import { cardDataToMarkdown } from '../../lib/cardToMarkdown';
 
 const INTENT_LABELS: Record<string, string> = {
   document_summarisation: 'Summary',
@@ -53,12 +55,15 @@ export default function IntentArtifactPanel({ intent, data, title, onClose }: Pr
   const eyebrow = INTENT_EYEBROWS[intent] || (INTENT_LABELS[intent] ? INTENT_LABELS[intent].toUpperCase() : 'ARTIFACT');
   const label = title || INTENT_LABELS[intent] || 'Artifact';
 
+  // Markdown report — generated once per data change. Looks like a memo
+  // / Notion doc / Word file rather than a styled UI component.
+  const markdown = useMemo(() => cardDataToMarkdown(intent, data), [intent, data]);
+
   const handleCopy = async () => {
     try {
-      // Best-effort copy of the structured data (JSON).
-      // Real "rich" copy from the rendered card body is a follow-up.
-      const text = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
-      await navigator.clipboard.writeText(text);
+      // Copy the markdown report — paste into Notion / docs / email
+      // and it renders as expected.
+      await navigator.clipboard.writeText(markdown || '');
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     } catch { /* ignore */ }
@@ -144,13 +149,82 @@ export default function IntentArtifactPanel({ intent, data, title, onClose }: Pr
         </button>
       </div>
 
-      {/* Body — scrollable, hosts the IntentCard */}
+      {/* Body — scrollable, renders the JSON-card data as a clean
+          markdown report (looks like a memo / Notion doc / Word file). */}
       <div style={{
         flex: 1, overflowY: 'auto',
-        padding: fullscreen ? '24px max(24px, calc(50vw - 440px))' : '20px 18px',
-        background: '#FDFBF5',
+        padding: fullscreen ? '32px max(32px, calc(50vw - 360px))' : '28px 32px',
+        background: '#FFFFFF',
       }}>
-        <IntentCard intent={intent as any} data={data as any} />
+        <div style={{
+          maxWidth: 720, margin: '0 auto',
+          fontFamily: "'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif",
+          fontSize: 14, lineHeight: 1.7, color: 'var(--text-primary)',
+        }}>
+          <ReactMarkdown
+            components={{
+              h1: ({ children }) => (
+                <h1 style={{
+                  fontFamily: "'DM Serif Display', Georgia, serif",
+                  fontSize: 28, fontWeight: 400, color: 'var(--navy)',
+                  margin: '0 0 12px 0', lineHeight: 1.2, letterSpacing: '-0.01em',
+                }}>{children}</h1>
+              ),
+              h2: ({ children }) => (
+                <h2 style={{
+                  fontSize: 16, fontWeight: 600, color: 'var(--navy)',
+                  margin: '28px 0 10px 0', paddingBottom: 6,
+                  borderBottom: '1px solid var(--border)', letterSpacing: '-0.005em',
+                }}>{children}</h2>
+              ),
+              h3: ({ children }) => (
+                <h3 style={{
+                  fontSize: 14, fontWeight: 600, color: 'var(--text-primary)',
+                  margin: '20px 0 6px 0',
+                }}>{children}</h3>
+              ),
+              p: ({ children }) => (
+                <p style={{ margin: '0 0 12px 0', lineHeight: 1.7 }}>{children}</p>
+              ),
+              ul: ({ children }) => (
+                <ul style={{ paddingLeft: 22, margin: '8px 0 14px 0' }}>{children}</ul>
+              ),
+              ol: ({ children }) => (
+                <ol style={{ paddingLeft: 22, margin: '8px 0 14px 0' }}>{children}</ol>
+              ),
+              li: ({ children }) => (
+                <li style={{ marginBottom: 4, lineHeight: 1.65 }}>{children}</li>
+              ),
+              strong: ({ children }) => (
+                <strong style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{children}</strong>
+              ),
+              em: ({ children }) => (
+                <em style={{ fontStyle: 'italic', color: 'var(--text-secondary)' }}>{children}</em>
+              ),
+              blockquote: ({ children }) => (
+                <blockquote style={{
+                  margin: '14px 0', padding: '10px 16px',
+                  borderLeft: '3px solid var(--border)',
+                  background: '#FAFAF6', color: 'var(--text-secondary)',
+                  fontStyle: 'normal',
+                }}>{children}</blockquote>
+              ),
+              code: ({ children }) => (
+                <code style={{
+                  fontFamily: "'IBM Plex Mono', ui-monospace, monospace",
+                  fontSize: 12.5, background: '#F4F4EE',
+                  padding: '1px 5px', borderRadius: 3,
+                  color: 'var(--text-primary)',
+                }}>{children}</code>
+              ),
+              hr: () => (
+                <hr style={{ border: 'none', borderTop: '1px solid var(--border)', margin: '24px 0' }} />
+              ),
+            }}
+          >
+            {markdown || '*No content.*'}
+          </ReactMarkdown>
+        </div>
       </div>
     </div>
   );
