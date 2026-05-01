@@ -4294,6 +4294,47 @@ export default function ChatView({ initialView = 'chat' }) {
     const trimmed = (text || '').trim();
     if ((!trimmed && pendingAttachments.length === 0) || isTyping) return;
 
+    // ─── Greeting + card-intent shortcut ────────────────────────────────
+    // When a user picks a card intent (clause_comparison, risk_assessment,
+    // …) and types a short greeting like "hi" with no document attached,
+    // the Edge would force JSON via response_format and emit an empty
+    // schema envelope — the card empty-state would then render. That's
+    // technically correct but reads as "the bot ignored my hello." User
+    // ask: chit-chat warmly and tell me what to upload.
+    //
+    // Detection: ≤ 30 chars AND matches a greeting pattern (or no real
+    // verbs / questions). Card intent. No pendingAttachments / vault doc /
+    // vault folder. We inject a tailored prose reply and skip the Edge
+    // round-trip entirely.
+    const GREETING_RE = /^(hi+|hey+|hello+|yo+|hola|sup|good\s*(morning|afternoon|evening)|gm|ga|ge|howdy|greetings?|ok+|okay|thanks?|thank\s*you|thx|ty|cool|nice|got\s*it)[!.,\s]*$/i;
+    const isGreeting = trimmed.length <= 30 && GREETING_RE.test(trimmed.replace(/[.!?]+$/g, '').trim());
+    const hasAnyDoc = pendingAttachments.length > 0
+      || !!activeVaultDocument || !!activeVaultFolder
+      || !!(sessionDocContext?.docNames || []).length;
+    if (isGreeting && isCardIntent(activeIntent) && !hasAnyDoc) {
+      const INTENT_GREETING_REPLIES = {
+        document_summarisation: "Hi! I can summarise documents — upload one using the **+** button and I'll break it down by key obligations, risk areas, and next steps.",
+        clause_comparison:      "Hi! I do clause-by-clause comparisons. Upload **two** documents (NDAs, agreements, redlines) using the **+** button and I'll lay them side-by-side with deltas highlighted.",
+        case_law_analysis:      "Hi! I can analyse case law. Upload the cited decision (or paste the citation) and I'll pull facts, holding, reasoning, and disposition.",
+        legal_research:         "Hi! I can run a research brief. Tell me what legal question you're researching — issue, jurisdiction, fact pattern — and I'll pull authorities and key holdings.",
+        risk_assessment:        "Hi! I can do a risk assessment. Upload the contract (or memo / lease / agreement) using the **+** button and I'll flag findings by severity with mitigations.",
+        clause_analysis:        "Hi! I can analyse clauses. Upload the contract using the **+** button and I'll grade each clause by risk priority with quoted language.",
+        timeline_extraction:    "Hi! I can extract timelines. Upload a document (or paste dated content) and I'll build a chronological timeline of every dated event.",
+        find_document:          "Hi! I can find documents in YourVault. Tell me what you're looking for — by name, file type, or what's inside.",
+      };
+      const reply = INTENT_GREETING_REPLIES[activeIntent] || "Hi! Tell me what you'd like to do — upload a document, ask a legal question, or pick a different mode.";
+      if (showEmptyState) setShowEmptyState(false);
+      const userMsg = { id: Date.now(), sender: 'user', content: trimmed, timestamp: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) };
+      const botMsg  = { id: Date.now() + 1, sender: 'bot', content: reply, timestamp: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }), sourceBadge: null };
+      setMessages((prev) => [...prev, userMsg, botMsg]);
+      setInput('');
+      setSuggestedIntent(null);
+      setSuggestedIntents([]);
+      setDismissedSuggestion(null);
+      if (inputRef.current) inputRef.current.style.height = 'auto';
+      return;
+    }
+
     // ─── Dev-only slash commands to preview intent cards with mock data ───
     // /demo-summary, /demo-comparison, /demo-casebrief, /demo-research
     // Lets PM/QA render any card without needing a live backend that
@@ -6296,9 +6337,20 @@ INSTRUCTIONS:
                  "Evidence stays visible: answer + citations + file pills" →
                  attachment chips render above the input (existing block). */
               <>
-                {/* Current search breadcrumb — gold-tinted, sits 8 px above the input box. */}
+                {/* Current search breadcrumb — only renders when there is
+                    something concrete to surface. The default scope ('files')
+                    + zero attachments + no pack would otherwise read as
+                    "Current search: attached chat files" while the chat has
+                    nothing attached, which lies. */}
                 {(() => {
-                  const scopeText = searchScope === 'files' ? 'attached chat files' : getScopeOption(searchScope).label;
+                  const hasAttachments = pendingAttachments.length > 0
+                    || !!activeVaultDocument || !!activeVaultFolder
+                    || (sessionDocContext?.docNames || []).length > 0;
+                  const showBreadcrumb = hasAttachments || !!activeKnowledgePack || searchScope !== 'files';
+                  if (!showBreadcrumb) return null;
+                  const scopeText = searchScope === 'files'
+                    ? 'attached chat files'
+                    : getScopeOption(searchScope).label;
                   return (
                     <div style={{
                       display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap',
@@ -6313,10 +6365,15 @@ INSTRUCTIONS:
                         <span style={{ width: 4, height: 4, borderRadius: '50%', background: '#C9A84C' }} />
                       </span>
                       <span>Current search:</span>
-                      <span style={{ color: '#C9A84C', fontWeight: 500 }}>{scopeText}</span>
+                      {hasAttachments && (
+                        <span style={{ color: '#C9A84C', fontWeight: 500 }}>{scopeText}</span>
+                      )}
+                      {!hasAttachments && searchScope !== 'files' && (
+                        <span style={{ color: '#C9A84C', fontWeight: 500 }}>{scopeText}</span>
+                      )}
                       {activeKnowledgePack && (
                         <>
-                          <span style={{ color: 'var(--text-muted)' }}>·</span>
+                          {(hasAttachments || searchScope !== 'files') && <span style={{ color: 'var(--text-muted)' }}>·</span>}
                           <span style={{ color: '#C9A84C', fontWeight: 500 }}>{activeKnowledgePack.name}</span>
                         </>
                       )}
