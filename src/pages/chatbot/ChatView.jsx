@@ -24,6 +24,7 @@ import WorkflowsPanel from '../../components/chat/WorkflowsPanel';
 import WorkflowBuilder from '../../components/chat/WorkflowBuilder';
 import PreRunModal from '../../components/chat/PreRunModal';
 import WorkflowRunPanel from '../../components/chat/WorkflowRunPanel';
+import IntentArtifactPanel from '../../components/chat/IntentArtifactPanel';
 import WorkflowProgressCard from '../../components/chat/WorkflowProgressCard';
 import WorkflowReportCard from '../../components/chat/WorkflowReportCard';
 import {
@@ -3159,7 +3160,7 @@ function AlreadyRunningAlert({ activeName, currentStep, total, onClose }) {
   );
 }
 
-function MessageBubble({ msg }) {
+function MessageBubble({ msg, onOpenArtifact, isActiveArtifact }) {
   const isBot = msg.sender === 'bot';
 
   // Workflow messages render the progress card + (on complete) the report.
@@ -3265,13 +3266,110 @@ function MessageBubble({ msg }) {
             // either pre-parsed cardData or JSON-parseable content, render
             // the dedicated card. Any parse or shape failure falls through
             // to the existing ReactMarkdown renderer — never crash.
+            //
+            // Card-intent results (Risk Memo, Summary, Comparison, etc.)
+            // now open in the right-side IntentArtifactPanel instead of
+            // rendering inline. The chat bubble shows a compact preview
+            // chip; clicking it opens the panel anchored to that message.
+            // Only find_document keeps its FileResultsCard inline — search
+            // results read better in the conversation flow.
             (() => {
+              const ARTIFACT_LABELS = {
+                document_summarisation: 'Summary',
+                clause_comparison:      'Clause comparison',
+                case_law_analysis:      'Case brief',
+                legal_research:         'Research brief',
+                risk_assessment:        'Risk memo',
+                clause_analysis:        'Clause analysis',
+                timeline_extraction:    'Timeline',
+              };
+              const ARTIFACT_SUBTITLES = {
+                document_summarisation: (d) => d?.documentName || d?.matterName || 'Sectioned takeaways',
+                clause_comparison:      (d) => d?.matterName || (Array.isArray(d?.documents) ? `${d.documents.length} documents` : 'Side-by-side'),
+                case_law_analysis:      (d) => d?.caseName || d?.parties || d?.matterName || 'Facts · Holding · Reasoning',
+                legal_research:         (d) => d?.question || d?.matterName || 'Authorities & holdings',
+                risk_assessment:        (d) => d?.matterName || d?.documentName || `${(d?.findings?.length) || 0} findings`,
+                clause_analysis:        (d) => d?.documentName || d?.matterName || `${(d?.clauses?.length) || 0} clauses`,
+                timeline_extraction:    (d) => d?.matterName || `${(d?.events?.length) || 0} events`,
+              };
+              const renderArtifactChip = (data) => {
+                const label = ARTIFACT_LABELS[msg.intent] || 'Artifact';
+                const subtitle = (ARTIFACT_SUBTITLES[msg.intent] && ARTIFACT_SUBTITLES[msg.intent](data)) || '';
+                return (
+                  <button
+                    onClick={() => onOpenArtifact && onOpenArtifact(msg.id)}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 12,
+                      width: '100%', textAlign: 'left',
+                      padding: '12px 14px', borderRadius: 12,
+                      background: isActiveArtifact ? 'rgba(10, 36, 99, 0.06)' : '#fff',
+                      border: '1px solid ' + (isActiveArtifact ? 'var(--navy)' : 'var(--border)'),
+                      cursor: 'pointer', transition: 'all 150ms ease',
+                      fontFamily: "'DM Sans', sans-serif",
+                    }}
+                    onMouseEnter={(e) => { if (!isActiveArtifact) (e.currentTarget).style.borderColor = 'var(--navy)'; }}
+                    onMouseLeave={(e) => { if (!isActiveArtifact) (e.currentTarget).style.borderColor = 'var(--border)'; }}
+                  >
+                    {/* Icon tile */}
+                    <span style={{
+                      width: 36, height: 36, borderRadius: 10,
+                      background: 'var(--ice-warm)',
+                      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                      flexShrink: 0,
+                    }}>
+                      <FileText size={16} style={{ color: 'var(--navy)' }} />
+                    </span>
+                    {/* Title + subtitle */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{
+                          fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase',
+                          color: 'var(--text-muted)', fontFamily: "'IBM Plex Mono', ui-monospace, monospace",
+                        }}>{label}</span>
+                        {isActiveArtifact && (
+                          <span style={{
+                            display: 'inline-flex', alignItems: 'center', gap: 4,
+                            fontSize: 10, fontWeight: 600, color: 'var(--navy)',
+                            padding: '2px 8px', borderRadius: 999, background: 'rgba(10, 36, 99, 0.10)',
+                          }}>
+                            <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--navy)' }} />
+                            Open
+                          </span>
+                        )}
+                      </div>
+                      <div style={{
+                        fontFamily: "'DM Serif Display', serif", fontSize: 16,
+                        color: 'var(--navy)', lineHeight: 1.25,
+                        marginTop: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                      }}>
+                        {subtitle || label}
+                      </div>
+                    </div>
+                    {/* Open arrow */}
+                    <span style={{
+                      flexShrink: 0, fontSize: 12, color: 'var(--text-muted)',
+                      display: 'inline-flex', alignItems: 'center', gap: 4,
+                    }}>
+                      {isActiveArtifact ? 'Viewing' : 'Open'} <ArrowUp size={12} style={{ transform: 'rotate(45deg)' }} />
+                    </span>
+                  </button>
+                );
+              };
+
+              // find_document keeps its inline list rendering.
+              if (msg.intent === 'find_document') {
+                if (msg.cardData) return <IntentCard intent={msg.intent} data={msg.cardData} />;
+                const parsed = tryParseCardData(msg.content);
+                if (parsed) return <IntentCard intent={msg.intent} data={parsed} />;
+              }
+
+              // Other card intents → preview chip (panel renders the full card).
               if (msg.cardData && isCardIntent(msg.intent)) {
-                return <IntentCard intent={msg.intent} data={msg.cardData} />;
+                return renderArtifactChip(msg.cardData);
               }
               if (isCardIntent(msg.intent)) {
                 const parsed = tryParseCardData(msg.content);
-                if (parsed) return <IntentCard intent={msg.intent} data={parsed} />;
+                if (parsed) return renderArtifactChip(parsed);
               }
               return (
                 <ReactMarkdown
@@ -3921,6 +4019,12 @@ export default function ChatView({ initialView = 'chat' }) {
   //   runPanelFocusId   runId? → auto-expand this run on mount (e.g. the
   //                              one just started from PreRunModal)
   const [runPanelOpen, setRunPanelOpen] = useState(false);
+  // ─── Intent Artifact panel — Claude-style right rail ───
+  // Card-intent results (Risk Memo, Clause Analysis, Summary, etc.) now
+  // render inside this panel instead of inline in chat. find_document
+  // keeps its FileResultsCard inline. Tracks the message id whose
+  // cardData is currently open in the panel.
+  const [activeArtifactMsgId, setActiveArtifactMsgId] = useState(null);
   const [runPanelFocusId, setRunPanelFocusId] = useState(null);
   const [workflowCount, setWorkflowCount] = useState(0);
   const [runningWorkflow, setRunningWorkflow] = useState(null);
@@ -4356,6 +4460,11 @@ export default function ChatView({ initialView = 'chat' }) {
         sourceBadge: null,
       };
       setMessages((prev) => [...prev, userMsg, botMsg]);
+      // Auto-open the artifact panel for demo card-intents too
+      // (find_document keeps its inline list).
+      if (intent !== 'find_document') {
+        setActiveArtifactMsgId(botMsg.id);
+      }
       setInput('');
       if (inputRef.current) inputRef.current.style.height = 'auto';
       return;
@@ -4944,6 +5053,11 @@ INSTRUCTIONS:
         sessionKbSnapshotId: sessionState.sessionKbSnapshotId,
       };
       setMessages((prev) => [...prev, botMsg]);
+      // Auto-open the artifact side panel for card-intent responses
+      // (skip find_document — its results read better inline as a list).
+      if (cardData && isCardIntent(botIntent) && botIntent !== 'find_document') {
+        setActiveArtifactMsgId(botMsg.id);
+      }
       setIsTyping(false);
       setStreamingContent('');
 
@@ -5593,7 +5707,14 @@ INSTRUCTIONS:
                   </div>
                 );
               })()}
-              {messages.map((msg) => <MessageBubble key={msg.id} msg={msg} />)}
+              {messages.map((msg) => (
+                <MessageBubble
+                  key={msg.id}
+                  msg={msg}
+                  onOpenArtifact={(id) => setActiveArtifactMsgId(id)}
+                  isActiveArtifact={activeArtifactMsgId === msg.id}
+                />
+              ))}
               {/* Streaming response — shows tokens as they arrive */}
               {isTyping && streamingContent && (
                 <MessageBubble msg={{ id: 'streaming', sender: 'bot', content: streamingContent, timestamp: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) }} />
@@ -6690,6 +6811,24 @@ INSTRUCTIONS:
           onClose={() => { setRunPanelOpen(false); setRunPanelFocusId(null); }}
         />
       )}
+
+      {/* ─── Intent Artifact panel — Claude-style right rail for card
+          intents (Risk Memo, Summary, Comparison, Case Brief, Research,
+          Clause Analysis, Timeline). Sits as a sibling of chat-main so
+          the chat shrinks when open. find_document stays inline. ─── */}
+      {(() => {
+        if (!activeArtifactMsgId) return null;
+        if (showTeamPage || showWorkspacesPanel || showWorkflowsPanel || editingWorkflow || showDocumentVaultPanel || showKnowledgePacksPanel) return null;
+        const artifactMsg = messages.find((m) => m.id === activeArtifactMsgId);
+        if (!artifactMsg || !artifactMsg.cardData || !isCardIntent(artifactMsg.intent) || artifactMsg.intent === 'find_document') return null;
+        return (
+          <IntentArtifactPanel
+            intent={artifactMsg.intent}
+            data={artifactMsg.cardData}
+            onClose={() => setActiveArtifactMsgId(null)}
+          />
+        );
+      })()}
 
       {/* ─── YourVault doc-picker modal — opened when user picks "YourVault"
           from the SearchScopePill on the chat input. Search-first list of
