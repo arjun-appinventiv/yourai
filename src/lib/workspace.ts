@@ -44,10 +44,24 @@ export interface WorkspaceDoc {
   error?: string;
 }
 
+/** Workspace category — user picks one when creating a workspace.
+ *  Maps to a practice-area-style label + accent color. Required.
+ *  Values match the keys in WorkspacesPage.PRACTICE_META. */
+export type WorkspaceCategory =
+  | 'LITIGATION'
+  | 'TRUST_ESTATE'
+  | 'CORPORATE'
+  | 'EMPLOYMENT'
+  | 'EXTERNAL'
+  | 'GENERAL';
+
 export interface Workspace {
   id: string;
   name: string;
   description: string;
+  /** Picked at creation time; required. Older mock workspaces without
+   *  this field fall back to inferring from the name. */
+  category?: WorkspaceCategory;
   createdBy: string;           // userId of owner
   createdAt: string;
   /** Soft-delete flag. 30-day retention applies when set. */
@@ -114,6 +128,10 @@ export function listWorkspacesForUser(userId: string, role: Role): Workspace[] {
 export interface NewWorkspaceInput {
   name: string;
   description?: string;
+  /** Required at the UI layer (Create modal blocks Continue without it).
+   *  Typed optional here because the API will validate; older callers
+   *  that don't supply it just get an undefined category. */
+  category?: WorkspaceCategory;
   createdBy: string;
   createdByName: string;
   createdByEmail: string;
@@ -142,6 +160,7 @@ export function createWorkspace(input: NewWorkspaceInput): Workspace {
     id: `ws-${now.getTime()}`,
     name: input.name.trim(),
     description: (input.description || '').trim(),
+    category: input.category,
     createdBy: input.createdBy,
     createdAt: today,
     deletedAt: null,
