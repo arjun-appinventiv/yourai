@@ -46,7 +46,12 @@ export default function RiskMemoCard({ data }: { data: RiskMemoCardData }) {
   const lows  = findings.filter((f) => f.severity === 'low');
 
   // Empty-state: schema-forced JSON with no contract supplied.
-  const isEmpty = findings.length === 0 && !data?.matterName?.trim() && !data?.executiveSummary?.trim() && !data?.documentName?.trim();
+  // Trigger on the strongest signal — no document AND no findings — even
+  // if the LLM hallucinated a generic matterName or executiveSummary
+  // (it tends to fabricate "Legal Inquiry" / "general legal inquiry"
+  // for trivial prompts like "Hi"). The card without findings or a
+  // document is functionally useless; render the upload prompt instead.
+  const isEmpty = findings.length === 0 && !data?.documentName?.trim() && !data?.highlightQuote?.trim();
   if (isEmpty) {
     return (
       <EditorialShell>
