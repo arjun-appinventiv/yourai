@@ -75,12 +75,12 @@ export default function IntentArtifactPanel({ intent, data, title, onClose }: Pr
     <div
       style={fullscreen ? {
         position: 'fixed', inset: 0, zIndex: 90,
-        background: '#FDFBF5',
+        background: '#FFFFFF',
         display: 'flex', flexDirection: 'column',
         boxShadow: '0 0 0 1px var(--border)',
       } : {
         width: 540, flexShrink: 0,
-        background: '#FDFBF5',
+        background: '#FFFFFF',
         borderLeft: '1px solid var(--border)',
         display: 'flex', flexDirection: 'column',
         minHeight: 0,
@@ -105,7 +105,7 @@ export default function IntentArtifactPanel({ intent, data, title, onClose }: Pr
         {/* Copy */}
         <button
           onClick={handleCopy}
-          title="Copy as JSON"
+          title="Copy as Markdown"
           style={{
             display: 'inline-flex', alignItems: 'center', gap: 6,
             padding: '6px 10px', borderRadius: 8,
