@@ -72,7 +72,7 @@ Deployed at `yourai-black.vercel.app` (production main deploys from the `yourai`
 /vercel.json                   Route rewrites for SPA + Edge functions.
 CLAUDE.md                      This file — auto-loaded each session.
 PROGRESS.md                    Living state — read each session.
-README.md                      Lovable-generated clone/dev instructions.
+README.md                      Clone/dev instructions.
 YourAI-Test-Suite.md           QA test spec (627 lines, dated 2026-04-14).
 ```
 

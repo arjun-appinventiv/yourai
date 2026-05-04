@@ -3261,57 +3261,53 @@ function MessageBubble({ msg, onOpenArtifact, isActiveArtifact, onConfirmAction 
           </div>
         )}
         <div style={{ fontSize: 14, lineHeight: 1.6, color: 'var(--text-primary)', wordBreak: 'break-word' }}>
-          {/* Confirmation message: doc-source picker (use attached vs upload new) */}
-          {isBot && msg.confirmation && msg.confirmation.kind === 'use_attached_or_new' && (
-            <div style={{
-              padding: '14px 16px', borderRadius: 12,
-              background: 'var(--ice-warm)', border: '1px solid var(--border)',
-            }}>
-              <div style={{ fontSize: 14, color: 'var(--text-primary)', lineHeight: 1.6 }}>
-                I see you have <strong>{msg.confirmation.docNames.length}</strong>{' '}
-                {msg.confirmation.docNames.length === 1 ? 'document' : 'documents'} attached:
+          {/* Confirmation message: doc-source picker (use attached vs upload new).
+              Rendered as plain prose with two inline text-link actions —
+              looks like part of the chat conversation, not a UI card. */}
+          {isBot && msg.confirmation && msg.confirmation.kind === 'use_attached_or_new' && (() => {
+            const names = msg.confirmation.docNames || [];
+            const headDocs = names.slice(0, 3);
+            const more = names.length - headDocs.length;
+            const docList = headDocs.map((n, i) => (
+              <React.Fragment key={i}>
+                <strong style={{ fontWeight: 600 }}>{n}</strong>
+                {i < headDocs.length - 1 ? ', ' : ''}
+              </React.Fragment>
+            ));
+            return (
+              <div style={{ fontSize: 14, color: 'var(--text-primary)', lineHeight: 1.7 }}>
+                <p style={{ margin: '0 0 10px 0' }}>
+                  I see you have {names.length === 1 ? '' : <><strong>{names.length}</strong> documents attached: </>}
+                  {names.length === 1 ? <><strong>{names[0]}</strong> attached.</> : docList}
+                  {more > 0 && <> and <strong>{more} more</strong></>}
+                  {names.length > 1 && '.'}
+                  {' '}
+                  Should I run <strong>{msg.confirmation.intentLabel}</strong> on {names.length === 1 ? 'this document' : 'these'}, or would you like to upload a new one?
+                </p>
+                <p style={{ margin: 0, fontSize: 13, color: 'var(--text-secondary)' }}>
+                  <a
+                    onClick={() => onConfirmAction && onConfirmAction({ kind: 'use_attached', message: msg.confirmation.pendingMessage, msgId: msg.id })}
+                    style={{
+                      color: 'var(--navy)', textDecoration: 'underline',
+                      cursor: 'pointer', fontWeight: 500,
+                    }}
+                  >
+                    Yes, use {names.length === 1 ? 'it' : 'them'}
+                  </a>
+                  <span style={{ color: 'var(--text-muted)' }}>{'  ·  '}</span>
+                  <a
+                    onClick={() => onConfirmAction && onConfirmAction({ kind: 'upload_new', msgId: msg.id })}
+                    style={{
+                      color: 'var(--text-secondary)', textDecoration: 'underline',
+                      cursor: 'pointer', fontWeight: 500,
+                    }}
+                  >
+                    I'll upload a new one
+                  </a>
+                </p>
               </div>
-              <ul style={{ margin: '8px 0 12px 18px', padding: 0 }}>
-                {msg.confirmation.docNames.slice(0, 6).map((n, i) => (
-                  <li key={i} style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 2 }}>
-                    {n}
-                  </li>
-                ))}
-                {msg.confirmation.docNames.length > 6 && (
-                  <li style={{ fontSize: 12, color: 'var(--text-muted)', listStyle: 'none' }}>
-                    + {msg.confirmation.docNames.length - 6} more
-                  </li>
-                )}
-              </ul>
-              <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 12, lineHeight: 1.55 }}>
-                Should I run <strong>{msg.confirmation.intentLabel}</strong> on these, or would you like to upload a new document?
-              </div>
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                <button
-                  onClick={() => onConfirmAction && onConfirmAction({ kind: 'use_attached', message: msg.confirmation.pendingMessage, msgId: msg.id })}
-                  style={{
-                    padding: '8px 14px', borderRadius: 8,
-                    background: 'var(--navy)', color: '#fff', border: 'none',
-                    fontSize: 13, fontWeight: 500, cursor: 'pointer',
-                    fontFamily: "'DM Sans', sans-serif",
-                  }}
-                >
-                  Use attached
-                </button>
-                <button
-                  onClick={() => onConfirmAction && onConfirmAction({ kind: 'upload_new', msgId: msg.id })}
-                  style={{
-                    padding: '8px 14px', borderRadius: 8,
-                    background: '#fff', color: 'var(--text-primary)', border: '1px solid var(--border)',
-                    fontSize: 13, fontWeight: 500, cursor: 'pointer',
-                    fontFamily: "'DM Sans', sans-serif",
-                  }}
-                >
-                  Upload new
-                </button>
-              </div>
-            </div>
-          )}
+            );
+          })()}
           {isBot && !msg.confirmation && (
             // Intent cards: if this bot message carries a known intent and
             // either pre-parsed cardData or JSON-parseable content, render
