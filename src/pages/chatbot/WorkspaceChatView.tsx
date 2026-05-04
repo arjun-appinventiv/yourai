@@ -17,7 +17,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import {
   ArrowLeft, ArrowUp, Briefcase, ChevronDown, Clock, FileText,
-  Lock, MessageSquare, Plus, Search, Settings as SettingsIcon,
+  Lock, LogOut, MessageSquare, Plus, Search, Settings as SettingsIcon,
   Sparkles, Trash2, Users as UsersIcon, X, UploadCloud, Database,
   AlertCircle, AlertTriangle, Check, Loader,
 } from 'lucide-react';
@@ -107,7 +107,7 @@ const PROMPT_SETS = {
 export default function WorkspaceChatView() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { operator } = useAuth();
+  const { operator, logout } = useAuth();
   const { currentRole, isOrgAdmin, isExternalUser } = useRole();
 
   const currentUserId = operator?.id || 'user-ryan';
@@ -121,7 +121,15 @@ export default function WorkspaceChatView() {
       return registered[email]?.user?.name || '';
     } catch { return ''; }
   })() || 'there';
+  const currentUserEmail = operator?.email || (() => {
+    try { return localStorage.getItem('yourai_current_email') || ''; } catch { return ''; }
+  })();
   const firstName = currentUserName.split(' ')[0] || 'there';
+
+  const handleSignOut = async () => {
+    try { await logout(); } catch { /* ignore */ }
+    navigate('/chat/login');
+  };
 
   const [workspace, setWorkspace] = useState<Workspace | null>(null);
   const [threads, setThreads] = useState<WorkspaceThread[]>([]);
@@ -602,6 +610,8 @@ export default function WorkspaceChatView() {
         threads={threads}
         activeThreadId={activeThreadId}
         currentUserId={currentUserId}
+        currentUserName={currentUserName}
+        currentUserEmail={currentUserEmail}
         isOrgAdmin={isOrgAdmin}
         canEditKB={canEditWorkspaceKB(workspace, currentUserId, isOrgAdmin)}
         showThreadSearch={showThreadSearch}
@@ -618,6 +628,7 @@ export default function WorkspaceChatView() {
         onUploadClick={handleUploadClick}
         onRemoveDoc={handleRemoveDoc}
         onToggleAllDocs={() => setShowAllDocs((v) => !v)}
+        onSignOut={handleSignOut}
       />
 
       <input
@@ -899,6 +910,8 @@ interface SidebarProps {
   threads: WorkspaceThread[];
   activeThreadId: string | null;
   currentUserId: string;
+  currentUserName: string;
+  currentUserEmail: string;
   isOrgAdmin: boolean;
   canEditKB: boolean;
   showThreadSearch: boolean;
@@ -915,15 +928,18 @@ interface SidebarProps {
   onUploadClick: () => void;
   onRemoveDoc: (id: string) => void;
   onToggleAllDocs: () => void;
+  onSignOut: () => void;
 }
 
 function WorkspaceSidebar(props: SidebarProps) {
   const {
-    workspace, threads, activeThreadId, currentUserId, isOrgAdmin, canEditKB,
+    workspace, threads, activeThreadId, currentUserId,
+    currentUserName, currentUserEmail,
+    isOrgAdmin, canEditKB,
     showThreadSearch, threadSearch, showAllDocs,
     onBackToList, onNewThread, onSwitchThread, onDeleteThread,
     onToggleThreadSearch, onThreadSearchChange, onOpenMembers, onOpenSettings,
-    onUploadClick, onRemoveDoc, onToggleAllDocs,
+    onUploadClick, onRemoveDoc, onToggleAllDocs, onSignOut,
   } = props;
 
   const canManage = canManageWorkspace(workspace, currentUserId, isOrgAdmin);
@@ -1070,9 +1086,24 @@ function WorkspaceSidebar(props: SidebarProps) {
         </div>
       </div>
 
-      {/* Bottom — settings */}
-      {canManage && (
-        <div style={{ borderTop: '1px solid var(--border)', padding: '10px 12px' }}>
+      {/* Bottom — user identity + settings + sign out */}
+      <div style={{ borderTop: '1px solid var(--border)', padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 4 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 6px' }}>
+          <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#F0F3F6', color: '#1E3A8A', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 600, flexShrink: 0 }}>
+            {initialsOf(currentUserName || currentUserEmail)}
+          </div>
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {currentUserName || 'You'}
+            </div>
+            {currentUserEmail && (
+              <div style={{ fontSize: 10, color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {currentUserEmail}
+              </div>
+            )}
+          </div>
+        </div>
+        {canManage && (
           <button
             onClick={onOpenSettings}
             style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px', borderRadius: 6, background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: 'var(--text-secondary)' }}
@@ -1081,8 +1112,16 @@ function WorkspaceSidebar(props: SidebarProps) {
           >
             <SettingsIcon size={13} /> Workspace Settings
           </button>
-        </div>
-      )}
+        )}
+        <button
+          onClick={onSignOut}
+          style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px', borderRadius: 6, background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: '#C65454' }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = '#F9E7E7'; }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; }}
+        >
+          <LogOut size={13} /> Sign out
+        </button>
+      </div>
     </div>
   );
 }
