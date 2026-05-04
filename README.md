@@ -3,9 +3,9 @@ Org Admin Panel — full role-based UI (Admin/Manager/Team)
 Auth Flow — Login, Forgot Password, OTP, Reset Password
 All components, hooks, mock data, and styling
 
-**Use your preferred IDE**
+**Local development**
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+Clone the repo and run locally. Production deploys from the `yourai` remote's `main` branch via Vercel.
 
 The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
 
