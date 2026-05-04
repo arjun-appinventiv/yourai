@@ -25,11 +25,48 @@ function nonEmpty(s: any): boolean {
   return !!safe(s);
 }
 
+// LLMs love handing back generic titles ("Risk Assessment of Uploaded
+// Documents", "This Contract", "Untitled case") in the matterName /
+// caseName slot when they don't have a real name. Detect and reject
+// these so we can fall back to the actual document filename.
+const GENERIC_TITLE = /^(risk\s+(memo|assessment|analysis|review|report)|risk\s+assessment\s+of|clause\s+(comparison|analysis)(\s+of)?|case\s+(law\s+)?(brief|analysis)|case\s+brief\s+of|research\s+(memo|brief|report)|legal\s+research|summary\s+of|document\s+(summary|summarisation)|timeline\s+of|the\s+document|this\s+document|uploaded\s+documents?|attached\s+documents?|untitled(\s+(case|matter|document))?|legal\s+(inquiry|matter)|general\s+(inquiry|matter)|n\/?a)/i;
+
+function isGenericTitle(s: string): boolean {
+  return GENERIC_TITLE.test((s || '').trim());
+}
+
+/** Pick the best title for an artifact's H1. Prefers a non-generic
+ *  matterName/caseName/topic, then falls back to documentName/sourceName,
+ *  then the intent label. Strips ".pdf" / ".docx" extensions on filenames. */
+function pickTitle(d: any, fallbackLabel: string): string {
+  const stripExt = (s: string) => s.replace(/\.(pdf|docx?|txt|rtf|odt|xls[xm]?|csv|pptx?)$/i, '').trim();
+  const candidates: string[] = [
+    safe(d?.matterName),
+    safe(d?.caseName),
+    safe(d?.topic),
+  ].filter(Boolean);
+  for (const c of candidates) {
+    if (!isGenericTitle(c)) return c;
+  }
+  const fileCandidates: string[] = [
+    safe(d?.documentName),
+    safe(d?.sourceName),
+  ].filter(Boolean);
+  for (const c of fileCandidates) {
+    if (!isGenericTitle(c)) return stripExt(c);
+  }
+  // All candidates are generic or empty — pick the first non-empty.
+  for (const c of [...candidates, ...fileCandidates]) {
+    if (c) return stripExt(c);
+  }
+  return fallbackLabel;
+}
+
 /* ─── Risk Memo ─── */
 function riskMemoToMd(d: any): string {
   if (!d) return '';
   const lines: string[] = [];
-  if (nonEmpty(d.matterName))     lines.push(`# ${d.matterName}`);
+  lines.push(`# ${pickTitle(d, 'Risk memo')}`);
   const metaParts: string[] = [];
   if (nonEmpty(d.documentName))   metaParts.push(`**Document:** ${d.documentName}`);
   if (nonEmpty(d.documentMeta))   metaParts.push(d.documentMeta);
@@ -84,7 +121,7 @@ function riskMemoToMd(d: any): string {
 function summaryToMd(d: any): string {
   if (!d) return '';
   const lines: string[] = [];
-  if (nonEmpty(d.documentName)) lines.push(`# ${d.documentName}`);
+  lines.push(`# ${pickTitle(d, 'Document summary')}`);
   const metaParts: string[] = [];
   if (d.clauseCount) metaParts.push(`${d.clauseCount} clauses`);
   if (nonEmpty(d.fileSize)) metaParts.push(d.fileSize);
@@ -125,10 +162,11 @@ function summaryToMd(d: any): string {
 function comparisonToMd(d: any): string {
   if (!d) return '';
   const lines: string[] = [];
-  const title = nonEmpty(d.matterName)
-    ? d.matterName
-    : (nonEmpty(d.doc1Name) && nonEmpty(d.doc2Name)) ? `${d.doc1Name} vs ${d.doc2Name}` : 'Clause comparison';
-  lines.push(`# ${title}`);
+  // Prefer "Doc1 vs Doc2" when both filenames are present and meaningful.
+  const fallback = (nonEmpty(d.doc1Name) && nonEmpty(d.doc2Name) && !isGenericTitle(d.doc1Name) && !isGenericTitle(d.doc2Name))
+    ? `${d.doc1Name} vs ${d.doc2Name}`
+    : 'Clause comparison';
+  lines.push(`# ${pickTitle(d, fallback)}`);
   if (d.clauseCount) lines.push(`${d.clauseCount} clauses compared`);
 
   const rows = Array.isArray(d.rows) ? d.rows : [];
@@ -152,7 +190,7 @@ function comparisonToMd(d: any): string {
 function caseBriefToMd(d: any): string {
   if (!d) return '';
   const lines: string[] = [];
-  if (nonEmpty(d.caseName)) lines.push(`# ${d.caseName}`);
+  lines.push(`# ${pickTitle(d, 'Case brief')}`);
   const metaParts: string[] = [];
   if (nonEmpty(d.court))   metaParts.push(d.court);
   if (nonEmpty(d.date))    metaParts.push(d.date);
@@ -182,7 +220,7 @@ function caseBriefToMd(d: any): string {
 function researchBriefToMd(d: any): string {
   if (!d) return '';
   const lines: string[] = [];
-  if (nonEmpty(d.topic)) lines.push(`# ${d.topic}`);
+  lines.push(`# ${pickTitle(d, 'Research brief')}`);
   const metaParts: string[] = [];
   if (nonEmpty(d.jurisdiction)) metaParts.push(`Jurisdiction: ${d.jurisdiction}`);
   if (d.stats) {
@@ -208,7 +246,7 @@ function researchBriefToMd(d: any): string {
 function clauseAnalysisToMd(d: any): string {
   if (!d) return '';
   const lines: string[] = [];
-  if (nonEmpty(d.matterName))   lines.push(`# ${d.matterName}`);
+  lines.push(`# ${pickTitle(d, 'Clause analysis')}`);
   const metaParts: string[] = [];
   if (nonEmpty(d.documentName)) metaParts.push(`**Document:** ${d.documentName}`);
   if (nonEmpty(d.documentMeta)) metaParts.push(d.documentMeta);
@@ -239,7 +277,7 @@ function clauseAnalysisToMd(d: any): string {
 function timelineToMd(d: any): string {
   if (!d) return '';
   const lines: string[] = [];
-  if (nonEmpty(d.matterName))   lines.push(`# ${d.matterName}`);
+  lines.push(`# ${pickTitle(d, 'Timeline')}`);
   const metaParts: string[] = [];
   if (nonEmpty(d.documentName)) metaParts.push(`**Document:** ${d.documentName}`);
   if (nonEmpty(d.documentMeta)) metaParts.push(d.documentMeta);

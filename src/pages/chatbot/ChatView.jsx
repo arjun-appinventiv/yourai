@@ -4209,6 +4209,12 @@ export default function ChatView({ initialView = 'chat' }) {
   const vaultAttachRef = useRef(null);
   const emptyMoreRef = useRef(null);
   const dropFileInputRef = useRef(null);
+  // Promise-per-attachment for in-flight text extraction. sendMessage
+  // awaits any unresolved promises before assembling messageForEdge so
+  // the first turn doesn't ship the "Text extraction is still in
+  // progress…" placeholder, which the LLM tends to interpret as
+  // "no doc attached" and respond with the upload prompt.
+  const extractionPromisesRef = useRef(new Map());
   // ─── Abort controller for in-flight streams ───
   const streamAbortRef = useRef(null);
   // ─── Session Guard (block detection + idle timeout) ───
@@ -4770,7 +4776,38 @@ export default function ChatView({ initialView = 'chat' }) {
     // MISSING_DOCUMENT_HANDLING branch — telling the user to upload.
     // We compute the merged content here so the Edge fetch and the
     // (legacy) callLLM fallback both have access.
-    const allAttachedDocs = (userMsg.attachments || []).filter((a) => a.kind === 'doc' || a.kind === undefined);
+    let allAttachedDocs = (userMsg.attachments || []).filter((a) => a.kind === 'doc' || a.kind === undefined);
+    // Wait for any in-flight text extractions to complete before building
+    // the Edge message — otherwise the first send ships the "extraction
+    // in progress" placeholder and the LLM treats it as "no doc". Cap at
+    // 12 s so a stuck extractor can't hang the whole send.
+    if (allAttachedDocs.some((a) => !a.content)) {
+      const pendingIds = allAttachedDocs.filter((a) => !a.content).map((a) => a.id);
+      const pendingPromises = pendingIds
+        .map((id) => extractionPromisesRef.current.get(id))
+        .filter(Boolean);
+      if (pendingPromises.length) {
+        const TIMEOUT_MS = 12000;
+        await Promise.race([
+          Promise.all(pendingPromises),
+          new Promise((res) => setTimeout(res, TIMEOUT_MS)),
+        ]).catch(() => {});
+        // Re-resolve content from each promise (state may not have
+        // applied yet inside this same async tick).
+        allAttachedDocs = await Promise.all(allAttachedDocs.map(async (a) => {
+          if (a.content) return a;
+          const p = extractionPromisesRef.current.get(a.id);
+          if (!p) return a;
+          try {
+            const text = await Promise.race([
+              p,
+              new Promise((res) => setTimeout(() => res(null), TIMEOUT_MS)),
+            ]);
+            return text ? { ...a, content: text } : a;
+          } catch { return a; }
+        }));
+      }
+    }
     const baseNames = sessionDocContext?.docNames || [];
     const baseContent = sessionDocContext?.content || '';
     const stamp = new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
@@ -5334,9 +5371,12 @@ INSTRUCTIONS:
     // entry didn't already have it (don't overwrite a richer prior copy).
     if (kind === 'doc') {
       files.forEach((file, i) => {
-        extractFileText(file).then(({ text }) => {
+        const id = newAtts[i].id;
+        // Store the promise so sendMessage can await it on the very
+        // first send (before pendingAttachments state has the content).
+        const promise = extractFileText(file).then(({ text }) => {
           setPendingAttachments(prev => prev.map(a =>
-            a.id === newAtts[i].id ? { ...a, content: text } : a
+            a.id === id ? { ...a, content: text } : a
           ));
           const vaultId = vaultIdByFileName.get(file.name);
           if (vaultId && text) {
@@ -5344,12 +5384,16 @@ INSTRUCTIONS:
               d.id === vaultId && !d.content ? { ...d, content: text } : d
             ));
           }
+          return text;
         }).catch((err) => {
           console.error('File extraction failed:', err);
+          const fallback = `[File: ${file.name}] Could not extract text.`;
           setPendingAttachments(prev => prev.map(a =>
-            a.id === newAtts[i].id ? { ...a, content: `[File: ${file.name}] Could not extract text.` } : a
+            a.id === id ? { ...a, content: fallback } : a
           ));
+          return fallback;
         });
+        extractionPromisesRef.current.set(id, promise);
       });
     }
   };
