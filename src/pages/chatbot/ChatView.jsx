@@ -4497,7 +4497,21 @@ export default function ChatView({ initialView = 'chat' }) {
     // ask whether to use the attached doc(s) or wait for a new upload.
     // Skipped on `opts.skipDocConfirmation = true` (the "Use attached"
     // button re-calls sendMessage with that flag set).
-    if (isCardIntent(activeIntent) && hasAnyDoc && !skipDocConfirmation && !isChitChat) {
+    //
+    // Compute the will-be intent up front: even if activeIntent is
+    // general_chat now, the hard-intent guardrail later in this function
+    // will auto-switch when a card-intent keyword is in the message
+    // ("Do clause analysis of attached doc" → clause_analysis). We must
+    // ask the user about doc source BEFORE the auto-switch, otherwise
+    // the confirmation skips and the bot silently picks docs.
+    let willBeCardIntent = activeIntent;
+    if (!hasManualIntentPick && activeIntent === 'general_chat' && trimmed.length >= 10) {
+      try {
+        const detected = detectIntent(trimmed, 'general_chat');
+        if (detected && detected !== 'general_chat') willBeCardIntent = detected;
+      } catch { /* ignore */ }
+    }
+    if (isCardIntent(willBeCardIntent) && hasAnyDoc && !skipDocConfirmation && !isChitChat) {
       const allDocNames = [
         ...((sessionDocContext?.docNames) || []),
         ...pendingAttachments.map((a) => a.name),
@@ -4516,7 +4530,7 @@ export default function ChatView({ initialView = 'chat' }) {
         sourceBadge: null,
         confirmation: {
           kind: 'use_attached_or_new',
-          intentLabel: getIntentLabel(activeIntent),
+          intentLabel: getIntentLabel(willBeCardIntent),
           docNames: uniqueDocNames,
           pendingMessage: trimmed,
         },
