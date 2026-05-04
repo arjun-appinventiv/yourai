@@ -3160,7 +3160,7 @@ function AlreadyRunningAlert({ activeName, currentStep, total, onClose }) {
   );
 }
 
-function MessageBubble({ msg, onOpenArtifact, isActiveArtifact }) {
+function MessageBubble({ msg, onOpenArtifact, isActiveArtifact, onConfirmAction }) {
   const isBot = msg.sender === 'bot';
 
   // Workflow messages render the progress card + (on complete) the report.
@@ -3261,7 +3261,58 @@ function MessageBubble({ msg, onOpenArtifact, isActiveArtifact }) {
           </div>
         )}
         <div style={{ fontSize: 14, lineHeight: 1.6, color: 'var(--text-primary)', wordBreak: 'break-word' }}>
-          {isBot ? (
+          {/* Confirmation message: doc-source picker (use attached vs upload new) */}
+          {isBot && msg.confirmation && msg.confirmation.kind === 'use_attached_or_new' && (
+            <div style={{
+              padding: '14px 16px', borderRadius: 12,
+              background: 'var(--ice-warm)', border: '1px solid var(--border)',
+            }}>
+              <div style={{ fontSize: 14, color: 'var(--text-primary)', lineHeight: 1.6 }}>
+                I see you have <strong>{msg.confirmation.docNames.length}</strong>{' '}
+                {msg.confirmation.docNames.length === 1 ? 'document' : 'documents'} attached:
+              </div>
+              <ul style={{ margin: '8px 0 12px 18px', padding: 0 }}>
+                {msg.confirmation.docNames.slice(0, 6).map((n, i) => (
+                  <li key={i} style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 2 }}>
+                    {n}
+                  </li>
+                ))}
+                {msg.confirmation.docNames.length > 6 && (
+                  <li style={{ fontSize: 12, color: 'var(--text-muted)', listStyle: 'none' }}>
+                    + {msg.confirmation.docNames.length - 6} more
+                  </li>
+                )}
+              </ul>
+              <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 12, lineHeight: 1.55 }}>
+                Should I run <strong>{msg.confirmation.intentLabel}</strong> on these, or would you like to upload a new document?
+              </div>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <button
+                  onClick={() => onConfirmAction && onConfirmAction({ kind: 'use_attached', message: msg.confirmation.pendingMessage, msgId: msg.id })}
+                  style={{
+                    padding: '8px 14px', borderRadius: 8,
+                    background: 'var(--navy)', color: '#fff', border: 'none',
+                    fontSize: 13, fontWeight: 500, cursor: 'pointer',
+                    fontFamily: "'DM Sans', sans-serif",
+                  }}
+                >
+                  Use attached
+                </button>
+                <button
+                  onClick={() => onConfirmAction && onConfirmAction({ kind: 'upload_new', msgId: msg.id })}
+                  style={{
+                    padding: '8px 14px', borderRadius: 8,
+                    background: '#fff', color: 'var(--text-primary)', border: '1px solid var(--border)',
+                    fontSize: 13, fontWeight: 500, cursor: 'pointer',
+                    fontFamily: "'DM Sans', sans-serif",
+                  }}
+                >
+                  Upload new
+                </button>
+              </div>
+            </div>
+          )}
+          {isBot && !msg.confirmation && (
             // Intent cards: if this bot message carries a known intent and
             // either pre-parsed cardData or JSON-parseable content, render
             // the dedicated card. Any parse or shape failure falls through
@@ -3387,7 +3438,8 @@ function MessageBubble({ msg, onOpenArtifact, isActiveArtifact }) {
                 >{msg.content}</ReactMarkdown>
               );
             })()
-          ) : msg.content}
+          )}
+          {!isBot && msg.content}
         </div>
         {msg.knowledgePack && (
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 8, marginRight: 6, padding: '4px 10px', borderRadius: 999, background: 'rgba(10, 36, 99, 0.06)', border: '1px solid rgba(10, 36, 99, 0.18)' }}>
@@ -4394,9 +4446,10 @@ export default function ChatView({ initialView = 'chat' }) {
     threadMessagesRef.current[activeThreadId] = messages;
   }, [messages, activeThreadId]);
 
-  const sendMessage = useCallback(async (text) => {
+  const sendMessage = useCallback(async (text, opts) => {
     const trimmed = (text || '').trim();
     if ((!trimmed && pendingAttachments.length === 0) || isTyping) return;
+    const skipDocConfirmation = !!(opts && opts.skipDocConfirmation);
 
     // ─── Chit-chat + card-intent intercept ───────────────────────────
     // When a user picks a card intent (clause_comparison, risk_assessment,
@@ -4431,6 +4484,42 @@ export default function ChatView({ initialView = 'chat' }) {
       || !!activeVaultDocument || !!activeVaultFolder
       || !!(sessionDocContext?.docNames || []).length;
     const useChitChatOverride = isChitChat && isCardIntent(activeIntent) && !hasAnyDoc;
+
+    // ─── Doc-source confirmation for card intents ──────────────────────
+    // When the user asks for a card-intent analysis AND there's already
+    // a document in session context (prior turns or active vault doc),
+    // ask whether to use the attached doc(s) or wait for a new upload.
+    // Skipped on `opts.skipDocConfirmation = true` (the "Use attached"
+    // button re-calls sendMessage with that flag set).
+    if (isCardIntent(activeIntent) && hasAnyDoc && !skipDocConfirmation && !isChitChat) {
+      const allDocNames = [
+        ...((sessionDocContext?.docNames) || []),
+        ...pendingAttachments.map((a) => a.name),
+        activeVaultDocument?.name,
+        activeVaultFolder ? `${activeVaultFolder.name} (folder)` : null,
+      ].filter(Boolean);
+      // Dedupe (prior turn's doc may also appear in pendingAttachments).
+      const uniqueDocNames = Array.from(new Set(allDocNames));
+      if (showEmptyState) setShowEmptyState(false);
+      const userMsg = { id: Date.now(), sender: 'user', content: trimmed, timestamp: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) };
+      const confirmMsg = {
+        id: Date.now() + 1,
+        sender: 'bot',
+        content: '',
+        timestamp: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
+        sourceBadge: null,
+        confirmation: {
+          kind: 'use_attached_or_new',
+          intentLabel: getIntentLabel(activeIntent),
+          docNames: uniqueDocNames,
+          pendingMessage: trimmed,
+        },
+      };
+      setMessages((prev) => [...prev, userMsg, confirmMsg]);
+      setInput('');
+      if (inputRef.current) inputRef.current.style.height = 'auto';
+      return;
+    }
 
     // ─── Dev-only slash commands to preview intent cards with mock data ───
     // /demo-summary, /demo-comparison, /demo-casebrief, /demo-research
@@ -5713,6 +5802,25 @@ INSTRUCTIONS:
                   msg={msg}
                   onOpenArtifact={(id) => setActiveArtifactMsgId(id)}
                   isActiveArtifact={activeArtifactMsgId === msg.id}
+                  onConfirmAction={(action) => {
+                    if (action.kind === 'use_attached') {
+                      // Replace the confirmation message with a friendlier
+                      // "OK, running" note + re-run sendMessage with the
+                      // skip-confirmation flag so the analysis actually runs.
+                      setMessages((prev) => prev.map((m) => m.id === action.msgId ? {
+                        ...m,
+                        confirmation: undefined,
+                        content: `Running on the attached document${m.confirmation?.docNames?.length === 1 ? '' : 's'}…`,
+                      } : m));
+                      sendMessage(action.message, { skipDocConfirmation: true });
+                    } else if (action.kind === 'upload_new') {
+                      setMessages((prev) => prev.map((m) => m.id === action.msgId ? {
+                        ...m,
+                        confirmation: undefined,
+                        content: 'OK — drop the new document via the **+** button or the drop zone below the input, then send your request again.',
+                      } : m));
+                    }
+                  }}
                 />
               ))}
               {/* Streaming response — shows tokens as they arrive */}
