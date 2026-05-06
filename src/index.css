@@ -122,6 +122,73 @@ textarea.no-focus-ring:focus {
 
 .row-fade-out { animation: fade-out 0.4s ease-in forwards; }
 
+/* ─────────────────────────────────────────────
+   Artifact prose — used by IntentArtifactPanel.
+   Renders card-intent reports (Risk Memo, Summary,
+   Comparison, Case Brief, Research, Clauses, Timeline)
+   as a clean text-only document. No fills, no borders,
+   no boxes — emphasis comes from color and typography.
+   To extend: emit markdown from cardToMarkdown.ts and
+   add a rule here if a new element shows up.
+   ───────────────────────────────────────────── */
+.artifact-prose {
+  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--text-primary);
+  max-width: 720px;
+  margin: 0 auto;
+}
+.artifact-prose h1 {
+  font-family: 'DM Serif Display', Georgia, serif;
+  font-size: 28px;
+  font-weight: 400;
+  color: var(--navy);
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+  margin: 0 0 var(--space-3) 0;
+}
+.artifact-prose h2 {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--navy);
+  letter-spacing: -0.005em;
+  margin: var(--space-8) 0 var(--space-2) 0;
+}
+.artifact-prose h3 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: var(--space-5) 0 var(--space-1) 0;
+}
+.artifact-prose p { margin: 0 0 var(--space-3) 0; }
+.artifact-prose ul,
+.artifact-prose ol { padding-left: 22px; margin: var(--space-2) 0 var(--space-3) 0; }
+.artifact-prose li { margin-bottom: var(--space-1); line-height: 1.65; }
+.artifact-prose strong { font-weight: 600; color: var(--text-primary); }
+.artifact-prose em { font-style: italic; color: var(--text-secondary); }
+.artifact-prose blockquote {
+  margin: var(--space-3) 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-style: italic;
+  color: var(--gold);
+}
+.artifact-prose code {
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-size: 12.5px;
+  background: transparent;
+  padding: 0;
+  border: 0;
+  color: var(--navy);
+}
+.artifact-prose hr {
+  border: 0;
+  height: var(--space-6);
+  margin: 0;
+}
+
 @keyframes spin {
   from { transform: rotate(0deg); }
   to   { transform: rotate(360deg); }

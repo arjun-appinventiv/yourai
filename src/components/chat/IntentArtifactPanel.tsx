@@ -149,81 +149,17 @@ export default function IntentArtifactPanel({ intent, data, title, onClose }: Pr
         </button>
       </div>
 
-      {/* Body — scrollable, renders the JSON-card data as a clean
-          markdown report (looks like a memo / Notion doc / Word file). */}
+      {/* Body — scrollable. All prose styling lives in the
+          .artifact-prose class in src/index.css so the dev team
+          has one place to look. To extend, emit markdown from
+          cardToMarkdown.ts; the class handles the rendering. */}
       <div style={{
         flex: 1, overflowY: 'auto',
         padding: fullscreen ? '32px max(32px, calc(50vw - 360px))' : '28px 32px',
         background: '#FFFFFF',
       }}>
-        <div style={{
-          maxWidth: 720, margin: '0 auto',
-          fontFamily: "'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif",
-          fontSize: 14, lineHeight: 1.7, color: 'var(--text-primary)',
-        }}>
-          <ReactMarkdown
-            components={{
-              h1: ({ children }) => (
-                <h1 style={{
-                  fontFamily: "'DM Serif Display', Georgia, serif",
-                  fontSize: 28, fontWeight: 400, color: 'var(--navy)',
-                  margin: '0 0 12px 0', lineHeight: 1.2, letterSpacing: '-0.01em',
-                }}>{children}</h1>
-              ),
-              h2: ({ children }) => (
-                <h2 style={{
-                  fontSize: 16, fontWeight: 600, color: 'var(--navy)',
-                  margin: '28px 0 10px 0', paddingBottom: 6,
-                  borderBottom: '1px solid var(--border)', letterSpacing: '-0.005em',
-                }}>{children}</h2>
-              ),
-              h3: ({ children }) => (
-                <h3 style={{
-                  fontSize: 14, fontWeight: 600, color: 'var(--text-primary)',
-                  margin: '20px 0 6px 0',
-                }}>{children}</h3>
-              ),
-              p: ({ children }) => (
-                <p style={{ margin: '0 0 12px 0', lineHeight: 1.7 }}>{children}</p>
-              ),
-              ul: ({ children }) => (
-                <ul style={{ paddingLeft: 22, margin: '8px 0 14px 0' }}>{children}</ul>
-              ),
-              ol: ({ children }) => (
-                <ol style={{ paddingLeft: 22, margin: '8px 0 14px 0' }}>{children}</ol>
-              ),
-              li: ({ children }) => (
-                <li style={{ marginBottom: 4, lineHeight: 1.65 }}>{children}</li>
-              ),
-              strong: ({ children }) => (
-                <strong style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{children}</strong>
-              ),
-              em: ({ children }) => (
-                <em style={{ fontStyle: 'italic', color: 'var(--text-secondary)' }}>{children}</em>
-              ),
-              blockquote: ({ children }) => (
-                <blockquote style={{
-                  margin: '14px 0', padding: '10px 16px',
-                  borderLeft: '3px solid var(--border)',
-                  background: '#FAFAF6', color: 'var(--text-secondary)',
-                  fontStyle: 'normal',
-                }}>{children}</blockquote>
-              ),
-              code: ({ children }) => (
-                <code style={{
-                  fontFamily: "'IBM Plex Mono', ui-monospace, monospace",
-                  fontSize: 12.5, background: '#F4F4EE',
-                  padding: '1px 5px', borderRadius: 3,
-                  color: 'var(--text-primary)',
-                }}>{children}</code>
-              ),
-              hr: () => (
-                <hr style={{ border: 'none', borderTop: '1px solid var(--border)', margin: '24px 0' }} />
-              ),
-            }}
-          >
-            {markdown || '*No content.*'}
-          </ReactMarkdown>
+        <div className="artifact-prose">
+          <ReactMarkdown>{markdown || '*No content.*'}</ReactMarkdown>
         </div>
       </div>
     </div>
