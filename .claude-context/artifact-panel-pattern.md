@@ -84,21 +84,33 @@ The same conditional check (`!showTeamPage && !showWorkspacesPanel && ...`) appl
 
 ## Body rendering — markdown, NOT IntentCard
 
-The panel body uses `ReactMarkdown` to render the output of `cardDataToMarkdown(intent, data)`. Styling lives inline in `IntentArtifactPanel.tsx` and follows a clean memo / Notion-doc / Word-file convention:
+The panel body uses `ReactMarkdown` to render the output of `cardDataToMarkdown(intent, data)`. Since 2026-05-06, **all prose styling lives in a single `.artifact-prose` CSS class in `src/index.css`** — no inline styles, no `components={{}}` overrides on `<ReactMarkdown>`. The component is now five lines:
 
-- **Body font**: `'DM Sans', sans-serif`, 14 px, line-height 1.7, color `--text-primary`
-- **H1**: DM Serif Display, 28 px, weight 400, color `--navy`, line-height 1.2, letter-spacing -0.01em — ONE per artifact, the matter / case / topic title
-- **H2**: 16 px, weight 600, color `--navy`, with `border-bottom: 1px solid var(--border)`, margin-top 28 px — section dividers
-- **H3**: 14 px, weight 600, color `--text-primary` — subsections (per-finding, per-clause, severity groups)
-- **p**: margin 0 0 12 px, line-height 1.7
-- **ul / ol**: paddingLeft 22, margin 8/14 px
-- **strong**: weight 600, color `--text-primary`
-- **em**: italic, color `--text-secondary`
-- **blockquote**: `border-left: 3px solid var(--border)`, background `#FAFAF6`, padding 10/16 px, color `--text-secondary`, margin 14 px — used for highlight quotes and per-finding citations
-- **code**: `'IBM Plex Mono'`, 12.5 px, background `#F4F4EE`, padding 1/5 px — used for `§` references
-- **hr**: `border-top: 1px solid var(--border)`, margin 24 px
+```tsx
+<div className="artifact-prose">
+  <ReactMarkdown>{markdown || '*No content.*'}</ReactMarkdown>
+</div>
+```
 
-Body padding: `28px 32px` (default), `32px max(32px, calc(50vw - 360px))` (fullscreen — gives a centered ~720 px column).
+The class follows a clean memo / Notion-doc / Word-file convention. All colors come from design tokens — no ad-hoc hex:
+
+- **Body font**: `'DM Sans', sans-serif`, 14 px, line-height 1.7, color `var(--text-primary)`, max-width 720 px centered
+- **H1**: DM Serif Display, 28 px, weight 400, color `var(--navy)`, line-height 1.2, letter-spacing -0.01em — ONE per artifact, the matter / case / topic title
+- **H2**: 16 px, weight 600, color `var(--navy)`, no rule beneath — emphasis comes from weight + color, not from a border line
+- **H3**: 14 px, weight 600, color `var(--text-primary)` — subsections (per-finding, per-clause, severity groups)
+- **p**: margin `0 0 var(--space-3) 0`, line-height inherited
+- **ul / ol**: paddingLeft 22, margin `var(--space-2) 0 var(--space-3) 0`
+- **strong**: weight 600, color `var(--text-primary)`
+- **em**: italic, color `var(--text-secondary)`
+- **blockquote**: italic, color `var(--gold)`, NO background, NO border-left, NO padding box — text-only emphasis. Used for highlight quotes and per-finding citations.
+- **code**: `'IBM Plex Mono'`, 12.5 px, color `var(--navy)`, no background fill — used for `§` references
+- **hr**: invisible 24 px spacer (rendered as a `div`) — section breaks come from spacing, not from a rule
+
+Why text-only emphasis: PM read on the first version was "looks like front-end components, should look like a report". The earlier blockquote (warm-cream fill + 3 px gray left bar + padding) and inline code (gray pill) read as UI tiles inside what's supposed to be a memo. Color + typography carry the same hierarchy without the chrome.
+
+Body padding (still inline on `IntentArtifactPanel.tsx`): `28px 32px` (default), `32px max(32px, calc(50vw - 360px))` (fullscreen — gives a centered ~720 px column).
+
+**To extend**: emit markdown from `cardToMarkdown.ts`, the class handles rendering. To support a new markdown element (table, image, etc.) that the serializers start emitting, add one CSS rule under `.artifact-prose`. **Don't** reintroduce `components={{}}` overrides on `<ReactMarkdown>` — the dev-team mental model is "one CSS class, one place to look".
 
 ## Per-intent markdown serializers
 

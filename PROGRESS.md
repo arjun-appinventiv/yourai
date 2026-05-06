@@ -108,10 +108,20 @@ The main `ChatView` fetch was wrapped in a silent try/catch that funnelled every
 - **Audit log modal** holds the per-step markdown output (collapsible) + Documents analysed pills + Retry for failed steps
 - **Download PDF** opens a clean printable HTML window (browser's native Save-as-PDF)
 
-### Knowledge & Document surfaces
-- Knowledge Packs panel (create, edit, delete, select as active for chat)
-- Document Vault panel (upload, select as active, role-scoped visibility)
-- Both are **independent** of intent — no auto-attach on intent change
+### Knowledge Packs — full lifecycle + real grounding (2026-05-06)
+- Browse, create, edit, delete; org-wide vs personal scope; share toggle
+- Pack docs carry real `content` (extracted text). Seed packs ship with realistic legal text via `src/data/samplePackContent.ts` (NDA template + risk checklist + redline; M&A diligence checklist + Meridian precedent + indemnification clauses; CA Labor Code summary + § 16600 / Edwards rule; GDPR + CCPA)
+- Custom packs: when a user uploads a doc into a pack, real text extraction runs via `extractFileText` (`src/lib/file-parser.ts`) — same parser the chat attach pipeline uses. Was a status-pill timer only before 2026-05-06
+- Active pack content inlined into `messageForEdge` under a `[Knowledge Pack reference for this conversation]` header so the Edge model can ground answers in real pack text. Per-doc cap 5,000 chars
+- Persistence: `knowledgePacks` state hydrates from / saves to localStorage under `yourai_knowledge_packs_v1` via `src/lib/knowledgePackStore.ts` (mirrors `documentVaultStore.ts` pattern). Refresh no longer wipes user-created packs
+- Source pill on a pack-grounded answer reads "Answered from: {pack name}"
+- Independent of intent — changing intent never changes the active pack
+- Sprint-2 follow-ups: link fetching (links save metadata-only today, no grounding); promoting Mine packs to org-wide via the share toggle
+
+### Document Vault
+- Upload, select as active, role-scoped visibility (Mine / Org-wide), nested folders, recursive upload
+- Real PDFs as seed docs + extracted text on every entry (see vault-specific sections below)
+- Independent of intent
 
 ### Super Admin portal
 - Tenant Management, User Management, Global Knowledge Base (with Bot Persona tab), Workflow Templates, Billing, Usage, Compliance, Static Content, Report Templates, Knowledge Base, Integrations, Notifications, Reports, Settings, User Stories (15 screens per README)
@@ -493,6 +503,40 @@ Reverse chronological. Each entry: *decision — rationale — date*.
 ---
 
 ## Last updated
+
+**2026-05-06** — Knowledge Pack feature, end-to-end. Plus three smaller deliverables (artifact panel CSS refactor, Sprint 1 FRD, Sprint 1 WBS xlsx). Three deploys to `yourai/main`.
+
+**1. Artifact panel — prose styling consolidated to a single CSS class** (commit `055ff86` / `index-CMxNkd4M.js`). The `IntentArtifactPanel` rendered card-intent reports via a 60-line per-element ReactMarkdown `components={{}}` map full of inline styles and ad-hoc hex colors (e.g. `#8A6B1F` for italic blockquote). PM read: hard for the dev team to follow consistently. Refactor moved every prose rule into a single `.artifact-prose` class in `src/index.css`, right next to the design tokens it references. Component shrank to `<div className="artifact-prose"><ReactMarkdown>{md}</ReactMarkdown></div>`. Same visual result; one place to look. Adding a new card intent: emit markdown from `cardToMarkdown.ts`, the class handles rendering. Adding a new markdown element: one CSS rule, no JSX edit.
+
+**2. Knowledge Pack feature — real grounding + persistence + real extraction** (3 deploys: `2b553da` / `index-EoE_TMlr.js` and `70f7dbd` / `index-DJdRrLNV.js`). User report: "Knowledge packs are still not working, tried creating one." Triage found three layers of brokenness, all fixed in this session.
+
+- **Diagnosis A: pack docs had no `content` field.** `DEFAULT_KNOWLEDGE_PACKS` shipped with `{name, size, uploaded}` only. Even if I wired the Edge to receive pack content, there'd be nothing to send.
+- **Diagnosis B: pack content never reached the AI.** The Edge `/api/chat` body shape is `{message, history, intent, sessionId, sessionDocId}`. ChatView's `messageForEdge` builder inlined doc context, vault docs, vault folders — but did NOT inline `activeKnowledgePack`. The only place pack content was ever passed was the dead `callLLM` fallback path (which is unreachable in production per CLAUDE.md gotcha #4), and even there only doc names, not text.
+- **Diagnosis C: no persistence.** `setKnowledgePacks` updated React state only; refresh wiped the user's work back to defaults.
+- **Diagnosis D (caught after first deploy when user retested):** custom packs created via the modal still didn't ground answers. Reason: `EditKnowledgePackModal`'s `simulateDocPipeline` was a status-pill timer only — `uploading → processing → ready` with no actual file read. User-uploaded pack docs saved as metadata-only.
+
+Fixes:
+
+- **A.** New file `src/data/samplePackContent.ts` (~450 lines) — realistic legal text for the four seed packs (NDA Playbook, M&A Due Diligence, Employment Law CA, Privacy & Data Protection). `DEFAULT_KNOWLEDGE_PACKS` doc objects now reference content via `SAMPLE_PACK_CONTENT['pack-X-doc-Y']`. Mirrors the `sampleVaultContent.ts` pattern.
+- **B.** ChatView's `sendMessage` builds a `packReferenceText` block from `activeKnowledgePack.docs.content` and prepends it to `messageForEdge` under a `[Knowledge Pack reference for this conversation]` header (parallel to the existing `[Documents attached to this conversation]` block). Per-doc cap 5,000 chars. Source pill on a pack-grounded answer reads "Answered from: {pack name}".
+- **C.** New file `src/lib/knowledgePackStore.ts` mirroring `documentVaultStore.ts` — `loadPacks` / `savePacks` / `seedPacksIfEmpty` against `localStorage` key `yourai_knowledge_packs_v1`. ChatView's `knowledgePacks` state hydrates on mount (`seedPacksIfEmpty` on first load + `loadPacks() || DEFAULT_KNOWLEDGE_PACKS`), saves on every mutation via `useEffect`.
+- **D.** `simulateDocPipeline` in `EditKnowledgePackModal` replaced with `runDocExtraction` — calls `extractFileText(file)` (the same `src/lib/file-parser.ts` helper used by chat attach, workflow builder, pre-run modal). Status flow unchanged visually; underneath, real PDF / DOCX / TXT parsing runs and the extracted text is stored on the doc as `content`. The `File` ref is stripped before save; `name`, `size`, `uploaded`, `content` survive.
+
+End-to-end: user creates a pack, uploads a real document, saves the pack, attaches it in chat, asks a question whose answer is in the doc — bot quotes / paraphrases the actual content. No more silent failures.
+
+Out-of-scope flags: **link fetching** (links save metadata-only; no fetch / parse pipeline. CORS, sanitisation, and link rot make this a Sprint-2 lift). **Promoting a Mine pack to org-wide** via the share toggle exists in the UI but the visibility filter logic should be re-verified once a second user account is in localStorage.
+
+**3. Sprint 1 deliverables for PM/leadership/QA distribution.** Two artefacts saved to `~/Desktop` and to the worktree:
+- `YourAI_Sprint_1_Feature_Breakdown.xlsx` — 8 modules / 22 sub-modules / 70 features, formatted per `.claude-context/wbs-format.md`. Module-level scope reference; backend-pending items flagged "In Progress" with one-line notes.
+- `FRD_Sprint_1_Tenant_Chat.docx` (v1.1) — 67 numbered QA scenarios across 12 surface groups, with embedded screenshots for the four module surfaces I could capture cleanly (chat empty state, doc attached chip, vault picker, KP picker). Markdown source at `docs/extracted/Sprint_1_Tenant_Chat.md` is the source of truth; regenerate via `node build_sprint1_frd_docx.cjs` from the worktree. **v1.1 corrections from initial draft:** upload cap = 5 per upload action (additive uploads bypass the cap, no per-conversation total), front-end response cards + right-rail artifact panel are out of Sprint 1 scope (deferred), task responses delivered inline as standard streamed chat messages.
+
+**Memory + format conventions captured:**
+- FRD format is **always .docx** (per Arjun's correction mid-session). Spreadsheets are for WBS / Delivery Tracker artefacts, not FRDs. Saved to user-memory `feedback_preferences.md`.
+- For browser screenshots embedded in deliverables: macOS `screencapture` with `-R x,y,w,h` works for static UI states (chat empty, panels), but loses transient states (open dropdowns, popovers) due to focus-stealing when Claude Code is in front. The Claude in Chrome MCP screenshot sees those states correctly but saves to extension storage. Workaround for future captures: drive the browser yourself when the screenshot needs a transient state, or accept inline-MCP-only references for those cases.
+
+**Bundle progression today**: `index-CMxNkd4M.js` → `index-EoE_TMlr.js` → `index-DJdRrLNV.js` (current). Production verified after each deploy.
+
+**Next up**: Timeline intent removal (paused mid-investigation when Arjun pivoted to KP). Inventory of touchpoints already grepped — 12 live references across 9 files (intents.ts × 3, intentDetector.ts × 2, cardToMarkdown.ts × 2, mockCardData.ts × 2, IntentArtifactPanel.tsx × 2, TimelineCard.tsx (delete), IntentCard.tsx × 4, ChatView.jsx × 4, api/chat.ts × 1). Will pick up next session unless the priority shifts.
 
 **2026-05-05** — Quick fix session on external-user UX. PM caught two related issues during a client demo: external users had no way to sign out, and the single-workspace auto-redirect was steering them into `WorkspaceChatView` immediately on login, where the sidebar offered no auth controls. Two-line fix in `ChatView.jsx` (delete the single-workspace branch in the external-user routing effect) plus a new footer block in `WorkspaceSidebar` (`WorkspaceChatView.tsx`) that always renders user identity + Sign out for every role. Internal users navigating into a workspace had the same auth-control gap, so the fix is symmetric. Local build clean (`index-lSQGlu5X.js`); committed `4302cc7` on `claude/great-banach`. **Not yet pushed/deployed** — awaiting Arjun's go-ahead before merging to `yourai/main`. CLAUDE.md updated with a new convention (full-replacement chat surfaces need their own profile/sign-out controls) and a new do-not-reintroduce entry (single-workspace auto-redirect for externals).
 
