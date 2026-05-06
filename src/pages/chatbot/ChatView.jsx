@@ -1529,17 +1529,21 @@ function EditKnowledgePackModal({ pack, onClose, onSave }) {
   const SUPPORTED_KP_EXTS = ['.doc','.docx','.ppt','.pptx','.xls','.xlsx','.pdf','.csv','.txt','.rtf','.odt','.ods','.odp','.pages','.numbers','.key','.html','.htm','.xml','.json'];
   const MAX_FILE_SIZE_MB = 10;
 
-  // Simulate the document pipeline: uploading → processing → ready.
-  // In production this would be backed by real upload + RAG indexing APIs.
-  const simulateDocPipeline = (id) => {
-    // After ~1.2s: flip from uploading to processing
+  // Run the real document pipeline: uploading → processing → ready.
+  // Extracts plain text via extractFileText and stores it as `content`
+  // on the doc record so the chat-grounding inlining (in sendMessage)
+  // can pass real text to the Edge model when this pack is attached.
+  // Without this, the pack saved as metadata-only and grounding failed.
+  const runDocExtraction = (id, file) => {
     setTimeout(() => {
       setDocs(prev => prev.map(d => d.id === id && d.status === 'uploading' ? { ...d, status: 'processing' } : d));
-      // After another ~2.5s: flip from processing to ready
-      setTimeout(() => {
-        setDocs(prev => prev.map(d => d.id === id && d.status === 'processing' ? { ...d, status: 'ready' } : d));
-      }, 2500);
-    }, 1200);
+    }, 150);
+    extractFileText(file).then(({ text }) => {
+      setDocs(prev => prev.map(d => d.id === id ? { ...d, status: 'ready', content: text } : d));
+    }).catch((err) => {
+      console.error('KP doc extraction failed:', err);
+      setDocs(prev => prev.map(d => d.id === id ? { ...d, status: 'failed', error: 'Could not read this document.' } : d));
+    });
   };
 
   // Simulate the link pipeline: fetching → reading → ready.
@@ -1572,12 +1576,15 @@ function EditKnowledgePackModal({ pack, onClose, onSave }) {
         rejected.push({ id: Date.now() + Math.random(), name: f.name, size: `${(f.size / (1024 * 1024)).toFixed(1)} MB`, uploaded: createdAt, status: 'failed', error: `Files must be under ${MAX_FILE_SIZE_MB} MB.` });
       } else {
         const id = Date.now() + Math.random();
-        accepted.push({ id, name: f.name, size: `${(f.size / (1024 * 1024)).toFixed(1)} MB`, uploaded: createdAt, status: 'uploading' });
+        accepted.push({ id, file: f, name: f.name, size: `${(f.size / (1024 * 1024)).toFixed(1)} MB`, uploaded: createdAt, status: 'uploading' });
       }
     });
 
-    setDocs(prev => [...prev, ...accepted, ...rejected]);
-    accepted.forEach(d => simulateDocPipeline(d.id));
+    // Strip the raw File reference before storing in state — it's only
+    // needed to kick off extraction; the cleaned doc keeps name+size+content.
+    const acceptedForState = accepted.map(({ file, ...rest }) => rest);
+    setDocs(prev => [...prev, ...acceptedForState, ...rejected]);
+    accepted.forEach(d => runDocExtraction(d.id, d.file));
   };
 
   const handleRemoveDoc = (id) => setDocs(prev => prev.filter(d => d.id !== id));
