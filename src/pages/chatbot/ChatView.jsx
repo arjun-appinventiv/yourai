@@ -18,7 +18,9 @@ import WorkspacesPage from './WorkspacesPage';
 import { listWorkspacesForUser, seedWorkspacesIfEmpty } from '../../lib/workspace';
 import { MOCK_WORKSPACES } from '../../lib/mockWorkspaces';
 import { loadVault, saveVault, seedVaultIfEmpty, loadFolders, saveFolders, seedFoldersIfEmpty } from '../../lib/documentVaultStore';
+import { loadPacks, savePacks, seedPacksIfEmpty } from '../../lib/knowledgePackStore';
 import { SAMPLE_VAULT_CONTENT, SAMPLE_VAULT_NESTED_DOCS } from '../../data/sampleVaultContent';
+import { SAMPLE_PACK_CONTENT } from '../../data/samplePackContent';
 import IntentCard, { isCardIntent, tryParseCardData } from '../../components/chat/cards/IntentCard';
 import WorkflowsPanel from '../../components/chat/WorkflowsPanel';
 import WorkflowBuilder from '../../components/chat/WorkflowBuilder';
@@ -119,9 +121,9 @@ const DEFAULT_KNOWLEDGE_PACKS = [
     ownerName: 'Ryan Melade',
     isGlobal: true,
     docs: [
-      { id: 1, name: 'Standard_NDA_Template.pdf', size: '1.2 MB', uploaded: 'Mar 12, 2026' },
-      { id: 2, name: 'NDA_Risk_Checklist.docx', size: '0.4 MB', uploaded: 'Mar 15, 2026' },
-      { id: 3, name: 'Mutual_NDA_Redline_Example.pdf', size: '0.9 MB', uploaded: 'Mar 18, 2026' },
+      { id: 1, name: 'Standard_NDA_Template.pdf', size: '1.2 MB', uploaded: 'Mar 12, 2026', content: SAMPLE_PACK_CONTENT['pack-1-doc-1'] },
+      { id: 2, name: 'NDA_Risk_Checklist.docx', size: '0.4 MB', uploaded: 'Mar 15, 2026', content: SAMPLE_PACK_CONTENT['pack-1-doc-2'] },
+      { id: 3, name: 'Mutual_NDA_Redline_Example.pdf', size: '0.9 MB', uploaded: 'Mar 18, 2026', content: SAMPLE_PACK_CONTENT['pack-1-doc-3'] },
     ],
     links: [
       { id: 1, name: 'ABA Model NDA Guidelines', url: 'https://americanbar.org/nda-guidelines' },
@@ -136,9 +138,9 @@ const DEFAULT_KNOWLEDGE_PACKS = [
     ownerName: 'Ryan Melade',
     isGlobal: true,
     docs: [
-      { id: 1, name: 'DD_Checklist_v3.pdf', size: '2.1 MB', uploaded: 'Mar 20, 2026' },
-      { id: 2, name: 'Meridian_Precedent.pdf', size: '5.3 MB', uploaded: 'Mar 22, 2026' },
-      { id: 3, name: 'Indemnification_Clauses.docx', size: '0.8 MB', uploaded: 'Mar 25, 2026' },
+      { id: 1, name: 'DD_Checklist_v3.pdf', size: '2.1 MB', uploaded: 'Mar 20, 2026', content: SAMPLE_PACK_CONTENT['pack-2-doc-1'] },
+      { id: 2, name: 'Meridian_Precedent.pdf', size: '5.3 MB', uploaded: 'Mar 22, 2026', content: SAMPLE_PACK_CONTENT['pack-2-doc-2'] },
+      { id: 3, name: 'Indemnification_Clauses.docx', size: '0.8 MB', uploaded: 'Mar 25, 2026', content: SAMPLE_PACK_CONTENT['pack-2-doc-3'] },
     ],
     links: [
       { id: 1, name: 'SEC M&A Filing Requirements', url: 'https://sec.gov/ma-filings' },
@@ -154,8 +156,8 @@ const DEFAULT_KNOWLEDGE_PACKS = [
     ownerName: 'Priya Shah',
     isGlobal: false,
     docs: [
-      { id: 1, name: 'CA_Labor_Code.pdf', size: '8.2 MB', uploaded: 'Feb 28, 2026' },
-      { id: 2, name: 'Non_Compete_Enforcement.docx', size: '0.6 MB', uploaded: 'Mar 2, 2026' },
+      { id: 1, name: 'CA_Labor_Code.pdf', size: '8.2 MB', uploaded: 'Feb 28, 2026', content: SAMPLE_PACK_CONTENT['pack-3-doc-1'] },
+      { id: 2, name: 'Non_Compete_Enforcement.docx', size: '0.6 MB', uploaded: 'Mar 2, 2026', content: SAMPLE_PACK_CONTENT['pack-3-doc-2'] },
     ],
     links: [
       { id: 1, name: 'CA Department of Industrial Relations', url: 'https://dir.ca.gov' },
@@ -170,8 +172,8 @@ const DEFAULT_KNOWLEDGE_PACKS = [
     ownerName: 'Priya Shah',
     isGlobal: false,
     docs: [
-      { id: 1, name: 'GDPR_Summary.pdf', size: '1.8 MB', uploaded: 'Apr 2, 2026' },
-      { id: 2, name: 'CCPA_Redline.docx', size: '0.5 MB', uploaded: 'Apr 5, 2026' },
+      { id: 1, name: 'GDPR_Summary.pdf', size: '1.8 MB', uploaded: 'Apr 2, 2026', content: SAMPLE_PACK_CONTENT['pack-4-doc-1'] },
+      { id: 2, name: 'CCPA_Redline.docx', size: '0.5 MB', uploaded: 'Apr 5, 2026', content: SAMPLE_PACK_CONTENT['pack-4-doc-2'] },
     ],
     links: [],
     createdAt: 'Apr 1, 2026',
@@ -3984,7 +3986,14 @@ export default function ChatView({ initialView = 'chat' }) {
   }, []);
   const [profile, setProfile] = useState(null);
   const [showPlanModal, setShowPlanModal] = useState(false);
-  const [knowledgePacks, setKnowledgePacks] = useState(DEFAULT_KNOWLEDGE_PACKS);
+  // Persisted across reloads — packs created / edited / deleted by the
+  // user survive a refresh. Seeded with DEFAULT_KNOWLEDGE_PACKS on first
+  // load (idempotent: skips if a stored list already exists).
+  const [knowledgePacks, setKnowledgePacks] = useState(() => {
+    seedPacksIfEmpty(DEFAULT_KNOWLEDGE_PACKS);
+    return loadPacks() || DEFAULT_KNOWLEDGE_PACKS;
+  });
+  useEffect(() => { savePacks(knowledgePacks); }, [knowledgePacks]);
   const [showKnowledgePacksPanel, setShowKnowledgePacksPanel] = useState(false);
   const [editingPack, setEditingPack] = useState(null);
   const [showPackPicker, setShowPackPicker] = useState(false);
@@ -4891,12 +4900,33 @@ export default function ChatView({ initialView = 'chat' }) {
     // all my docs" comes back, ship as silent retrieval with citations.
     const effectiveDocContext = mergedDocContent || vaultSelectionContext;
 
+    // Knowledge Pack reference — inlined alongside any document context
+    // so the Edge model can ground answers in the pack. Without this,
+    // attaching a pack ("NDA Playbook" etc.) has no functional effect
+    // on the response. Same precedence as documents: pack content is a
+    // reference layer, not a replacement for the user's question.
+    let packReferenceText = '';
+    if (activeKnowledgePack && Array.isArray(activeKnowledgePack.docs) && activeKnowledgePack.docs.length > 0) {
+      const PER_PACK_DOC_CAP = 5000;
+      const pieces = activeKnowledgePack.docs.map((d) => {
+        const txt = (d.content || '').slice(0, PER_PACK_DOC_CAP);
+        return txt
+          ? `## ${d.name}\n${txt}${d.content && d.content.length > PER_PACK_DOC_CAP ? '\n[... truncated ...]' : ''}`
+          : `[${d.name}] (no extracted content)`;
+      });
+      const desc = activeKnowledgePack.description ? `\nDescription: ${activeKnowledgePack.description}` : '';
+      packReferenceText = `Pack: ${activeKnowledgePack.name}${desc}\n\n${pieces.join('\n\n')}`;
+    }
+    const packHeader = packReferenceText
+      ? `[Knowledge Pack reference for this conversation]\n${packReferenceText}\n\n`
+      : '';
+
     // (b) When user sends purely an attachment with no typed text, substitute a default question so the Edge guard passes.
     const effectiveQuestion = trimmed || (effectiveDocContext ? 'Please review the attached document(s) and summarise what you find.' : '');
     const docsHeader = effectiveDocContext
       ? `[Documents attached to this conversation]\n${effectiveDocContext}\n\n[User question]\n`
       : '';
-    let messageForEdge = (docsHeader + effectiveQuestion).trim();
+    let messageForEdge = (packHeader + docsHeader + effectiveQuestion).trim();
     // Final Edge intent. When chit-chat fired on a card intent w/ no doc,
     // flip to 'general_chat' so the Edge does NOT force JSON, and prepend
     // a context hint so the LLM knows what the user originally selected.
