@@ -508,11 +508,11 @@ function Sidebar({ activeKey, onOpenChat, onOpenPromptTemplates, onOpenClients, 
         onMouseLeave={() => setHoveredItem(null)}
         style={{
           display: 'flex', alignItems: 'center', gap: 8,
-          height: 32, padding: '7px 8px', borderRadius: 6,
+          height: 32, padding: '7px 8px 7px 6px', borderRadius: 6,
           cursor: item.onClick ? 'pointer' : 'default',
           userSelect: 'none',
-          background: isActive ? '#fff' : isHovered ? '#fff' : 'transparent',
-          border: isActive ? '0.5px solid var(--border)' : '0.5px solid transparent',
+          background: isActive ? 'rgba(10, 36, 99, 0.06)' : isHovered ? 'rgba(10, 36, 99, 0.04)' : 'transparent',
+          borderLeft: isActive ? '3px solid var(--navy)' : '3px solid transparent',
           transition: 'background 150ms ease, border-color 150ms ease',
         }}
       >
