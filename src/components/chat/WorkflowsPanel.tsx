@@ -100,6 +100,11 @@ export default function WorkflowsPanel({ onClose, onCreateNew, onRun, onEdit, on
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<FilterKey>('all');
   const [menuOpenFor, setMenuOpenFor] = useState<string | null>(null);
+  // Right-rail workflow inspector (audit #8) — clicking a card body opens
+  // a 380 px detail rail with the full step pipeline, description, and a
+  // bigger Run CTA. Run/Edit/Duplicate/Delete buttons inside the card all
+  // stopPropagation so they keep working independently.
+  const [inspectedTemplateId, setInspectedTemplateId] = useState<string | null>(null);
 
   // Snapshot the active-run info once so the picker can visually dim the
   // corresponding card's Run button. Changing activeRunId during the
@@ -185,6 +190,16 @@ export default function WorkflowsPanel({ onClose, onCreateNew, onRun, onEdit, on
     return Math.round(total / templates.length);
   }, [templates]);
 
+  const inspectedTemplate = useMemo(
+    () => (inspectedTemplateId ? templates.find((t) => t.id === inspectedTemplateId) || null : null),
+    [templates, inspectedTemplateId],
+  );
+  // Close the rail if the inspected template is removed (delete, filter
+  // visibility change). Without this the rail keeps a stale reference.
+  useEffect(() => {
+    if (inspectedTemplateId && !inspectedTemplate) setInspectedTemplateId(null);
+  }, [inspectedTemplateId, inspectedTemplate]);
+
   return (
     <div style={{
       flex: 1, display: 'flex', flexDirection: 'column',
@@ -267,8 +282,9 @@ export default function WorkflowsPanel({ onClose, onCreateNew, onRun, onEdit, on
         </div>
       </div>
 
-      {/* ─── Scroll area ─── */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '24px 36px 36px' }}>
+      {/* ─── Scroll area + right-rail inspector (audit #8) ─── */}
+      <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'row' }}>
+      <div style={{ flex: 1, minWidth: 0, overflowY: 'auto', padding: '24px 36px 36px' }}>
         {/* Running-now banner */}
         {activeRun && (
           <div style={{
@@ -341,7 +357,9 @@ export default function WorkflowsPanel({ onClose, onCreateNew, onRun, onEdit, on
                 template={t}
                 ctx={ctx}
                 isRunning={activeTemplateId === t.id}
+                inspected={inspectedTemplateId === t.id}
                 menuOpen={menuOpenFor === t.id}
+                onInspect={() => setInspectedTemplateId(t.id)}
                 onToggleMenu={() => setMenuOpenFor((x) => (x === t.id ? null : t.id))}
                 onCloseMenu={() => setMenuOpenFor(null)}
                 onRun={() => onRun(t)}
@@ -405,7 +423,159 @@ export default function WorkflowsPanel({ onClose, onCreateNew, onRun, onEdit, on
           </div>
         )}
       </div>
+
+      {inspectedTemplate && (
+        <WorkflowInspector
+          template={inspectedTemplate}
+          ctx={ctx}
+          isRunning={activeTemplateId === inspectedTemplate.id}
+          onClose={() => setInspectedTemplateId(null)}
+          onRun={() => onRun(inspectedTemplate)}
+          onEdit={() => onEdit(inspectedTemplate)}
+          onDuplicate={() => onDuplicate(inspectedTemplate)}
+        />
+      )}
+      </div>
     </div>
+  );
+}
+
+/* ─── WorkflowInspector — right rail with full pipeline + Run CTA (audit #8) ─── */
+function WorkflowInspector({ template, ctx, isRunning, onClose, onRun, onEdit, onDuplicate }: {
+  template: WorkflowTemplate;
+  ctx: PermissionContext;
+  isRunning: boolean;
+  onClose: () => void;
+  onRun: () => void;
+  onEdit: () => void;
+  onDuplicate: () => void;
+}) {
+  const theme = themeFor(template.practiceArea);
+  const HeroIcon = (template.steps[0] && OP_ICON[template.steps[0].operation]) || Zap;
+  const badge = VISIBILITY_BADGE[template.visibility];
+  const canEdit = canEditTemplate(template, ctx);
+  return (
+    <aside style={{
+      width: 380, flexShrink: 0,
+      borderLeft: '1px solid rgba(10,36,99,0.10)',
+      background: '#FFFFFF',
+      display: 'flex', flexDirection: 'column', minHeight: 0,
+    }}>
+      {/* Practice-area top stripe (matches the card top stripe) */}
+      <div style={{ height: 3, background: theme.accent, flexShrink: 0 }} />
+
+      {/* Header — icon + practice area + title + close */}
+      <div style={{ padding: '20px 22px 16px', borderBottom: '1px solid rgba(10,36,99,0.06)', display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+        <div style={{ width: 44, height: 44, borderRadius: 12, background: theme.iconBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <HeroIcon size={20} style={{ color: theme.accent }} />
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: theme.accent }}>
+            {template.practiceArea}
+          </div>
+          <h2 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 22, color: 'var(--navy)', margin: '4px 0 0', lineHeight: 1.2, letterSpacing: '-0.01em' }}>
+            {template.name}
+          </h2>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
+            <span style={{
+              fontSize: 11, padding: '3px 9px', borderRadius: 999,
+              background: template.visibility === 'platform' ? 'var(--navy)' : badge.bg,
+              color: template.visibility === 'platform' ? '#FFFFFF' : badge.color,
+              border: template.visibility === 'platform' ? '1px solid var(--navy)' : `1px solid ${badge.border}`,
+              fontWeight: 500,
+            }}>{badge.label}</span>
+            <span style={{
+              display: 'inline-flex', alignItems: 'center', gap: 4,
+              fontSize: 11, padding: '3px 9px', borderRadius: 999,
+              background: '#F3F4F6', color: '#6B7280', border: '1px solid #E5E7EB',
+            }}>
+              <Clock size={10} /> {template.steps.length} steps · ~{template.estimatedTotalSeconds}s
+            </span>
+          </div>
+        </div>
+        <button
+          onClick={onClose}
+          title="Close"
+          style={{ width: 28, height: 28, borderRadius: 6, background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(15,23,42,0.06)'; }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+        >
+          <X size={14} style={{ color: 'var(--text-muted)' }} />
+        </button>
+      </div>
+
+      {/* Description */}
+      {template.description && (
+        <div style={{ padding: '14px 22px', borderBottom: '1px solid rgba(10,36,99,0.06)' }}>
+          <p style={{ fontSize: 13, color: '#374151', lineHeight: 1.6, margin: 0 }}>{template.description}</p>
+        </div>
+      )}
+
+      {/* Pipeline steps — vertical list with name + per-step duration */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '14px 0 16px' }}>
+        <div style={{ padding: '0 22px 8px', fontSize: 10, color: 'var(--text-muted)', fontFamily: "'IBM Plex Mono', ui-monospace, monospace", letterSpacing: '0.12em', textTransform: 'uppercase' }}>Pipeline</div>
+        {template.steps.map((s, i) => {
+          const Icon = OP_ICON[s.operation] || Zap;
+          const cfg = OPERATION_CONFIG[s.operation];
+          const isLast = i === template.steps.length - 1;
+          return (
+            <div key={s.id} style={{ padding: '8px 22px', display: 'flex', alignItems: 'flex-start', gap: 12, position: 'relative' }}>
+              {/* Step number circle + connector */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0 }}>
+                <div style={{ width: 26, height: 26, borderRadius: '50%', background: 'var(--navy)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 600 }}>
+                  {i + 1}
+                </div>
+                {!isLast && <div style={{ width: 1, flex: 1, background: 'rgba(10,36,99,0.10)', minHeight: 20, marginTop: 2 }} />}
+              </div>
+              <div style={{ flex: 1, minWidth: 0, paddingBottom: isLast ? 0 : 4 }}>
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--text-primary)', fontWeight: 500 }}>
+                  <Icon size={13} style={{ color: 'var(--navy)', flexShrink: 0 }} />
+                  {s.name || cfg?.label || s.operation}
+                </div>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
+                  {cfg?.label && s.name && cfg.label !== s.name ? `${cfg.label} · ` : ''}
+                  ~{s.estimatedSeconds || cfg?.defaultSeconds || 0}s
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Footer — Edit + Run */}
+      <div style={{ padding: '14px 22px', borderTop: '1px solid rgba(10,36,99,0.06)', display: 'flex', alignItems: 'center', gap: 8 }}>
+        {canEdit && (
+          <button
+            onClick={onEdit}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '9px 14px', borderRadius: 8, background: '#fff', color: 'var(--text-primary)', border: '1px solid var(--border)', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}
+          >
+            <Edit3 size={12} /> Edit
+          </button>
+        )}
+        <button
+          onClick={onDuplicate}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '9px 14px', borderRadius: 8, background: '#fff', color: 'var(--text-primary)', border: '1px solid var(--border)', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}
+        >
+          <Copy size={12} /> Duplicate
+        </button>
+        <div style={{ flex: 1 }} />
+        <button
+          onClick={onRun}
+          disabled={isRunning}
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+            padding: '9px 18px', borderRadius: 10,
+            backgroundColor: isRunning ? '#9CA3AF' : 'var(--navy)',
+            color: '#fff', border: 'none',
+            fontSize: 13, fontWeight: 600,
+            cursor: isRunning ? 'not-allowed' : 'pointer',
+            boxShadow: isRunning ? 'none' : '0 1px 2px rgba(10,36,99,0.12)',
+          }}
+        >
+          {isRunning ? <><Loader size={12} className="animate-spin" /> Running…</> : <>Run <ArrowRight size={13} /></>}
+        </button>
+      </div>
+    </aside>
   );
 }
 
@@ -505,8 +675,10 @@ interface CardProps {
   template: WorkflowTemplate;
   ctx: PermissionContext;
   isRunning: boolean;
+  inspected?: boolean;
   isFav: boolean;
   menuOpen: boolean;
+  onInspect?: () => void;
   onToggleMenu: () => void;
   onCloseMenu: () => void;
   onRun: () => void;
@@ -516,7 +688,7 @@ interface CardProps {
   onToggleFav: () => void;
 }
 
-function WorkflowCard({ template, ctx, isRunning, isFav, menuOpen, onToggleMenu, onCloseMenu, onRun, onEdit, onDuplicate, onDelete, onToggleFav }: CardProps) {
+function WorkflowCard({ template, ctx, isRunning, inspected, isFav, menuOpen, onInspect, onToggleMenu, onCloseMenu, onRun, onEdit, onDuplicate, onDelete, onToggleFav }: CardProps) {
   const badge = VISIBILITY_BADGE[template.visibility];
   const canEdit = canEditTemplate(template, ctx);
   const canDelete = canDeleteTemplate(template, ctx);
@@ -532,19 +704,29 @@ function WorkflowCard({ template, ctx, isRunning, isFav, menuOpen, onToggleMenu,
   // Use the first step's operation icon so every card reads uniquely at-a-glance
   // (falls back to Zap if unknown).
   const HeroIcon = (template.steps[0] && OP_ICON[template.steps[0].operation]) || Zap;
+  // Inspected card gets a navy border so the user sees which card the
+  // open right-rail is anchored to.
+  const restingBorder = inspected ? 'var(--navy)' : 'rgba(10,36,99,0.08)';
+  const restingShadow = inspected ? '0 4px 14px rgba(10,36,99,0.10)' : '0 1px 3px rgba(10,36,99,0.03)';
   return (
     <div
+      onClick={(e) => {
+        // Inner buttons (Run / Edit / Star / kebab) all stopPropagation,
+        // so this only fires when the user clicks empty card chrome.
+        if (onInspect) onInspect();
+      }}
       style={{
         borderRadius: 12,
-        border: '1px solid rgba(10,36,99,0.08)',
+        border: '1px solid ' + restingBorder,
         background: '#FFFFFF',
         display: 'flex', flexDirection: 'column',
         overflow: 'hidden',
-        transition: 'box-shadow 0.18s ease',
-        boxShadow: '0 1px 3px rgba(10,36,99,0.03)',
+        transition: 'box-shadow 0.18s ease, border-color 0.18s ease',
+        boxShadow: restingShadow,
+        cursor: onInspect ? 'pointer' : 'default',
       }}
-      onMouseEnter={(e) => { e.currentTarget.style.boxShadow = '0 8px 24px rgba(10,36,99,0.08)'; }}
-      onMouseLeave={(e) => { e.currentTarget.style.boxShadow = '0 1px 3px rgba(10,36,99,0.03)'; }}
+      onMouseEnter={(e) => { if (!inspected) e.currentTarget.style.boxShadow = '0 8px 24px rgba(10,36,99,0.08)'; }}
+      onMouseLeave={(e) => { if (!inspected) e.currentTarget.style.boxShadow = '0 1px 3px rgba(10,36,99,0.03)'; }}
     >
       {/* ── Practice-area top stripe ── */}
       <div style={{ height: 3, background: theme.accent }} />
@@ -575,7 +757,7 @@ function WorkflowCard({ template, ctx, isRunning, isFav, menuOpen, onToggleMenu,
             </button>
             <div style={{ position: 'relative' }}>
               <button
-                onClick={onToggleMenu}
+                onClick={(e) => { e.stopPropagation(); onToggleMenu(); }}
                 title="More actions"
                 style={{ padding: 6, borderRadius: 6, background: 'none', border: '1px solid transparent', cursor: 'pointer', display: 'flex' }}
                 onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(0,0,0,0.04)'; }}
@@ -685,7 +867,7 @@ function WorkflowCard({ template, ctx, isRunning, isFav, menuOpen, onToggleMenu,
           Updated {relativeFrom(template.updatedAt)}
         </span>
         <button
-          onClick={onRun}
+          onClick={(e) => { e.stopPropagation(); onRun(); }}
           disabled={isRunning}
           style={{
             display: 'inline-flex', alignItems: 'center', gap: 6,
