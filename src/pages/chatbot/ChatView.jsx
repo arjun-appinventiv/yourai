@@ -7516,55 +7516,6 @@ INSTRUCTIONS:
             </div>
           </div>
 
-          {/* ─── Two guide cards: "Primary composer" + "Secondary support" ───
-              Rendered at the bottom of the flex column when in empty state,
-              matching the Figma chat empty-state layout. marginTop: auto
-              pushes them to the bottom of the remaining vertical space. */}
-          {showEmptyState && (
-            <div className="px-4 sm:px-6" style={{
-              maxWidth: 880, width: '100%', marginLeft: 'auto', marginRight: 'auto',
-              boxSizing: 'border-box', marginTop: 'auto', paddingBottom: 20, flexShrink: 0,
-            }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                {/* Left — Primary composer */}
-                <div style={{
-                  background: 'var(--navy)', borderRadius: 14,
-                  padding: '18px 20px', display: 'flex', alignItems: 'center', gap: 14,
-                }}>
-                  <div style={{
-                    width: 38, height: 38, borderRadius: 10, flexShrink: 0,
-                    background: 'rgba(255,255,255,0.1)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  }}>
-                    <MessageSquare size={18} color="white" />
-                  </div>
-                  <div>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: '#fff', letterSpacing: '-0.01em' }}>Primary composer</div>
-                    <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginTop: 3, lineHeight: 1.45 }}>one clear place to ask</div>
-                  </div>
-                </div>
-
-                {/* Right — Secondary support */}
-                <div style={{
-                  background: '#F3ECDD', borderRadius: 14,
-                  padding: '18px 20px', display: 'flex', alignItems: 'center', gap: 14,
-                  border: '1px solid #E8DCCC',
-                }}>
-                  <div style={{
-                    width: 38, height: 38, borderRadius: 10, flexShrink: 0,
-                    background: 'rgba(201,168,76,0.18)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  }}>
-                    <Upload size={18} style={{ color: 'var(--navy)' }} />
-                  </div>
-                  <div>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--navy)', letterSpacing: '-0.01em' }}>Secondary support</div>
-                    <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 3, lineHeight: 1.45 }}>add context or choose a start</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       </div>
 
