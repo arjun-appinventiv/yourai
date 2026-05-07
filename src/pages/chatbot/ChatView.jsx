@@ -1620,7 +1620,12 @@ function EditKnowledgePackModal({ pack, onClose, onSave }) {
     const cleanDocs = docs.filter(d => d.status === 'ready').map(({ status, error, ...rest }) => rest);
     const cleanLinks = links.filter(l => l.status === 'ready').map(({ status, error, ...rest }) => rest);
     onSave({
-      id: pack?.id || Date.now(),
+      // For new packs, pass id: undefined so handleSavePack's create branch
+      // fires (assigns a fresh id + unshifts). Passing a fresh Date.now()
+      // here would route to the edit branch's map(), find no match, and
+      // silently drop the pack — which was the long-standing create bug
+      // fixed 2026-05-07.
+      id: pack?.id,
       name: name.trim(),
       description: description.trim(),
       docs: cleanDocs,
@@ -5605,16 +5610,23 @@ INSTRUCTIONS:
   };
 
   const handleSavePack = (data) => {
-    if (data.id) {
-      setKnowledgePacks(prev => prev.map(p => p.id === data.id ? { ...p, ...data } : p));
-    } else {
+    setKnowledgePacks(prev => {
+      // Defensive: only treat as edit if the id actually exists in the
+      // current list. A stale id from a closed-then-reopened modal — or
+      // a call site that pre-assigns ids — would otherwise be silently
+      // dropped by .map() (the bug behind 2026-05-07's "create doesn't
+      // work" report).
+      const idx = data.id ? prev.findIndex(p => p.id === data.id) : -1;
+      if (idx >= 0) {
+        return prev.map((p, i) => i === idx ? { ...p, ...data } : p);
+      }
       const newPack = {
         ...data,
-        id: Date.now(),
-        createdAt: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+        id: data.id || Date.now(),
+        createdAt: data.createdAt || new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
       };
-      setKnowledgePacks(prev => [newPack, ...prev]);
-    }
+      return [newPack, ...prev];
+    });
   };
 
   const handleDeletePack = (id) => {
