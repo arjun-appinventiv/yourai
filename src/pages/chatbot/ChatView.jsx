@@ -1666,7 +1666,7 @@ function PackInspector({ pack, activePack, currentUserId, isOrgAdmin, onClose, o
           onClick={() => onSelect?.(pack)}
           style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 8, background: isActive ? '#5CA868' : 'var(--navy)', color: '#fff', border: 'none', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}
         >
-          {isActive ? <><CheckCircle size={12} /> Active in chat</> : 'Use in chat'}
+          {isActive ? <><CheckCircle size={12} /> Active in chat</> : 'Snap to chat'}
         </button>
       </div>
     </aside>
@@ -1809,7 +1809,7 @@ function PackRow({ pack, activePack, inspected, currentUserId, isOrgAdmin, onIns
             onClick={(e) => { e.stopPropagation(); onSelect(pack); }}
             style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '6px 14px', borderRadius: 6, backgroundColor: isActive ? '#5CA868' : 'var(--navy)', color: 'white', border: 'none', fontSize: 12, fontWeight: 500, cursor: 'pointer', flexShrink: 0 }}
           >
-            {isActive ? <><CheckCircle size={12} /> Active</> : 'Use'}
+            {isActive ? <><CheckCircle size={12} /> Active</> : 'Snap to chat'}
           </button>
         )}
       </div>
@@ -3122,7 +3122,7 @@ Rules:
                               onClick={() => onSelect(d)}
                               style={{ padding: '4px 10px', borderRadius: 6, background: isDocActive ? '#5CA868' : 'var(--navy)', color: '#fff', border: 'none', fontSize: 11, fontWeight: 500, cursor: 'pointer' }}
                             >
-                              {isDocActive ? 'Active' : 'Use'}
+                              {isDocActive ? 'Active' : 'Snap to chat'}
                             </button>
                           )}
                           {canEdit && (
@@ -7061,6 +7061,48 @@ INSTRUCTIONS:
                         </div>
                       );
                     })()}
+                  </div>
+                </div>
+
+                {/* ─── Two UX guide cards (Figma chat empty state) ─────────
+                    "Primary composer" (dark navy) + "Secondary support" (warm cream)
+                    Appear below the Optional / Quick Starts box. */}
+                <div style={{ marginTop: 14, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                  {/* Left — Primary composer */}
+                  <div style={{
+                    background: 'var(--navy)', borderRadius: 14,
+                    padding: '18px 20px', display: 'flex', alignItems: 'center', gap: 14,
+                  }}>
+                    <div style={{
+                      width: 38, height: 38, borderRadius: 10, flexShrink: 0,
+                      background: 'rgba(255,255,255,0.1)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>
+                      <MessageSquare size={18} color="white" />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: '#fff', letterSpacing: '-0.01em' }}>Primary composer</div>
+                      <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginTop: 3, lineHeight: 1.45 }}>one clear place to ask</div>
+                    </div>
+                  </div>
+
+                  {/* Right — Secondary support */}
+                  <div style={{
+                    background: '#F3ECDD', borderRadius: 14,
+                    padding: '18px 20px', display: 'flex', alignItems: 'center', gap: 14,
+                    border: '1px solid #E8DCCC',
+                  }}>
+                    <div style={{
+                      width: 38, height: 38, borderRadius: 10, flexShrink: 0,
+                      background: 'rgba(201,168,76,0.18)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>
+                      <Upload size={18} style={{ color: 'var(--navy)' }} />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--navy)', letterSpacing: '-0.01em' }}>Secondary support</div>
+                      <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 3, lineHeight: 1.45 }}>add context or choose a start</div>
+                    </div>
                   </div>
                 </div>
 
