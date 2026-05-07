@@ -126,25 +126,6 @@ const CARD_SCHEMAS: Record<string, string> = {
   "sourceName": "string",
   "generatedLabel": "string"
 }`,
-  timeline_extraction: `{
-  "matterName": "string",
-  "documentName": "string or null",
-  "documentMeta": "string or null",
-  "pages": number or null,
-  "size": "string or null",
-  "uploadedLabel": "string or null",
-  "events": [
-    {
-      "date": "string — keep the source's format",
-      "kind": "event" | "deadline" | "milestone" | "filing",
-      "label": "string — short event title",
-      "description": "string or null",
-      "source": "string or null — e.g. 'p.1' or '§3.2'"
-    }
-  ],
-  "sourceName": "string",
-  "generatedLabel": "string"
-}`,
 };
 
 export default async function handler(req: Request): Promise<Response> {

@@ -5,7 +5,6 @@ import CaseBriefCard, { type CaseBriefCardData } from './CaseBriefCard';
 import ResearchBriefCard, { type ResearchBriefCardData } from './ResearchBriefCard';
 import RiskMemoCard, { type RiskMemoCardData } from './RiskMemoCard';
 import ClauseAnalysisCard, { type ClauseAnalysisCardData } from './ClauseAnalysisCard';
-import TimelineCard, { type TimelineCardData } from './TimelineCard';
 import FileResultsCard, { type FileResultsCardData, type FileResultRow } from './FileResultsCard';
 
 /**
@@ -21,7 +20,6 @@ export type CardIntent =
   | 'legal_research'
   | 'risk_assessment'
   | 'clause_analysis'
-  | 'timeline_extraction'
   | 'find_document';
 
 export const CARD_INTENTS: CardIntent[] = [
@@ -31,7 +29,6 @@ export const CARD_INTENTS: CardIntent[] = [
   'legal_research',
   'risk_assessment',
   'clause_analysis',
-  'timeline_extraction',
   'find_document',
 ];
 
@@ -79,8 +76,6 @@ export default function IntentCard({ intent, data, onUseDoc, onBrowseVault }: In
       return <RiskMemoCard data={data as RiskMemoCardData} />;
     case 'clause_analysis':
       return <ClauseAnalysisCard data={data as ClauseAnalysisCardData} />;
-    case 'timeline_extraction':
-      return <TimelineCard data={data as TimelineCardData} />;
     case 'find_document':
       return <FileResultsCard data={data as FileResultsCardData} onUse={onUseDoc} onBrowseVault={onBrowseVault} />;
     default:

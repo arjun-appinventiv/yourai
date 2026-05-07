@@ -42,7 +42,6 @@ import {
   MOCK_RESEARCH_BRIEF_CARD,
   MOCK_RISK_MEMO_CARD,
   MOCK_CLAUSE_ANALYSIS_CARD,
-  MOCK_TIMELINE_CARD,
 } from '../../lib/mockCardData';
 import { billingData, subscriptionPlans } from '../../data/mockData';
 import { callLLM, getApiKey } from '../../lib/llm-client';
@@ -3419,7 +3418,6 @@ function MessageBubble({ msg, onOpenArtifact, isActiveArtifact, onConfirmAction 
                 legal_research:         'Research brief',
                 risk_assessment:        'Risk memo',
                 clause_analysis:        'Clause analysis',
-                timeline_extraction:    'Timeline',
               };
               const ARTIFACT_SUBTITLES = {
                 document_summarisation: (d) => d?.documentName || d?.matterName || 'Sectioned takeaways',
@@ -3428,7 +3426,6 @@ function MessageBubble({ msg, onOpenArtifact, isActiveArtifact, onConfirmAction 
                 legal_research:         (d) => d?.question || d?.matterName || 'Authorities & holdings',
                 risk_assessment:        (d) => d?.matterName || d?.documentName || `${(d?.findings?.length) || 0} findings`,
                 clause_analysis:        (d) => d?.documentName || d?.matterName || `${(d?.clauses?.length) || 0} clauses`,
-                timeline_extraction:    (d) => d?.matterName || `${(d?.events?.length) || 0} events`,
               };
               const renderArtifactChip = (data) => {
                 const label = ARTIFACT_LABELS[msg.intent] || 'Artifact';
@@ -4706,7 +4703,6 @@ export default function ChatView({ initialView = 'chat' }) {
       '/demo-research':   { intent: 'legal_research',         data: MOCK_RESEARCH_BRIEF_CARD },
       '/demo-risk':       { intent: 'risk_assessment',        data: MOCK_RISK_MEMO_CARD },
       '/demo-clauses':    { intent: 'clause_analysis',        data: MOCK_CLAUSE_ANALYSIS_CARD },
-      '/demo-timeline':   { intent: 'timeline_extraction',    data: MOCK_TIMELINE_CARD },
     };
     if (demoMap[trimmed]) {
       if (showEmptyState) setShowEmptyState(false);

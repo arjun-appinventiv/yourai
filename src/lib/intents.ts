@@ -18,7 +18,6 @@ export const INTENTS: IntentDef[] = [
   { id: 'legal_qa', label: 'Legal Q&A' },
   { id: 'risk_assessment', label: 'Risk Assessment' },
   { id: 'clause_analysis', label: 'Clause Analysis' },
-  { id: 'timeline_extraction', label: 'Timeline' },
   { id: 'find_document', label: 'Find Document' },
 ];
 
@@ -36,7 +35,7 @@ export interface IntentBucket {
 export const INTENT_BUCKETS: IntentBucket[] = [
   { label: 'DEFAULT',        intentIds: ['general_chat'] },
   { label: 'ASK & RESEARCH', intentIds: ['legal_qa', 'legal_research', 'case_law_analysis', 'find_document'] },
-  { label: 'ANALYZE',        intentIds: ['contract_review', 'clause_analysis', 'clause_comparison', 'risk_assessment', 'document_summarisation', 'timeline_extraction'] },
+  { label: 'ANALYZE',        intentIds: ['contract_review', 'clause_analysis', 'clause_comparison', 'risk_assessment', 'document_summarisation'] },
   { label: 'DRAFT',          intentIds: ['document_drafting', 'email_letter_drafting'] },
 ];
 
@@ -63,7 +62,6 @@ export const INTENT_DESCRIPTIONS: Record<string, string> = {
   clause_comparison:      'Compare clauses across documents in a side-by-side table.',
   risk_assessment:        'Identify findings ranked by severity with mitigations.',
   document_summarisation: 'Summarise the document with sectioned takeaways and key terms.',
-  timeline_extraction:    'Extract dated events into a chronological timeline.',
   document_drafting:      'Draft a document grounded in selected sources and chat context.',
   email_letter_drafting:  'Draft a professional email using selected documents and chat context.',
 };
