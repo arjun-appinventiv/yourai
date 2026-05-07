@@ -102,14 +102,18 @@ textarea.no-focus-ring:focus {
 .no-focus-ring::-webkit-scrollbar { width: 0; height: 0; }
 .no-focus-ring { scrollbar-width: none; }
 
+/* Toast slides down from above (toasts live in the top-right corner
+   since 2026-05-07). Direction inverted from the previous bottom-
+   docked version. Don't reintroduce a bottom-translation without also
+   moving the toast renderer back to bottom-anchored. */
 @keyframes toast-in {
-  from { opacity: 0; transform: translateY(20px); }
+  from { opacity: 0; transform: translateY(-20px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes toast-out {
   from { opacity: 1; transform: translateY(0); }
-  to { opacity: 0; transform: translateY(20px); }
+  to { opacity: 0; transform: translateY(-20px); }
 }
 
 .toast-enter { animation: toast-in 0.3s ease-out; }

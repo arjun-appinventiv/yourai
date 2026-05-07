@@ -7631,13 +7631,14 @@ INSTRUCTIONS:
         );
       })()}
 
-      {/* Transient toast for team actions */}
+      {/* Transient toast — top-right corner, slides in from above. */}
       {toastMsg && (
-        <div style={{
-          position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)',
+        <div className="toast-enter" style={{
+          position: 'fixed', top: 24, right: 24,
           zIndex: 100, padding: '10px 18px', borderRadius: 10,
           background: 'var(--navy)', color: 'white', fontSize: 13, fontWeight: 500,
           boxShadow: '0 8px 24px rgba(10, 36, 99, 0.25)',
+          maxWidth: 'min(420px, calc(100vw - 48px))',
         }}>
           {toastMsg}
         </div>
