@@ -141,17 +141,6 @@ export const INTENT_DEFAULTS: Record<string, IntentConfig> = {
     custom_instruction: '',
     response_format: 'structured_sections',
   },
-  timeline_extraction: {
-    keywords: [
-      'timeline of', 'chronology', 'chronological order', 'dates in this',
-      'key dates', 'build a timeline', 'extract the timeline', 'sequence of events',
-      'what happened when', 'list the events', 'litigation timeline', 'discovery timeline',
-      'deadlines in this', 'important dates',
-    ],
-    opening_behaviour: 'ask_for_document',
-    custom_instruction: '',
-    response_format: 'structured_sections',
-  },
   // Vault-search intent. Client-only — no LLM round-trip. Keywords combine
   // an action verb (find / search / where / do I have / show me / list)
   // with a noun anchor (file / files / doc / docs / document / documents)
@@ -191,7 +180,6 @@ export const INTENT_DEFAULTS: Record<string, IntentConfig> = {
 const PRIORITY_ORDER = [
   'find_document',
   'contract_review',
-  'timeline_extraction',
   'clause_analysis',
   'document_summarisation',
   'document_drafting',

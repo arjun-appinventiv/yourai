@@ -27,7 +27,6 @@ const INTENT_LABELS: Record<string, string> = {
   legal_research:         'Research brief',
   risk_assessment:        'Risk memo',
   clause_analysis:        'Clause analysis',
-  timeline_extraction:    'Timeline',
 };
 
 const INTENT_EYEBROWS: Record<string, string> = {
@@ -37,7 +36,6 @@ const INTENT_EYEBROWS: Record<string, string> = {
   legal_research:         'RESEARCH BRIEF',
   risk_assessment:        'RISK MEMO',
   clause_analysis:        'CLAUSE ANALYSIS',
-  timeline_extraction:    'TIMELINE',
 };
 
 interface Props {

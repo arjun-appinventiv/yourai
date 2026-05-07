@@ -273,30 +273,6 @@ function clauseAnalysisToMd(d: any): string {
   return lines.join('\n');
 }
 
-/* ─── Timeline ─── */
-function timelineToMd(d: any): string {
-  if (!d) return '';
-  const lines: string[] = [];
-  lines.push(`# ${pickTitle(d, 'Timeline')}`);
-  const metaParts: string[] = [];
-  if (nonEmpty(d.documentName)) metaParts.push(`**Document:** ${d.documentName}`);
-  if (nonEmpty(d.documentMeta)) metaParts.push(d.documentMeta);
-  if (metaParts.length) lines.push(metaParts.join(' · '));
-
-  const events = Array.isArray(d.events) ? d.events : [];
-  if (events.length) {
-    lines.push('', '## Timeline');
-    events.forEach((e: any) => {
-      const head = `**${safe(e.date) || '—'}** · ${safe(e.label) || 'Event'}`;
-      lines.push('', head);
-      if (nonEmpty(e.description)) lines.push(safe(e.description));
-      if (nonEmpty(e.source))      lines.push(`*Source: ${e.source}*`);
-    });
-  }
-  if (nonEmpty(d.generatedLabel)) lines.push('', '---', '', `*${d.generatedLabel}*`);
-  return lines.join('\n');
-}
-
 /* ─── Generic JSON walk fallback ─── */
 function genericToMd(d: any): string {
   try {
@@ -317,7 +293,6 @@ export function cardDataToMarkdown(intent: string, data: unknown): string {
       case 'case_law_analysis':       return caseBriefToMd(data);
       case 'legal_research':          return researchBriefToMd(data);
       case 'clause_analysis':         return clauseAnalysisToMd(data);
-      case 'timeline_extraction':     return timelineToMd(data);
       default:                        return genericToMd(data);
     }
   } catch {

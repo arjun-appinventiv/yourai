@@ -8,7 +8,6 @@ import type { CaseBriefCardData } from '../components/chat/cards/CaseBriefCard';
 import type { ResearchBriefCardData } from '../components/chat/cards/ResearchBriefCard';
 import type { RiskMemoCardData } from '../components/chat/cards/RiskMemoCard';
 import type { ClauseAnalysisCardData } from '../components/chat/cards/ClauseAnalysisCard';
-import type { TimelineCardData } from '../components/chat/cards/TimelineCard';
 
 export const MOCK_SUMMARY_CARD: SummaryCardData = {
   documentName: 'Meridian Capital NDA v2',
@@ -240,23 +239,3 @@ export const MOCK_CLAUSE_ANALYSIS_CARD: ClauseAnalysisCardData = {
   generatedLabel: 'Generated just now',
 };
 
-/* ─── Timeline ─── */
-export const MOCK_TIMELINE_CARD: TimelineCardData = {
-  matterName: 'Apex v. Meridian — Discovery Timeline',
-  documentName: 'Discovery_Schedule_2026.pdf',
-  documentMeta: '6 pages · 340 KB',
-  pages: 6,
-  size: '340 KB',
-  uploadedLabel: 'Uploaded today',
-  events: [
-    { date: 'Jan 14, 2026', kind: 'milestone', label: 'Complaint filed',       description: 'Apex Systems Corp filed complaint in SDNY alleging breach of confidentiality.', source: 'p.1' },
-    { date: 'Feb 2, 2026',  kind: 'filing',    label: 'Answer due',            description: 'Meridian\'s answer and counterclaim deadline.', source: 'Rule 12(a)' },
-    { date: 'Feb 18, 2026', kind: 'event',     label: 'Rule 26(f) conference', description: 'Parties met and agreed on ESI protocol.', source: 'ECF #14' },
-    { date: 'Mar 3, 2026',  kind: 'deadline',  label: 'Initial disclosures',   description: 'Exchanged per Rule 26(a)(1).', source: 'ECF #18' },
-    { date: 'Apr 15, 2026', kind: 'deadline',  label: 'Fact discovery closes', description: 'All depositions and document requests must be completed.', source: 'Scheduling Order §2' },
-    { date: 'Jun 30, 2026', kind: 'deadline',  label: 'Expert reports due',    description: 'Plaintiff\'s expert reports; defendant\'s 30 days later.', source: 'Scheduling Order §3' },
-    { date: 'Sep 8, 2026',  kind: 'milestone', label: 'Dispositive motions',   description: 'Summary judgment motions due.', source: 'Scheduling Order §5' },
-  ],
-  sourceName: 'Discovery_Schedule_2026.pdf',
-  generatedLabel: 'Generated just now',
-};
