@@ -175,7 +175,7 @@ export default function WorkflowsPanel({ onClose, onCreateNew, onRun, onEdit, on
     setTemplates((prev) => prev.filter((x) => x.id !== t.id));
   };
 
-  // Aggregate stats for the hero strip
+  // Aggregate stats for the hero strip (matches Figma: "in use", "templates", "docs")
   const runsThisWeek = useMemo(() => {
     const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
     return recentRuns.filter((r) => {
@@ -189,6 +189,18 @@ export default function WorkflowsPanel({ onClose, onCreateNew, onRun, onEdit, on
     const total = templates.reduce((a, t) => a + (t.estimatedTotalSeconds || 0), 0);
     return Math.round(total / templates.length);
   }, [templates]);
+
+  // Count of templates that have ever been run (proxy for "in use")
+  const inUseCount = useMemo(() => {
+    const usedIds = new Set(recentRuns.map((r) => r.templateId));
+    if (activeRun) usedIds.add(activeRun.templateId);
+    return usedIds.size || (activeTemplateId ? 1 : 0);
+  }, [recentRuns, activeRun, activeTemplateId]);
+
+  // Total docs processed across all recent runs
+  const docsProcessed = useMemo(() => {
+    return recentRuns.reduce((sum, r) => sum + (r.uploadedDocs?.length || 0), 0);
+  }, [recentRuns]);
 
   const inspectedTemplate = useMemo(
     () => (inspectedTemplateId ? templates.find((t) => t.id === inspectedTemplateId) || null : null),
@@ -258,10 +270,10 @@ export default function WorkflowsPanel({ onClose, onCreateNew, onRun, onEdit, on
               AI Pipelines
             </span>
             <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 26, color: 'var(--navy)', margin: 0, lineHeight: 1.15 }}>
-              Workflows
+              From documents to deliverables, in one click
             </h1>
             <p style={{ fontSize: 13, color: '#374151', marginTop: 6, lineHeight: 1.55, maxWidth: 620 }}>
-              Chain multiple AI steps into a reusable pipeline — read documents, analyse clauses, check compliance, and produce a structured report, all with one click.
+              Chain AI steps into a reusable pipeline — read documents, analyse clauses, check compliance, and produce a structured report automatically.
             </p>
             {/* Running-in context pill — display only, no action */}
             <div style={{
@@ -275,9 +287,9 @@ export default function WorkflowsPanel({ onClose, onCreateNew, onRun, onEdit, on
             </div>
           </div>
           <div style={{ display: 'flex', gap: 24, flexShrink: 0, alignItems: 'flex-start', marginTop: 4 }}>
-            <StatTile icon={Zap}        value={templates.length} label="Templates" />
-            <StatTile icon={TrendingUp} value={runsThisWeek}      label="Runs / week" />
-            <StatTile icon={Clock}      value={`~${avgRunSeconds}s`} label="Avg duration" />
+            <StatTile icon={TrendingUp} value={inUseCount}        label="In use" />
+            <StatTile icon={Zap}        value={templates.length}  label="Templates" />
+            <StatTile icon={Clock}      value={docsProcessed > 0 ? `${docsProcessed}+` : `~${Math.round(avgRunSeconds / 60)}m avg`} label={docsProcessed > 0 ? 'Docs processed' : 'Avg run time'} />
           </div>
         </div>
       </div>
