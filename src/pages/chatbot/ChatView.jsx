@@ -1195,6 +1195,11 @@ function KnowledgePacksPanel({ packs, onClose, onCreateNew, onEdit, onDelete, on
   const [scope, setScope] = useState('all'); // 'all' | 'org' | 'mine'
   const [ownerFilter, setOwnerFilter] = useState(null); // null = All owners, else owner id
   const [ownerMenuOpen, setOwnerMenuOpen] = useState(false);
+  // Right-rail inspector (audit #7) — clicking a pack card opens a 380 px
+  // detail rail with full description, doc list, share toggle, Use CTA.
+  // Mutually exclusive with the activePack notion: a pack can be inspected
+  // (read-only deep look) without being made the active in-chat pack.
+  const [inspectedPackId, setInspectedPackId] = useState(null);
 
   // Role-based visibility — others never see colleagues' personal packs.
   const visible = useMemo(() => {
@@ -1235,6 +1240,11 @@ function KnowledgePacksPanel({ packs, onClose, onCreateNew, onEdit, onDelete, on
 
   const activeOwner = ownerFilter ? owners.find((o) => o.id === ownerFilter) : null;
   const truncOwnerName = activeOwner ? (activeOwner.name.length > 14 ? activeOwner.name.slice(0, 13) + '…' : activeOwner.name) : 'All';
+
+  const inspectedPack = useMemo(() => (inspectedPackId ? visible.find((p) => p.id === inspectedPackId) || null : null), [visible, inspectedPackId]);
+  // If the inspected pack disappears (deleted, filtered out of visibility),
+  // close the rail rather than leave it pointing at a stale id.
+  useEffect(() => { if (inspectedPackId && !inspectedPack) setInspectedPackId(null); }, [inspectedPackId, inspectedPack]);
 
   return (
     <div style={{ flex: 1, minWidth: 0, height: '100vh', overflow: 'hidden', background: '#FBFAF7', display: 'flex', flexDirection: 'column' }}>
@@ -1360,62 +1370,209 @@ function KnowledgePacksPanel({ packs, onClose, onCreateNew, onEdit, onDelete, on
         </button>
       </div>
 
-      {/* Scrollable content */}
-      <div style={{ flex: 1, overflowY: 'auto' }}>
-        {/* Hero */}
-        <div style={{ maxWidth: 1080, margin: '0 auto', padding: '32px 28px 18px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-            <Sparkles size={14} style={{ color: 'var(--gold)' }} />
-            <span style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: "'IBM Plex Mono', ui-monospace, monospace", letterSpacing: '0.1em', textTransform: 'uppercase' }}>Knowledge Packs</span>
+      {/* Scrollable content + right-rail inspector — flex row so the rail
+          shrinks the grid area when open (audit #7). */}
+      <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'row' }}>
+        <div style={{ flex: 1, minWidth: 0, overflowY: 'auto' }}>
+          {/* Hero */}
+          <div style={{ maxWidth: 1080, margin: '0 auto', padding: '32px 28px 18px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+              <Sparkles size={14} style={{ color: 'var(--gold)' }} />
+              <span style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: "'IBM Plex Mono', ui-monospace, monospace", letterSpacing: '0.1em', textTransform: 'uppercase' }}>Knowledge Packs</span>
+            </div>
+            <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 30, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.02em', lineHeight: 1.2 }}>
+              Saved bundles
+            </h1>
+            <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 8, lineHeight: 1.6, maxWidth: 640 }}>
+              Group documents and links into a pack you can attach to a chat in one click.
+              Useful for state-law libraries, deal-specific exhibits, or playbooks.
+            </p>
           </div>
-          <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 30, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.02em', lineHeight: 1.2 }}>
-            Saved bundles
-          </h1>
-          <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 8, lineHeight: 1.6, maxWidth: 640 }}>
-            Group documents and links into a pack you can attach to a chat in one click.
-            Useful for state-law libraries, deal-specific exhibits, or playbooks.
-          </p>
+
+          {/* Pack grid (or empty state) */}
+          <div style={{ maxWidth: 1080, margin: '0 auto', padding: '0 28px 48px' }}>
+            {filtered.length === 0 ? (
+              <div style={{ padding: '64px 24px', textAlign: 'center', borderRadius: 12, border: '1px dashed var(--border)', background: '#fff' }}>
+                <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'var(--ice-warm)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
+                  <Package size={26} style={{ color: 'var(--navy)' }} />
+                </div>
+                <div style={{ fontSize: 16, fontWeight: 600, fontFamily: "'DM Serif Display', serif", color: 'var(--text-primary)' }}>
+                  {search ? 'No matches' : 'No packs in this view'}
+                </div>
+                <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 6, lineHeight: 1.6 }}>
+                  {search ? 'Try a different term, or clear the search.' : 'Bundle a few related documents to spin up your first pack.'}
+                </div>
+                {!search && (
+                  <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 16 }}>
+                    <button onClick={onCreateNew} style={{ padding: '8px 16px', borderRadius: 8, background: 'var(--navy)', color: '#fff', border: 'none', fontSize: 12, cursor: 'pointer' }}>+ New pack</button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 14 }}>
+                {filtered.map((p) => (
+                  <PackRow
+                    key={p.id}
+                    pack={p}
+                    activePack={activePack}
+                    inspected={inspectedPackId === p.id}
+                    currentUserId={currentUserId}
+                    isOrgAdmin={isOrgAdmin}
+                    onInspect={() => setInspectedPackId(p.id)}
+                    onSelect={onSelect}
+                    onEdit={onEdit}
+                    onDelete={onDelete}
+                    onToggleGlobal={onToggleGlobal}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Pack grid (or empty state) */}
-        <div style={{ maxWidth: 1080, margin: '0 auto', padding: '0 28px 48px' }}>
-          {filtered.length === 0 ? (
-            <div style={{ padding: '64px 24px', textAlign: 'center', borderRadius: 12, border: '1px dashed var(--border)', background: '#fff' }}>
-              <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'var(--ice-warm)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
-                <Package size={26} style={{ color: 'var(--navy)' }} />
-              </div>
-              <div style={{ fontSize: 16, fontWeight: 600, fontFamily: "'DM Serif Display', serif", color: 'var(--text-primary)' }}>
-                {search ? 'No matches' : 'No packs in this view'}
-              </div>
-              <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 6, lineHeight: 1.6 }}>
-                {search ? 'Try a different term, or clear the search.' : 'Bundle a few related documents to spin up your first pack.'}
-              </div>
-              {!search && (
-                <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 16 }}>
-                  <button onClick={onCreateNew} style={{ padding: '8px 16px', borderRadius: 8, background: 'var(--navy)', color: '#fff', border: 'none', fontSize: 12, cursor: 'pointer' }}>+ New pack</button>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 14 }}>
-              {filtered.map((p) => (
-                <PackRow
-                  key={p.id}
-                  pack={p}
-                  activePack={activePack}
-                  currentUserId={currentUserId}
-                  isOrgAdmin={isOrgAdmin}
-                  onSelect={onSelect}
-                  onEdit={onEdit}
-                  onDelete={onDelete}
-                  onToggleGlobal={onToggleGlobal}
-                />
-              ))}
-            </div>
-          )}
-        </div>
+        {inspectedPack && (
+          <PackInspector
+            pack={inspectedPack}
+            activePack={activePack}
+            currentUserId={currentUserId}
+            isOrgAdmin={isOrgAdmin}
+            onClose={() => setInspectedPackId(null)}
+            onSelect={onSelect}
+            onEdit={onEdit}
+            onToggleGlobal={onToggleGlobal}
+          />
+        )}
       </div>
     </div>
+  );
+}
+
+/* ─── PackInspector — right rail with full pack detail (audit #7) ─── */
+function PackInspector({ pack, activePack, currentUserId, isOrgAdmin, onClose, onSelect, onEdit, onToggleGlobal }) {
+  const isOwner = pack.ownerId === currentUserId;
+  const canEdit = isOrgAdmin || isOwner;
+  const canToggleGlobal = isOrgAdmin;
+  const isActive = activePack?.id === pack.id;
+  const ownerPill = pack.isGlobal
+    ? { bg: 'rgba(201,168,76,0.18)', color: '#9A7A22', border: 'rgba(201,168,76,0.45)', label: 'Org-wide' }
+    : isOwner
+      ? { bg: '#F0F3F6', color: '#1E3A8A', border: '#D8DFE9', label: 'Your pack' }
+      : { bg: '#F8F4ED', color: '#6B7885', border: '#E5E0D3', label: `By ${pack.ownerName || 'Member'}` };
+  const docs = Array.isArray(pack.docs) ? pack.docs : [];
+  const links = Array.isArray(pack.links) ? pack.links : [];
+  return (
+    <aside style={{
+      width: 380, flexShrink: 0,
+      borderLeft: '1px solid var(--border)', background: '#fff',
+      display: 'flex', flexDirection: 'column', minHeight: 0,
+    }}>
+      {/* Header — icon + title + ownership + close */}
+      <div style={{ padding: '20px 22px 16px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+        <div style={{ width: 44, height: 44, borderRadius: 12, background: pack.isGlobal ? 'rgba(201,168,76,0.15)' : 'var(--ice-warm)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <Package size={20} style={{ color: pack.isGlobal ? '#9A7A22' : 'var(--navy)' }} />
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <h2 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 22, color: 'var(--navy)', margin: 0, lineHeight: 1.2, letterSpacing: '-0.01em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{pack.name}</h2>
+          <span style={{ display: 'inline-block', marginTop: 8, fontSize: 10, padding: '2px 8px', borderRadius: 999, background: ownerPill.bg, color: ownerPill.color, border: `1px solid ${ownerPill.border}`, fontWeight: 600, letterSpacing: '0.02em' }}>
+            {ownerPill.label}
+          </span>
+        </div>
+        <button
+          onClick={onClose}
+          title="Close"
+          style={{ width: 28, height: 28, borderRadius: 6, background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(15,23,42,0.06)'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+        >
+          <X size={14} style={{ color: 'var(--text-muted)' }} />
+        </button>
+      </div>
+
+      {/* Description */}
+      {pack.description && (
+        <div style={{ padding: '14px 22px', borderBottom: '1px solid var(--border)' }}>
+          <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, margin: 0 }}>{pack.description}</p>
+        </div>
+      )}
+
+      {/* Stats */}
+      <div style={{ padding: '12px 22px', display: 'flex', gap: 16, borderBottom: '1px solid var(--border)', fontSize: 11, color: 'var(--text-muted)' }}>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+          <FileText size={12} /> {docs.length} doc{docs.length !== 1 ? 's' : ''}
+        </span>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+          <Link2 size={12} /> {links.length} link{links.length !== 1 ? 's' : ''}
+        </span>
+      </div>
+
+      {/* Doc + link list */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '6px 0 16px' }}>
+        {docs.length === 0 && links.length === 0 ? (
+          <div style={{ padding: '24px 22px', fontSize: 12, color: 'var(--text-muted)', textAlign: 'center' }}>
+            This pack has no documents or links yet.
+          </div>
+        ) : (
+          <>
+            {docs.length > 0 && (
+              <>
+                <div style={{ padding: '12px 22px 6px', fontSize: 10, color: 'var(--text-muted)', fontFamily: "'IBM Plex Mono', ui-monospace, monospace", letterSpacing: '0.12em', textTransform: 'uppercase' }}>Documents</div>
+                {docs.map((d, i) => (
+                  <div key={d.id || i} style={{ padding: '8px 22px', display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <FileText size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 12, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.name || 'Untitled'}</div>
+                      {d.size && <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 1 }}>{d.size}</div>}
+                    </div>
+                  </div>
+                ))}
+              </>
+            )}
+            {links.length > 0 && (
+              <>
+                <div style={{ padding: '12px 22px 6px', fontSize: 10, color: 'var(--text-muted)', fontFamily: "'IBM Plex Mono', ui-monospace, monospace", letterSpacing: '0.12em', textTransform: 'uppercase' }}>Links</div>
+                {links.map((l, i) => (
+                  <div key={l.id || i} style={{ padding: '8px 22px', display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <Link2 size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 12, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{l.label || l.url || 'Link'}</div>
+                      {l.url && <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{l.url}</div>}
+                    </div>
+                  </div>
+                ))}
+              </>
+            )}
+          </>
+        )}
+      </div>
+
+      {/* Footer — share toggle (Org Admin) + Edit + Use in chat */}
+      <div style={{ padding: '14px 22px', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8 }}>
+        {canToggleGlobal && (
+          <span
+            onClick={() => onToggleGlobal?.(pack.id, !pack.isGlobal)}
+            title={pack.isGlobal ? 'Shared org-wide — click to make personal' : 'Share with entire organisation'}
+            style={{ width: 28, height: 16, borderRadius: 999, background: pack.isGlobal ? 'var(--navy)' : '#CBD5E1', position: 'relative', transition: 'background 150ms', flexShrink: 0, cursor: 'pointer' }}
+          >
+            <span style={{ position: 'absolute', top: 2, left: pack.isGlobal ? 14 : 2, width: 12, height: 12, borderRadius: '50%', background: '#fff', boxShadow: '0 1px 2px rgba(0,0,0,0.2)', transition: 'left 150ms' }} />
+          </span>
+        )}
+        {canEdit && (
+          <button
+            onClick={() => onEdit?.(pack)}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '8px 14px', borderRadius: 8, background: '#fff', color: 'var(--text-primary)', border: '1px solid var(--border)', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}
+          >
+            <Edit3 size={12} /> Edit
+          </button>
+        )}
+        <div style={{ flex: 1 }} />
+        <button
+          onClick={() => onSelect?.(pack)}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 8, background: isActive ? '#5CA868' : 'var(--navy)', color: '#fff', border: 'none', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}
+        >
+          {isActive ? <><CheckCircle size={12} /> Active in chat</> : 'Use in chat'}
+        </button>
+      </div>
+    </aside>
   );
 }
 
@@ -1440,7 +1597,7 @@ function ScopeTab({ label, count, active, onClick }) {
 }
 
 /* ─── Knowledge Pack card row (vertical layout for grid cells) ─── */
-function PackRow({ pack, activePack, currentUserId, isOrgAdmin, onSelect, onEdit, onDelete, onToggleGlobal }) {
+function PackRow({ pack, activePack, inspected, currentUserId, isOrgAdmin, onInspect, onSelect, onEdit, onDelete, onToggleGlobal }) {
   const isOwner = pack.ownerId === currentUserId;
   const canEdit = isOrgAdmin || isOwner;
   const canToggleGlobal = isOrgAdmin;
@@ -1454,17 +1611,30 @@ function PackRow({ pack, activePack, currentUserId, isOrgAdmin, onSelect, onEdit
       ? { bg: '#F0F3F6', color: '#1E3A8A', border: '#D8DFE9', label: 'Your pack' }
       : { bg: '#F8F4ED', color: '#6B7885', border: '#E5E0D3', label: `By ${pack.ownerName || 'Member'}` };
 
+  // Inspected card gets a subtle navy border so the open right rail
+  // visibly anchors to the card the user clicked.
+  const restingBorder = isActive ? '#5CA868' : (inspected ? 'var(--navy)' : 'var(--border)');
+  const restingShadow = isActive
+    ? '0 0 0 1px rgba(92,168,104,0.4)'
+    : (inspected ? '0 4px 14px rgba(10,36,99,0.10)' : 'none');
+
   return (
     <div
+      onClick={(e) => {
+        // Buttons inside the card stopPropagation; this fires for any
+        // empty area on the card body to open the inspector rail.
+        if (onInspect) onInspect(pack);
+      }}
       style={{
         padding: '16px 18px', borderRadius: 12,
-        border: '1px solid ' + (isActive ? '#5CA868' : 'var(--border)'),
+        border: '1px solid ' + restingBorder,
         transition: 'all 0.15s', background: '#fff',
         display: 'flex', flexDirection: 'column', minHeight: 168,
-        boxShadow: isActive ? '0 0 0 1px rgba(92,168,104,0.4)' : 'none',
+        boxShadow: restingShadow,
+        cursor: onInspect ? 'pointer' : 'default',
       }}
-      onMouseEnter={(e) => { if (!isActive) { e.currentTarget.style.boxShadow = '0 4px 14px rgba(15,23,42,0.06)'; e.currentTarget.style.borderColor = 'var(--navy)'; } }}
-      onMouseLeave={(e) => { if (!isActive) { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.borderColor = 'var(--border)'; } }}
+      onMouseEnter={(e) => { if (!isActive && !inspected) { e.currentTarget.style.boxShadow = '0 4px 14px rgba(15,23,42,0.06)'; e.currentTarget.style.borderColor = 'var(--navy)'; } }}
+      onMouseLeave={(e) => { if (!isActive && !inspected) { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.borderColor = 'var(--border)'; } }}
     >
       {/* Header row — icon, title block, kebab */}
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
@@ -1530,7 +1700,7 @@ function PackRow({ pack, activePack, currentUserId, isOrgAdmin, onSelect, onEdit
         </div>
         {canToggleGlobal && (
           <span
-            onClick={() => onToggleGlobal?.(pack.id, !pack.isGlobal)}
+            onClick={(e) => { e.stopPropagation(); onToggleGlobal?.(pack.id, !pack.isGlobal); }}
             title={pack.isGlobal ? 'Shared org-wide — click to make personal' : 'Share with entire organisation'}
             style={{ width: 28, height: 16, borderRadius: 999, background: pack.isGlobal ? 'var(--navy)' : '#CBD5E1', position: 'relative', transition: 'background 150ms', flexShrink: 0, cursor: 'pointer' }}
           >
@@ -1539,7 +1709,7 @@ function PackRow({ pack, activePack, currentUserId, isOrgAdmin, onSelect, onEdit
         )}
         {onSelect && (
           <button
-            onClick={() => onSelect(pack)}
+            onClick={(e) => { e.stopPropagation(); onSelect(pack); }}
             style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '6px 14px', borderRadius: 6, backgroundColor: isActive ? '#5CA868' : 'var(--navy)', color: 'white', border: 'none', fontSize: 12, fontWeight: 500, cursor: 'pointer', flexShrink: 0 }}
           >
             {isActive ? <><CheckCircle size={12} /> Active</> : 'Use'}
@@ -6389,7 +6559,9 @@ INSTRUCTIONS:
                       {activeVaultDocument && <span>Attached</span>}
                     </button>
 
-                    {/* Intent dropdown pill (with bucket dot prefix). */}
+                    {/* Intent dropdown pill — bucket-color dot prefix (matches
+                        populated-chat pill + audit note #4 "color dot carries
+                        through to chips and trigger"). */}
                     <div style={{ position: 'relative' }} ref={intentDropdownRef}>
                       {(() => {
                         const bucket = getBucketForIntent(activeIntent);
@@ -6405,10 +6577,7 @@ INSTRUCTIONS:
                               color: 'var(--text-primary)', cursor: 'pointer', whiteSpace: 'nowrap',
                             }}
                           >
-                            {(() => {
-                              const Icon = MessageCircle;
-                              return <Icon size={14} style={{ color: 'var(--navy)' }} />;
-                            })()}
+                            <span style={{ width: 8, height: 8, borderRadius: '50%', background: dotColor, flexShrink: 0 }} />
                             <span>{getIntentLabel(activeIntent)}</span>
                             <ChevronDown size={12} style={{ transform: isIntentDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 150ms' }} />
                           </button>
@@ -6489,22 +6658,25 @@ INSTRUCTIONS:
                       onPickVault={() => setIsVaultPickerModalOpen(true)}
                     />
 
-                    {/* Pack dropdown — pill with name (or "No pack"). The
-                        KP popover renders inside this same `position: relative`
-                        wrapper so it anchors directly under the pill. */}
+                    {/* Pack pill — gold-tinted when active (matches mockup),
+                        neutral white when no pack picked. Opens the inline
+                        dropdown (audit note #3 — picker is a popover anchored
+                        to the pill, not a modal). */}
                     <div style={{ position: 'relative', flexShrink: 0 }} ref={kpMenuRef}>
                       <button
-                        onClick={() => setIsPackPickerModalOpen(true)}
-                        title="Pick a Knowledge Pack"
+                        onClick={() => setIsKpMenuOpen(v => !v)}
+                        title={activeKnowledgePack ? activeKnowledgePack.name : 'Pick a Knowledge Pack'}
                         style={{
                           display: 'inline-flex', alignItems: 'center', gap: 8,
                           padding: '8px 14px', borderRadius: 999,
                           fontSize: 13, fontFamily: "'DM Sans', sans-serif", fontWeight: 500,
-                          border: '1px solid var(--border)', background: '#fff',
-                          color: 'var(--text-primary)', cursor: 'pointer', whiteSpace: 'nowrap', maxWidth: 220,
+                          border: activeKnowledgePack ? '1px solid #C9A84C' : '1px solid var(--border)',
+                          background: activeKnowledgePack ? 'rgba(201, 168, 76, 0.10)' : '#fff',
+                          color: activeKnowledgePack ? '#7A6520' : 'var(--text-primary)',
+                          cursor: 'pointer', whiteSpace: 'nowrap', maxWidth: 220,
                         }}
                       >
-                        <Package size={13} style={{ color: 'var(--navy)', flexShrink: 0 }} />
+                        <span style={{ width: 8, height: 8, borderRadius: '50%', background: activeKnowledgePack ? '#C9A84C' : '#CBD5E1', flexShrink: 0 }} />
                         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {activeKnowledgePack ? activeKnowledgePack.name : 'Pick a pack'}
                         </span>
