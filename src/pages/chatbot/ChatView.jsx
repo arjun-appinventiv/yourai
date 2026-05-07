@@ -404,7 +404,7 @@ const riskColors = {
    Layout structure confirmed by Arjun. Not signed off by Ryan.
    All existing nav items preserved — reorganised only. */
 
-function Sidebar({ activeKey, onOpenChat, onOpenPromptTemplates, onOpenClients, onOpenKnowledgePacks, onOpenDocumentVault, onOpenInviteTeam, onOpenAuditLogs, onOpenBilling, onOpenWorkspaces, onOpenWorkflows, promptCount, clientCount, packCount, vaultCount, memberCount, workspaceCount, workflowCount, isOpen, onClose, threads, activeThreadId, onSwitchThread, onNewThread, onDeleteThread, threadSearch, onThreadSearchChange, onSignOut, runningWorkflow, onViewRunning }) {
+function Sidebar({ activeKey, onOpenChat, onOpenPromptTemplates, onOpenClients, onOpenKnowledgePacks, onOpenDocumentVault, onOpenInviteTeam, onOpenAuditLogs, onOpenBilling, onOpenWorkspaces, onOpenWorkflows, promptCount, clientCount, packCount, vaultCount, memberCount, workspaceCount, workflowCount, isOpen, onClose, threads, activeThreadId, onSwitchThread, onNewThread, onDeleteThread, onRenameThread, threadSearch, onThreadSearchChange, onSignOut, runningWorkflow, onViewRunning }) {
   // Role + permission gating — every nav item decides visibility via hasPermission
   // rather than by comparing role strings directly. See src/lib/roles.ts.
   const { hasPermission, isOrgAdmin, isExternalUser } = useRole();
@@ -439,6 +439,11 @@ function Sidebar({ activeKey, onOpenChat, onOpenPromptTemplates, onOpenClients, 
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [hoveredItem, setHoveredItem] = useState(null);
   const [hoveredThread, setHoveredThread] = useState(null);
+  // Inline-rename state for the recent-threads list. When set, that
+  // row swaps to an editable input. Enter / blur commits via
+  // onRenameThread; Escape cancels.
+  const [renamingThreadId, setRenamingThreadId] = useState(null);
+  const [renamingDraft, setRenamingDraft] = useState('');
 
   const toggleWorkspace = () => {
     setWorkspaceOpen(prev => { const next = !prev; try { localStorage.setItem('yourai_sidebar_workspace_open', String(next)); } catch {} return next; });
@@ -686,16 +691,29 @@ function Sidebar({ activeKey, onOpenChat, onOpenPromptTemplates, onOpenClients, 
             {recentThreads.map(t => {
               const isActive = t.id === activeThreadId;
               const isHov = hoveredThread === t.id;
+              const isRenaming = renamingThreadId === t.id;
+              const commitRename = () => {
+                const trimmed = (renamingDraft || '').trim();
+                if (trimmed && trimmed !== t.title) {
+                  onRenameThread?.(t.id, trimmed);
+                }
+                setRenamingThreadId(null);
+                setRenamingDraft('');
+              };
+              const cancelRename = () => {
+                setRenamingThreadId(null);
+                setRenamingDraft('');
+              };
               return (
                 <div
                   key={t.id}
-                  onClick={() => onSwitchThread(t.id)}
+                  onClick={isRenaming ? undefined : () => onSwitchThread(t.id)}
                   onMouseEnter={() => setHoveredThread(t.id)}
                   onMouseLeave={() => setHoveredThread(null)}
                   style={{
                     display: 'flex', alignItems: 'center', gap: 8,
                     padding: '6px 8px', borderRadius: 6,
-                    cursor: 'pointer', userSelect: 'none',
+                    cursor: isRenaming ? 'default' : 'pointer', userSelect: 'none',
                     minHeight: 44,
                     background: isActive ? '#fff' : isHov ? '#fff' : 'transparent',
                     border: isActive ? '0.5px solid var(--border)' : '0.5px solid transparent',
@@ -704,14 +722,29 @@ function Sidebar({ activeKey, onOpenChat, onOpenPromptTemplates, onOpenClients, 
                 >
                   <MessageSquare size={13} style={{ color: isActive ? 'var(--navy)' : 'var(--text-muted)', flexShrink: 0, marginTop: 1 }} />
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 12, fontWeight: isActive ? 500 : 400, color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {t.title}
-                    </div>
+                    {isRenaming ? (
+                      <input
+                        autoFocus
+                        value={renamingDraft}
+                        onChange={(e) => setRenamingDraft(e.target.value)}
+                        onClick={(e) => e.stopPropagation()}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') { e.preventDefault(); commitRename(); }
+                          else if (e.key === 'Escape') { e.preventDefault(); cancelRename(); }
+                        }}
+                        onBlur={commitRename}
+                        style={{ width: '100%', fontSize: 12, fontWeight: 500, color: 'var(--text-primary)', background: 'transparent', border: 'none', outline: 'none', padding: 0, fontFamily: 'inherit' }}
+                      />
+                    ) : (
+                      <div style={{ fontSize: 12, fontWeight: isActive ? 500 : 400, color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {t.title}
+                      </div>
+                    )}
                     {/* Content-match snippet — only present when the
                         Search Chats query matched a message body (not the
                         title). Lets the user see *what* hit so they don't
                         have to open the thread to find out. */}
-                    {t.searchSnippet ? (
+                    {!isRenaming && (t.searchSnippet ? (
                       <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1, fontStyle: 'italic', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {t.searchSnippet}
                       </div>
@@ -719,17 +752,28 @@ function Sidebar({ activeKey, onOpenChat, onOpenPromptTemplates, onOpenClients, 
                       <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>
                         {t.updatedAt} &middot; {t.messageCount} msgs
                       </div>
-                    )}
+                    ))}
                   </div>
-                  {/* Delete — appears on hover */}
-                  {isHov && totalThreads > 1 && (
-                    <button
-                      onClick={(e) => { e.stopPropagation(); onDeleteThread(t.id); }}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, color: 'var(--text-muted)', flexShrink: 0 }}
-                      title="Delete conversation"
-                    >
-                      <Trash2 size={12} />
-                    </button>
+                  {/* Rename + Delete — appear on hover, hidden during rename */}
+                  {isHov && !isRenaming && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 2, flexShrink: 0 }}>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setRenamingThreadId(t.id); setRenamingDraft(t.title || ''); }}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, color: 'var(--text-muted)' }}
+                        title="Rename conversation"
+                      >
+                        <Edit3 size={12} />
+                      </button>
+                      {totalThreads > 1 && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); onDeleteThread(t.id); }}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, color: 'var(--text-muted)' }}
+                          title="Delete conversation"
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      )}
+                    </div>
                   )}
                 </div>
               );
@@ -1508,7 +1552,7 @@ function PackRow({ pack, activePack, currentUserId, isOrgAdmin, onSelect, onEdit
 }
 
 /* ─────────────────── Edit / Create Knowledge Pack Modal ─────────────────── */
-function EditKnowledgePackModal({ pack, onClose, onSave }) {
+function EditKnowledgePackModal({ pack, initialFiles = [], onClose, onSave }) {
   const { hasPermission, isOrgAdmin } = useRole();
   const canShareGlobally = isOrgAdmin || hasPermission(PERMISSIONS.CREATE_GLOBAL_KP);
   const isNew = !pack;
@@ -1534,11 +1578,30 @@ function EditKnowledgePackModal({ pack, onClose, onSave }) {
   // on the doc record so the chat-grounding inlining (in sendMessage)
   // can pass real text to the Edge model when this pack is attached.
   // Without this, the pack saved as metadata-only and grounding failed.
+  //
+  // Stub detection: extractFileText never throws — for image-based or
+  // unparseable PDFs it RESOLVES with a placeholder string starting
+  // `[File: foo.pdf] This PDF appears to be image-based or empty…`.
+  // Saving that as `content` yields silent broken grounding (the LLM
+  // sees only the placeholder and asks the user to upload). Detect
+  // and mark such docs as `failed` so the modal blocks Save until the
+  // user removes/retries — same UX as a hard parse error.
+  const isExtractionStub = (text) => {
+    if (typeof text !== 'string') return true;
+    const t = text.trim();
+    if (!t) return true;
+    // The parser's known stub format. See src/lib/file-parser.ts.
+    return /^\[File:\s.+\]\s/.test(t) && t.length < 400;
+  };
   const runDocExtraction = (id, file) => {
     setTimeout(() => {
       setDocs(prev => prev.map(d => d.id === id && d.status === 'uploading' ? { ...d, status: 'processing' } : d));
     }, 150);
     extractFileText(file).then(({ text }) => {
+      if (isExtractionStub(text)) {
+        setDocs(prev => prev.map(d => d.id === id ? { ...d, status: 'failed', error: 'No readable text — likely an image-based PDF.' } : d));
+        return;
+      }
       setDocs(prev => prev.map(d => d.id === id ? { ...d, status: 'ready', content: text } : d));
     }).catch((err) => {
       console.error('KP doc extraction failed:', err);
@@ -1586,6 +1649,20 @@ function EditKnowledgePackModal({ pack, onClose, onSave }) {
     setDocs(prev => [...prev, ...acceptedForState, ...rejected]);
     accepted.forEach(d => runDocExtraction(d.id, d.file));
   };
+
+  // When the modal mounts with overflow files (user clicked "Create a
+  // Knowledge Pack" on the chat-attach overflow banner), feed those
+  // files into the same pipeline as a manual + Add Document — so the
+  // user doesn't have to re-pick. Run once on mount; the parent clears
+  // initialFiles after Save / close.
+  const initialFilesProcessedRef = useRef(false);
+  useEffect(() => {
+    if (initialFilesProcessedRef.current) return;
+    if (!Array.isArray(initialFiles) || initialFiles.length === 0) return;
+    initialFilesProcessedRef.current = true;
+    handleDocFilesPicked({ target: { files: initialFiles, value: '' } });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialFiles]);
 
   const handleRemoveDoc = (id) => setDocs(prev => prev.filter(d => d.id !== id));
 
@@ -4008,6 +4085,12 @@ export default function ChatView({ initialView = 'chat' }) {
   useEffect(() => { savePacks(knowledgePacks); }, [knowledgePacks]);
   const [showKnowledgePacksPanel, setShowKnowledgePacksPanel] = useState(false);
   const [editingPack, setEditingPack] = useState(null);
+  // When the user hits the chat-attach overflow banner and clicks
+  // "Create a Knowledge Pack", we preserve the File objects here so
+  // the new-pack modal can prefill its docs list and run real
+  // extraction — instead of dumping the user back into the panel
+  // with no recollection of what they were trying to upload.
+  const [overflowFilesForNewPack, setOverflowFilesForNewPack] = useState([]);
   const [showPackPicker, setShowPackPicker] = useState(false);
   const [activeKnowledgePack, setActiveKnowledgePack] = useState(null);
   const [pendingAttachments, setPendingAttachments] = useState([]);
@@ -4140,6 +4223,13 @@ export default function ChatView({ initialView = 'chat' }) {
   const [threadSearch, setThreadSearch] = useState('');
   // Per-thread message store — persists messages when switching between threads
   const threadMessagesRef = useRef({});
+  // Per-thread "what was attached when you left this conversation"
+  // snapshot: pack, vault doc, vault folder, sessionDocContext (the
+  // accumulated document text from prior sends in this thread). Without
+  // this, switching back to an earlier conversation lost every doc the
+  // user had attached and the bot could no longer reference them. Keys
+  // are thread ids; the entry is `null` when a thread has no context.
+  const threadContextRef = useRef({});
 
   // ─── Session Document Version Handling (DEC-093, DEC-094, DEC-095) ───
   // See knowledge-pack-strategy.md — Document Version Handling section
@@ -4284,6 +4374,16 @@ export default function ChatView({ initialView = 'chat' }) {
   const handleNewThread = useCallback(() => {
     // Save current thread messages before switching
     threadMessagesRef.current[activeThreadId] = messages;
+    // Snapshot current thread's attached context so switching back
+    // shows the docs / pack / folder the user had selected.
+    threadContextRef.current[activeThreadId] = {
+      activeKnowledgePack,
+      activeVaultDocument,
+      activeVaultFolder,
+      sessionDocContext,
+      activeIntent,
+      hasManualIntentPick,
+    };
 
     const newThread = {
       id: `thread-${Date.now()}`,
@@ -4311,6 +4411,11 @@ export default function ChatView({ initialView = 'chat' }) {
     setSuggestedIntents([]);
     setDismissedSuggestion(null);
     setIsIntentDropdownOpen(false);
+    // Clear in-flight extraction promises tied to the prior thread —
+    // otherwise the Map grows unbounded across thread switches and a
+    // late resolve from a prior thread can write to the new thread's
+    // pendingAttachments / vault unexpectedly.
+    extractionPromisesRef.current.clear();
     // DEC-093 + DEC-094: New session gets current KB snapshot
     setSessionState({
       sessionKbSnapshotId: `kb-snapshot-${Date.now()}`,
@@ -4361,14 +4466,30 @@ export default function ChatView({ initialView = 'chat' }) {
     if (threadId === activeThreadId) return;
     // Save current thread messages before switching
     threadMessagesRef.current[activeThreadId] = messages;
-    // Update thread metadata
+    // Snapshot current thread's attached context (pack / vault doc /
+    // vault folder / sessionDocContext / intent) so coming back to
+    // this thread restores the working state — not just the messages.
+    threadContextRef.current[activeThreadId] = {
+      activeKnowledgePack,
+      activeVaultDocument,
+      activeVaultFolder,
+      sessionDocContext,
+      activeIntent,
+      hasManualIntentPick,
+    };
+    // Update thread metadata. Auto-derive title from first user msg
+    // ONLY if the user hasn't explicitly renamed this thread — once
+    // they rename, the title sticks.
     setThreads(prev => prev.map(t => {
       if (t.id === activeThreadId) {
         const firstUserMsg = messages.find(m => m.sender === 'user');
+        const autoTitle = firstUserMsg
+          ? (firstUserMsg.content.length > 50 ? firstUserMsg.content.substring(0, 50) + '...' : firstUserMsg.content)
+          : t.title;
         return {
           ...t,
           isActive: false,
-          title: firstUserMsg ? (firstUserMsg.content.length > 50 ? firstUserMsg.content.substring(0, 50) + '...' : firstUserMsg.content) : t.title,
+          title: t.userRenamed ? t.title : autoTitle,
           preview: firstUserMsg ? firstUserMsg.content : t.preview,
           messageCount: messages.length,
         };
@@ -4389,18 +4510,35 @@ export default function ChatView({ initialView = 'chat' }) {
       setMessages([]);
       setShowEmptyState(true);
     }
-    setActiveKnowledgePack(null);
-    setActiveVaultDocument(null);
-    setActiveVaultFolder(null);
+    // Restore the target thread's attached context — or clear if none.
+    const restored = threadContextRef.current[threadId];
+    setActiveKnowledgePack(restored?.activeKnowledgePack || null);
+    setActiveVaultDocument(restored?.activeVaultDocument || null);
+    setActiveVaultFolder(restored?.activeVaultFolder || null);
+    setSessionDocContext(restored?.sessionDocContext || null);
+    setActiveIntent(restored?.activeIntent || DEFAULT_INTENT);
+    setHasManualIntentPick(!!restored?.hasManualIntentPick);
+    // Pending (uncommitted) attachments are tied to "what I'm about to
+    // send" — they don't carry across thread switches.
     setPendingAttachments([]);
-    setSessionDocContext(null);
+    extractionPromisesRef.current.clear();
     setInput('');
-  }, [activeThreadId, messages]);
+  }, [activeThreadId, messages, activeKnowledgePack, activeVaultDocument, activeVaultFolder, sessionDocContext, activeIntent, hasManualIntentPick]);
+
+  const handleRenameThread = useCallback((threadId, newTitle) => {
+    const trimmed = (newTitle || '').trim();
+    if (!trimmed) return;
+    // Mark `userRenamed: true` so the auto-title-from-first-message
+    // logic in handleSwitchThread doesn't clobber it on the next switch.
+    setThreads((prev) => prev.map((t) => (t.id === threadId ? { ...t, title: trimmed, userRenamed: true } : t)));
+    showToast(`Conversation renamed to "${trimmed}"`);
+  }, [showToast]);
 
   const handleDeleteThread = useCallback((threadId) => {
     if (threads.length <= 1) return;
     const target = threads.find(t => t.id === threadId);
     delete threadMessagesRef.current[threadId];
+    delete threadContextRef.current[threadId];
     const remaining = threads.filter(t => t.id !== threadId);
     setThreads(remaining);
     if (threadId === activeThreadId) {
@@ -4925,12 +5063,13 @@ export default function ChatView({ initialView = 'chat' }) {
     const effectiveDocContext = mergedDocContent || vaultSelectionContext;
 
     // Knowledge Pack content — folded INTO the same `[Documents attached
-    // to this conversation]` block as user uploads / vault picks. The
-    // Edge prompt's MISSING_DOCUMENT_HANDLING branch only recognises the
-    // doc-context block as "document content"; a separate `[Knowledge
-    // Pack reference]` header read as background material and the model
-    // would still ask the user to upload. Each pack doc is labelled with
-    // "(from Knowledge Pack: X)" so the model can disambiguate.
+    // to this conversation]` block as user uploads / vault picks, but
+    // sub-labelled so the model can distinguish "reference material from
+    // the user's pack" from "documents the user just attached". This
+    // matters when the user wants to compare/measure their doc against
+    // the pack (e.g. "review my case against the attached real-estate
+    // laws"). Both layers are document content for grounding purposes
+    // — they just play different roles in the analysis.
     let packDocsBlock = '';
     let packHasAnyContent = false;
     if (activeKnowledgePack && Array.isArray(activeKnowledgePack.docs) && activeKnowledgePack.docs.length > 0) {
@@ -4938,16 +5077,20 @@ export default function ChatView({ initialView = 'chat' }) {
       const pieces = activeKnowledgePack.docs.map((d) => {
         const raw = d.content || '';
         const txt = raw.slice(0, PER_PACK_DOC_CAP);
-        if (!txt.trim()) return `\n## ${d.name}\n[No extracted text available for this file.]`;
+        if (!txt.trim()) return `## ${d.name}\n[No extracted text available for this file.]`;
         packHasAnyContent = true;
-        return `\n## ${d.name} (from Knowledge Pack: ${activeKnowledgePack.name})\n${txt}${raw.length > PER_PACK_DOC_CAP ? '\n[... truncated ...]' : ''}`;
+        return `## ${d.name}\n${txt}${raw.length > PER_PACK_DOC_CAP ? '\n[... truncated ...]' : ''}`;
       });
-      packDocsBlock = pieces.join('\n');
+      packDocsBlock = `--- Reference material from the Knowledge Pack "${activeKnowledgePack.name}" ---\n${pieces.join('\n\n')}`;
     }
 
-    // Pack docs first so the user's direct uploads (which are "fresher"
-    // intent) come last inside the merged block.
-    const mergedDocsForEdge = [packDocsBlock, effectiveDocContext].filter(Boolean).join('\n\n');
+    // Pack reference first (background frame), then user's own attached
+    // documents (the subject of analysis). The "ROLES" framing is
+    // explicit so the model knows what to compare against what.
+    const userDocsBlock = effectiveDocContext
+      ? `--- Documents the user attached for this conversation ---\n${effectiveDocContext}`
+      : '';
+    const mergedDocsForEdge = [packDocsBlock, userDocsBlock].filter(Boolean).join('\n\n');
 
     // (b) When user sends purely an attachment with no typed text, substitute a default question so the Edge guard passes.
     const effectiveQuestion = trimmed || (mergedDocsForEdge ? 'Please review the attached document(s) and summarise what you find.' : '');
@@ -5312,6 +5455,16 @@ INSTRUCTIONS:
   const handleAttachFiles = (files, kind) => {
     // Validate file types for document uploads
     if (kind === 'doc') {
+      // ─── Overflow check FIRST (before unsupported / oversize filtering) ──
+      // Otherwise dropping 6 files where 1 is unsupported leaves 5 valid
+      // and the cap appears to "pass" — the user never sees the offer to
+      // bundle into a Knowledge Pack even though they tried to attach >5.
+      const currentDocCount = pendingAttachments.filter(a => a.kind === 'doc').length;
+      if (currentDocCount + files.length > MAX_CHAT_ATTACHMENTS) {
+        setAttachLimitOverflow({ files: [...files], currentCount: currentDocCount });
+        return; // Don't add to pending — user has to make a choice
+      }
+
       const rejected = files.filter(f => {
         const ext = f.name.lastIndexOf('.') !== -1
           ? f.name.slice(f.name.lastIndexOf('.')).toLowerCase()
@@ -5895,6 +6048,7 @@ INSTRUCTIONS:
         onSwitchThread={(id) => { handleSwitchThread(id); setSidebarOpen(false); }}
         onNewThread={() => { handleNewThread(); setSidebarOpen(false); }}
         onDeleteThread={handleDeleteThread}
+        onRenameThread={handleRenameThread}
         threadSearch={threadSearch}
         onThreadSearchChange={setThreadSearch}
         onSignOut={async () => { await session.signOut(); navigate('/chat/login'); }}
@@ -6031,10 +6185,12 @@ INSTRUCTIONS:
                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                     <button
                       onClick={() => {
-                        // Open the knowledge pack creator — the user will need to re-add
-                        // their files there since File objects can't be passed around.
-                        setEditingPack(null);
-                        setShowKnowledgePacksPanel(true);
+                        // Open the new-pack modal directly with the files the
+                        // user just tried to attach — modal kicks off real
+                        // extraction on each one and the user only has to
+                        // name the pack + Save.
+                        setOverflowFilesForNewPack([...attachLimitOverflow.files]);
+                        setEditingPack({ isNew: true });
                         setAttachLimitOverflow(null);
                       }}
                       style={{ padding: '8px 16px', borderRadius: 8, fontSize: 12, fontWeight: 600, background: 'var(--navy)', color: '#fff', border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}
@@ -7014,6 +7170,20 @@ INSTRUCTIONS:
                   e.preventDefault();
                   setIsFileDropHover(false);
                   const files = Array.from(e.dataTransfer?.files || []);
+                  // Folder drops produce items in dataTransfer.items (kind="file"
+                  // and webkitGetAsEntry().isDirectory) but yield nothing in .files.
+                  // Detect that case and steer the user toward YourVault, which
+                  // already has folder-upload support.
+                  const looksLikeFolder = files.length === 0 && Array.from(e.dataTransfer?.items || []).some((it) => it.kind === 'file');
+                  if (looksLikeFolder) {
+                    setMessages((prev) => [...prev, {
+                      id: Date.now(),
+                      sender: 'bot',
+                      content: '**Folders aren\'t supported in chat attach.** Drop individual files here, or upload the folder to **YourVault** first (the vault preserves folder structure) and then attach a doc or the whole folder from there.',
+                      timestamp: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
+                    }]);
+                    return;
+                  }
                   if (files.length) handleAttachFiles(files, 'doc');
                 }}
                 style={{
@@ -7501,8 +7671,9 @@ INSTRUCTIONS:
       {editingPack && (
         <EditKnowledgePackModal
           pack={editingPack.isNew ? null : editingPack}
-          onClose={() => setEditingPack(null)}
-          onSave={(data) => { handleSavePack(data); setEditingPack(null); }}
+          initialFiles={editingPack.isNew ? overflowFilesForNewPack : []}
+          onClose={() => { setEditingPack(null); setOverflowFilesForNewPack([]); }}
+          onSave={(data) => { handleSavePack(data); setEditingPack(null); setOverflowFilesForNewPack([]); }}
         />
       )}
 
