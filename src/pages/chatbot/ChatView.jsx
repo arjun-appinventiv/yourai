@@ -4120,6 +4120,16 @@ export default function ChatView({ initialView = 'chat' }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUserId, currentRole, workspaceTick, showWorkspacesPanel]);
   const [toastMsg, setToastMsg] = useState('');
+  // Single helper so every mutation handler ends with one line instead of
+  // repeating `setToastMsg(...) + setTimeout(() => setToastMsg(''), 3200)`.
+  // 3.2 s matches the timing every existing toast site uses; the bottom-
+  // center navy pill at the end of the file is the only renderer.
+  const toastTimerRef = useRef(null);
+  const showToast = useCallback((msg) => {
+    setToastMsg(msg);
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = setTimeout(() => setToastMsg(''), 3200);
+  }, []);
   // Add Client standalone flow removed — clients are created via workspace
   // invites (External User → client record). Kept here as an anchor comment
   // to remind future edits not to reintroduce the modal.
@@ -4389,6 +4399,7 @@ export default function ChatView({ initialView = 'chat' }) {
 
   const handleDeleteThread = useCallback((threadId) => {
     if (threads.length <= 1) return;
+    const target = threads.find(t => t.id === threadId);
     delete threadMessagesRef.current[threadId];
     const remaining = threads.filter(t => t.id !== threadId);
     setThreads(remaining);
@@ -4408,7 +4419,8 @@ export default function ChatView({ initialView = 'chat' }) {
         setShowEmptyState(true);
       }
     }
-  }, [threads, activeThreadId]);
+    showToast(target?.title && target.title !== 'New Conversation' ? `"${target.title}" deleted` : 'Conversation deleted');
+  }, [threads, activeThreadId, showToast]);
 
   // Sidebar Search Chats — hybrid match across title/preview AND message
   // content. Title path stays cheap (no message-store walk); content path
@@ -5459,7 +5471,8 @@ INSTRUCTIONS:
         sourceBadge: null,
       }]);
     }
-  }, [sessionDocContext]);
+    showToast(`"${doc.name}" attached to chat`);
+  }, [sessionDocContext, showToast]);
 
   // Folder attach: mutually exclusive with single-doc attach.
   // Skip the version-banner gate — folders are a coarser context
@@ -5467,7 +5480,8 @@ INSTRUCTIONS:
   const handleSelectVaultFolder = useCallback((folder) => {
     setActiveVaultFolder(folder);
     setActiveVaultDocument(null);
-  }, []);
+    showToast(`Folder "${folder.name}" attached to chat`);
+  }, [showToast]);
 
   const handleCreateVaultFolder = useCallback((name, parentId = null) => {
     const trimmed = (name || '').trim();
@@ -5482,7 +5496,8 @@ INSTRUCTIONS:
       parentId: parentId || null,
     };
     setVaultFolders((prev) => [newFolder, ...prev]);
-  }, [currentUserId, operator]);
+    showToast(`Folder "${trimmed}" created`);
+  }, [currentUserId, operator, showToast]);
 
   // Recursive folder upload — walks each File's `webkitRelativePath`,
   // creates a folder for every directory segment that doesn't already
@@ -5566,8 +5581,7 @@ INSTRUCTIONS:
           return next;
         });
         const total = files.length;
-        setToastMsg(`Uploaded ${total} ${total === 1 ? 'file' : 'files'} with folder structure preserved`);
-        setTimeout(() => setToastMsg(''), 3500);
+        showToast(`Uploaded ${total} ${total === 1 ? 'file' : 'files'} with folder structure preserved`);
       }, 0);
 
       return folders;
@@ -5581,9 +5595,11 @@ INSTRUCTIONS:
     if (activeVaultFolder?.id === folderId) {
       setActiveVaultFolder((prev) => (prev ? { ...prev, name: trimmed } : prev));
     }
-  }, [activeVaultFolder]);
+    showToast(`Folder renamed to "${trimmed}"`);
+  }, [activeVaultFolder, showToast]);
 
   const handleDeleteVaultFolder = useCallback((folderId) => {
+    let removedName = '';
     setVaultFolders((prev) => {
       // Re-parent any direct child folders to the deleted folder's
       // parent so the subtree doesn't orphan. Docs inside child folders
@@ -5591,6 +5607,7 @@ INSTRUCTIONS:
       // child folder. Docs that were in the *deleted* folder itself
       // get unset (handled in setDocumentVault below).
       const target = prev.find((f) => f.id === folderId);
+      removedName = target?.name || '';
       const newParent = target?.parentId ?? null;
       return prev
         .filter((f) => f.id !== folderId)
@@ -5598,11 +5615,13 @@ INSTRUCTIONS:
     });
     setDocumentVault((prev) => prev.map((d) => (d.folderId === folderId ? { ...d, folderId: null } : d)));
     if (activeVaultFolder?.id === folderId) setActiveVaultFolder(null);
-  }, [activeVaultFolder]);
+    showToast(removedName ? `Folder "${removedName}" deleted` : 'Folder deleted');
+  }, [activeVaultFolder, showToast]);
 
   const handleSelectKnowledgePack = useCallback((pack) => {
     setActiveKnowledgePack(pack);
-  }, []);
+    showToast(`Knowledge pack "${pack.name}" attached to chat`);
+  }, [showToast]);
 
   const handleKeyDown = (e) => {
     if (e.key === 'Escape' && isIntentDropdownOpen) { setIsIntentDropdownOpen(false); return; }
@@ -5610,6 +5629,7 @@ INSTRUCTIONS:
   };
 
   const handleSavePack = (data) => {
+    let wasEdit = false;
     setKnowledgePacks(prev => {
       // Defensive: only treat as edit if the id actually exists in the
       // current list. A stale id from a closed-then-reopened modal — or
@@ -5618,6 +5638,7 @@ INSTRUCTIONS:
       // work" report).
       const idx = data.id ? prev.findIndex(p => p.id === data.id) : -1;
       if (idx >= 0) {
+        wasEdit = true;
         return prev.map((p, i) => i === idx ? { ...p, ...data } : p);
       }
       const newPack = {
@@ -5627,24 +5648,42 @@ INSTRUCTIONS:
       };
       return [newPack, ...prev];
     });
+    showToast(wasEdit ? `Knowledge pack "${data.name}" updated` : `Knowledge pack "${data.name}" created`);
   };
 
   const handleDeletePack = (id) => {
-    setKnowledgePacks(prev => prev.filter(p => p.id !== id));
+    let removedName = '';
+    setKnowledgePacks(prev => {
+      const target = prev.find(p => p.id === id);
+      removedName = target?.name || '';
+      return prev.filter(p => p.id !== id);
+    });
     if (activeKnowledgePack?.id === id) setActiveKnowledgePack(null);
+    showToast(removedName ? `Knowledge pack "${removedName}" deleted` : 'Knowledge pack deleted');
   };
 
   const handleSaveDocument = (data) => {
+    let wasEdit = false;
     setDocumentVault(prev => {
       const exists = prev.some(d => d.id === data.id);
-      if (exists) return prev.map(d => d.id === data.id ? { ...d, ...data } : d);
+      if (exists) {
+        wasEdit = true;
+        return prev.map(d => d.id === data.id ? { ...d, ...data } : d);
+      }
       return [data, ...prev];
     });
+    showToast(wasEdit ? `"${data.name}" updated in YourVault` : `"${data.name}" added to YourVault`);
   };
 
   const handleDeleteDocument = (id) => {
-    setDocumentVault(prev => prev.filter(d => d.id !== id));
+    let removedName = '';
+    setDocumentVault(prev => {
+      const target = prev.find(d => d.id === id);
+      removedName = target?.name || '';
+      return prev.filter(d => d.id !== id);
+    });
     if (activeVaultDocument?.id === id) setActiveVaultDocument(null);
+    showToast(removedName ? `"${removedName}" deleted from YourVault` : 'Document deleted');
   };
 
   const handleCreatePrompt = (data) => {
@@ -5656,10 +5695,17 @@ INSTRUCTIONS:
       createdAt: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
     };
     setPromptTemplates(prev => [newTemplate, ...prev]);
+    showToast(`Prompt template "${data.title}" created`);
   };
 
   const handleDeletePrompt = (id) => {
-    setPromptTemplates(prev => prev.filter(t => t.id !== id));
+    let removedTitle = '';
+    setPromptTemplates(prev => {
+      const target = prev.find(t => t.id === id);
+      removedTitle = target?.title || '';
+      return prev.filter(t => t.id !== id);
+    });
+    showToast(removedTitle ? `Prompt template "${removedTitle}" deleted` : 'Prompt template deleted');
   };
 
   const handleAddClient = (data) => {
@@ -5676,10 +5722,17 @@ INSTRUCTIONS:
       matters: 0,
     };
     setClients(prev => [newClient, ...prev]);
+    showToast(`Client "${data.name}" added`);
   };
 
   const handleDeleteClient = (id) => {
-    setClients(prev => prev.filter(c => c.id !== id));
+    let removedName = '';
+    setClients(prev => {
+      const target = prev.find(c => c.id === id);
+      removedName = target?.name || '';
+      return prev.filter(c => c.id !== id);
+    });
+    showToast(removedName ? `Client "${removedName}" removed` : 'Client removed');
   };
 
   // ─── Session Guard Screens (Blocked / Timed Out) ───
@@ -5981,14 +6034,14 @@ INSTRUCTIONS:
                     <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 12px', borderRadius: 999, background: 'rgba(10, 36, 99, 0.06)', border: '1px solid rgba(10, 36, 99, 0.25)' }}>
                       <Package size={13} style={{ color: 'var(--navy)' }} />
                       <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--navy)' }}>Using: {activeKnowledgePack.name}</span>
-                      <button onClick={() => setActiveKnowledgePack(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', color: 'var(--navy)' }}><X size={13} /></button>
+                      <button onClick={() => { const n = activeKnowledgePack.name; setActiveKnowledgePack(null); showToast(`Knowledge pack "${n}" detached`); }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', color: 'var(--navy)' }}><X size={13} /></button>
                     </div>
                   )}
                   {activeVaultDocument && (
                     <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 12px', borderRadius: 999, background: 'rgba(10, 36, 99, 0.06)', border: '1px solid rgba(10, 36, 99, 0.25)' }}>
                       <File size={13} style={{ color: 'var(--navy)' }} />
                       <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--navy)' }}>Using: {activeVaultDocument.name}</span>
-                      <button onClick={() => setActiveVaultDocument(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', color: 'var(--navy)' }}><X size={13} /></button>
+                      <button onClick={() => { const n = activeVaultDocument.name; setActiveVaultDocument(null); showToast(`"${n}" detached`); }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', color: 'var(--navy)' }}><X size={13} /></button>
                     </div>
                   )}
                   {activeVaultFolder && (
@@ -5997,7 +6050,7 @@ INSTRUCTIONS:
                       <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--navy)' }}>
                         Using folder: {activeVaultFolder.name} <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>({folderDocCount} {folderDocCount === 1 ? 'doc' : 'docs'})</span>
                       </span>
-                      <button onClick={() => setActiveVaultFolder(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', color: 'var(--navy)' }}><X size={13} /></button>
+                      <button onClick={() => { const n = activeVaultFolder.name; setActiveVaultFolder(null); showToast(`Folder "${n}" detached`); }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', color: 'var(--navy)' }}><X size={13} /></button>
                     </div>
                   )}
                 </div>
