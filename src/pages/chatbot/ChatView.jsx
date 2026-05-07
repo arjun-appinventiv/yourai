@@ -4924,33 +4924,65 @@ export default function ChatView({ initialView = 'chat' }) {
     // all my docs" comes back, ship as silent retrieval with citations.
     const effectiveDocContext = mergedDocContent || vaultSelectionContext;
 
-    // Knowledge Pack reference — inlined alongside any document context
-    // so the Edge model can ground answers in the pack. Without this,
-    // attaching a pack ("NDA Playbook" etc.) has no functional effect
-    // on the response. Same precedence as documents: pack content is a
-    // reference layer, not a replacement for the user's question.
-    let packReferenceText = '';
+    // Knowledge Pack content — folded INTO the same `[Documents attached
+    // to this conversation]` block as user uploads / vault picks. The
+    // Edge prompt's MISSING_DOCUMENT_HANDLING branch only recognises the
+    // doc-context block as "document content"; a separate `[Knowledge
+    // Pack reference]` header read as background material and the model
+    // would still ask the user to upload. Each pack doc is labelled with
+    // "(from Knowledge Pack: X)" so the model can disambiguate.
+    let packDocsBlock = '';
+    let packHasAnyContent = false;
     if (activeKnowledgePack && Array.isArray(activeKnowledgePack.docs) && activeKnowledgePack.docs.length > 0) {
       const PER_PACK_DOC_CAP = 5000;
       const pieces = activeKnowledgePack.docs.map((d) => {
-        const txt = (d.content || '').slice(0, PER_PACK_DOC_CAP);
-        return txt
-          ? `## ${d.name}\n${txt}${d.content && d.content.length > PER_PACK_DOC_CAP ? '\n[... truncated ...]' : ''}`
-          : `[${d.name}] (no extracted content)`;
+        const raw = d.content || '';
+        const txt = raw.slice(0, PER_PACK_DOC_CAP);
+        if (!txt.trim()) return `\n## ${d.name}\n[No extracted text available for this file.]`;
+        packHasAnyContent = true;
+        return `\n## ${d.name} (from Knowledge Pack: ${activeKnowledgePack.name})\n${txt}${raw.length > PER_PACK_DOC_CAP ? '\n[... truncated ...]' : ''}`;
       });
-      const desc = activeKnowledgePack.description ? `\nDescription: ${activeKnowledgePack.description}` : '';
-      packReferenceText = `Pack: ${activeKnowledgePack.name}${desc}\n\n${pieces.join('\n\n')}`;
+      packDocsBlock = pieces.join('\n');
     }
-    const packHeader = packReferenceText
-      ? `[Knowledge Pack reference for this conversation]\n${packReferenceText}\n\n`
-      : '';
+
+    // Pack docs first so the user's direct uploads (which are "fresher"
+    // intent) come last inside the merged block.
+    const mergedDocsForEdge = [packDocsBlock, effectiveDocContext].filter(Boolean).join('\n\n');
 
     // (b) When user sends purely an attachment with no typed text, substitute a default question so the Edge guard passes.
-    const effectiveQuestion = trimmed || (effectiveDocContext ? 'Please review the attached document(s) and summarise what you find.' : '');
-    const docsHeader = effectiveDocContext
-      ? `[Documents attached to this conversation]\n${effectiveDocContext}\n\n[User question]\n`
+    const effectiveQuestion = trimmed || (mergedDocsForEdge ? 'Please review the attached document(s) and summarise what you find.' : '');
+    const docsHeader = mergedDocsForEdge
+      ? `[Documents attached to this conversation]\n${mergedDocsForEdge}\n\n[User question]\n`
       : '';
-    let messageForEdge = (packHeader + docsHeader + effectiveQuestion).trim();
+    let messageForEdge = (docsHeader + effectiveQuestion).trim();
+
+    // Diagnostic log — visible in DevTools console. Lets us verify
+    // what's actually being shipped to the Edge when grounding looks
+    // wrong on the user side. Cheap; no PII concerns since the user's
+    // own attachments are echoed only in length, not in content.
+    if (typeof window !== 'undefined') {
+      // eslint-disable-next-line no-console
+      console.log('[ChatView] sendMessage → Edge', {
+        activeKnowledgePack: activeKnowledgePack
+          ? {
+              id: activeKnowledgePack.id,
+              name: activeKnowledgePack.name,
+              docCount: activeKnowledgePack.docs?.length || 0,
+              docContentLengths: (activeKnowledgePack.docs || []).map((d) => ({
+                name: d.name,
+                contentLength: (d.content || '').length,
+                hasContent: !!(d.content && d.content.trim()),
+              })),
+              packHasAnyContent,
+            }
+          : null,
+        hasUserUploads: !!mergedDocContent,
+        hasVaultSelection: !!vaultSelectionContext,
+        mergedDocsLength: mergedDocsForEdge.length,
+        messageForEdgeLength: messageForEdge.length,
+        messageForEdgePreview: messageForEdge.slice(0, 600),
+      });
+    }
     // Final Edge intent. When chit-chat fired on a card intent w/ no doc,
     // flip to 'general_chat' so the Edge does NOT force JSON, and prepend
     // a context hint so the LLM knows what the user originally selected.
