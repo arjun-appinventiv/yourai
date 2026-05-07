@@ -899,6 +899,20 @@ function Sidebar({ activeKey, onOpenChat, onOpenPromptTemplates, onOpenClients, 
   );
 }
 /* ─────────────────── Prompt Templates Panel ─────────────────── */
+/* ─── Category → accent color map (left-border stripe on each card) ─── */
+const PROMPT_CAT_COLOR = {
+  'Analysis':  { border: '#1E3A8A', bg: '#DCE5FA', text: '#1E3A8A' },
+  'Review':    { border: '#5B21B6', bg: '#EFE7FF', text: '#5B21B6' },
+  'Research':  { border: '#0F766E', bg: '#D1F1EE', text: '#0F766E' },
+  'Summary':   { border: '#166534', bg: '#DCFCE7', text: '#166534' },
+  'Drafting':  { border: '#B45309', bg: '#FEF3C7', text: '#92400E' },
+  'Other':     { border: '#475569', bg: '#E5E7EB', text: '#475569' },
+};
+const promptCatColor = (cat) => PROMPT_CAT_COLOR[cat] || PROMPT_CAT_COLOR['Other'];
+
+/* Full-page prompt templates — matches Figma audit #9:
+   "Choose a prompt, fill the blanks, send"
+   2-column card grid with colored left-border stripes per category */
 function PromptTemplatesPanel({ templates, onUsePrompt, onClose, onCreateNew, onDelete }) {
   const [search, setSearch] = useState('');
   const [filterCat, setFilterCat] = useState('All');
@@ -910,72 +924,155 @@ function PromptTemplatesPanel({ templates, onUsePrompt, onClose, onCreateNew, on
   });
 
   return (
-    <>
-      <div onClick={onClose} style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)', zIndex: 60, backdropFilter: 'blur(4px)' }} />
-      <div
-        className="fixed inset-0 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-[580px] md:max-h-[85vh] md:rounded-2xl"
-        style={{ backgroundColor: 'white', boxShadow: '0 20px 60px rgba(0,0,0,0.2)', zIndex: 61, display: 'flex', flexDirection: 'column' }}
-      >
-        {/* Header */}
-        <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid var(--border)' }}>
-          <div className="flex items-center justify-between gap-2">
-            <div className="min-w-0">
-              <h3 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 18, color: 'var(--text-primary)', margin: 0 }}>Prompt Templates</h3>
-              <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>{templates.length} saved prompts · Click to use in chat</p>
+    <div style={{ flex: 1, minWidth: 0, height: '100vh', overflowY: 'auto', background: '#FBFAF7', display: 'flex', flexDirection: 'column' }}>
+      {/* ── Page chrome bar ── */}
+      <div style={{ background: '#fff', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto', padding: '28px 36px 24px' }}>
+          <button
+            onClick={onClose}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 8px', marginLeft: -8, borderRadius: 6, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 12, marginBottom: 12 }}
+            onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-primary)'; }}
+            onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; }}
+          >
+            <ArrowLeft size={13} /> Back to chat
+          </button>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 24, flexWrap: 'wrap' }}>
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 34, color: 'var(--navy)', margin: 0, lineHeight: 1.15, letterSpacing: '-0.01em' }}>
+                Choose a prompt, fill the blanks, send
+              </h1>
+              <p style={{ fontSize: 14, color: 'var(--text-muted)', marginTop: 10, lineHeight: 1.55, maxWidth: 680 }}>
+                Start every analysis or draft from a proven template. Pick one, customise the blanks, and send — the AI does the rest.
+              </p>
             </div>
-            <div className="flex items-center gap-2">
-              <button onClick={onCreateNew} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 14px', borderRadius: 8, backgroundColor: 'var(--navy)', color: 'white', border: 'none', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}><Plus size={14} /> New Template</button>
-              <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100"><X size={18} style={{ color: 'var(--text-muted)' }} /></button>
-            </div>
+            <button
+              onClick={onCreateNew}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '12px 20px', borderRadius: 12, backgroundColor: 'var(--navy)', color: 'white', border: 'none', fontSize: 13, fontWeight: 500, cursor: 'pointer', boxShadow: '0 1px 2px rgba(10,36,99,0.15)', flexShrink: 0 }}
+            >
+              <Plus size={14} /> New Template
+            </button>
           </div>
-          {/* Search + filter */}
-          <div className="flex flex-col sm:flex-row sm:items-center gap-3" style={{ marginTop: 12 }}>
-            <div style={{ position: 'relative', flex: 1 }}>
-              <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-              <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search templates..." style={{ width: '100%', height: 34, borderRadius: 8, border: '1px solid var(--border)', paddingLeft: 32, fontSize: 13, outline: 'none', boxSizing: 'border-box', fontFamily: "'DM Sans', sans-serif" }} />
-            </div>
-            <div className="flex gap-1 flex-wrap">
-              {categories.map(c => (
-                <button key={c} onClick={() => setFilterCat(c)} style={{ padding: '4px 10px', borderRadius: 6, fontSize: 11, fontWeight: 500, border: '1px solid ' + (filterCat === c ? 'var(--navy)' : 'var(--border)'), background: filterCat === c ? 'var(--navy)' : 'white', color: filterCat === c ? 'white' : 'var(--text-muted)', cursor: 'pointer' }}>{c}</button>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Template list */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '8px 16px 16px' }}>
-          {filtered.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-muted)' }}>
-              <BookOpen size={32} style={{ margin: '0 auto 12px', opacity: 0.4 }} />
-              <div style={{ fontSize: 14, fontWeight: 500 }}>No templates found</div>
-              <div style={{ fontSize: 12, marginTop: 4 }}>Try a different search or create a new template</div>
-            </div>
-          ) : (
-            filtered.map(t => (
-              <div key={t.id} style={{ padding: '14px 16px', borderRadius: 10, border: '1px solid var(--border)', marginTop: 8, cursor: 'pointer', transition: 'all 0.15s' }}
-                onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--navy)'; e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.06)'; }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.boxShadow = 'none'; }}
-              >
-                <div className="flex items-start justify-between">
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div className="flex items-center gap-2">
-                      <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{t.title}</span>
-                      <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 999, backgroundColor: '#F0F3F6', color: '#1E3A8A', fontWeight: 500 }}>{t.category}</span>
-                    </div>
-                    <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 6, lineHeight: 1.5, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{t.prompt}</p>
-                  </div>
-                  <div className="flex items-center gap-1" style={{ marginLeft: 12, flexShrink: 0 }}>
-                    <button onClick={(e) => { e.stopPropagation(); onUsePrompt(t.prompt); onClose(); }} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 6, backgroundColor: 'var(--navy)', color: 'white', border: 'none', fontSize: 11, fontWeight: 500, cursor: 'pointer' }} title="Use this prompt"><Copy size={12} /> Use</button>
-                    <button onClick={(e) => { e.stopPropagation(); onDelete(t.id); }} style={{ padding: '5px', borderRadius: 6, background: 'none', border: '1px solid var(--border)', cursor: 'pointer', display: 'flex' }} title="Delete"><Trash2 size={13} style={{ color: '#C65454' }} /></button>
-                  </div>
-                </div>
-                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6 }}>Created {t.createdAt}</div>
-              </div>
-            ))
-          )}
         </div>
       </div>
-    </>
+
+      {/* ── Filter tabs + search ── */}
+      <div style={{ maxWidth: 1100, margin: '0 auto', padding: '20px 36px 0', width: '100%', boxSizing: 'border-box' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          {/* Category tabs */}
+          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', flex: 1 }}>
+            {categories.map(c => {
+              const active = filterCat === c;
+              const col = c !== 'All' ? promptCatColor(c) : null;
+              return (
+                <button
+                  key={c}
+                  onClick={() => setFilterCat(c)}
+                  style={{
+                    padding: '7px 14px', borderRadius: 8, fontSize: 12, fontWeight: 500,
+                    border: '1px solid ' + (active ? (col ? col.border : 'var(--navy)') : 'var(--border)'),
+                    background: active ? (col ? col.bg : 'var(--navy)') : '#fff',
+                    color: active ? (col ? col.text : 'white') : 'var(--text-secondary)',
+                    cursor: 'pointer', transition: 'all 120ms',
+                    borderLeft: active && col ? `3px solid ${col.border}` : undefined,
+                  }}
+                >
+                  {c}
+                </button>
+              );
+            })}
+          </div>
+          {/* Search */}
+          <div style={{ position: 'relative', minWidth: 220 }}>
+            <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+            <input
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search templates…"
+              style={{ width: '100%', height: 36, borderRadius: 10, border: '1px solid var(--border)', paddingLeft: 32, paddingRight: 12, fontSize: 13, outline: 'none', boxSizing: 'border-box', fontFamily: "'DM Sans', sans-serif", background: '#fff' }}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* ── Card grid ── */}
+      <div style={{ maxWidth: 1100, margin: '0 auto', padding: '20px 36px 48px', width: '100%', boxSizing: 'border-box' }}>
+        {filtered.length === 0 ? (
+          <div style={{ padding: '64px 24px', textAlign: 'center', borderRadius: 14, border: '1px dashed var(--border)', background: '#fff' }}>
+            <BookOpen size={36} style={{ margin: '0 auto 12px', opacity: 0.35, color: 'var(--text-muted)' }} />
+            <div style={{ fontSize: 15, fontWeight: 500, color: 'var(--text-primary)' }}>No templates found</div>
+            <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 6 }}>Try a different search or category, or create a new template.</div>
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))', gap: 16 }}>
+            {filtered.map(t => {
+              const col = promptCatColor(t.category);
+              return (
+                <div
+                  key={t.id}
+                  style={{
+                    background: '#fff',
+                    borderRadius: 12,
+                    border: '1px solid var(--border)',
+                    borderLeft: `4px solid ${col.border}`,
+                    display: 'flex', flexDirection: 'column',
+                    overflow: 'hidden',
+                    transition: 'box-shadow 150ms, transform 150ms',
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 4px 16px rgba(10,36,99,0.08)'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.transform = 'translateY(0)'; }}
+                >
+                  <div style={{ padding: '18px 20px', flex: 1, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    {/* Category label */}
+                    <span style={{
+                      alignSelf: 'flex-start',
+                      fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase',
+                      padding: '3px 9px', borderRadius: 6,
+                      background: col.bg, color: col.text,
+                      fontFamily: "'IBM Plex Mono', ui-monospace, monospace",
+                    }}>{t.category}</span>
+                    {/* Title */}
+                    <div style={{ fontFamily: "'DM Serif Display', serif", fontSize: 18, color: 'var(--navy)', lineHeight: 1.25, letterSpacing: '-0.01em' }}>
+                      {t.title}
+                    </div>
+                    {/* Description */}
+                    <p style={{
+                      fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.55, margin: 0,
+                      display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+                      flex: 1,
+                    }}>
+                      {t.prompt}
+                    </p>
+                    {/* Created */}
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Created {t.createdAt}</div>
+                  </div>
+                  {/* Action footer */}
+                  <div style={{ padding: '12px 20px', borderTop: '1px solid var(--border)', background: '#FBFAF7', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                    <button
+                      onClick={() => { onDelete(t.id); }}
+                      style={{ padding: '5px 10px', borderRadius: 7, border: '1px solid var(--border)', background: '#fff', fontSize: 11, color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
+                    >
+                      <Trash2 size={12} style={{ color: '#C65454' }} /> Delete
+                    </button>
+                    <button
+                      onClick={() => { onUsePrompt(t.prompt); onClose(); }}
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 5,
+                        padding: '8px 18px', borderRadius: 8,
+                        background: 'var(--navy)', color: '#fff',
+                        border: 'none', fontSize: 12, fontWeight: 600,
+                        cursor: 'pointer', letterSpacing: '0.01em',
+                      }}
+                    >
+                      Use →
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -1381,11 +1478,11 @@ function KnowledgePacksPanel({ packs, onClose, onCreateNew, onEdit, onDelete, on
               <span style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: "'IBM Plex Mono', ui-monospace, monospace", letterSpacing: '0.1em', textTransform: 'uppercase' }}>Knowledge Packs</span>
             </div>
             <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 30, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.02em', lineHeight: 1.2 }}>
-              Saved bundles
+              Reference packs, ready in one click
             </h1>
             <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 8, lineHeight: 1.6, maxWidth: 640 }}>
-              Group documents and links into a pack you can attach to a chat in one click.
-              Useful for state-law libraries, deal-specific exhibits, or playbooks.
+              Curated collections of policies, playbooks, and precedents — maintained by your team.
+              Attach to any chat in one click to ground every answer in the right source material.
             </p>
           </div>
 
@@ -6222,10 +6319,10 @@ INSTRUCTIONS:
       {/* Chat main area — hidden when a full-page panel (Team / Workspaces /
           Workflows / Vault / Knowledge Packs / Workflow Builder) is active
           so the sidebar stays visible but the chat UI is replaced. */}
-      <div style={{ flex: 1, display: (showTeamPage || showWorkspacesPanel || showWorkflowsPanel || editingWorkflow || showDocumentVaultPanel || showKnowledgePacksPanel) ? 'none' : 'flex', flexDirection: 'column', minWidth: 0 }}>
+      <div style={{ flex: 1, display: (showTeamPage || showWorkspacesPanel || showWorkflowsPanel || editingWorkflow || showDocumentVaultPanel || showKnowledgePacksPanel || showPromptPanel) ? 'none' : 'flex', flexDirection: 'column', minWidth: 0 }}>
         <TopNav plan={plan} usage={usage} onOpenSidebar={() => setSidebarOpen(true)} />
 
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#FAFBFC', minHeight: 0 }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#FBFAF7', minHeight: 0 }}>
           {/* Document limit banners */}
           {docPct >= 100 && (
             <div className="px-3 sm:px-6 md:px-10 py-2.5 flex items-center gap-2 sm:gap-3 flex-wrap" style={{ backgroundColor: '#F9E7E7', borderBottom: '1px solid #F9E7E7' }}>
@@ -7693,11 +7790,11 @@ INSTRUCTIONS:
       {/* Plan Comparison Modal */}
       {showPlanModal && <PlanComparisonModal currentPlan={plan} onClose={() => setShowPlanModal(false)} navigate={navigate} />}
 
-      {/* Prompt Templates Panel */}
+      {/* Prompt Templates — full-page panel (Figma #9), rendered at sibling level with Workflows/KP */}
       {showPromptPanel && (
         <PromptTemplatesPanel
           templates={promptTemplates}
-          onUsePrompt={(prompt) => { setInput(prompt); if (inputRef.current) inputRef.current.focus(); if (showEmptyState) { /* keep empty state, user will manually send */ } }}
+          onUsePrompt={(prompt) => { setInput(prompt); if (inputRef.current) inputRef.current.focus(); }}
           onClose={() => setShowPromptPanel(false)}
           onCreateNew={() => { setShowPromptPanel(false); setShowCreatePrompt(true); }}
           onDelete={handleDeletePrompt}
