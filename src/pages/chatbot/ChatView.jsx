@@ -6325,7 +6325,7 @@ INSTRUCTIONS:
       <div style={{ flex: 1, display: (showTeamPage || showWorkspacesPanel || showWorkflowsPanel || editingWorkflow || showDocumentVaultPanel || showKnowledgePacksPanel || showPromptPanel) ? 'none' : 'flex', flexDirection: 'column', minWidth: 0 }}>
         <TopNav plan={plan} usage={usage} onOpenSidebar={() => setSidebarOpen(true)} />
 
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#FBFAF7', minHeight: 0 }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#fff', minHeight: 0 }}>
           {/* Document limit banners */}
           {docPct >= 100 && (
             <div className="px-3 sm:px-6 md:px-10 py-2.5 flex items-center gap-2 sm:gap-3 flex-wrap" style={{ backgroundColor: '#F9E7E7', borderBottom: '1px solid #F9E7E7' }}>
@@ -6865,9 +6865,8 @@ INSTRUCTIONS:
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
                     <span style={{
-                      fontSize: 11, fontFamily: "'IBM Plex Mono', ui-monospace, monospace",
-                      letterSpacing: '0.14em', textTransform: 'uppercase',
-                      color: 'var(--text-muted)', fontWeight: 600,
+                      fontSize: 12, fontFamily: "'DM Sans', sans-serif",
+                      color: 'var(--text-muted)', fontWeight: 500,
                     }}>Optional</span>
 
                     <button
@@ -6925,9 +6924,8 @@ INSTRUCTIONS:
                   {/* Quick starts row */}
                   <div style={{ borderTop: '1px solid var(--border)', marginTop: 14, paddingTop: 14 }}>
                     <div style={{
-                      fontSize: 11, fontFamily: "'IBM Plex Mono', ui-monospace, monospace",
-                      letterSpacing: '0.14em', textTransform: 'uppercase',
-                      color: 'var(--text-muted)', fontWeight: 600, marginBottom: 10,
+                      fontSize: 12, fontFamily: "'DM Sans', sans-serif",
+                      color: 'var(--text-muted)', fontWeight: 500, marginBottom: 10,
                     }}>Quick starts</div>
                     {(() => {
                       // Prefills inlined here (used to use SUGGESTED.find()
