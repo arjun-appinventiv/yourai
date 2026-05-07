@@ -6601,7 +6601,7 @@ INSTRUCTIONS:
                 {/* ─── Primary input box ─── */}
                 <div style={{
                   display: 'flex', flexDirection: 'column',
-                  border: '1.5px solid var(--border)', borderRadius: 18, background: '#fff',
+                  border: '1.5px solid var(--border-mid)', borderRadius: 18, background: '#fff',
                   padding: '14px 16px', boxShadow: '0 2px 12px rgba(10, 36, 99, 0.04)',
                 }}>
                   <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
@@ -6860,7 +6860,7 @@ INSTRUCTIONS:
                 {/* ─── Optional box: Upload + Source + Pack repeats + Quick starts ─── */}
                 <div style={{
                   marginTop: 14,
-                  border: '1px solid var(--border)', borderRadius: 14, background: '#fff',
+                  border: '1.5px solid var(--border-mid)', borderRadius: 14, background: '#fff',
                   padding: '14px 16px',
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
