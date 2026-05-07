@@ -35,9 +35,15 @@ export interface KnowledgePack {
 }
 
 // v1: initial release of localStorage-backed packs (was in-memory only
-// up to 2026-05-06). Bump to v2 if the seed shape ever changes in a
-// way that requires re-seeding on existing browsers.
-const KEY = 'yourai_knowledge_packs_v1';
+// up to 2026-05-06).
+// v2 (2026-05-07): bumped because v1 packs were saved before the
+// modal's runDocExtraction fix landed — their docs lacked `content`,
+// which made grounding silently fail (the bot would acknowledge the
+// doc name but ask the user to upload via +). Bumping forces re-seed
+// so existing browsers get the bundled defaults whose seed docs DO
+// carry real text. User-created packs from v1 are lost; the alternative
+// (silent broken grounding) was worse.
+const KEY = 'yourai_knowledge_packs_v2';
 
 export function loadPacks(): KnowledgePack[] | null {
   try {
