@@ -418,7 +418,8 @@ function Sidebar({ activeKey, onOpenChat, onOpenPromptTemplates, onOpenClients, 
       const email = localStorage.getItem('yourai_current_email');
       if (!email) return null;
       const registered = JSON.parse(localStorage.getItem('yourai_registered_users') || '{}');
-      return registered[email]?.user || null;
+      const u = registered[email];
+      return u?.user || u || null;
     } catch { return null; }
   })();
   const displayName = resolvedUser?.name || 'Your Account';
@@ -512,9 +513,9 @@ function Sidebar({ activeKey, onOpenChat, onOpenPromptTemplates, onOpenClients, 
           height: 38, padding: '7px 8px 7px 10px', borderRadius: 8,
           cursor: item.onClick ? 'pointer' : 'default',
           userSelect: 'none',
-          background: isActive ? 'rgba(11,29,58,0.06)' : isHovered ? 'rgba(10, 36, 99, 0.04)' : 'transparent',
-          borderLeft: isActive ? '3px solid #C9A84C' : '3px solid transparent',
-          transition: 'background 150ms ease, border-color 150ms ease, border-left-color 150ms ease',
+          background: isActive ? '#ffffff' : isHovered ? 'rgba(15, 28, 63, 0.04)' : 'transparent',
+          boxShadow: isActive ? '0 1px 2px rgba(0,0,0,0.04), 0 0 0 1px #ece4d2' : 'none',
+          transition: 'background 150ms ease, box-shadow 150ms ease',
         }}
       >
         <Icon size={16} style={{ color: isActive ? 'var(--text-primary)' : 'var(--text-muted)', flexShrink: 0 }} />
@@ -538,20 +539,14 @@ function Sidebar({ activeKey, onOpenChat, onOpenPromptTemplates, onOpenClients, 
   // ─── Section header renderer ───
   const renderSectionHeader = (label, isOpen, onToggle) => (
     <div
-      onClick={onToggle}
       style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '0 8px', marginBottom: 4, cursor: 'pointer', userSelect: 'none',
+        padding: '0 8px', marginBottom: 4,
       }}
     >
-      <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+      <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--section-label)', textTransform: 'uppercase', letterSpacing: '1.2px' }}>
         {label}
       </span>
-      <ChevronDown size={12} style={{
-        color: 'var(--text-muted)',
-        transform: isOpen ? 'rotate(0deg)' : 'rotate(-90deg)',
-        transition: 'transform 200ms ease',
-      }} />
     </div>
   );
 
@@ -571,12 +566,12 @@ function Sidebar({ activeKey, onOpenChat, onOpenPromptTemplates, onOpenClients, 
       )}
     <div
       className={`fixed inset-y-0 left-0 z-40 transform transition-transform md:relative md:translate-x-0 md:flex ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}
-      style={{ width: 300, minWidth: 300, background: '#fff', borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}
+      style={{ width: 280, minWidth: 280, background: 'var(--bg-sidebar)', borderRight: '1px solid #e9e2d1', display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}
     >
       {/* ═══ ZONE 1 — Header ═══ */}
       <div style={{ padding: '16px 14px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <span style={{ fontFamily: "'DM Serif Display', serif", fontSize: 22 }}>
-          <span style={{ color: 'var(--navy)' }}>Your</span><span style={{ color: '#C9A84C' }}>AI</span>
+        <span style={{ fontFamily: "'Fraunces', serif", fontSize: 24, fontWeight: 600, letterSpacing: '-0.5px' }}>
+          <span style={{ color: 'var(--navy)' }}>Your</span><span style={{ color: 'var(--gold)' }}>AI</span>
         </span>
         {/* Close button — mobile only */}
         <button
@@ -625,29 +620,17 @@ function Sidebar({ activeKey, onOpenChat, onOpenPromptTemplates, onOpenClients, 
 
         {/* ═══ ZONE 3 — WORKSPACE Section ═══ */}
         <div>
-          {renderSectionHeader('Workspace', workspaceOpen, toggleWorkspace)}
-          <div style={{
-            overflow: 'hidden',
-            maxHeight: workspaceOpen ? '400px' : '0px',
-            transition: 'max-height 200ms ease',
-          }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              {workspaceItems.map(renderNavItem)}
-            </div>
+          {renderSectionHeader('Workspace')}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {workspaceItems.map(renderNavItem)}
           </div>
         </div>
 
         {/* ═══ ZONE 4 — KNOWLEDGE Section ═══ */}
         <div>
-          {renderSectionHeader('Knowledge', knowledgeOpen, toggleKnowledge)}
-          <div style={{
-            overflow: 'hidden',
-            maxHeight: knowledgeOpen ? '400px' : '0px',
-            transition: 'max-height 200ms ease',
-          }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              {knowledgeItems.map(renderNavItem)}
-            </div>
+          {renderSectionHeader('Knowledge')}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {knowledgeItems.map(renderNavItem)}
           </div>
         </div>
 
@@ -655,7 +638,7 @@ function Sidebar({ activeKey, onOpenChat, onOpenPromptTemplates, onOpenClients, 
         {adminItems.length > 0 && (
           <div>
             <div style={{ display: 'flex', alignItems: 'center', padding: '0 8px', marginBottom: 4 }}>
-              <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--section-label)', textTransform: 'uppercase', letterSpacing: '1.2px' }}>
                 Admin
               </span>
             </div>
@@ -670,10 +653,10 @@ function Sidebar({ activeKey, onOpenChat, onOpenPromptTemplates, onOpenClients, 
         {!isExternalUser && (
         <div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 8px', marginBottom: 4 }}>
-            <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--section-label)', textTransform: 'uppercase', letterSpacing: '1.2px' }}>
               Recent Chats
             </span>
-            <Search size={12} style={{ color: 'var(--text-muted)', opacity: 0.6 }} />
+            <Search size={12} style={{ color: 'var(--text-muted)', opacity: 0.7 }} />
           </div>
 
           {/* Recent thread list — 3 max */}
@@ -702,12 +685,12 @@ function Sidebar({ activeKey, onOpenChat, onOpenPromptTemplates, onOpenClients, 
                   onMouseLeave={() => setHoveredThread(null)}
                   style={{
                     display: 'flex', alignItems: 'center', gap: 8,
-                    padding: '6px 8px', borderRadius: 6,
+                    padding: '6px 8px', borderRadius: 8,
                     cursor: isRenaming ? 'default' : 'pointer', userSelect: 'none',
                     minHeight: 44,
-                    background: isActive ? '#fff' : isHov ? '#fff' : 'transparent',
-                    border: isActive ? '0.5px solid var(--border)' : '0.5px solid transparent',
-                    transition: 'background 150ms ease, border-color 150ms ease',
+                    background: isActive ? '#fff' : isHov ? 'rgba(15, 28, 63, 0.03)' : 'transparent',
+                    boxShadow: isActive ? '0 0 0 1px #ece4d2' : 'none',
+                    transition: 'background 150ms ease, box-shadow 150ms ease',
                   }}
                 >
                   <MessageSquare size={13} style={{ color: isActive ? 'var(--navy)' : 'var(--text-muted)', flexShrink: 0, marginTop: 1 }} />
@@ -839,10 +822,10 @@ function Sidebar({ activeKey, onOpenChat, onOpenPromptTemplates, onOpenClients, 
       {/* ═══ ZONE 6 — User Profile Footer ═══ */}
       <div style={{ borderTop: '0.5px solid var(--border)', position: 'relative' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px' }}>
-          <div style={{ width: 26, height: 26, borderRadius: '50%', background: '#F0F3F6', color: '#1E3A8A', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 600, flexShrink: 0 }}>{initials}</div>
+          <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#d8d4ca', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 600, flexShrink: 0 }}>{initials}</div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-primary)', lineHeight: 1.3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{displayName}</div>
-            <div style={{ fontSize: 10, color: 'var(--text-muted)', lineHeight: 1.3 }}>{roleLabel} &middot; {planLabel}</div>
+            <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text-primary)', lineHeight: 1.3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{displayName}</div>
+            <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.3, marginTop: 1 }}>{roleLabel} &middot; {planLabel}</div>
           </div>
           <button
             onClick={() => setShowProfileMenu(v => !v)}
@@ -930,7 +913,7 @@ function PromptTemplatesPanel({ templates, onUsePrompt, onClose, onCreateNew, on
           </button>
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 24, flexWrap: 'wrap' }}>
             <div style={{ minWidth: 0, flex: 1 }}>
-              <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 34, color: 'var(--navy)', margin: 0, lineHeight: 1.15, letterSpacing: '-0.01em' }}>
+              <h1 style={{ fontFamily: "'Fraunces', serif", fontSize: 34, color: 'var(--navy)', margin: 0, lineHeight: 1.15, letterSpacing: '-0.01em' }}>
                 Choose a prompt, fill the blanks, send
               </h1>
               <p style={{ fontSize: 14, color: 'var(--text-muted)', marginTop: 10, lineHeight: 1.55, maxWidth: 680 }}>
@@ -980,7 +963,7 @@ function PromptTemplatesPanel({ templates, onUsePrompt, onClose, onCreateNew, on
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="Search templates…"
-              style={{ width: '100%', height: 36, borderRadius: 10, border: '1px solid var(--border)', paddingLeft: 32, paddingRight: 12, fontSize: 13, outline: 'none', boxSizing: 'border-box', fontFamily: "'DM Sans', sans-serif", background: '#fff' }}
+              style={{ width: '100%', height: 36, borderRadius: 10, border: '1px solid var(--border)', paddingLeft: 32, paddingRight: 12, fontSize: 13, outline: 'none', boxSizing: 'border-box', fontFamily: "inherit", background: '#fff' }}
             />
           </div>
         </div>
@@ -1020,10 +1003,10 @@ function PromptTemplatesPanel({ templates, onUsePrompt, onClose, onCreateNew, on
                       fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase',
                       padding: '3px 9px', borderRadius: 6,
                       background: col.bg, color: col.text,
-                      fontFamily: "'IBM Plex Mono', ui-monospace, monospace",
+                      fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
                     }}>{t.category}</span>
                     {/* Title */}
-                    <div style={{ fontFamily: "'DM Serif Display', serif", fontSize: 18, color: 'var(--navy)', lineHeight: 1.25, letterSpacing: '-0.01em' }}>
+                    <div style={{ fontFamily: "'Fraunces', serif", fontSize: 18, color: 'var(--navy)', lineHeight: 1.25, letterSpacing: '-0.01em' }}>
                       {t.title}
                     </div>
                     {/* Description */}
@@ -1086,13 +1069,13 @@ function CreatePromptModal({ onClose, onSave }) {
       <div onClick={onClose} style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)', zIndex: 70, backdropFilter: 'blur(4px)' }} />
       <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 500, backgroundColor: 'white', borderRadius: 16, boxShadow: '0 20px 60px rgba(0,0,0,0.2)', zIndex: 71 }}>
         <div className="flex items-center justify-between" style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)' }}>
-          <h3 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 18, color: 'var(--text-primary)', margin: 0 }}>New Prompt Template</h3>
+          <h3 style={{ fontFamily: "'Fraunces', serif", fontSize: 18, color: 'var(--text-primary)', margin: 0 }}>New Prompt Template</h3>
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100"><X size={18} style={{ color: 'var(--text-muted)' }} /></button>
         </div>
         <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div>
             <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Template name</label>
-            <input value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g., Contract Risk Analysis" style={{ width: '100%', height: 40, border: '1px solid var(--border)', borderRadius: 8, padding: '0 12px', fontSize: 13, outline: 'none', boxSizing: 'border-box', fontFamily: "'DM Sans', sans-serif" }} />
+            <input value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g., Contract Risk Analysis" style={{ width: '100%', height: 40, border: '1px solid var(--border)', borderRadius: 8, padding: '0 12px', fontSize: 13, outline: 'none', boxSizing: 'border-box', fontFamily: "inherit" }} />
           </div>
           <div>
             <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Category</label>
@@ -1104,7 +1087,7 @@ function CreatePromptModal({ onClose, onSave }) {
           </div>
           <div>
             <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Prompt text</label>
-            <textarea value={prompt} onChange={e => setPrompt(e.target.value)} placeholder="Write your reusable prompt here..." rows={5} style={{ width: '100%', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 12px', fontSize: 13, outline: 'none', resize: 'vertical', boxSizing: 'border-box', fontFamily: "'DM Sans', sans-serif", lineHeight: 1.5 }} />
+            <textarea value={prompt} onChange={e => setPrompt(e.target.value)} placeholder="Write your reusable prompt here..." rows={5} style={{ width: '100%', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 12px', fontSize: 13, outline: 'none', resize: 'vertical', boxSizing: 'border-box', fontFamily: "inherit", lineHeight: 1.5 }} />
           </div>
         </div>
         <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
@@ -1144,7 +1127,7 @@ function ClientsPanel({ clients, onClose, onAddClient, onDeleteClient }) {
         <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid var(--border)' }}>
           <div className="flex items-center justify-between gap-2">
             <div className="min-w-0">
-              <h3 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 18, color: 'var(--text-primary)', margin: 0 }}>Clients</h3>
+              <h3 style={{ fontFamily: "'Fraunces', serif", fontSize: 18, color: 'var(--text-primary)', margin: 0 }}>Clients</h3>
               <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>{clients.length} client{clients.length !== 1 ? 's' : ''} · Added automatically when you invite an External User to a workspace</p>
             </div>
             <div className="flex items-center gap-2">
@@ -1153,7 +1136,7 @@ function ClientsPanel({ clients, onClose, onAddClient, onDeleteClient }) {
           </div>
           <div style={{ position: 'relative', marginTop: 12 }}>
             <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search clients by name, contact, or email..." style={{ width: '100%', height: 34, borderRadius: 8, border: '1px solid var(--border)', paddingLeft: 32, fontSize: 13, outline: 'none', boxSizing: 'border-box', fontFamily: "'DM Sans', sans-serif" }} />
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search clients by name, contact, or email..." style={{ width: '100%', height: 34, borderRadius: 8, border: '1px solid var(--border)', paddingLeft: 32, fontSize: 13, outline: 'none', boxSizing: 'border-box', fontFamily: "inherit" }} />
           </div>
         </div>
 
@@ -1222,14 +1205,14 @@ function AddClientModal({ onClose, onSave }) {
     onClose();
   };
 
-  const inputStyle = { width: '100%', height: 40, border: '1px solid var(--border)', borderRadius: 8, padding: '0 12px', fontSize: 13, outline: 'none', boxSizing: 'border-box', fontFamily: "'DM Sans', sans-serif" };
+  const inputStyle = { width: '100%', height: 40, border: '1px solid var(--border)', borderRadius: 8, padding: '0 12px', fontSize: 13, outline: 'none', boxSizing: 'border-box', fontFamily: "inherit" };
 
   return (
     <>
       <div onClick={onClose} style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)', zIndex: 70, backdropFilter: 'blur(4px)' }} />
       <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 480, backgroundColor: 'white', borderRadius: 16, boxShadow: '0 20px 60px rgba(0,0,0,0.2)', zIndex: 71 }}>
         <div className="flex items-center justify-between" style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)' }}>
-          <h3 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 18, color: 'var(--text-primary)', margin: 0 }}>Add Client</h3>
+          <h3 style={{ fontFamily: "'Fraunces', serif", fontSize: 18, color: 'var(--text-primary)', margin: 0 }}>Add Client</h3>
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100"><X size={18} style={{ color: 'var(--text-muted)' }} /></button>
         </div>
         <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -1347,7 +1330,7 @@ function KnowledgePacksPanel({ packs, onClose, onCreateNew, onEdit, onDelete, on
         >
           <ArrowLeft size={13} /> Back to chat
         </button>
-        <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: "'IBM Plex Mono', ui-monospace, monospace", letterSpacing: '0.08em', textTransform: 'uppercase' }}>Knowledge Packs</span>
+        <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", letterSpacing: '0.08em', textTransform: 'uppercase' }}>Knowledge Packs</span>
       </div>
 
       {/* Sticky toolbar */}
@@ -1358,7 +1341,7 @@ function KnowledgePacksPanel({ packs, onClose, onCreateNew, onEdit, onDelete, on
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search packs…"
-            style={{ width: '100%', height: 36, borderRadius: 8, border: '1px solid var(--border)', paddingLeft: 36, paddingRight: 12, fontSize: 13, outline: 'none', boxSizing: 'border-box', fontFamily: "'DM Sans', sans-serif", background: '#fff' }}
+            style={{ width: '100%', height: 36, borderRadius: 8, border: '1px solid var(--border)', paddingLeft: 36, paddingRight: 12, fontSize: 13, outline: 'none', boxSizing: 'border-box', fontFamily: "inherit", background: '#fff' }}
           />
         </div>
 
@@ -1373,7 +1356,7 @@ function KnowledgePacksPanel({ packs, onClose, onCreateNew, onEdit, onDelete, on
                 border: '1px solid ' + (ownerFilter ? 'var(--navy)' : 'var(--border)'),
                 background: ownerFilter ? 'rgba(10,36,99,0.04)' : '#fff',
                 fontSize: 12, color: 'var(--text-secondary)',
-                cursor: 'pointer', fontFamily: "'DM Sans', sans-serif",
+                cursor: 'pointer', fontFamily: "inherit",
               }}
             >
               <User size={13} style={{ color: 'var(--text-muted)' }} />
@@ -1442,7 +1425,7 @@ function KnowledgePacksPanel({ packs, onClose, onCreateNew, onEdit, onDelete, on
                 color: scope === t.id ? 'var(--navy)' : 'var(--text-muted)',
                 border: 'none', cursor: 'pointer',
                 boxShadow: scope === t.id ? '0 1px 2px rgba(15,23,42,0.06)' : 'none',
-                fontFamily: "'DM Sans', sans-serif",
+                fontFamily: "inherit",
               }}
             >
               {t.label} <span style={{ color: 'var(--text-muted)', fontWeight: 400, marginLeft: 2 }}>{t.count}</span>
@@ -1467,9 +1450,9 @@ function KnowledgePacksPanel({ packs, onClose, onCreateNew, onEdit, onDelete, on
           <div style={{ maxWidth: 1080, margin: '0 auto', padding: '32px 28px 18px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
               <Sparkles size={14} style={{ color: 'var(--gold)' }} />
-              <span style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: "'IBM Plex Mono', ui-monospace, monospace", letterSpacing: '0.1em', textTransform: 'uppercase' }}>Knowledge Packs</span>
+              <span style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", letterSpacing: '0.1em', textTransform: 'uppercase' }}>Knowledge Packs</span>
             </div>
-            <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 30, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.02em', lineHeight: 1.2 }}>
+            <h1 style={{ fontFamily: "'Fraunces', serif", fontSize: 30, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.02em', lineHeight: 1.2 }}>
               Reference packs, ready in one click
             </h1>
             <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 8, lineHeight: 1.6, maxWidth: 640 }}>
@@ -1485,7 +1468,7 @@ function KnowledgePacksPanel({ packs, onClose, onCreateNew, onEdit, onDelete, on
                 <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'var(--ice-warm)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
                   <Package size={26} style={{ color: 'var(--navy)' }} />
                 </div>
-                <div style={{ fontSize: 16, fontWeight: 600, fontFamily: "'DM Serif Display', serif", color: 'var(--text-primary)' }}>
+                <div style={{ fontSize: 16, fontWeight: 600, fontFamily: "'Fraunces', serif", color: 'var(--text-primary)' }}>
                   {search ? 'No matches' : 'No packs in this view'}
                 </div>
                 <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 6, lineHeight: 1.6 }}>
@@ -1561,7 +1544,7 @@ function PackInspector({ pack, activePack, currentUserId, isOrgAdmin, onClose, o
           <Package size={20} style={{ color: pack.isGlobal ? '#9A7A22' : 'var(--navy)' }} />
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <h2 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 22, color: 'var(--navy)', margin: 0, lineHeight: 1.2, letterSpacing: '-0.01em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{pack.name}</h2>
+          <h2 style={{ fontFamily: "'Fraunces', serif", fontSize: 22, color: 'var(--navy)', margin: 0, lineHeight: 1.2, letterSpacing: '-0.01em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{pack.name}</h2>
           <span style={{ display: 'inline-block', marginTop: 8, fontSize: 10, padding: '2px 8px', borderRadius: 999, background: ownerPill.bg, color: ownerPill.color, border: `1px solid ${ownerPill.border}`, fontWeight: 600, letterSpacing: '0.02em' }}>
             {ownerPill.label}
           </span>
@@ -1604,7 +1587,7 @@ function PackInspector({ pack, activePack, currentUserId, isOrgAdmin, onClose, o
           <>
             {docs.length > 0 && (
               <>
-                <div style={{ padding: '12px 22px 6px', fontSize: 10, color: 'var(--text-muted)', fontFamily: "'IBM Plex Mono', ui-monospace, monospace", letterSpacing: '0.12em', textTransform: 'uppercase' }}>Documents</div>
+                <div style={{ padding: '12px 22px 6px', fontSize: 10, color: 'var(--text-muted)', fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", letterSpacing: '0.12em', textTransform: 'uppercase' }}>Documents</div>
                 {docs.map((d, i) => (
                   <div key={d.id || i} style={{ padding: '8px 22px', display: 'flex', alignItems: 'center', gap: 10 }}>
                     <FileText size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
@@ -1618,7 +1601,7 @@ function PackInspector({ pack, activePack, currentUserId, isOrgAdmin, onClose, o
             )}
             {links.length > 0 && (
               <>
-                <div style={{ padding: '12px 22px 6px', fontSize: 10, color: 'var(--text-muted)', fontFamily: "'IBM Plex Mono', ui-monospace, monospace", letterSpacing: '0.12em', textTransform: 'uppercase' }}>Links</div>
+                <div style={{ padding: '12px 22px 6px', fontSize: 10, color: 'var(--text-muted)', fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", letterSpacing: '0.12em', textTransform: 'uppercase' }}>Links</div>
                 {links.map((l, i) => (
                   <div key={l.id || i} style={{ padding: '8px 22px', display: 'flex', alignItems: 'center', gap: 10 }}>
                     <Link2 size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
@@ -1992,7 +1975,7 @@ function EditKnowledgePackModal({ pack, initialFiles = [], onClose, onSave }) {
     );
   };
 
-  const inputStyle = { width: '100%', height: 40, border: '1px solid var(--border)', borderRadius: 8, padding: '0 12px', fontSize: 13, outline: 'none', boxSizing: 'border-box', fontFamily: "'DM Sans', sans-serif" };
+  const inputStyle = { width: '100%', height: 40, border: '1px solid var(--border)', borderRadius: 8, padding: '0 12px', fontSize: 13, outline: 'none', boxSizing: 'border-box', fontFamily: "inherit" };
 
   return (
     <>
@@ -2003,7 +1986,7 @@ function EditKnowledgePackModal({ pack, initialFiles = [], onClose, onSave }) {
         style={{ backgroundColor: 'white', boxShadow: '0 20px 60px rgba(0,0,0,0.2)', zIndex: 71, display: 'flex', flexDirection: 'column' }}
       >
         <div className="flex items-center justify-between" style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)' }}>
-          <h3 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 18, color: 'var(--text-primary)', margin: 0 }}>{isNew ? 'New Knowledge Pack' : 'Edit Knowledge Pack'}</h3>
+          <h3 style={{ fontFamily: "'Fraunces', serif", fontSize: 18, color: 'var(--text-primary)', margin: 0 }}>{isNew ? 'New Knowledge Pack' : 'Edit Knowledge Pack'}</h3>
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100"><X size={18} style={{ color: 'var(--text-muted)' }} /></button>
         </div>
 
@@ -2158,7 +2141,7 @@ function FilterChip({ icon: Icon, label, value, isActive, isOpen, onToggle, onCl
           border: '1px solid ' + (isActive ? 'var(--navy)' : 'var(--border)'),
           background: isActive ? 'rgba(10,36,99,0.04)' : '#fff',
           fontSize: 12, color: 'var(--text-secondary)',
-          cursor: 'pointer', fontFamily: "'DM Sans', sans-serif",
+          cursor: 'pointer', fontFamily: "inherit",
         }}
       >
         <Icon size={12} style={{ color: 'var(--text-muted)' }} />
@@ -2673,7 +2656,7 @@ Rules:
         >
           <ArrowLeft size={13} /> Back to chat
         </button>
-        <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: "'IBM Plex Mono', ui-monospace, monospace", letterSpacing: '0.08em', textTransform: 'uppercase' }}>YourVault</span>
+        <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", letterSpacing: '0.08em', textTransform: 'uppercase' }}>YourVault</span>
       </div>
 
       {/* Body — left rail + main pane.
@@ -2688,7 +2671,7 @@ Rules:
         {/* ── LEFT RAIL: folder tree ── */}
         <div style={{ width: 280, flexShrink: 0, borderRight: '1px solid var(--border)', background: '#fff', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           <div style={{ padding: '16px 16px 10px' }}>
-            <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', fontFamily: "'IBM Plex Mono', ui-monospace, monospace" }}>Library</div>
+            <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace" }}>Library</div>
           </div>
           <div style={{ flex: 1, overflowY: 'auto', paddingBottom: 8 }}>
             {/* Pinned: All documents */}
@@ -2713,7 +2696,7 @@ Rules:
             </div>
             {/* Folders eyebrow */}
             <div style={{ padding: '14px 16px 6px' }}>
-              <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', fontFamily: "'IBM Plex Mono', ui-monospace, monospace" }}>Folders</div>
+              <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace" }}>Folders</div>
             </div>
             {/* Recursive tree */}
             {(childrenByParent.get(null) || []).length === 0 && (
@@ -2727,7 +2710,7 @@ Rules:
           <div style={{ padding: 10, borderTop: '1px solid var(--border)', background: '#fff' }}>
             <button
               onClick={() => setCreatingFolder(true)}
-              style={{ width: '100%', height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, fontSize: 12, color: 'var(--text-secondary)', background: 'transparent', border: '1px dashed var(--border)', borderRadius: 8, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}
+              style={{ width: '100%', height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, fontSize: 12, color: 'var(--text-secondary)', background: 'transparent', border: '1px dashed var(--border)', borderRadius: 8, cursor: 'pointer', fontFamily: "inherit" }}
               onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--navy)'; e.currentTarget.style.color = 'var(--navy)'; }}
               onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
             >
@@ -2758,7 +2741,7 @@ Rules:
                       color: scope === t.id ? 'var(--navy)' : 'var(--text-muted)',
                       border: 'none', cursor: 'pointer',
                       boxShadow: scope === t.id ? '0 1px 2px rgba(15,23,42,0.06)' : 'none',
-                      fontFamily: "'DM Sans', sans-serif",
+                      fontFamily: "inherit",
                     }}
                   >
                     {t.label} <span style={{ color: 'var(--text-muted)', fontWeight: 400, marginLeft: 2 }}>{t.count}</span>
@@ -2781,7 +2764,7 @@ Rules:
                   if (e.key === 'Escape') { setCreatingFolder(false); setNewFolderName(''); }
                 }}
                 placeholder={currentFolder ? `New folder in ${currentFolder.name}…` : 'New folder name…'}
-                style={{ flex: 1, maxWidth: 360, height: 32, borderRadius: 8, border: '1px solid var(--border)', padding: '0 10px', fontSize: 13, outline: 'none', fontFamily: "'DM Sans', sans-serif" }}
+                style={{ flex: 1, maxWidth: 360, height: 32, borderRadius: 8, border: '1px solid var(--border)', padding: '0 10px', fontSize: 13, outline: 'none', fontFamily: "inherit" }}
               />
               <button onClick={handleCreateFolderConfirm} disabled={!newFolderName.trim()} style={{ padding: '6px 12px', borderRadius: 6, border: 'none', background: newFolderName.trim() ? 'var(--navy)' : '#9CA3AF', color: '#fff', fontSize: 12, fontWeight: 500, cursor: newFolderName.trim() ? 'pointer' : 'not-allowed' }}>Create</button>
               <button onClick={() => { setCreatingFolder(false); setNewFolderName(''); }} style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid var(--border)', background: '#fff', fontSize: 12, color: 'var(--text-muted)', cursor: 'pointer' }}>Cancel</button>
@@ -2794,7 +2777,7 @@ Rules:
             <div style={{ maxWidth: 1080, margin: '0 auto', padding: '32px 28px 14px' }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
                 <div style={{ minWidth: 0, flex: 1 }}>
-                  <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 34, color: 'var(--navy)', margin: 0, letterSpacing: '-0.02em', lineHeight: 1.15 }}>
+                  <h1 style={{ fontFamily: "'Fraunces', serif", fontSize: 34, color: 'var(--navy)', margin: 0, letterSpacing: '-0.02em', lineHeight: 1.15 }}>
                     {currentFolder ? currentFolder.name : 'Ask across your documents'}
                   </h1>
                   {!currentFolder && (
@@ -2865,7 +2848,7 @@ Rules:
                     onKeyDown={(e) => { if (e.key === 'Enter') handleAskAnything(); }}
                     disabled={askLoading}
                     placeholder="Ask the vault or search documents…"
-                    style={{ width: '100%', height: 24, border: 'none', outline: 'none', fontSize: 15, color: 'var(--text-primary)', background: 'transparent', fontFamily: "'DM Sans', sans-serif" }}
+                    style={{ width: '100%', height: 24, border: 'none', outline: 'none', fontSize: 15, color: 'var(--text-primary)', background: 'transparent', fontFamily: "inherit" }}
                   />
                   <div style={{ marginTop: 4, fontSize: 12, color: 'var(--text-muted)' }}>
                     e.g., "find indemnification clauses across Acme contracts"
@@ -2875,7 +2858,7 @@ Rules:
                   display: 'inline-flex', alignItems: 'center', gap: 2,
                   padding: '4px 8px', borderRadius: 6,
                   border: '1px solid var(--border)', background: '#FBFAF7',
-                  fontSize: 11, color: 'var(--text-muted)', fontFamily: "'IBM Plex Mono', ui-monospace, monospace",
+                  fontSize: 11, color: 'var(--text-muted)', fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
                   flexShrink: 0,
                 }}>⌘K</kbd>
               </div>
@@ -2888,17 +2871,17 @@ Rules:
             }}>
               {/* 1. Visualize — List/Grid toggle (visual only — list is the default render) */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: "'IBM Plex Mono', ui-monospace, monospace", letterSpacing: '0.06em' }}>1. Visualize</span>
+                <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", letterSpacing: '0.06em' }}>1. Visualize</span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 0, padding: 0, borderRadius: 10, border: '1px solid var(--border)', background: '#fff', overflow: 'hidden' }}>
                   <button style={{
-                    padding: '7px 14px', fontSize: 12, fontFamily: "'DM Sans', sans-serif",
+                    padding: '7px 14px', fontSize: 12, fontFamily: "inherit",
                     fontWeight: 500, background: 'var(--navy)', color: '#fff',
                     border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6,
                   }}>
                     List
                   </button>
                   <button style={{
-                    padding: '7px 14px', fontSize: 12, fontFamily: "'DM Sans', sans-serif",
+                    padding: '7px 14px', fontSize: 12, fontFamily: "inherit",
                     fontWeight: 500, background: '#fff', color: 'var(--text-secondary)',
                     border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6,
                   }}>
@@ -2916,14 +2899,14 @@ Rules:
 
               {/* 3. Refine — single dropdown collapsing the existing chips */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: "'IBM Plex Mono', ui-monospace, monospace", letterSpacing: '0.06em' }}>3. Refine</span>
+                <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", letterSpacing: '0.06em' }}>3. Refine</span>
                 <button
                   onClick={() => setOpenFilterMenu(openFilterMenu === 'refine' ? null : 'refine')}
                   style={{
                     display: 'inline-flex', alignItems: 'center', gap: 6,
                     padding: '7px 14px', borderRadius: 10,
                     border: '1px solid var(--border)', background: '#fff',
-                    fontSize: 12, fontFamily: "'DM Sans', sans-serif", fontWeight: 500,
+                    fontSize: 12, fontFamily: "inherit", fontWeight: 500,
                     color: 'var(--text-primary)', cursor: 'pointer',
                   }}
                 >
@@ -2940,12 +2923,12 @@ Rules:
 
               {/* 4. Move — drag-to-chat affordance hint */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: "'IBM Plex Mono', ui-monospace, monospace", letterSpacing: '0.06em' }}>4. Move</span>
+                <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", letterSpacing: '0.06em' }}>4. Move</span>
                 <span style={{
                   display: 'inline-flex', alignItems: 'center', gap: 6,
                   padding: '7px 14px', borderRadius: 10,
                   border: '1px dashed var(--border)', background: '#FBFAF7',
-                  fontSize: 12, fontFamily: "'DM Sans', sans-serif",
+                  fontSize: 12, fontFamily: "inherit",
                   color: 'var(--text-muted)',
                 }}>
                   <FileText size={12} />
@@ -3045,7 +3028,7 @@ Rules:
 
             {/* Documents list — rich cards */}
             <div style={{ maxWidth: 1080, margin: '0 auto', padding: '8px 28px 24px' }}>
-              <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-muted)', fontFamily: "'IBM Plex Mono', ui-monospace, monospace", marginBottom: 8 }}>
+              <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-muted)', fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", marginBottom: 8 }}>
                 {currentFolderId ? 'Documents in this folder' : 'All documents'}
               </div>
 
@@ -3054,7 +3037,7 @@ Rules:
                   <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'var(--ice-warm)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
                     <FolderOpen size={26} style={{ color: 'var(--navy)' }} />
                   </div>
-                  <div style={{ fontSize: 16, fontWeight: 600, fontFamily: "'DM Serif Display', serif", color: 'var(--text-primary)' }}>{emptyCopy.title}</div>
+                  <div style={{ fontSize: 16, fontWeight: 600, fontFamily: "'Fraunces', serif", color: 'var(--text-primary)' }}>{emptyCopy.title}</div>
                   <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 6, lineHeight: 1.6 }}>{emptyCopy.body}</div>
                   {!search && (
                     <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 16 }}>
@@ -3309,7 +3292,7 @@ function EditDocumentModal({ document: docItem, onClose, onSave, folders = [], d
     onClose();
   };
 
-  const inputStyle = { width: '100%', height: 40, border: '1px solid var(--border)', borderRadius: 8, padding: '0 12px', fontSize: 13, outline: 'none', boxSizing: 'border-box', fontFamily: "'DM Sans', sans-serif" };
+  const inputStyle = { width: '100%', height: 40, border: '1px solid var(--border)', borderRadius: 8, padding: '0 12px', fontSize: 13, outline: 'none', boxSizing: 'border-box', fontFamily: "inherit" };
 
   return (
     <>
@@ -3320,7 +3303,7 @@ function EditDocumentModal({ document: docItem, onClose, onSave, folders = [], d
         style={{ backgroundColor: 'white', boxShadow: '0 20px 60px rgba(0,0,0,0.2)', zIndex: 71, display: 'flex', flexDirection: 'column' }}
       >
         <div className="flex items-center justify-between" style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)' }}>
-          <h3 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 18, color: 'var(--text-primary)', margin: 0 }}>{isNew ? 'New Document' : 'Edit Document'}</h3>
+          <h3 style={{ fontFamily: "'Fraunces', serif", fontSize: 18, color: 'var(--text-primary)', margin: 0 }}>{isNew ? 'New Document' : 'Edit Document'}</h3>
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100"><X size={18} style={{ color: 'var(--text-muted)' }} /></button>
         </div>
 
@@ -3506,7 +3489,7 @@ function TopNav({ onOpenSidebar }) {
           <Menu size={20} />
         </button>
         {/* Small wordmark on top-left (desktop) */}
-        <span className="hidden md:inline-flex" style={{ fontFamily: "'DM Serif Display', serif", fontSize: 15, letterSpacing: '-0.01em' }}>
+        <span className="hidden md:inline-flex" style={{ fontFamily: "'Fraunces', serif", fontSize: 15, letterSpacing: '-0.01em' }}>
           <span style={{ color: 'var(--navy)' }}>Your</span><span style={{ color: '#C9A84C' }}>AI</span>
         </span>
       </div>
@@ -3597,7 +3580,7 @@ function AlreadyRunningAlert({ activeName, currentStep, total, onClose }) {
           <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--ice-warm)', color: 'var(--navy)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
             <Zap size={16} />
           </div>
-          <h3 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 17, margin: 0 }}>A workflow is already running</h3>
+          <h3 style={{ fontFamily: "'Fraunces', serif", fontSize: 17, margin: 0 }}>A workflow is already running</h3>
         </div>
         <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, margin: '0 0 4px' }}>
           <strong>{activeName}</strong> · Step {currentStep} of {total}
@@ -3803,7 +3786,7 @@ function MessageBubble({ msg, onOpenArtifact, isActiveArtifact, onConfirmAction 
                       background: isActiveArtifact ? 'rgba(10, 36, 99, 0.06)' : '#fff',
                       border: '1px solid ' + (isActiveArtifact ? 'var(--navy)' : 'var(--border)'),
                       cursor: 'pointer', transition: 'all 150ms ease',
-                      fontFamily: "'DM Sans', sans-serif",
+                      fontFamily: "inherit",
                     }}
                     onMouseEnter={(e) => { if (!isActiveArtifact) (e.currentTarget).style.borderColor = 'var(--navy)'; }}
                     onMouseLeave={(e) => { if (!isActiveArtifact) (e.currentTarget).style.borderColor = 'var(--border)'; }}
@@ -3822,7 +3805,7 @@ function MessageBubble({ msg, onOpenArtifact, isActiveArtifact, onConfirmAction 
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <span style={{
                           fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase',
-                          color: 'var(--text-muted)', fontFamily: "'IBM Plex Mono', ui-monospace, monospace",
+                          color: 'var(--text-muted)', fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
                         }}>{label}</span>
                         {isActiveArtifact && (
                           <span style={{
@@ -3836,7 +3819,7 @@ function MessageBubble({ msg, onOpenArtifact, isActiveArtifact, onConfirmAction 
                         )}
                       </div>
                       <div style={{
-                        fontFamily: "'DM Serif Display', serif", fontSize: 16,
+                        fontFamily: "'Fraunces', serif", fontSize: 16,
                         color: 'var(--navy)', lineHeight: 1.25,
                         marginTop: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                       }}>
@@ -3960,7 +3943,7 @@ function ModelSelector({ plan, selectedModel, onSelect, onLockedClick }) {
               background: isActive ? 'var(--navy)' : m.enterprise ? '#FBEED5' : 'white',
               color: isActive ? 'white' : isLocked ? '#9CA3AF' : m.enterprise ? '#E8A33D' : 'var(--slate)',
               fontSize: 12, fontWeight: 500, cursor: isLocked ? 'not-allowed' : 'pointer',
-              fontFamily: "'DM Sans', sans-serif", transition: 'all 0.15s',
+              fontFamily: "inherit", transition: 'all 0.15s',
               opacity: isLocked ? 0.6 : 1,
             }}
             title={isLocked ? `Available on ${m.minPlan} plan and above` : m.label}
@@ -4005,7 +3988,7 @@ function PlanComparisonModal({ currentPlan, onClose, navigate }) {
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-5" style={{ borderBottom: '1px solid var(--border)' }}>
           <div>
-            <h3 style={{ fontFamily: "'DM Serif Display', serif", fontSize: '18px', color: 'var(--text-primary)' }}>Choose a plan that fits your firm</h3>
+            <h3 style={{ fontFamily: "'Fraunces', serif", fontSize: '18px', color: 'var(--text-primary)' }}>Choose a plan that fits your firm</h3>
             <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>All plans include encrypted storage, ABA compliance, and zero data retention</p>
           </div>
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100"><X size={18} style={{ color: 'var(--text-muted)' }} /></button>
@@ -4019,7 +4002,7 @@ function PlanComparisonModal({ currentPlan, onClose, navigate }) {
                 <th style={{ width: 140, textAlign: 'left', padding: '8px 0', fontSize: 12, color: 'var(--text-muted)', fontWeight: 500 }}>Feature</th>
                 {subscriptionPlans.map((p) => (
                   <th key={p.id} style={{ textAlign: 'center', padding: '8px 6px', verticalAlign: 'top' }}>
-                    <div style={{ fontFamily: "'DM Serif Display', serif", fontSize: 16, color: 'var(--navy)' }}>{p.name}</div>
+                    <div style={{ fontFamily: "'Fraunces', serif", fontSize: 16, color: 'var(--navy)' }}>{p.name}</div>
                     <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)', margin: '4px 0' }}>
                       {p.price === 0 ? 'Free' : `$${p.price}`}
                     </div>
@@ -4135,7 +4118,7 @@ function SearchScopePill({ scope, isOpen, setIsOpen, setScope, scopeRef, openUpw
         style={{
           display: 'inline-flex', alignItems: 'center', gap: 6,
           padding: compact ? '5px 10px' : '6px 12px', borderRadius: 999,
-          fontSize: 12, fontFamily: "'DM Sans', sans-serif", fontWeight: 500,
+          fontSize: 12, fontFamily: "inherit", fontWeight: 500,
           border: '1px solid var(--border)', backgroundColor: '#fff',
           color: 'var(--navy)', cursor: 'pointer', whiteSpace: 'nowrap',
           transition: 'all 150ms ease',
@@ -4158,7 +4141,7 @@ function SearchScopePill({ scope, isOpen, setIsOpen, setScope, scopeRef, openUpw
             <div style={{
               padding: '12px 16px 6px',
               fontSize: 10, color: 'var(--text-muted)',
-              fontFamily: "'IBM Plex Mono', ui-monospace, monospace",
+              fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
               letterSpacing: '0.14em', textTransform: 'uppercase',
             }}>Search within</div>
             {SCOPE_OPTIONS.map((opt) => {
@@ -4290,7 +4273,7 @@ function MiniWorkflowCard({ workflow, onRun }) {
       onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.boxShadow = 'none'; }}
     >
       <div className="flex items-center gap-2 flex-wrap">
-        <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontWeight: 600, color: 'var(--navy)' }}>{workflow.name}</span>
+        <span style={{ fontFamily: "inherit", fontSize: 13, fontWeight: 600, color: 'var(--navy)' }}>{workflow.name}</span>
         <span style={{ fontSize: 9, padding: '2px 7px', borderRadius: 999, background: 'var(--ice-warm)', color: 'var(--navy)', border: '1px solid var(--border)', fontWeight: 500 }}>{workflow.practiceArea}</span>
       </div>
       <div style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}>
@@ -4342,7 +4325,8 @@ function EmptyState() {
       const email = localStorage.getItem('yourai_current_email');
       if (!email) return '';
       const registered = JSON.parse(localStorage.getItem('yourai_registered_users') || '{}');
-      return registered[email]?.user?.name || '';
+      const u = registered[email];
+      return u?.user?.name || u?.name || '';
     } catch { return ''; }
   })().split(' ')[0];
   const currentUserName = resolvedFirstName || 'there';
@@ -4352,27 +4336,36 @@ function EmptyState() {
   // and pick up the live state (input, attachments, dropdowns) without
   // prop-drilling.
   return (
-    <div className="px-4 sm:px-6" style={{ paddingTop: '12vh', paddingBottom: 24 }}>
+    <div className="px-4 sm:px-6" style={{ paddingTop: '10vh', paddingBottom: 24 }}>
       <div style={{ maxWidth: 880, width: '100%', margin: '0 auto' }}>
         <div style={{ textAlign: 'center' }}>
-          <div style={{ margin: '0 auto 16px', display: 'flex', justifyContent: 'center' }}>
-            <Sparkles size={32} style={{ color: '#C9A84C' }} />
+          {/* Gold ring sparkle */}
+          <div style={{ textAlign: 'center', marginBottom: 14 }}>
+            <span style={{
+              display: 'inline-flex', width: 38, height: 38, borderRadius: '50%',
+              background: 'var(--gold-bg)', alignItems: 'center', justifyContent: 'center',
+              color: 'var(--gold)',
+            }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2l1.6 5.4L19 9l-5.4 1.6L12 16l-1.6-5.4L5 9l5.4-1.6z"/>
+              </svg>
+            </span>
           </div>
           <h2
-            className="text-5xl sm:text-6xl"
             style={{
-              fontFamily: "'DM Serif Display', serif",
-              fontWeight: 400,
-              color: 'var(--navy)',
-              margin: '0 0 10px',
-              lineHeight: 1.08,
-              letterSpacing: '-0.015em',
+              fontFamily: "'Fraunces', serif",
+              fontWeight: 500,
+              fontSize: 46,
+              color: 'var(--text-primary)',
+              margin: '0 0 12px',
+              lineHeight: 1.1,
+              letterSpacing: '-1.2px',
             }}
           >
             {getGreeting()}, {currentUserName}
           </h2>
-          <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: 'var(--text-muted)', margin: '0 auto', maxWidth: 520, lineHeight: 1.45 }}>
-            Start with a question, or add documents for context.
+          <p style={{ fontSize: 14.5, color: 'var(--text-secondary)', margin: '0 auto 28px', maxWidth: 560, lineHeight: 1.5 }}>
+            Your AI assistant is ready — ask anything about your documents or Alaska law.
           </p>
         </div>
       </div>
@@ -6310,7 +6303,7 @@ INSTRUCTIONS:
         <div style={{ width: 72, height: 72, borderRadius: '50%', background: isBlocked ? '#F9E7E7' : '#FBEED5', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 20 }}>
           <Lock size={32} style={{ color: isBlocked ? '#C65454' : '#E8A33D' }} />
         </div>
-        <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 28, color: 'var(--navy)', margin: 0 }}>{title}</h1>
+        <h1 style={{ fontFamily: "'Fraunces', serif", fontSize: 28, color: 'var(--navy)', margin: 0 }}>{title}</h1>
         <p style={{ fontSize: 15, color: 'var(--text-secondary)', maxWidth: 440, marginTop: 12, lineHeight: 1.6 }}>{body}</p>
         <div style={{ display: 'flex', gap: 12, marginTop: 24 }}>
           <button onClick={handleSignOut} style={{ padding: '10px 20px', borderRadius: 6, background: 'var(--navy)', color: '#fff', border: 'none', fontSize: 14, fontWeight: 500, cursor: 'pointer' }}>
@@ -6333,7 +6326,7 @@ INSTRUCTIONS:
         <div style={{ width: 48, height: 48, borderRadius: '50%', background: '#FBEED5', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
           <AlertTriangle size={22} style={{ color: '#E8A33D' }} />
         </div>
-        <h3 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 20, color: 'var(--navy)', margin: '0 0 8px' }}>Still there?</h3>
+        <h3 style={{ fontFamily: "'Fraunces', serif", fontSize: 20, color: 'var(--navy)', margin: '0 0 8px' }}>Still there?</h3>
         <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '0 0 20px', lineHeight: 1.6 }}>
           You've been inactive for a while. For your security, you'll be signed out in about 2 minutes.
         </p>
@@ -6747,135 +6740,40 @@ INSTRUCTIONS:
                 {/* ─── Primary input box ─── */}
                 <div style={{
                   display: 'flex', flexDirection: 'column',
-                  border: '1px solid var(--border)', borderRadius: 18, background: '#fff',
-                  padding: '16px 18px', boxShadow: '0 2px 16px rgba(10, 36, 99, 0.06)',
+                  border: '1px solid #d9dbe1', borderRadius: 14, background: '#fff',
+                  padding: '18px 18px 14px',
                 }}>
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-                    <textarea
-                      ref={inputRef}
-                      className="no-focus-ring"
-                      value={input}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setInput(val);
-                        clearTimeout(suggestionTimer.current);
-                        if (val.trim().length < 10) { setSuggestedIntent(null); setSuggestedIntents([]); return; }
-                        suggestionTimer.current = setTimeout(() => {
-                          const allMatches = detectAllIntents(val);
-                          const relevant = allMatches.filter(m => m.intentId !== activeIntent && m.intentId !== dismissedSuggestion);
-                          if (relevant.length === 0) { setSuggestedIntent(null); setSuggestedIntents([]); return; }
-                          if (relevant.length >= 2 && relevant[0].matchCount === relevant[1].matchCount) {
-                            const tied = relevant.filter(m => m.matchCount === relevant[0].matchCount);
-                            setSuggestedIntents(tied); setSuggestedIntent(null);
-                          } else { setSuggestedIntent(relevant[0].intentId); setSuggestedIntents([]); }
-                        }, 600);
-                      }}
-                      onKeyDown={handleKeyDown}
-                      placeholder={inputPlaceholder}
-                      rows={1}
-                      style={{ flex: 1, border: 'none', outline: 'none', fontSize: 15, color: 'var(--text-primary)', background: 'transparent', resize: 'none', maxHeight: 200, overflowY: 'auto', lineHeight: '1.5', fontFamily: 'inherit', padding: '6px 4px' }}
-                      onInput={(e) => { e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 200) + 'px'; }}
-                    />
-                    {(() => {
-                      const canSend = (input.trim() || pendingAttachments.length > 0) && !isTyping;
-                      return (
-                        <div onClick={() => canSend && sendMessage(input)} style={{ width: 40, height: 40, borderRadius: '50%', background: canSend ? 'var(--navy)' : '#9CA3AF', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: canSend ? 'pointer' : 'not-allowed', flexShrink: 0, opacity: canSend ? 1 : 0.6, transition: 'background 150ms, opacity 150ms' }}><ArrowUp size={18} color="#fff" /></div>
-                      );
-                    })()}
-                  </div>
+                  <textarea
+                    ref={inputRef}
+                    className="no-focus-ring"
+                    value={input}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setInput(val);
+                      clearTimeout(suggestionTimer.current);
+                      if (val.trim().length < 10) { setSuggestedIntent(null); setSuggestedIntents([]); return; }
+                      suggestionTimer.current = setTimeout(() => {
+                        const allMatches = detectAllIntents(val);
+                        const relevant = allMatches.filter(m => m.intentId !== activeIntent && m.intentId !== dismissedSuggestion);
+                        if (relevant.length === 0) { setSuggestedIntent(null); setSuggestedIntents([]); return; }
+                        if (relevant.length >= 2 && relevant[0].matchCount === relevant[1].matchCount) {
+                          const tied = relevant.filter(m => m.matchCount === relevant[0].matchCount);
+                          setSuggestedIntents(tied); setSuggestedIntent(null);
+                        } else { setSuggestedIntent(relevant[0].intentId); setSuggestedIntents([]); }
+                      }, 600);
+                    }}
+                    onKeyDown={handleKeyDown}
+                    placeholder={inputPlaceholder}
+                    rows={1}
+                    style={{ width: '100%', border: 'none', outline: 'none', fontSize: 15, color: 'var(--text-primary)', background: 'transparent', resize: 'none', maxHeight: 200, overflowY: 'auto', lineHeight: '1.5', fontFamily: 'inherit', padding: '4px 0 14px' }}
+                    onInput={(e) => { e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 200) + 'px'; }}
+                  />
 
-                  {/* Divider + 3-pill row (Intent / SearchScope / Pack) */}
-                  <div style={{ borderTop: '1px solid var(--border)', marginTop: 12, paddingTop: 12, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                  {/* Composer bottom: LEFT (source pill) | CENTER (mode hint) | RIGHT (mode-pill + send) */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
 
-                    {/* Intent dropdown pill — bucket-color dot prefix (matches
-                        populated-chat pill + audit note #4 "color dot carries
-                        through to chips and trigger"). */}
-                    <div style={{ position: 'relative' }} ref={intentDropdownRef}>
-                      {(() => {
-                        const bucket = getBucketForIntent(activeIntent);
-                        const dotColor = bucket ? BUCKET_COLORS[bucket] : 'var(--text-muted)';
-                        return (
-                          <button
-                            onClick={() => setIsIntentDropdownOpen(v => !v)}
-                            style={{
-                              display: 'inline-flex', alignItems: 'center', gap: 8,
-                              padding: '8px 14px', borderRadius: 999,
-                              fontSize: 13, fontFamily: "'DM Sans', sans-serif", fontWeight: 500,
-                              border: '1px solid var(--border)', background: '#fff',
-                              color: 'var(--text-primary)', cursor: 'pointer', whiteSpace: 'nowrap',
-                            }}
-                          >
-                            <MessageSquare size={14} style={{ flexShrink: 0, color: 'var(--navy)' }} />
-                            <span>{getIntentLabel(activeIntent)}</span>
-                            <ChevronDown size={12} style={{ transform: isIntentDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 150ms' }} />
-                          </button>
-                        );
-                      })()}
-                      {isIntentDropdownOpen && (
-                        <>
-                          <div onClick={() => setIsIntentDropdownOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 50 }} />
-                          <div style={{
-                            position: 'absolute', top: 'calc(100% + 6px)', left: 0, width: 280,
-                            backgroundColor: 'white', borderRadius: 12, border: '1px solid var(--border)',
-                            boxShadow: '0 12px 32px rgba(0,0,0,0.14)', zIndex: 51,
-                            maxHeight: 420, overflowY: 'auto',
-                          }}>
-                            {groupIntentsByBucket(INTENTS.map(i => i.id)).map((bucket, bucketIdx) => {
-                              const dotColor = BUCKET_COLORS[bucket.label] || 'var(--text-muted)';
-                              return (
-                                <div key={bucket.label}>
-                                  <div style={{
-                                    display: 'flex', alignItems: 'center', gap: 8,
-                                    padding: '12px 14px 6px',
-                                    fontSize: 11, color: 'var(--text-primary)', fontWeight: 700,
-                                    fontFamily: "'IBM Plex Mono', ui-monospace, monospace",
-                                    letterSpacing: '0.14em', textTransform: 'uppercase',
-                                    borderTop: bucketIdx === 0 ? 'none' : '1px solid var(--border)',
-                                    background: bucketIdx === 0 ? 'transparent' : 'rgba(10, 36, 99, 0.02)',
-                                  }}>
-                                    <span style={{ width: 7, height: 7, borderRadius: '50%', background: dotColor, flexShrink: 0 }} />
-                                    {bucket.label}
-                                  </div>
-                                  {bucket.intents.map((intent) => {
-                                    const isCurrent = activeIntent === intent.id;
-                                    return (
-                                      <div
-                                        key={intent.id}
-                                        onClick={() => { setActiveIntent(intent.id); setHasManualIntentPick(true); setIsIntentDropdownOpen(false); }}
-                                        style={{
-                                          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                                          padding: '8px 14px', cursor: 'pointer', fontSize: 13,
-                                          color: isCurrent ? 'var(--text-primary)' : 'var(--text-secondary)',
-                                          fontWeight: isCurrent ? 500 : 400,
-                                          backgroundColor: isCurrent ? 'rgba(10, 36, 99, 0.04)' : 'transparent',
-                                        }}
-                                        onMouseEnter={(e) => { if (!isCurrent) e.currentTarget.style.backgroundColor = 'var(--ice-warm)'; }}
-                                        onMouseLeave={(e) => { if (!isCurrent) e.currentTarget.style.backgroundColor = 'transparent'; }}
-                                      >
-                                        <span>{intent.label}</span>
-                                        {isCurrent && <CheckCircle size={14} style={{ color: 'var(--navy)', flexShrink: 0 }} />}
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                              );
-                            })}
-                            {INTENT_DESCRIPTIONS[activeIntent] && (
-                              <div style={{
-                                padding: '10px 14px', borderTop: '1px solid var(--border)',
-                                background: 'var(--ice-warm)',
-                                fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.5,
-                              }}>
-                                <Info size={11} style={{ display: 'inline', marginRight: 6, color: 'var(--text-muted)', verticalAlign: 'middle' }} />
-                                {INTENT_DESCRIPTIONS[activeIntent]}
-                              </div>
-                            )}
-                          </div>
-                        </>
-                      )}
-                    </div>
-
-                    {/* SearchScope (File Search ▼) */}
+                    {/* LEFT: source pill (SearchScope) */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
                     <SearchScopePill
                       scope={searchScope}
                       isOpen={isScopeOpenInput}
@@ -6885,31 +6783,126 @@ INSTRUCTIONS:
                       openUpward={false}
                       onPickVault={() => setIsVaultPickerModalOpen(true)}
                     />
+                    </div>
 
-                    {/* Pack pill — gold-tinted when active (matches mockup),
-                        neutral white when no pack picked. Opens the inline
-                        dropdown (audit note #3 — picker is a popover anchored
-                        to the pill, not a modal). */}
-                    <div style={{ position: 'relative', flexShrink: 0 }} ref={kpMenuRef}>
-                      <button
-                        onClick={() => setIsKpMenuOpen(v => !v)}
-                        title={activeKnowledgePack ? activeKnowledgePack.name : 'Pick a Knowledge Pack'}
-                        style={{
-                          display: 'inline-flex', alignItems: 'center', gap: 8,
-                          padding: '8px 14px', borderRadius: 999,
-                          fontSize: 13, fontFamily: "'DM Sans', sans-serif", fontWeight: 500,
-                          border: activeKnowledgePack ? '1px solid #C9A84C' : '1px solid var(--border)',
-                          background: activeKnowledgePack ? 'rgba(201, 168, 76, 0.10)' : '#fff',
-                          color: activeKnowledgePack ? '#7A6520' : 'var(--text-primary)',
-                          cursor: 'pointer', whiteSpace: 'nowrap', maxWidth: 220,
-                        }}
-                      >
-                        <Layers size={14} style={{ flexShrink: 0, color: activeKnowledgePack ? '#7A6520' : 'var(--text-muted)' }} />
-                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {activeKnowledgePack ? activeKnowledgePack.name : 'Pick a pack'}
-                        </span>
-                        <ChevronDown size={12} style={{ transform: isKpMenuOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 150ms', flexShrink: 0 }} />
-                      </button>
+                    {/* CENTER: mode hint */}
+                    {(() => {
+                      const desc = INTENT_DESCRIPTIONS[activeIntent];
+                      const bucket = getBucketForIntent(activeIntent);
+                      const hintColor = bucket === 'DRAFT' ? 'var(--green-text)' : bucket === 'ANALYZE' ? '#7A6520' : bucket === 'ASK & RESEARCH' ? 'var(--blue)' : 'var(--text-muted)';
+                      if (!desc) return null;
+                      return (
+                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6, color: hintColor, fontSize: 12.5, lineHeight: 1.4, flex: 1, minWidth: 0, marginLeft: 8, marginRight: 8 }}>
+                          <Info size={13} style={{ flexShrink: 0, marginTop: 1, color: hintColor }} />
+                          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{desc}</span>
+                        </div>
+                      );
+                    })()}
+
+                    {/* RIGHT: mode-pill (intent dropdown) + send */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                      {/* Mode pill = Intent selector */}
+                      <div style={{ position: 'relative' }} ref={intentDropdownRef}>
+                        {(() => {
+                          const bucket = getBucketForIntent(activeIntent);
+                          const bucketColor = bucket ? BUCKET_COLORS[bucket] : '#8a8f9c';
+                          return (
+                            <button
+                              onClick={() => setIsIntentDropdownOpen(v => !v)}
+                              style={{
+                                display: 'inline-flex', alignItems: 'center', gap: 8,
+                                padding: '7px 14px', borderRadius: 999,
+                                fontSize: 13, fontFamily: 'inherit', fontWeight: 500,
+                                border: `1.5px solid ${bucketColor}`,
+                                background: '#fff',
+                                color: 'var(--text-primary)', cursor: 'pointer', whiteSpace: 'nowrap',
+                              }}
+                            >
+                              <span style={{ width: 8, height: 8, borderRadius: '50%', background: bucketColor, flexShrink: 0 }} />
+                              <span>{getIntentLabel(activeIntent)}</span>
+                              <ChevronDown size={11} style={{ transform: isIntentDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 150ms' }} />
+                            </button>
+                          );
+                        })()}
+                        {isIntentDropdownOpen && (
+                          <>
+                            <div onClick={() => setIsIntentDropdownOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 50 }} />
+                            <div style={{
+                              position: 'absolute', bottom: 'calc(100% + 6px)', right: 0, width: 280,
+                              backgroundColor: 'white', borderRadius: 12, border: '1px solid var(--border)',
+                              boxShadow: '0 12px 32px rgba(0,0,0,0.14)', zIndex: 51,
+                              maxHeight: 420, overflowY: 'auto',
+                            }}>
+                              {groupIntentsByBucket(INTENTS.map(i => i.id)).map((bucket, bucketIdx) => {
+                                const dotColor = BUCKET_COLORS[bucket.label] || 'var(--text-muted)';
+                                return (
+                                  <div key={bucket.label}>
+                                    <div style={{
+                                      display: 'flex', alignItems: 'center', gap: 8,
+                                      padding: '12px 14px 6px',
+                                      fontSize: 11, color: 'var(--text-primary)', fontWeight: 700,
+                                      letterSpacing: '0.14em', textTransform: 'uppercase',
+                                      borderTop: bucketIdx === 0 ? 'none' : '1px solid var(--border)',
+                                      background: bucketIdx === 0 ? 'transparent' : 'rgba(10, 36, 99, 0.02)',
+                                    }}>
+                                      <span style={{ width: 7, height: 7, borderRadius: '50%', background: dotColor, flexShrink: 0 }} />
+                                      {bucket.label}
+                                    </div>
+                                    {bucket.intents.map((intent) => {
+                                      const isCurrent = activeIntent === intent.id;
+                                      return (
+                                        <div
+                                          key={intent.id}
+                                          onClick={() => { setActiveIntent(intent.id); setHasManualIntentPick(true); setIsIntentDropdownOpen(false); }}
+                                          style={{
+                                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                            padding: '8px 14px', cursor: 'pointer', fontSize: 13,
+                                            color: isCurrent ? 'var(--text-primary)' : 'var(--text-secondary)',
+                                            fontWeight: isCurrent ? 500 : 400,
+                                            backgroundColor: isCurrent ? 'rgba(10, 36, 99, 0.04)' : 'transparent',
+                                          }}
+                                          onMouseEnter={(e) => { if (!isCurrent) e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.03)'; }}
+                                          onMouseLeave={(e) => { if (!isCurrent) e.currentTarget.style.backgroundColor = 'transparent'; }}
+                                        >
+                                          <span>{intent.label}</span>
+                                          {isCurrent && <CheckCircle size={14} style={{ color: 'var(--navy)', flexShrink: 0 }} />}
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                );
+                              })}
+                              {INTENT_DESCRIPTIONS[activeIntent] && (
+                                <div style={{
+                                  padding: '10px 14px', borderTop: '1px solid var(--border)',
+                                  background: '#fafafa',
+                                  fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.5,
+                                }}>
+                                  <Info size={11} style={{ display: 'inline', marginRight: 6, color: 'var(--text-muted)', verticalAlign: 'middle' }} />
+                                  {INTENT_DESCRIPTIONS[activeIntent]}
+                                </div>
+                              )}
+                            </div>
+                          </>
+                        )}
+                      </div>
+
+                      {/* Send button */}
+                      {(() => {
+                        const canSend = (input.trim() || pendingAttachments.length > 0) && !isTyping;
+                        return (
+                          <div onClick={() => canSend && sendMessage(input)} style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--navy)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: canSend ? 'pointer' : 'default', flexShrink: 0, opacity: canSend ? 1 : 0.45, transition: 'opacity 150ms' }}>
+                            <ArrowUp size={16} color="#fff" />
+                          </div>
+                        );
+                      })()}
+                    </div>
+
+                    {/* Hidden ref for kpMenuRef (keeps popover tree alive) */}
+                    <div style={{ display: 'none' }} ref={kpMenuRef}>
+                      <button onClick={() => setIsKpMenuOpen(v => !v)}>
+                        <span>{activeKnowledgePack ? activeKnowledgePack.name : 'Pick a pack'}</span>
+                        <ChevronDown size={12} /></button>
                       {isKpMenuOpen && (() => {
                         const q = kpQuery.trim().toLowerCase();
                         const filteredPacks = q
@@ -6969,228 +6962,120 @@ INSTRUCTIONS:
                   </div>
                 </div>
 
-                {/* ─── Status line: "Using {intent} · {scope} · {pack} pack" ─── */}
-                <div style={{
-                  textAlign: 'center', marginTop: 14, fontSize: 12,
-                  fontFamily: "'DM Sans', sans-serif", color: 'var(--text-muted)',
-                }}>
-                  Using <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{getIntentLabel(activeIntent)}</span>
-                  {' · '}
-                  <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{getScopeOption(searchScope).label}</span>
-                  {activeKnowledgePack && (
-                    <>
-                      {' · '}
-                      <span style={{ color: '#C9A84C', fontWeight: 500 }}>{activeKnowledgePack.name} pack</span>
-                    </>
-                  )}
-                </div>
-
-                {/* ─── Optional box: Upload + Source + Pack repeats + Quick starts ─── */}
-                <div style={{
-                  marginTop: 14,
-                  border: '1px solid var(--border)', borderRadius: 14, background: '#fff',
-                  padding: '14px 18px',
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
-                    <span style={{
-                      fontSize: 12, fontFamily: "'DM Sans', sans-serif",
-                      color: 'var(--text-muted)', fontWeight: 500,
-                    }}>Optional</span>
-
-                    <button
-                      onClick={() => dropFileInputRef.current?.click()}
-                      style={{
-                        display: 'inline-flex', alignItems: 'center', gap: 6,
-                        padding: '6px 10px', borderRadius: 8,
-                        fontSize: 13, fontFamily: "'DM Sans', sans-serif", fontWeight: 500,
-                        background: 'transparent', border: 'none', color: 'var(--text-primary)',
-                        cursor: 'pointer',
-                      }}
-                    >
-                      <Upload size={14} style={{ color: 'var(--navy)' }} /> Upload files
-                    </button>
-
-                    <span style={{ width: 1, height: 16, background: 'var(--border)' }} />
-
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>Source:</span>
-                      <SearchScopePill
-                        scope={searchScope}
-                        isOpen={isScopeOpenOptional}
-                        setIsOpen={setIsScopeOpenOptional}
-                        setScope={setSearchScope}
-                        scopeRef={scopeOptionalRef}
-                        openUpward={false}
-                        compact
-                        onPickVault={() => setIsVaultPickerModalOpen(true)}
-                      />
-                    </div>
-
-                    <span style={{ width: 1, height: 16, background: 'var(--border)' }} />
-
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>Pack:</span>
-                      <button
-                        onClick={() => setIsPackPickerModalOpen(true)}
-                        style={{
-                          display: 'inline-flex', alignItems: 'center', gap: 6,
-                          padding: '5px 10px', borderRadius: 999,
-                          fontSize: 12, fontFamily: "'DM Sans', sans-serif", fontWeight: 500,
-                          border: '1px solid var(--border)', background: '#fff',
-                          color: 'var(--text-primary)', cursor: 'pointer', whiteSpace: 'nowrap', maxWidth: 200,
-                        }}
-                      >
-                        <Package size={12} style={{ color: 'var(--navy)' }} />
-                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {activeKnowledgePack ? activeKnowledgePack.name : 'No pack'}
-                        </span>
-                        <ChevronDown size={12} />
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Quick starts row */}
-                  <div style={{ borderTop: '1px solid var(--border)', marginTop: 14, paddingTop: 14 }}>
-                    <div style={{
-                      fontSize: 12, fontFamily: "'DM Sans', sans-serif",
-                      color: 'var(--text-muted)', fontWeight: 500, marginBottom: 10,
-                    }}>Quick starts</div>
-                    {(() => {
-                      // Prefills inlined here (used to use SUGGESTED.find()
-                      // by title, but title-string drift was the source of
-                      // a regression where the send button stayed disabled
-                      // after a Quick Start click — find returned undefined,
-                      // setInput never fired, input stayed empty, canSend
-                      // false. Inline strings remove that indirection.
-                      const QUICK = [
-                        {
-                          id: 'contract_review',
-                          label: 'Review contract',
-                          icon: FileSearch,
-                          prefill: 'Review this contract and flag any one-sided provisions, unusual liability caps, or missing standard protections I should push back on. Structure your response as: 1) high-risk issues, 2) medium-risk issues, 3) recommended redlines.',
-                        },
-                        {
-                          id: 'document_summarisation',
-                          label: 'Summarize',
-                          icon: FileText,
-                          prefill: 'Summarise this document in three sections: (1) Key obligations and deadlines, (2) Risk areas and ambiguities, (3) Recommended next steps. Keep each section under 100 words.',
-                        },
-                        {
-                          id: 'email_letter_drafting',
-                          label: 'Draft email',
-                          icon: Mail,
-                          prefill: 'Draft a professional email to opposing counsel requesting a seven-day extension on the upcoming deadline. Keep the tone courteous but firm, under 120 words, and include a brief reason tied to document review workload.',
-                        },
-                      ];
-                      return (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                          {QUICK.map((q) => {
-                            const Icon = q.icon;
-                            return (
-                              <button
-                                key={q.id}
-                                onClick={() => {
-                                  setActiveIntent(q.id);
-                                  setHasManualIntentPick(true);
-                                  if (q.prefill) {
-                                    setInput(q.prefill);
-                                    if (inputRef.current) inputRef.current.focus();
-                                  }
-                                }}
-                                style={{
-                                  display: 'inline-flex', alignItems: 'center', gap: 8,
-                                  padding: '8px 16px', borderRadius: 999,
-                                  fontSize: 13, fontFamily: "'DM Sans', sans-serif", fontWeight: 500,
-                                  border: '1px solid var(--border)', background: '#fff',
-                                  color: 'var(--text-primary)', cursor: 'pointer', whiteSpace: 'nowrap',
-                                  transition: 'all 150ms ease',
-                                }}
-                                onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--navy)'; }}
-                                onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border)'; }}
-                              >
-                                <Icon size={14} style={{ color: 'var(--navy)' }} />
-                                {q.label}
-                              </button>
-                            );
-                          })}
-                          {/* More — opens an overflow popover listing every
-                              intent that isn't a Quick Start. Reuses the
-                              existing emptyMoreRef + isEmptyMoreOpen state. */}
-                          <div ref={emptyMoreRef} style={{ position: 'relative', marginLeft: 'auto' }}>
-                            <button
-                              onClick={() => setIsEmptyMoreOpen(v => !v)}
-                              style={{
-                                display: 'inline-flex', alignItems: 'center', gap: 4,
-                                padding: '8px 12px', borderRadius: 8,
-                                fontSize: 13, fontFamily: "'DM Sans', sans-serif", fontWeight: 500,
-                                border: 'none', background: 'transparent', color: 'var(--text-secondary)',
-                                cursor: 'pointer', whiteSpace: 'nowrap',
-                              }}
-                            >
-                              More <ChevronRight size={13} style={{ transform: isEmptyMoreOpen ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 150ms' }} />
-                            </button>
-                            {isEmptyMoreOpen && (() => {
-                              const QUICK_IDS = new Set(QUICK.map((q) => q.id));
-                              const OVERFLOW = INTENTS.filter((i) => !QUICK_IDS.has(i.id));
-                              return (
-                                <>
-                                  <div onClick={() => setIsEmptyMoreOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 50 }} />
-                                  <div style={{
-                                    position: 'absolute', bottom: 'calc(100% + 8px)', right: 0, width: 280,
-                                    backgroundColor: '#fff', borderRadius: 12,
-                                    border: '1px solid var(--border)', boxShadow: '0 12px 32px rgba(0,0,0,0.14)',
-                                    zIndex: 51, maxHeight: 360, overflowY: 'auto',
-                                  }}>
-                                    {groupIntentsByBucket(OVERFLOW.map((i) => i.id)).map((bucket, bucketIdx) => {
-                                      const dotColor = BUCKET_COLORS[bucket.label] || 'var(--text-muted)';
-                                      return (
-                                        <div key={bucket.label}>
-                                          <div style={{
-                                            display: 'flex', alignItems: 'center', gap: 8,
-                                            padding: '12px 14px 6px',
-                                            fontSize: 11, color: 'var(--text-primary)', fontWeight: 700,
-                                            fontFamily: "'IBM Plex Mono', ui-monospace, monospace",
-                                            letterSpacing: '0.14em', textTransform: 'uppercase',
-                                            borderTop: bucketIdx === 0 ? 'none' : '1px solid var(--border)',
-                                            background: bucketIdx === 0 ? 'transparent' : 'rgba(10, 36, 99, 0.02)',
-                                          }}>
-                                            <span style={{ width: 7, height: 7, borderRadius: '50%', background: dotColor, flexShrink: 0 }} />
-                                            {bucket.label}
+                {/* ─── Quick chips ─── */}
+                {(() => {
+                  const QUICK_CHIPS = [
+                    { id: 'general_chat', label: 'General Chat', color: '#8a8f9c' },
+                    { id: 'contract_review', label: 'Review a contract', color: '#c9a04a',
+                      prefill: 'Review this contract and flag any one-sided provisions, unusual liability caps, or missing standard protections I should push back on. Structure your response as: 1) high-risk issues, 2) medium-risk issues, 3) recommended redlines.' },
+                    { id: 'document_summarisation', label: 'Summarize a document', color: '#c9a04a',
+                      prefill: 'Summarise this document in three sections: (1) Key obligations and deadlines, (2) Risk areas and ambiguities, (3) Recommended next steps. Keep each section under 100 words.' },
+                    { id: 'email_letter_drafting', label: 'Draft an email', color: '#3fb56b',
+                      prefill: 'Draft a professional email to opposing counsel requesting a seven-day extension on the upcoming deadline. Keep the tone courteous but firm, under 120 words, and include a brief reason tied to document review workload.' },
+                    { id: 'legal_research', label: 'Legal research', color: '#3a6dd6' },
+                  ];
+                  return (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 14, flexWrap: 'nowrap', justifyContent: 'center', overflowX: 'auto', scrollbarWidth: 'none' }}>
+                      {QUICK_CHIPS.map((chip) => (
+                        <button
+                          key={chip.id}
+                          onClick={() => {
+                            setActiveIntent(chip.id);
+                            setHasManualIntentPick(true);
+                            if (chip.prefill) {
+                              setInput(chip.prefill);
+                              if (inputRef.current) inputRef.current.focus();
+                            }
+                          }}
+                          style={{
+                            display: 'inline-flex', alignItems: 'center', gap: 7,
+                            padding: '7px 14px', borderRadius: 999,
+                            border: '1px solid #e2e3e7', background: '#fff',
+                            fontSize: 12.5, color: 'var(--text-primary)', cursor: 'pointer',
+                          }}
+                          onMouseEnter={(e) => { e.currentTarget.style.background = '#fafafa'; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; }}
+                        >
+                          <span style={{ width: 7, height: 7, borderRadius: '50%', background: chip.color, flexShrink: 0 }} />
+                          {chip.label}
+                        </button>
+                      ))}
+                      <div ref={emptyMoreRef} style={{ position: 'relative' }}>
+                        <button
+                          onClick={() => setIsEmptyMoreOpen(v => !v)}
+                          style={{
+                            display: 'inline-flex', alignItems: 'center', gap: 4,
+                            padding: '7px 12px', borderRadius: 999,
+                            border: '1px solid #e2e3e7', background: '#fff',
+                            fontSize: 12.5, color: 'var(--text-secondary)', cursor: 'pointer',
+                          }}
+                        >
+                          More <ChevronDown size={11} style={{ transform: isEmptyMoreOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 150ms' }} />
+                        </button>
+                        {isEmptyMoreOpen && (() => {
+                          const QUICK_IDS = new Set(QUICK_CHIPS.map((q) => q.id));
+                          const OVERFLOW = INTENTS.filter((i) => !QUICK_IDS.has(i.id));
+                          return (
+                            <>
+                              <div onClick={() => setIsEmptyMoreOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 50 }} />
+                              <div style={{
+                                position: 'absolute', bottom: 'calc(100% + 8px)', right: 0, width: 280,
+                                backgroundColor: '#fff', borderRadius: 12,
+                                border: '1px solid var(--border)', boxShadow: '0 12px 32px rgba(0,0,0,0.14)',
+                                zIndex: 51, maxHeight: 360, overflowY: 'auto',
+                              }}>
+                                {groupIntentsByBucket(OVERFLOW.map((i) => i.id)).map((bucket, bucketIdx) => {
+                                  const dotColor = BUCKET_COLORS[bucket.label] || 'var(--text-muted)';
+                                  return (
+                                    <div key={bucket.label}>
+                                      <div style={{
+                                        display: 'flex', alignItems: 'center', gap: 8,
+                                        padding: '12px 14px 6px',
+                                        fontSize: 11, color: 'var(--text-primary)', fontWeight: 700,
+                                        letterSpacing: '0.14em', textTransform: 'uppercase',
+                                        borderTop: bucketIdx === 0 ? 'none' : '1px solid var(--border)',
+                                        background: bucketIdx === 0 ? 'transparent' : 'rgba(10, 36, 99, 0.02)',
+                                      }}>
+                                        <span style={{ width: 7, height: 7, borderRadius: '50%', background: dotColor, flexShrink: 0 }} />
+                                        {bucket.label}
+                                      </div>
+                                      {bucket.intents.map((intent) => {
+                                        const isCurrent = activeIntent === intent.id;
+                                        return (
+                                          <div
+                                            key={intent.id}
+                                            onClick={() => { setActiveIntent(intent.id); setHasManualIntentPick(true); setIsEmptyMoreOpen(false); }}
+                                            style={{
+                                              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                              padding: '8px 14px', cursor: 'pointer', fontSize: 13,
+                                              color: isCurrent ? 'var(--text-primary)' : 'var(--text-secondary)',
+                                              fontWeight: isCurrent ? 500 : 400,
+                                              background: isCurrent ? 'rgba(10, 36, 99, 0.04)' : 'transparent',
+                                            }}
+                                            onMouseEnter={(e) => { if (!isCurrent) e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.03)'; }}
+                                            onMouseLeave={(e) => { if (!isCurrent) e.currentTarget.style.backgroundColor = 'transparent'; }}
+                                          >
+                                            <span>{intent.label}</span>
+                                            {isCurrent && <CheckCircle size={13} style={{ color: 'var(--navy)', flexShrink: 0 }} />}
                                           </div>
-                                          {bucket.intents.map((intent) => {
-                                            const isCurrent = activeIntent === intent.id;
-                                            return (
-                                              <div
-                                                key={intent.id}
-                                                onClick={() => { setActiveIntent(intent.id); setHasManualIntentPick(true); setIsEmptyMoreOpen(false); }}
-                                                style={{
-                                                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                                                  padding: '8px 14px', cursor: 'pointer', fontSize: 13,
-                                                  color: isCurrent ? 'var(--text-primary)' : 'var(--text-secondary)',
-                                                  fontWeight: isCurrent ? 500 : 400,
-                                                  background: isCurrent ? 'rgba(10, 36, 99, 0.04)' : 'transparent',
-                                                  transition: 'background 100ms',
-                                                }}
-                                                onMouseEnter={(e) => { if (!isCurrent) e.currentTarget.style.backgroundColor = 'var(--ice-warm)'; }}
-                                                onMouseLeave={(e) => { if (!isCurrent) e.currentTarget.style.backgroundColor = 'transparent'; }}
-                                              >
-                                                <span>{intent.label}</span>
-                                                {isCurrent && <CheckCircle size={13} style={{ color: 'var(--navy)', flexShrink: 0 }} />}
-                                              </div>
-                                            );
-                                          })}
-                                        </div>
-                                      );
-                                    })}
-                                  </div>
-                                </>
-                              );
-                            })()}
-                          </div>
-                        </div>
-                      );
-                    })()}
-                  </div>
+                                        );
+                                      })}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </>
+                          );
+                        })()}
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* ─── Footer note ─── */}
+                <div style={{ marginTop: 16, textAlign: 'center', color: 'var(--text-muted)', fontSize: 12.5 }}>
+                  YourAI may produce inaccurate information. Always verify critical outputs.{' '}
+                  <span style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>Private &amp; encrypted.</span>
                 </div>
 
                 {/* Legacy popovers — kept inside a hidden mount so the existing
@@ -7222,7 +7107,7 @@ INSTRUCTIONS:
                           <div style={{
                             padding: '10px 14px 4px', flexShrink: 0,
                             fontSize: 10, color: 'var(--text-muted)',
-                            fontFamily: "'IBM Plex Mono', ui-monospace, monospace",
+                            fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
                             letterSpacing: '0.12em', textTransform: 'uppercase',
                           }}>
                             From your vault
@@ -7323,7 +7208,7 @@ INSTRUCTIONS:
                     <div style={{
                       display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap',
                       marginBottom: 8, paddingLeft: 4,
-                      fontSize: 12, fontFamily: "'DM Sans', sans-serif", color: 'var(--text-muted)',
+                      fontSize: 12, fontFamily: "inherit", color: 'var(--text-muted)',
                     }}>
                       <span style={{
                         display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
@@ -7352,7 +7237,7 @@ INSTRUCTIONS:
                 {/* Input box — flex column (textarea on top, controls row on bottom). */}
                 <div style={{
                   display: 'flex', flexDirection: 'column', gap: 10,
-                  border: '1.5px solid var(--border)', borderRadius: 18, background: '#fff',
+                  border: '1px solid #d9dbe1', borderRadius: 14, background: '#fff',
                   padding: '12px 14px',
                 }}>
                   <textarea
@@ -7396,9 +7281,9 @@ INSTRUCTIONS:
                         style={{
                           display: 'inline-flex', alignItems: 'center', gap: 6,
                           padding: '6px 10px', borderRadius: 999,
-                          fontSize: 12, fontFamily: "'DM Sans', sans-serif", fontWeight: 500,
-                          border: activeVaultDocument ? '1px solid var(--navy)' : '1px solid var(--border)',
-                          background: activeVaultDocument ? 'rgba(10, 36, 99, 0.06)' : '#fff',
+                          fontSize: 12, fontWeight: 500,
+                          border: activeVaultDocument ? '1.5px solid var(--navy)' : '1px solid var(--border)',
+                          background: activeVaultDocument ? 'rgba(15, 28, 63, 0.05)' : '#fff',
                           color: 'var(--navy)', cursor: 'pointer', whiteSpace: 'nowrap',
                         }}
                       >
@@ -7417,48 +7302,48 @@ INSTRUCTIONS:
                     </div>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      {/* Pack pill — visible only when a pack is active. Click opens the existing pack picker. */}
+                      {/* Anchor pill (knowledge pack) — gold tint, visible only when active. */}
                       {activeKnowledgePack && (
                         <button
                           onClick={() => setIsPackPickerModalOpen(true)}
                           title={activeKnowledgePack.name}
                           style={{
-                            display: 'inline-flex', alignItems: 'center', gap: 6,
-                            padding: '5px 10px', borderRadius: 999,
-                            fontSize: 12, fontFamily: "'DM Sans', sans-serif", fontWeight: 500,
-                            border: '1px solid var(--border)', background: '#fff',
+                            display: 'inline-flex', alignItems: 'center', gap: 7,
+                            padding: '7px 12px', borderRadius: 999,
+                            fontSize: 13, fontWeight: 500,
+                            border: '1px solid var(--gold-border)', background: 'var(--gold-bg)',
                             color: 'var(--text-primary)', cursor: 'pointer', whiteSpace: 'nowrap',
-                            maxWidth: 160,
+                            maxWidth: 180,
                           }}
                         >
-                          <Layers size={13} style={{ flexShrink: 0, color: '#7A6520' }} />
+                          <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--gold)', flexShrink: 0 }} />
                           <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {activeKnowledgePack.name.length > 12 ? `${activeKnowledgePack.name.slice(0, 12)}…` : activeKnowledgePack.name}
+                            {activeKnowledgePack.name.length > 14 ? `${activeKnowledgePack.name.slice(0, 14)}…` : activeKnowledgePack.name}
                           </span>
-                          <ChevronDown size={12} style={{ flexShrink: 0 }} />
+                          <ChevronDown size={11} style={{ flexShrink: 0 }} />
                         </button>
                       )}
 
-                      {/* Intent dropdown — collapsed pill with bucket dot. */}
+                      {/* Mode pill — colored bucket border + dot. */}
                       <div style={{ position: 'relative' }} ref={intentDropdownRef}>
                         {(() => {
                           const bucket = getBucketForIntent(activeIntent);
-                          const dotColor = bucket ? BUCKET_COLORS[bucket] : 'var(--text-muted)';
+                          const bucketColor = bucket ? BUCKET_COLORS[bucket] : '#8a8f9c';
                           return (
                             <button
                               onClick={() => setIsIntentDropdownOpen(v => !v)}
                               style={{
-                                display: 'inline-flex', alignItems: 'center', gap: 6,
-                                padding: '5px 12px', borderRadius: 999,
-                                fontSize: 12, fontWeight: 500, fontFamily: "'DM Sans', sans-serif",
-                                border: '1px solid var(--text-primary)',
+                                display: 'inline-flex', alignItems: 'center', gap: 7,
+                                padding: '6px 12px', borderRadius: 999,
+                                fontSize: 12.5, fontWeight: 500,
+                                border: `1.5px solid ${bucketColor}`,
                                 backgroundColor: 'white', color: 'var(--text-primary)',
                                 cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
                               }}
                             >
-                              <MessageSquare size={13} style={{ flexShrink: 0, color: 'var(--navy)' }} />
+                              <span style={{ width: 7, height: 7, borderRadius: '50%', background: bucketColor, flexShrink: 0 }} />
                               {getIntentLabel(activeIntent)}
-                              <ChevronDown size={12} style={{ transform: isIntentDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 150ms' }} />
+                              <ChevronDown size={11} style={{ transform: isIntentDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 150ms' }} />
                             </button>
                           );
                         })()}
@@ -7479,7 +7364,7 @@ INSTRUCTIONS:
                                       display: 'flex', alignItems: 'center', gap: 8,
                                       padding: '12px 14px 6px',
                                       fontSize: 11, color: 'var(--text-primary)', fontWeight: 700,
-                                      fontFamily: "'IBM Plex Mono', ui-monospace, monospace",
+                                      fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
                                       letterSpacing: '0.14em', textTransform: 'uppercase',
                                       borderTop: bucketIdx === 0 ? 'none' : '1px solid var(--border)',
                                       background: bucketIdx === 0 ? 'transparent' : 'rgba(10, 36, 99, 0.02)',
@@ -7532,7 +7417,7 @@ INSTRUCTIONS:
                       {(() => {
                         const canSend = (input.trim() || pendingAttachments.length > 0) && !isTyping;
                         return (
-                          <div onClick={() => canSend && sendMessage(input)} style={{ width: 36, height: 36, borderRadius: '50%', background: canSend ? 'var(--navy)' : '#9CA3AF', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: canSend ? 'pointer' : 'not-allowed', flexShrink: 0, opacity: canSend ? 1 : 0.6, transition: 'background 150ms, opacity 150ms' }}><ArrowUp size={16} color="#fff" /></div>
+                          <div onClick={() => canSend && sendMessage(input)} style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--navy)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: canSend ? 'pointer' : 'default', flexShrink: 0, opacity: canSend ? 1 : 0.45, transition: 'opacity 150ms' }}><ArrowUp size={16} color="#fff" /></div>
                         );
                       })()}
                     </div>
@@ -7607,7 +7492,7 @@ INSTRUCTIONS:
                   }}
                 />
                 <Upload size={13} style={{ color: 'var(--text-muted)' }} />
-                <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', fontFamily: "'DM Sans', sans-serif" }}>
+                <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', fontFamily: "inherit" }}>
                   {labelText}
                 </span>
               </div>
@@ -7632,15 +7517,6 @@ INSTRUCTIONS:
               />
             )}
 
-            {/* Merged icon-pill row removed — Quick Starts inside the Optional
-                box (rendered up in the empty-state input area) covers the
-                primary actions; the remaining intents are reachable via the
-                input-box intent dropdown (with verb buckets + descriptions). */}
-
-            <div style={{ textAlign: 'center', fontSize: 12, color: 'var(--text-muted)', marginTop: showEmptyState ? 18 : 6, lineHeight: 1.45, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-              <Lock size={12} style={{ flexShrink: 0 }} />
-              <span>Private &amp; encrypted. Verify critical outputs.</span>
-            </div>
           </div>
 
         </div>
@@ -7707,7 +7583,7 @@ INSTRUCTIONS:
               {/* Header */}
               <div style={{ padding: '20px 24px 14px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
                 <div>
-                  <div style={{ fontFamily: "'DM Serif Display', serif", fontSize: 22, color: 'var(--navy)', lineHeight: 1.2 }}>Attach from YourVault</div>
+                  <div style={{ fontFamily: "'Fraunces', serif", fontSize: 22, color: 'var(--navy)', lineHeight: 1.2 }}>Attach from YourVault</div>
                   <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>Pick a document to attach to this conversation.</div>
                 </div>
                 <button onClick={() => { setIsVaultPickerModalOpen(false); setVaultPickerQuery(''); }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: 'var(--text-muted)' }}>
@@ -7724,7 +7600,7 @@ INSTRUCTIONS:
                     value={vaultPickerQuery}
                     onChange={(e) => setVaultPickerQuery(e.target.value)}
                     placeholder="Search YourVault by name, description, or file…"
-                    style={{ width: '100%', height: 40, borderRadius: 10, border: '1px solid var(--border)', paddingLeft: 36, paddingRight: 14, fontSize: 13, outline: 'none', boxSizing: 'border-box', fontFamily: "'DM Sans', sans-serif", background: '#FBFAF7' }}
+                    style={{ width: '100%', height: 40, borderRadius: 10, border: '1px solid var(--border)', paddingLeft: 36, paddingRight: 14, fontSize: 13, outline: 'none', boxSizing: 'border-box', fontFamily: "inherit", background: '#FBFAF7' }}
                   />
                 </div>
               </div>
@@ -7812,7 +7688,7 @@ INSTRUCTIONS:
             >
               <div style={{ padding: '20px 24px 14px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
                 <div>
-                  <div style={{ fontFamily: "'DM Serif Display', serif", fontSize: 22, color: 'var(--navy)', lineHeight: 1.2 }}>Pick a Knowledge Pack</div>
+                  <div style={{ fontFamily: "'Fraunces', serif", fontSize: 22, color: 'var(--navy)', lineHeight: 1.2 }}>Pick a Knowledge Pack</div>
                   <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>Attach a curated pack to ground this conversation in a specific playbook.</div>
                 </div>
                 <button onClick={() => { setIsPackPickerModalOpen(false); setPackPickerQuery(''); }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: 'var(--text-muted)' }}>
@@ -7828,7 +7704,7 @@ INSTRUCTIONS:
                     value={packPickerQuery}
                     onChange={(e) => setPackPickerQuery(e.target.value)}
                     placeholder="Search packs by name or description…"
-                    style={{ width: '100%', height: 40, borderRadius: 10, border: '1px solid var(--border)', paddingLeft: 36, paddingRight: 14, fontSize: 13, outline: 'none', boxSizing: 'border-box', fontFamily: "'DM Sans', sans-serif", background: '#FBFAF7' }}
+                    style={{ width: '100%', height: 40, borderRadius: 10, border: '1px solid var(--border)', paddingLeft: 36, paddingRight: 14, fontSize: 13, outline: 'none', boxSizing: 'border-box', fontFamily: "inherit", background: '#FBFAF7' }}
                   />
                 </div>
               </div>

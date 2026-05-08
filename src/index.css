@@ -9,11 +9,16 @@
    ───────────────────────────────────────────── */
 :root {
   /* ─── Brand Colors ─── */
-  --navy:       #0B1D3A;
+  --navy:       #0f1c3f;
+  --navy-2:     #14224a;
   --navy-mid:   #132C54;
   --navy-light: #1A3A6B;
-  --gold:       #C9A84C;
+  --gold:       #c9a04a;
+  --gold-light: #d4ae5d;
   --gold-soft:  #D4B96A;
+  --gold-bg:    #fdf6e7;
+  --gold-bg-soft: #faf2df;
+  --gold-border: #e9d29a;
 
   /* ─── Neutral Colors ─── */
   --ice:        #E8EEF4;
@@ -22,6 +27,14 @@
   --slate:      #3D5A80;
   --text-light: #9CA3AF;
   --white:      #FFFFFF;
+  --bg-page:    #eef0f2;
+  --bg-card:    #ffffff;
+  --bg-sidebar: #f6f1e7;
+  --bg-sidebar-2: #efe8d9;
+  --bg-soft:    #fafaf8;
+  --chip-bg:    #ffffff;
+  --chip-border: #e2e3e7;
+  --section-label: #9aa0ad;
 
   /* ─── Status Colors ─── */
   --success:       #5CA868;
@@ -41,14 +54,21 @@
   --danger-text:   #7D2C2C;
 
   /* ─── Semantic Text Tokens ─── */
-  --text-primary:   #070E1A;
-  --text-secondary: #0B1D3A;
-  --text-muted:     #98A2B3;
+  --text-primary:   #1a2238;
+  --text-secondary: #5f6678;
+  --text-muted:     #8a8f9c;
   --text-tertiary:  #94A3B8;
   --muted:          #94A3B8;
 
+  /* ─── Green palette ─── */
+  --green:          #3fb56b;
+  --green-soft:     #e8f5ec;
+  --green-text:     #2a8a4f;
+  --blue:           #3a6dd6;
+  --blue-soft:      #e8eef9;
+
   /* ─── Border Tokens ─── */
-  --border:         #EAECF0;
+  --border:         #e6e6ea;
   --border-mid:     #D0D5DD;
   --border-strong:  #98A2B3;
   /* Alias used by new workflow-runs components */
@@ -58,9 +78,9 @@
   --bg-surface-alt: #F8F9FA;
 
   /* ─── Brand Aliases (used by workflow-runs components) ─── */
-  --brand-navy: #0B1D3A;
-  --brand-gold: #C9A84C;
-  --font-body:  'DM Sans', sans-serif;
+  --brand-navy: #0f1c3f;
+  --brand-gold: #c9a04a;
+  --font-body:  'Inter', sans-serif;
 
   /* ─── Focus & Interaction ─── */
   --focus-ring: rgba(201, 168, 76, 0.18);
@@ -100,7 +120,7 @@
 }
 
 body {
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   background-color: var(--cream);
   color: var(--text-secondary);
   margin: 0;
@@ -163,7 +183,7 @@ textarea.no-focus-ring:focus {
    add a rule here if a new element shows up.
    ───────────────────────────────────────────── */
 .artifact-prose {
-  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   font-size: 14px;
   line-height: 1.7;
   color: var(--text-primary);
@@ -171,7 +191,7 @@ textarea.no-focus-ring:focus {
   margin: 0 auto;
 }
 .artifact-prose h1 {
-  font-family: 'DM Serif Display', Georgia, serif;
+  font-family: 'Fraunces', Georgia, serif;
   font-size: 28px;
   font-weight: 400;
   color: var(--navy);
