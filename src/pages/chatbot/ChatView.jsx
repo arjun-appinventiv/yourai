@@ -4351,33 +4351,27 @@ function EmptyState() {
     <div className="px-4 sm:px-6" style={{ paddingTop: '10vh', paddingBottom: 24 }}>
       <div style={{ maxWidth: 880, width: '100%', margin: '0 auto' }}>
         <div style={{ textAlign: 'center' }}>
-          {/* Gold ring sparkle */}
-          <div style={{ textAlign: 'center', marginBottom: 14 }}>
-            <span style={{
-              display: 'inline-flex', width: 38, height: 38, borderRadius: '50%',
-              background: 'var(--gold-bg)', alignItems: 'center', justifyContent: 'center',
-              color: 'var(--gold)',
-            }}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 2l1.6 5.4L19 9l-5.4 1.6L12 16l-1.6-5.4L5 9l5.4-1.6z"/>
-              </svg>
-            </span>
+          {/* Sparkle — plain gold, no circle */}
+          <div style={{ textAlign: 'center', color: 'var(--gold)', marginBottom: 12 }}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2l1.6 5.4L19 9l-5.4 1.6L12 16l-1.6-5.4L5 9l5.4-1.6z"/>
+            </svg>
           </div>
           <h2
             style={{
               fontFamily: "'Fraunces', serif",
               fontWeight: 500,
-              fontSize: 46,
+              fontSize: 52,
               color: 'var(--text-primary)',
-              margin: '0 0 12px',
+              margin: '0 0 14px',
               lineHeight: 1.1,
-              letterSpacing: '-1.2px',
+              letterSpacing: '-1.5px',
             }}
           >
             {getGreeting()}, {currentUserName}
           </h2>
-          <p style={{ fontSize: 14.5, color: 'var(--text-secondary)', margin: '0 auto 28px', maxWidth: 560, lineHeight: 1.5 }}>
-            Your AI assistant is ready — ask anything about your documents or Alaska law.
+          <p style={{ fontSize: 15.5, color: 'var(--text-secondary)', margin: '0 auto 32px', lineHeight: 1.5 }}>
+            Start with a question, or add documents for context.
           </p>
         </div>
       </div>
@@ -6752,183 +6746,175 @@ INSTRUCTIONS:
                 {/* ─── Primary input box ─── */}
                 <div style={{
                   display: 'flex', flexDirection: 'column',
-                  border: '1px solid #d9dbe1', borderRadius: 14, background: '#fff',
-                  padding: '18px 18px 14px',
+                  border: '1px solid #d9dbe1', borderRadius: 16, background: '#fff',
+                  padding: '22px 22px 18px',
+                  boxShadow: '0 1px 2px rgba(15,28,63,0.03)',
                 }}>
-                  <textarea
-                    ref={inputRef}
-                    className="no-focus-ring"
-                    value={input}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      setInput(val);
-                      clearTimeout(suggestionTimer.current);
-                      if (val.trim().length < 10) { setSuggestedIntent(null); setSuggestedIntents([]); return; }
-                      suggestionTimer.current = setTimeout(() => {
-                        const allMatches = detectAllIntents(val);
-                        const relevant = allMatches.filter(m => m.intentId !== activeIntent && m.intentId !== dismissedSuggestion);
-                        if (relevant.length === 0) { setSuggestedIntent(null); setSuggestedIntents([]); return; }
-                        if (relevant.length >= 2 && relevant[0].matchCount === relevant[1].matchCount) {
-                          const tied = relevant.filter(m => m.matchCount === relevant[0].matchCount);
-                          setSuggestedIntents(tied); setSuggestedIntent(null);
-                        } else { setSuggestedIntent(relevant[0].intentId); setSuggestedIntents([]); }
-                      }, 600);
-                    }}
-                    onKeyDown={handleKeyDown}
-                    placeholder={inputPlaceholder}
-                    rows={1}
-                    style={{ width: '100%', border: 'none', outline: 'none', fontSize: 15, color: 'var(--text-primary)', background: 'transparent', resize: 'none', maxHeight: 200, overflowY: 'auto', lineHeight: '1.5', fontFamily: 'inherit', padding: '4px 0 14px' }}
-                    onInput={(e) => { e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 200) + 'px'; }}
-                  />
-
-                  {/* Composer bottom: LEFT (source pill) | CENTER (mode hint) | RIGHT (mode-pill + send) */}
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-
-                    {/* LEFT: source pill (SearchScope) */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-                    <SearchScopePill
-                      scope={searchScope}
-                      isOpen={isScopeOpenInput}
-                      setIsOpen={setIsScopeOpenInput}
-                      setScope={setSearchScope}
-                      scopeRef={scopeInputRef}
-                      openUpward={false}
-                      onPickVault={() => setIsVaultPickerModalOpen(true)}
+                  {/* Input row: textarea + send (separated from pills by dashed border) */}
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, paddingBottom: 18, borderBottom: '1px dashed #e2e3e7' }}>
+                    <textarea
+                      ref={inputRef}
+                      className="no-focus-ring"
+                      value={input}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setInput(val);
+                        clearTimeout(suggestionTimer.current);
+                        if (val.trim().length < 10) { setSuggestedIntent(null); setSuggestedIntents([]); return; }
+                        suggestionTimer.current = setTimeout(() => {
+                          const allMatches = detectAllIntents(val);
+                          const relevant = allMatches.filter(m => m.intentId !== activeIntent && m.intentId !== dismissedSuggestion);
+                          if (relevant.length === 0) { setSuggestedIntent(null); setSuggestedIntents([]); return; }
+                          if (relevant.length >= 2 && relevant[0].matchCount === relevant[1].matchCount) {
+                            const tied = relevant.filter(m => m.matchCount === relevant[0].matchCount);
+                            setSuggestedIntents(tied); setSuggestedIntent(null);
+                          } else { setSuggestedIntent(relevant[0].intentId); setSuggestedIntents([]); }
+                        }, 600);
+                      }}
+                      onKeyDown={handleKeyDown}
+                      placeholder={inputPlaceholder}
+                      rows={1}
+                      style={{ flex: 1, border: 'none', outline: 'none', fontSize: 15.5, color: 'var(--text-primary)', background: 'transparent', resize: 'none', maxHeight: 200, overflowY: 'auto', lineHeight: '1.5', fontFamily: 'inherit', padding: '4px 0', minHeight: 56 }}
+                      onInput={(e) => { e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 200) + 'px'; }}
                     />
-                    </div>
-
-                    {/* CENTER: mode hint */}
+                    {/* Send button 44×44 */}
                     {(() => {
-                      const desc = INTENT_DESCRIPTIONS[activeIntent];
-                      const bucket = getBucketForIntent(activeIntent);
-                      const hintColor = bucket === 'DRAFT' ? 'var(--green-text)' : bucket === 'ANALYZE' ? '#7A6520' : bucket === 'ASK & RESEARCH' ? 'var(--blue)' : 'var(--text-muted)';
-                      if (!desc) return null;
+                      const canSend = (input.trim() || pendingAttachments.length > 0) && !isTyping;
                       return (
-                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6, color: hintColor, fontSize: 12.5, lineHeight: 1.4, flex: 1, minWidth: 0, marginLeft: 8, marginRight: 8 }}>
-                          <Info size={13} style={{ flexShrink: 0, marginTop: 1, color: hintColor }} />
-                          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{desc}</span>
+                        <div onClick={() => canSend && sendMessage(input)} style={{ width: 44, height: 44, borderRadius: '50%', background: 'var(--navy)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: canSend ? 'pointer' : 'default', flexShrink: 0, opacity: canSend ? 1 : 0.45, transition: 'opacity 150ms' }}>
+                          <ArrowUp size={18} color="#fff" />
                         </div>
                       );
                     })()}
+                  </div>
 
-                    {/* RIGHT: mode-pill (intent dropdown) + send */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-                      {/* Mode pill = Intent selector */}
-                      <div style={{ position: 'relative' }} ref={intentDropdownRef}>
-                        {(() => {
-                          const bucket = getBucketForIntent(activeIntent);
-                          const bucketColor = bucket ? BUCKET_COLORS[bucket] : '#8a8f9c';
-                          return (
-                            <button
-                              onClick={() => setIsIntentDropdownOpen(v => !v)}
-                              style={{
-                                display: 'inline-flex', alignItems: 'center', gap: 8,
-                                padding: '7px 14px', borderRadius: 999,
-                                fontSize: 13, fontFamily: 'inherit', fontWeight: 500,
-                                border: `1.5px solid ${bucketColor}`,
-                                background: '#fff',
-                                color: 'var(--text-primary)', cursor: 'pointer', whiteSpace: 'nowrap',
-                              }}
-                            >
-                              <span style={{ width: 8, height: 8, borderRadius: '50%', background: bucketColor, flexShrink: 0 }} />
-                              <span>{getIntentLabel(activeIntent)}</span>
-                              <ChevronDown size={11} style={{ transform: isIntentDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 150ms' }} />
-                            </button>
-                          );
-                        })()}
-                        {isIntentDropdownOpen && (
-                          <>
-                            <div onClick={() => setIsIntentDropdownOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 50 }} />
-                            <div style={{
-                              position: 'absolute', bottom: 'calc(100% + 6px)', right: 0, width: 280,
-                              backgroundColor: 'white', borderRadius: 12, border: '1px solid var(--border)',
-                              boxShadow: '0 12px 32px rgba(0,0,0,0.14)', zIndex: 51,
-                              maxHeight: 420, overflowY: 'auto',
-                            }}>
-                              {groupIntentsByBucket(INTENTS.map(i => i.id)).map((bucket, bucketIdx) => {
-                                const dotColor = BUCKET_COLORS[bucket.label] || 'var(--text-muted)';
-                                return (
-                                  <div key={bucket.label}>
-                                    <div style={{
-                                      display: 'flex', alignItems: 'center', gap: 8,
-                                      padding: '12px 14px 6px',
-                                      fontSize: 11, color: 'var(--text-primary)', fontWeight: 700,
-                                      letterSpacing: '0.14em', textTransform: 'uppercase',
-                                      borderTop: bucketIdx === 0 ? 'none' : '1px solid var(--border)',
-                                      background: bucketIdx === 0 ? 'transparent' : 'rgba(10, 36, 99, 0.02)',
-                                    }}>
-                                      <span style={{ width: 7, height: 7, borderRadius: '50%', background: dotColor, flexShrink: 0 }} />
-                                      {bucket.label}
-                                    </div>
-                                    {bucket.intents.map((intent) => {
-                                      const isCurrent = activeIntent === intent.id;
-                                      return (
-                                        <div
-                                          key={intent.id}
-                                          onClick={() => { setActiveIntent(intent.id); setHasManualIntentPick(true); setIsIntentDropdownOpen(false); }}
-                                          style={{
-                                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                                            padding: '8px 14px', cursor: 'pointer', fontSize: 13,
-                                            color: isCurrent ? 'var(--text-primary)' : 'var(--text-secondary)',
-                                            fontWeight: isCurrent ? 500 : 400,
-                                            backgroundColor: isCurrent ? 'rgba(10, 36, 99, 0.04)' : 'transparent',
-                                          }}
-                                          onMouseEnter={(e) => { if (!isCurrent) e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.03)'; }}
-                                          onMouseLeave={(e) => { if (!isCurrent) e.currentTarget.style.backgroundColor = 'transparent'; }}
-                                        >
-                                          <span>{intent.label}</span>
-                                          {isCurrent && <CheckCircle size={14} style={{ color: 'var(--navy)', flexShrink: 0 }} />}
-                                        </div>
-                                      );
-                                    })}
+                  {/* Pill row: 3 equal mode / scope / pack pills */}
+                  <div style={{ display: 'flex', gap: 12, marginTop: 16 }}>
+
+                    {/* Pill 1 — Intent/mode */}
+                    <div style={{ position: 'relative', flex: 1 }} ref={intentDropdownRef}>
+                      <button
+                        onClick={() => setIsIntentDropdownOpen(v => !v)}
+                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '10px 14px', borderRadius: 999, border: '1px solid var(--chip-border)', background: '#fff', fontSize: 13.5, fontFamily: 'inherit', fontWeight: 500, color: 'var(--text-primary)', cursor: 'pointer', transition: 'background 0.12s ease, border-color 0.12s ease' }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = '#fafafa'; e.currentTarget.style.borderColor = '#d4d6dc'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.borderColor = 'var(--chip-border)'; }}
+                      >
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <MessageSquare size={16} style={{ color: 'var(--text-primary)', flexShrink: 0 }} />
+                          {getIntentLabel(activeIntent)}
+                        </span>
+                        <ChevronDown size={14} style={{ color: 'var(--text-muted)', flexShrink: 0, transform: isIntentDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 150ms' }} />
+                      </button>
+                      {isIntentDropdownOpen && (
+                        <>
+                          <div onClick={() => setIsIntentDropdownOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 50 }} />
+                          <div style={{ position: 'absolute', bottom: 'calc(100% + 6px)', left: 0, width: 280, backgroundColor: 'white', borderRadius: 12, border: '1px solid var(--border)', boxShadow: '0 12px 32px rgba(0,0,0,0.14)', zIndex: 51, maxHeight: 420, overflowY: 'auto' }}>
+                            {groupIntentsByBucket(INTENTS.map(i => i.id)).map((bucket, bucketIdx) => {
+                              const dotColor = BUCKET_COLORS[bucket.label] || 'var(--text-muted)';
+                              return (
+                                <div key={bucket.label}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 14px 6px', fontSize: 11, color: 'var(--text-primary)', fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', borderTop: bucketIdx === 0 ? 'none' : '1px solid var(--border)', background: bucketIdx === 0 ? 'transparent' : 'rgba(10, 36, 99, 0.02)' }}>
+                                    <span style={{ width: 7, height: 7, borderRadius: '50%', background: dotColor, flexShrink: 0 }} />
+                                    {bucket.label}
                                   </div>
-                                );
-                              })}
-                              {INTENT_DESCRIPTIONS[activeIntent] && (
-                                <div style={{
-                                  padding: '10px 14px', borderTop: '1px solid var(--border)',
-                                  background: '#fafafa',
-                                  fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.5,
-                                }}>
-                                  <Info size={11} style={{ display: 'inline', marginRight: 6, color: 'var(--text-muted)', verticalAlign: 'middle' }} />
-                                  {INTENT_DESCRIPTIONS[activeIntent]}
+                                  {bucket.intents.map((intent) => {
+                                    const isCurrent = activeIntent === intent.id;
+                                    return (
+                                      <div key={intent.id} onClick={() => { setActiveIntent(intent.id); setHasManualIntentPick(true); setIsIntentDropdownOpen(false); }}
+                                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 14px', cursor: 'pointer', fontSize: 13, color: isCurrent ? 'var(--text-primary)' : 'var(--text-secondary)', fontWeight: isCurrent ? 500 : 400, backgroundColor: isCurrent ? 'rgba(10, 36, 99, 0.04)' : 'transparent' }}
+                                        onMouseEnter={(e) => { if (!isCurrent) e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.03)'; }}
+                                        onMouseLeave={(e) => { if (!isCurrent) e.currentTarget.style.backgroundColor = 'transparent'; }}
+                                      >
+                                        <span>{intent.label}</span>
+                                        {isCurrent && <CheckCircle size={14} style={{ color: 'var(--navy)', flexShrink: 0 }} />}
+                                      </div>
+                                    );
+                                  })}
                                 </div>
-                              )}
-                            </div>
-                          </>
-                        )}
-                      </div>
-
-                      {/* Send button */}
-                      {(() => {
-                        const canSend = (input.trim() || pendingAttachments.length > 0) && !isTyping;
-                        return (
-                          <div onClick={() => canSend && sendMessage(input)} style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--navy)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: canSend ? 'pointer' : 'default', flexShrink: 0, opacity: canSend ? 1 : 0.45, transition: 'opacity 150ms' }}>
-                            <ArrowUp size={16} color="#fff" />
+                              );
+                            })}
+                            {INTENT_DESCRIPTIONS[activeIntent] && (
+                              <div style={{ padding: '10px 14px', borderTop: '1px solid var(--border)', background: '#fafafa', fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                                <Info size={11} style={{ display: 'inline', marginRight: 6, color: 'var(--text-muted)', verticalAlign: 'middle' }} />
+                                {INTENT_DESCRIPTIONS[activeIntent]}
+                              </div>
+                            )}
                           </div>
-                        );
-                      })()}
+                        </>
+                      )}
                     </div>
 
-                    {/* Hidden ref for kpMenuRef (keeps popover tree alive) */}
-                    <div style={{ display: 'none' }} ref={kpMenuRef}>
-                      <button onClick={() => setIsKpMenuOpen(v => !v)}>
-                        <span>{activeKnowledgePack ? activeKnowledgePack.name : 'Pick a pack'}</span>
-                        <ChevronDown size={12} /></button>
+                    {/* Pill 2 — Search scope */}
+                    <div style={{ position: 'relative', flex: 1 }} ref={scopeInputRef}>
+                      <button
+                        onClick={() => setIsScopeOpenInput(v => !v)}
+                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '10px 14px', borderRadius: 999, border: '1px solid var(--chip-border)', background: '#fff', fontSize: 13.5, fontFamily: 'inherit', fontWeight: 500, color: 'var(--text-primary)', cursor: 'pointer', transition: 'background 0.12s ease, border-color 0.12s ease' }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = '#fafafa'; e.currentTarget.style.borderColor = '#d4d6dc'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.borderColor = 'var(--chip-border)'; }}
+                      >
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <Search size={16} style={{ color: 'var(--text-primary)', flexShrink: 0 }} />
+                          {getScopeOption(searchScope).label}
+                        </span>
+                        <ChevronDown size={14} style={{ color: 'var(--text-muted)', flexShrink: 0, transform: isScopeOpenInput ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 150ms' }} />
+                      </button>
+                      {isScopeOpenInput && (
+                        <>
+                          <div onClick={() => setIsScopeOpenInput(false)} style={{ position: 'fixed', inset: 0, zIndex: 50 }} />
+                          <div style={{ position: 'absolute', bottom: 'calc(100% + 8px)', left: 0, width: 290, backgroundColor: '#fff', borderRadius: 14, border: '1px solid var(--border)', boxShadow: '0 12px 32px rgba(0,0,0,0.14)', zIndex: 51, overflow: 'hidden' }}>
+                            <div style={{ padding: '12px 16px 6px', fontSize: 10, color: 'var(--text-muted)', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', letterSpacing: '0.14em', textTransform: 'uppercase' }}>Search within</div>
+                            {SCOPE_OPTIONS.map((opt) => {
+                              const isCurrent = opt.id === searchScope;
+                              const Icon = opt.icon;
+                              return (
+                                <div key={opt.id}
+                                  onClick={() => {
+                                    setIsScopeOpenInput(false);
+                                    if (opt.id === 'vault') { setIsVaultPickerModalOpen(true); return; }
+                                    setSearchScope(opt.id);
+                                  }}
+                                  style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 16px', cursor: 'pointer', backgroundColor: isCurrent ? 'rgba(10,36,99,0.04)' : 'transparent' }}
+                                  onMouseEnter={(e) => { if (!isCurrent) e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.02)'; }}
+                                  onMouseLeave={(e) => { if (!isCurrent) e.currentTarget.style.backgroundColor = 'transparent'; }}
+                                >
+                                  <Icon size={14} style={{ color: isCurrent ? 'var(--navy)' : 'var(--text-muted)', marginTop: 2, flexShrink: 0 }} />
+                                  <div>
+                                    <div style={{ fontSize: 13, fontWeight: 500, color: isCurrent ? 'var(--navy)' : 'var(--text-primary)' }}>{opt.label}</div>
+                                    <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2, lineHeight: 1.4 }}>{opt.sub}</div>
+                                  </div>
+                                  {isCurrent && <Check size={13} style={{ color: 'var(--navy)', marginLeft: 'auto', flexShrink: 0, marginTop: 2 }} />}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </>
+                      )}
+                    </div>
+
+                    {/* Pill 3 — Knowledge pack */}
+                    <div style={{ position: 'relative', flex: 1 }} ref={kpMenuRef}>
+                      <button
+                        onClick={() => setIsKpMenuOpen(v => !v)}
+                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '10px 14px', borderRadius: 999, border: '1px solid var(--chip-border)', background: '#fff', fontSize: 13.5, fontFamily: 'inherit', fontWeight: 500, color: 'var(--text-primary)', cursor: 'pointer', transition: 'background 0.12s ease, border-color 0.12s ease' }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = '#fafafa'; e.currentTarget.style.borderColor = '#d4d6dc'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.borderColor = 'var(--chip-border)'; }}
+                      >
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <Package size={16} style={{ color: 'var(--text-primary)', flexShrink: 0 }} />
+                          {activeKnowledgePack ? activeKnowledgePack.name : 'Knowledge Pack'}
+                        </span>
+                        <ChevronDown size={14} style={{ color: 'var(--text-muted)', flexShrink: 0, transform: isKpMenuOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 150ms' }} />
+                      </button>
                       {isKpMenuOpen && (() => {
                         const q = kpQuery.trim().toLowerCase();
-                        const filteredPacks = q
-                          ? knowledgePacks.filter(p => `${p.name || ''} ${p.description || ''}`.toLowerCase().includes(q))
-                          : knowledgePacks;
+                        const filteredPacks = q ? knowledgePacks.filter(p => `${p.name || ''} ${p.description || ''}`.toLowerCase().includes(q)) : knowledgePacks;
                         return (
                           <>
                             <div onClick={() => { setIsKpMenuOpen(false); setKpQuery(''); }} style={{ position: 'fixed', inset: 0, zIndex: 50 }} />
-                            <div style={{ position: 'absolute', top: 'calc(100% + 8px)', right: 0, width: 280, backgroundColor: '#fff', borderRadius: 12, border: '1px solid var(--border)', boxShadow: '0 12px 32px rgba(0,0,0,0.14)', zIndex: 51, overflow: 'hidden', display: 'flex', flexDirection: 'column', maxHeight: 360 }}>
+                            <div style={{ position: 'absolute', bottom: 'calc(100% + 8px)', right: 0, width: 280, backgroundColor: '#fff', borderRadius: 12, border: '1px solid var(--border)', boxShadow: '0 12px 32px rgba(0,0,0,0.14)', zIndex: 51, overflow: 'hidden', display: 'flex', flexDirection: 'column', maxHeight: 360 }}>
                               {knowledgePacks.length > 5 && (
                                 <div style={{ padding: '8px 10px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
-                                  <input autoFocus type="text" value={kpQuery} onChange={(e) => setKpQuery(e.target.value)} placeholder="Search packs…"
-                                    style={{ width: '100%', padding: '6px 10px', borderRadius: 8, border: '1px solid var(--border)', fontSize: 12, fontFamily: 'inherit', outline: 'none' }}
-                                    onClick={(e) => e.stopPropagation()} />
+                                  <input autoFocus type="text" value={kpQuery} onChange={(e) => setKpQuery(e.target.value)} placeholder="Search packs…" style={{ width: '100%', padding: '6px 10px', borderRadius: 8, border: '1px solid var(--border)', fontSize: 12, fontFamily: 'inherit', outline: 'none' }} onClick={(e) => e.stopPropagation()} />
                                 </div>
                               )}
                               <div style={{ flex: 1, overflowY: 'auto' }}>
@@ -6947,8 +6933,7 @@ INSTRUCTIONS:
                                   filteredPacks.map((pack) => {
                                     const isCurrent = activeKnowledgePack?.id === pack.id;
                                     return (
-                                      <div key={pack.id}
-                                        onClick={() => { handleSelectKnowledgePack(pack); setIsKpMenuOpen(false); setKpQuery(''); }}
+                                      <div key={pack.id} onClick={() => { handleSelectKnowledgePack(pack); setIsKpMenuOpen(false); setKpQuery(''); }}
                                         style={{ padding: '8px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: isCurrent ? 'var(--navy)' : 'var(--text-secondary)', fontWeight: isCurrent ? 500 : 400 }}
                                         onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--ice-warm)'; }}
                                         onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}>
@@ -6971,123 +6956,131 @@ INSTRUCTIONS:
                         );
                       })()}
                     </div>
+
                   </div>
                 </div>
 
-                {/* ─── Quick chips ─── */}
-                {(() => {
-                  const QUICK_CHIPS = [
-                    { id: 'general_chat', label: 'General Chat', color: '#8a8f9c' },
-                    { id: 'contract_review', label: 'Review a contract', color: '#c9a04a',
-                      prefill: 'Review this contract and flag any one-sided provisions, unusual liability caps, or missing standard protections I should push back on. Structure your response as: 1) high-risk issues, 2) medium-risk issues, 3) recommended redlines.' },
-                    { id: 'document_summarisation', label: 'Summarize a document', color: '#c9a04a',
-                      prefill: 'Summarise this document in three sections: (1) Key obligations and deadlines, (2) Risk areas and ambiguities, (3) Recommended next steps. Keep each section under 100 words.' },
-                    { id: 'email_letter_drafting', label: 'Draft an email', color: '#3fb56b',
-                      prefill: 'Draft a professional email to opposing counsel requesting a seven-day extension on the upcoming deadline. Keep the tone courteous but firm, under 120 words, and include a brief reason tied to document review workload.' },
-                    { id: 'legal_research', label: 'Legal research', color: '#3a6dd6' },
-                  ];
-                  return (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 14, flexWrap: 'nowrap', justifyContent: 'center', overflowX: 'auto', scrollbarWidth: 'none' }}>
-                      {QUICK_CHIPS.map((chip) => (
-                        <button
-                          key={chip.id}
-                          onClick={() => {
-                            setActiveIntent(chip.id);
-                            setHasManualIntentPick(true);
-                            if (chip.prefill) {
-                              setInput(chip.prefill);
-                              if (inputRef.current) inputRef.current.focus();
-                            }
-                          }}
-                          style={{
-                            display: 'inline-flex', alignItems: 'center', gap: 7,
-                            padding: '7px 14px', borderRadius: 999,
-                            border: '1px solid #e2e3e7', background: '#fff',
-                            fontSize: 12.5, color: 'var(--text-primary)', cursor: 'pointer',
-                          }}
-                          onMouseEnter={(e) => { e.currentTarget.style.background = '#fafafa'; }}
-                          onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; }}
-                        >
-                          <span style={{ width: 7, height: 7, borderRadius: '50%', background: chip.color, flexShrink: 0 }} />
-                          {chip.label}
-                        </button>
-                      ))}
-                      <div ref={emptyMoreRef} style={{ position: 'relative' }}>
-                        <button
-                          onClick={() => setIsEmptyMoreOpen(v => !v)}
-                          style={{
-                            display: 'inline-flex', alignItems: 'center', gap: 4,
-                            padding: '7px 12px', borderRadius: 999,
-                            border: '1px solid #e2e3e7', background: '#fff',
-                            fontSize: 12.5, color: 'var(--text-secondary)', cursor: 'pointer',
-                          }}
-                        >
-                          More <ChevronDown size={11} style={{ transform: isEmptyMoreOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 150ms' }} />
-                        </button>
-                        {isEmptyMoreOpen && (() => {
-                          const QUICK_IDS = new Set(QUICK_CHIPS.map((q) => q.id));
-                          const OVERFLOW = INTENTS.filter((i) => !QUICK_IDS.has(i.id));
-                          return (
-                            <>
-                              <div onClick={() => setIsEmptyMoreOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 50 }} />
-                              <div style={{
-                                position: 'absolute', bottom: 'calc(100% + 8px)', right: 0, width: 280,
-                                backgroundColor: '#fff', borderRadius: 12,
-                                border: '1px solid var(--border)', boxShadow: '0 12px 32px rgba(0,0,0,0.14)',
-                                zIndex: 51, maxHeight: 360, overflowY: 'auto',
-                              }}>
-                                {groupIntentsByBucket(OVERFLOW.map((i) => i.id)).map((bucket, bucketIdx) => {
-                                  const dotColor = BUCKET_COLORS[bucket.label] || 'var(--text-muted)';
-                                  return (
-                                    <div key={bucket.label}>
-                                      <div style={{
-                                        display: 'flex', alignItems: 'center', gap: 8,
-                                        padding: '12px 14px 6px',
-                                        fontSize: 11, color: 'var(--text-primary)', fontWeight: 700,
-                                        letterSpacing: '0.14em', textTransform: 'uppercase',
-                                        borderTop: bucketIdx === 0 ? 'none' : '1px solid var(--border)',
-                                        background: bucketIdx === 0 ? 'transparent' : 'rgba(10, 36, 99, 0.02)',
-                                      }}>
-                                        <span style={{ width: 7, height: 7, borderRadius: '50%', background: dotColor, flexShrink: 0 }} />
-                                        {bucket.label}
-                                      </div>
-                                      {bucket.intents.map((intent) => {
-                                        const isCurrent = activeIntent === intent.id;
-                                        return (
-                                          <div
-                                            key={intent.id}
-                                            onClick={() => { setActiveIntent(intent.id); setHasManualIntentPick(true); setIsEmptyMoreOpen(false); }}
-                                            style={{
-                                              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                                              padding: '8px 14px', cursor: 'pointer', fontSize: 13,
-                                              color: isCurrent ? 'var(--text-primary)' : 'var(--text-secondary)',
-                                              fontWeight: isCurrent ? 500 : 400,
-                                              background: isCurrent ? 'rgba(10, 36, 99, 0.04)' : 'transparent',
-                                            }}
-                                            onMouseEnter={(e) => { if (!isCurrent) e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.03)'; }}
-                                            onMouseLeave={(e) => { if (!isCurrent) e.currentTarget.style.backgroundColor = 'transparent'; }}
-                                          >
-                                            <span>{intent.label}</span>
-                                            {isCurrent && <CheckCircle size={13} style={{ color: 'var(--navy)', flexShrink: 0 }} />}
-                                          </div>
-                                        );
-                                      })}
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            </>
-                          );
-                        })()}
-                      </div>
+                {/* ─── Using row ─── */}
+                <div style={{ textAlign: 'center', margin: '22px 0 18px', fontSize: 13, color: 'var(--text-secondary)' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Using</span>
+                  {' '}<span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{getIntentLabel(activeIntent)}</span>
+                  <span style={{ color: '#c4c8d0', margin: '0 6px' }}>•</span>
+                  <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{getScopeOption(searchScope).label}</span>
+                  {activeKnowledgePack && (
+                    <>
+                      <span style={{ color: '#c4c8d0', margin: '0 6px' }}>•</span>
+                      <span style={{ color: 'var(--gold)', fontWeight: 500 }}>{activeKnowledgePack.name}</span>
+                    </>
+                  )}
+                </div>
+
+                {/* ─── Secondary / optional box ─── */}
+                <div style={{ border: '1px solid #e6e7ec', borderRadius: 14, background: '#fafaf8', padding: '18px 22px' }}>
+                  {/* Optional row: upload + source + pack */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 24, paddingBottom: 14, borderBottom: '1px solid #ececec', fontSize: 13.5, flexWrap: 'wrap' }}>
+                    <span style={{ color: 'var(--text-muted)', fontSize: 13 }}>Optional</span>
+                    <button
+                      onClick={() => setIsVaultPickerModalOpen(true)}
+                      style={{ display: 'flex', alignItems: 'center', gap: 7, color: 'var(--gold)', fontWeight: 500, cursor: 'pointer', background: 'none', border: 'none', fontFamily: 'inherit', fontSize: 13.5, padding: 0 }}
+                    >
+                      <Upload size={16} />
+                      Upload files
+                    </button>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 'auto', cursor: 'pointer' }} onClick={() => setIsScopeOpenInput(v => !v)}>
+                      <span style={{ color: 'var(--text-secondary)', fontSize: 13 }}>Source:</span>
+                      <span style={{ fontWeight: 500, fontSize: 13, color: 'var(--text-primary)' }}>{getScopeOption(searchScope).label}</span>
+                      <ChevronDown size={13} style={{ color: 'var(--text-muted)' }} />
                     </div>
-                  );
-                })()}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }} onClick={() => setIsKpMenuOpen(v => !v)}>
+                      <span style={{ color: 'var(--text-secondary)', fontSize: 13 }}>Pack:</span>
+                      <span style={{ fontWeight: 500, fontSize: 13, color: 'var(--text-primary)' }}>{activeKnowledgePack ? activeKnowledgePack.name : 'M&A Due Diligence'}</span>
+                      <ChevronDown size={13} style={{ color: 'var(--text-muted)' }} />
+                    </div>
+                  </div>
+
+                  {/* Quick starts */}
+                  <div style={{ fontSize: 13.5, color: 'var(--text-secondary)', margin: '14px 0 10px' }}>Quick starts</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <button
+                      onClick={() => { setActiveIntent('contract_review'); setHasManualIntentPick(true); setInput('Review this contract and flag any one-sided provisions, unusual liability caps, or missing standard protections I should push back on. Structure your response as: 1) high-risk issues, 2) medium-risk issues, 3) recommended redlines.'); if (inputRef.current) inputRef.current.focus(); }}
+                      style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 16px', borderRadius: 999, border: '1px solid #e2e3e7', background: '#fff', fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', cursor: 'pointer', fontFamily: 'inherit' }}
+                      onMouseEnter={(e) => { e.currentTarget.style.background = '#fafafa'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; }}
+                    >
+                      <FileText size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+                      Review contract
+                    </button>
+                    <button
+                      onClick={() => { setActiveIntent('document_summarisation'); setHasManualIntentPick(true); setInput('Summarise this document in three sections: (1) Key obligations and deadlines, (2) Risk areas and ambiguities, (3) Recommended next steps. Keep each section under 100 words.'); if (inputRef.current) inputRef.current.focus(); }}
+                      style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 16px', borderRadius: 999, border: '1px solid #e2e3e7', background: '#fff', fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', cursor: 'pointer', fontFamily: 'inherit' }}
+                      onMouseEnter={(e) => { e.currentTarget.style.background = '#fafafa'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; }}
+                    >
+                      <FileText size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+                      Summarize
+                    </button>
+                    <button
+                      onClick={() => { setActiveIntent('email_letter_drafting'); setHasManualIntentPick(true); setInput('Draft a professional email to opposing counsel requesting a seven-day extension on the upcoming deadline. Keep the tone courteous but firm, under 120 words, and include a brief reason tied to document review workload.'); if (inputRef.current) inputRef.current.focus(); }}
+                      style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 16px', borderRadius: 999, border: '1px solid #e2e3e7', background: '#fff', fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', cursor: 'pointer', fontFamily: 'inherit' }}
+                      onMouseEnter={(e) => { e.currentTarget.style.background = '#fafafa'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; }}
+                    >
+                      <Mail size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+                      Draft email
+                    </button>
+                    <div ref={emptyMoreRef} style={{ position: 'relative', marginLeft: 'auto' }}>
+                      <button
+                        onClick={() => setIsEmptyMoreOpen(v => !v)}
+                        style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer', padding: '8px 6px', background: 'none', border: 'none', fontFamily: 'inherit' }}
+                        onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text-primary)'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-secondary)'; }}
+                      >
+                        More <ChevronRight size={14} />
+                      </button>
+                      {isEmptyMoreOpen && (() => {
+                        const QUICK_IDS = new Set(['contract_review', 'document_summarisation', 'email_letter_drafting']);
+                        const OVERFLOW = INTENTS.filter((i) => !QUICK_IDS.has(i.id));
+                        return (
+                          <>
+                            <div onClick={() => setIsEmptyMoreOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 50 }} />
+                            <div style={{ position: 'absolute', bottom: 'calc(100% + 8px)', right: 0, width: 280, backgroundColor: '#fff', borderRadius: 12, border: '1px solid var(--border)', boxShadow: '0 12px 32px rgba(0,0,0,0.14)', zIndex: 51, maxHeight: 360, overflowY: 'auto' }}>
+                              {groupIntentsByBucket(OVERFLOW.map((i) => i.id)).map((bucket, bucketIdx) => {
+                                const dotColor = BUCKET_COLORS[bucket.label] || 'var(--text-muted)';
+                                return (
+                                  <div key={bucket.label}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 14px 6px', fontSize: 11, color: 'var(--text-primary)', fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', borderTop: bucketIdx === 0 ? 'none' : '1px solid var(--border)', background: bucketIdx === 0 ? 'transparent' : 'rgba(10, 36, 99, 0.02)' }}>
+                                      <span style={{ width: 7, height: 7, borderRadius: '50%', background: dotColor, flexShrink: 0 }} />
+                                      {bucket.label}
+                                    </div>
+                                    {bucket.intents.map((intent) => {
+                                      const isCurrent = activeIntent === intent.id;
+                                      return (
+                                        <div key={intent.id}
+                                          onClick={() => { setActiveIntent(intent.id); setHasManualIntentPick(true); setIsEmptyMoreOpen(false); }}
+                                          style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 14px', cursor: 'pointer', fontSize: 13, color: isCurrent ? 'var(--text-primary)' : 'var(--text-secondary)', fontWeight: isCurrent ? 500 : 400, background: isCurrent ? 'rgba(10, 36, 99, 0.04)' : 'transparent' }}
+                                          onMouseEnter={(e) => { if (!isCurrent) e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.03)'; }}
+                                          onMouseLeave={(e) => { if (!isCurrent) e.currentTarget.style.backgroundColor = 'transparent'; }}
+                                        >
+                                          <span>{intent.label}</span>
+                                          {isCurrent && <CheckCircle size={13} style={{ color: 'var(--navy)', flexShrink: 0 }} />}
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </>
+                        );
+                      })()}
+                    </div>
+                  </div>
+                </div>
 
                 {/* ─── Footer note ─── */}
-                <div style={{ marginTop: 16, textAlign: 'center', color: 'var(--text-muted)', fontSize: 12.5 }}>
-                  YourAI may produce inaccurate information. Always verify critical outputs.{' '}
-                  <span style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>Private &amp; encrypted.</span>
+                <div style={{ marginTop: 26, textAlign: 'center', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8, color: 'var(--text-muted)', fontSize: 13 }}>
+                  <Lock size={14} />
+                  Private &amp; encrypted. Verify critical outputs.
                 </div>
 
                 {/* Legacy popovers — kept inside a hidden mount so the existing
