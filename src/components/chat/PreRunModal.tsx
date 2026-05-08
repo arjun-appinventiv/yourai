@@ -9,7 +9,7 @@
  * can drop a WorkflowProgressCard into the current thread.
  */
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   X, Plus, Briefcase, Database, FileText, Clock,
   UploadCloud, Loader, AlertTriangle, CheckCircle, Trash2,
@@ -19,7 +19,7 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import {
   type WorkflowTemplate, type UploadedDoc, type WorkflowOperation,
-  OPERATION_CONFIG,
+  OPERATION_CONFIG, listRuns,
 } from '../../lib/workflow';
 import { startRun } from '../../lib/workflowRunner';
 import { extractFileText } from '../../lib/file-parser';
@@ -54,6 +54,9 @@ export default function PreRunModal({ template, workspaceId, workspaceName, work
 
   const [uploads, setUploads] = useState<UploadedDoc[]>([]);
   const [dragActive, setDragActive] = useState(false);
+  const [expandedStepId, setExpandedStepId] = useState<string | null>(template.steps[0]?.id || null);
+  const [showLogic, setShowLogic] = useState(false);
+  const [runAttempted, setRunAttempted] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   // Keyed by upload name — stable across re-renders, tolerates id churn.
   const [classifications, setClassifications] = useState<Record<string, DocClassification>>({});
@@ -65,6 +68,17 @@ export default function PreRunModal({ template, workspaceId, workspaceName, work
   const anyProcessing = uploads.some((d) => d.status === 'processing');
   const anyReady = uploads.some((d) => d.status === 'ready');
   const canRun = !anyProcessing && uploads.length > 0;
+  const existingRuns = useMemo(() => listRuns().filter((run) => run.templateId === template.id), [template.id]);
+  const lastRun = existingRuns[0] || null;
+  const sampleOutput = template.outputLabel || `${template.practiceArea} report`;
+
+  const requestClose = () => {
+    if (uploads.length > 0) {
+      const confirmed = window.confirm('Close this workflow run setup? Your uploaded files will be removed from this draft.');
+      if (!confirmed) return;
+    }
+    onCancel();
+  };
 
   // Pre-flight classification — fires once all uploads finish processing,
   // only for ready docs we haven't classified yet. Advisory only; never
@@ -107,11 +121,11 @@ export default function PreRunModal({ template, workspaceId, workspaceName, work
       const ext = f.name.lastIndexOf('.') !== -1 ? f.name.slice(f.name.lastIndexOf('.') + 1).toLowerCase() : '';
       const id = `up-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
       if (!ACCEPTED.includes(ext)) {
-        setUploads((prev) => [...prev, { id, name: f.name, size: f.size, type: ext, status: 'failed', content: null }]);
+        setUploads((prev) => [...prev, { id, name: f.name, size: f.size, type: ext, status: 'failed', content: `Unsupported file type. Upload PDF, DOCX, XLSX, or TXT.` }]);
         continue;
       }
       if (f.size > MAX_BYTES) {
-        setUploads((prev) => [...prev, { id, name: f.name, size: f.size, type: ext, status: 'failed', content: null }]);
+        setUploads((prev) => [...prev, { id, name: f.name, size: f.size, type: ext, status: 'failed', content: `File exceeds the 100 MB limit.` }]);
         continue;
       }
 
@@ -125,7 +139,7 @@ export default function PreRunModal({ template, workspaceId, workspaceName, work
         const res = await extractFileText(f);
         setUploads((prev) => prev.map((x) => (x.id === id ? { ...x, status: 'ready', content: res?.text || '' } : x)));
       } catch {
-        setUploads((prev) => prev.map((x) => (x.id === id ? { ...x, status: 'failed' } : x)));
+        setUploads((prev) => prev.map((x) => (x.id === id ? { ...x, status: 'failed', content: 'We could not read this file. Try a different file or format.' } : x)));
       }
     }
   };
@@ -133,6 +147,8 @@ export default function PreRunModal({ template, workspaceId, workspaceName, work
   const removeUpload = (id: string) => setUploads((prev) => prev.filter((x) => x.id !== id));
 
   const handleRun = () => {
+    setRunAttempted(true);
+    if (!canRun) return;
     // Only ready docs go into the run. Failed docs are excluded but
     // surfaced in the report card as partial-failure warnings.
     const readyDocs = uploads.filter((d) => d.status === 'ready');
@@ -158,22 +174,41 @@ export default function PreRunModal({ template, workspaceId, workspaceName, work
 
   return (
     <>
-      <div onClick={onCancel} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 70, backdropFilter: 'blur(4px)' }} />
+      <div onClick={requestClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 70, backdropFilter: 'blur(4px)' }} />
       <div
         style={{
           position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)',
-          width: 520, maxHeight: '88vh', minHeight: 480, background: '#fff',
-          borderRadius: 16, boxShadow: '0 20px 60px rgba(0,0,0,0.25)',
+          width: 560, maxHeight: '88vh', background: '#fff',
+          borderRadius: 16, boxShadow: '0 20px 60px rgba(11,29,58,0.18)',
           zIndex: 71, display: 'flex', flexDirection: 'column', overflow: 'hidden',
         }}
       >
         {/* Header */}
-        <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid var(--border)' }}>
+        <div style={{ padding: '20px 24px 18px', borderBottom: '1px solid var(--border)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 12 }}>
+            <button
+              onClick={requestClose}
+              style={{ background: 'none', border: 'none', padding: 0, color: 'var(--text-muted)', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}
+            >
+              ← Back to Workflows
+            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+              <button onClick={() => onToast?.('Editing is available from the Workflows builder.')} style={headerLinkStyle}>
+                Edit workflow
+              </button>
+              <button onClick={() => setShowLogic((prev) => !prev)} style={headerLinkStyle}>
+                View logic
+              </button>
+            </div>
+          </div>
           <div className="flex items-start justify-between gap-3">
             <div style={{ minWidth: 0 }}>
               <h3 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 20, color: 'var(--text-primary)', margin: 0, lineHeight: 1.3 }}>
                 {template.name}
               </h3>
+              <p style={{ margin: '8px 0 0', fontSize: 13, lineHeight: 1.6, color: 'var(--text-secondary)', maxWidth: 420 }}>
+                {template.description || `Analyse ${template.practiceArea.toLowerCase()} documents to identify risks and generate a structured report.`}
+              </p>
               <div className="flex items-center gap-2 flex-wrap" style={{ marginTop: 6 }}>
                 <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 999, background: 'var(--ice-warm)', color: 'var(--navy)', border: '1px solid var(--border)', fontWeight: 500 }}>
                   {template.practiceArea}
@@ -183,14 +218,14 @@ export default function PreRunModal({ template, workspaceId, workspaceName, work
                 </span>
               </div>
             </div>
-            <button onClick={onCancel} className="p-2 rounded-lg hover:bg-gray-100" style={{ flexShrink: 0 }}>
+            <button onClick={requestClose} className="p-1.5 rounded-lg hover:bg-gray-100" style={{ flexShrink: 0 }}>
               <X size={18} style={{ color: 'var(--text-muted)' }} />
             </button>
           </div>
         </div>
 
         {/* Body — scrollable */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '18px 24px 8px' }}>
+        <div style={{ flex: 1, overflowY: 'auto', padding: '18px 24px 10px' }}>
           {/* Knowledge source */}
           <div style={{
             padding: '12px 14px', borderRadius: 10, marginBottom: workspaceHasNoDocs ? 8 : 16,
@@ -223,49 +258,123 @@ export default function PreRunModal({ template, workspaceId, workspaceName, work
             </div>
           )}
 
-          {/* Steps preview — horizontal pipeline with arrows */}
-          <div style={{ marginBottom: 18 }}>
-            <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>
+          {/* Steps preview — expandable vertical list */}
+          <div style={{ marginBottom: 20 }}>
+            <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>
               Workflow Steps
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
+            <div style={{ display: 'grid', gap: 8, position: 'relative' }}>
+              <div style={{ position: 'absolute', left: 14, top: 16, bottom: 16, width: 1, background: 'var(--border)', opacity: 0.9 }} />
               {template.steps.map((s, i) => {
                 const cfg = OPERATION_CONFIG[s.operation];
                 const Icon = OP_ICON[s.operation];
+                const expanded = expandedStepId === s.id;
                 return (
-                  <React.Fragment key={s.id}>
-                    <div
-                      title={`${i + 1}. ${s.name || 'unnamed'} — ${cfg.label}`}
-                      style={{
-                        position: 'relative',
-                        width: 44, height: 44, borderRadius: 10,
-                        background: 'var(--ice-warm)', border: '1px solid var(--border)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        flexShrink: 0,
-                      }}
-                    >
-                      <Icon size={16} style={{ color: 'var(--navy)' }} />
-                      <span style={{ position: 'absolute', bottom: -4, right: -4, width: 16, height: 16, borderRadius: '50%', background: '#fff', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 600, color: 'var(--text-muted)' }}>
-                        {i + 1}
-                      </span>
+                  <button
+                    key={s.id}
+                    onClick={() => setExpandedStepId((prev) => (prev === s.id ? null : s.id))}
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'auto minmax(0,1fr) auto',
+                      gap: 12,
+                      alignItems: 'start',
+                      padding: '10px 12px',
+                      borderRadius: 10,
+                      background: expanded ? '#FFFFFF' : 'var(--ice-warm)',
+                      border: `1px solid ${expanded ? 'rgba(11,29,58,0.16)' : 'var(--border)'}`,
+                      boxShadow: expanded ? '0 2px 8px rgba(11,29,58,0.06)' : 'none',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      transition: 'all 0.15s ease',
+                      position: 'relative',
+                    }}
+                  >
+                    <div style={{ width: 24, height: 24, borderRadius: '50%', background: '#fff', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', flexShrink: 0, position: 'relative', zIndex: 1 }}>
+                      {i + 1}
                     </div>
-                    {i < template.steps.length - 1 && (
-                      <ArrowRight size={11} style={{ color: '#9CA3AF', flexShrink: 0 }} />
-                    )}
-                  </React.Fragment>
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                        <span style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 4,
+                          padding: '3px 10px',
+                          borderRadius: 999,
+                          fontSize: 10.5,
+                          fontWeight: 600,
+                          border: '1px solid rgba(201,168,76,0.38)',
+                          background: 'linear-gradient(180deg, rgba(212,185,106,0.18) 0%, rgba(201,168,76,0.08) 100%)',
+                          color: 'var(--brand-gold)',
+                          boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.45)',
+                        }}>
+                          <Icon size={10} /> {cfg.label}
+                        </span>
+                        <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>
+                          {s.name || cfg.label}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.55 }}>
+                        {getStepOutcomeLabel(s.operation)}
+                      </div>
+                      {expanded && (
+                        <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--border)', fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.65 }}>
+                          {showLogic ? s.instruction : cfg.description}
+                        </div>
+                      )}
+                    </div>
+                    <span style={{ fontSize: 12, color: 'var(--text-muted)', paddingTop: 2 }}>{expanded ? '−' : '+'}</span>
+                  </button>
                 );
               })}
             </div>
           </div>
 
+          {/* Sample output + Last run info cards */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20 }}>
+            <div style={infoCardStyle}>
+              <div style={sectionLabelStyle}>Sample output</div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>
+                {sampleOutput}
+              </div>
+              <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.65 }}>
+                Review a structured summary of risks, priority findings, and the next actions this workflow recommends.
+              </div>
+            </div>
+            <div style={infoCardStyle}>
+              <div style={sectionLabelStyle}>Last run</div>
+              {lastRun ? (
+                <>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>
+                    {lastRun.status === 'complete' ? 'Completed successfully' : lastRun.status === 'running' ? 'Currently running' : 'Recently started'}
+                  </div>
+                  <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.65 }}>
+                    {formatRunDate(lastRun.startedAt)} · {lastRun.steps.filter((step) => step.status === 'complete').length} of {lastRun.steps.length} steps complete
+                  </div>
+                </>
+              ) : (
+                <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.65 }}>
+                  No previous run yet. Once you run this workflow, the latest summary will appear here.
+                </div>
+              )}
+            </div>
+          </div>
+
           {/* Upload documents */}
           <div style={{ marginBottom: 8 }}>
-            <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>
-              Upload your working documents
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+              <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Upload your working documents
+              </div>
+              <span style={{ fontSize: 10, color: 'var(--status-error, #C44F4F)', fontWeight: 600 }}>* Required</span>
             </div>
             <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '0 0 10px 0', lineHeight: 1.55 }}>
               These are the documents the workflow will analyse. Upload all relevant files before running.
             </p>
+            {runAttempted && !anyReady && (
+              <div style={{ marginBottom: 10, padding: '8px 10px', borderRadius: 10, background: 'rgba(196,84,84,0.08)', border: '1px solid rgba(196,84,84,0.18)', color: '#A33F3F', fontSize: 12 }}>
+                Add at least one valid file before running this workflow.
+              </div>
+            )}
 
             <div
               onClick={() => fileInputRef.current?.click()}
@@ -273,9 +382,9 @@ export default function PreRunModal({ template, workspaceId, workspaceName, work
               onDragLeave={() => setDragActive(false)}
               onDrop={(e) => { e.preventDefault(); setDragActive(false); if (e.dataTransfer.files) handleFilesPicked(e.dataTransfer.files); }}
               style={{
-                padding: '32px 20px', borderRadius: 12, textAlign: 'center', cursor: 'pointer',
-                border: `2px dashed ${dragActive ? '#C9A84C' : 'var(--border)'}`,
-                background: dragActive ? '#FDF6E3' : '#FBFAF7',
+                padding: '20px 18px', borderRadius: 12, textAlign: 'center', cursor: 'pointer',
+                border: `1.5px dashed ${dragActive ? '#C9A84C' : 'var(--border)'}`,
+                background: dragActive ? 'rgba(201,168,76,0.08)' : '#FFFFFF',
                 transition: 'all 120ms',
               }}
             >
@@ -331,12 +440,12 @@ export default function PreRunModal({ template, workspaceId, workspaceName, work
         </div>
 
         {/* Footer */}
-        <div style={{ padding: '14px 24px 18px', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, boxShadow: '0 -4px 12px rgba(0,0,0,0.04)' }}>
-          <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}>
-            ~{template.estimatedTotalSeconds}s estimated
-          </span>
-          <div className="flex items-center gap-2">
-            <button onClick={onCancel} style={{ padding: '9px 16px', borderRadius: 8, border: '1px solid var(--border)', background: '#fff', fontSize: 13, cursor: 'pointer', color: 'var(--text-muted)' }}>
+        <div style={{ padding: '14px 24px 18px', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+          <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+            Takes ~{template.estimatedTotalSeconds}s • No changes will be made to your documents
+          </div>
+          <div className="flex items-center gap-2" style={{ flexShrink: 0 }}>
+            <button onClick={requestClose} style={{ padding: '9px 16px', borderRadius: 10, border: '1px solid var(--border)', background: '#fff', fontSize: 13, cursor: 'pointer', color: 'var(--text-muted)' }}>
               Cancel
             </button>
             <button
@@ -345,9 +454,9 @@ export default function PreRunModal({ template, workspaceId, workspaceName, work
               title={!canRun && !anyProcessing ? 'Upload at least one document to run' : undefined}
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: 6,
-                padding: '9px 18px', borderRadius: 8, border: 'none',
-                background: canRun ? 'var(--navy)' : '#E5E7EB',
-                color: canRun ? '#fff' : '#9CA3AF', fontSize: 13, fontWeight: 500,
+                padding: '10px 18px', borderRadius: 10, border: 'none',
+                background: canRun ? 'var(--navy)' : '#9CA3AF',
+                color: '#fff', fontSize: 13, fontWeight: 500,
                 cursor: canRun ? 'pointer' : 'not-allowed',
               }}
             >
@@ -374,12 +483,17 @@ function UploadRow({ upload, classification, onRemove, sizeStr }: {
   const { Icon } = statusBadge;
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 10, background: upload.status === 'failed' ? '#FEF7F7' : 'var(--ice-warm)', border: `1px solid ${upload.status === 'failed' ? '#F9E7E7' : 'var(--border)'}` }}>
+    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 10px', borderRadius: 10, background: upload.status === 'failed' ? '#FEF7F7' : 'var(--ice-warm)', border: `1px solid ${upload.status === 'failed' ? '#F9E7E7' : 'var(--border)'}` }}>
       <FileText size={13} style={{ color: 'var(--navy)', flexShrink: 0 }} />
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{upload.name}</div>
         <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2, display: 'inline-flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
           <span>{upload.type.toUpperCase()} · {sizeStr}</span>
+          {upload.status === 'failed' && upload.content && (
+            <div style={{ fontSize: 10.5, color: '#A33F3F', marginTop: 6, lineHeight: 1.5, width: '100%' }}>
+              {upload.content}
+            </div>
+          )}
           {classification && (
             <span
               title={`Detected ${classification.type} (${classification.confidence} confidence)`}
@@ -406,3 +520,49 @@ function UploadRow({ upload, classification, onRemove, sizeStr }: {
     </div>
   );
 }
+
+function getStepOutcomeLabel(operation: WorkflowOperation): string {
+  switch (operation) {
+    case 'read_documents':      return 'Outputs a structured reading of the uploaded documents for downstream analysis.';
+    case 'analyse_clauses':     return 'Highlights risky or non-standard clauses and groups them into findings.';
+    case 'compare_against_standard': return 'Benchmarks your document against the selected playbook or standard.';
+    case 'generate_report':     return 'Produces the final structured report with recommendations.';
+    case 'research_precedents': return 'Returns relevant precedents and supporting legal references.';
+    case 'compliance_check':    return 'Maps document content against controls, rules, or policy requirements.';
+    default:                    return 'Produces a structured output for the next workflow step.';
+  }
+}
+
+function formatRunDate(iso: string): string {
+  try {
+    return new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }).format(new Date(iso));
+  } catch {
+    return 'Recently';
+  }
+}
+
+const headerLinkStyle: React.CSSProperties = {
+  background: 'none',
+  border: 'none',
+  padding: 0,
+  color: 'var(--text-secondary)',
+  fontSize: 12,
+  fontWeight: 500,
+  cursor: 'pointer',
+};
+
+const infoCardStyle: React.CSSProperties = {
+  border: '1px solid var(--border)',
+  borderRadius: 12,
+  background: '#FFFFFF',
+  padding: 14,
+};
+
+const sectionLabelStyle: React.CSSProperties = {
+  fontSize: 10,
+  fontWeight: 600,
+  color: 'var(--text-muted)',
+  textTransform: 'uppercase',
+  letterSpacing: '0.05em',
+  marginBottom: 6,
+};

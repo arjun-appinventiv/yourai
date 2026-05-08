@@ -508,12 +508,12 @@ function Sidebar({ activeKey, onOpenChat, onOpenPromptTemplates, onOpenClients, 
         onMouseLeave={() => setHoveredItem(null)}
         style={{
           display: 'flex', alignItems: 'center', gap: 8,
-          height: 32, padding: '7px 8px 7px 6px', borderRadius: 6,
+          height: 32, padding: '7px 8px 7px 10px', borderRadius: 6,
           cursor: item.onClick ? 'pointer' : 'default',
           userSelect: 'none',
-          background: isActive ? 'rgba(10, 36, 99, 0.06)' : isHovered ? 'rgba(10, 36, 99, 0.04)' : 'transparent',
-          borderLeft: isActive ? '3px solid var(--navy)' : '3px solid transparent',
-          transition: 'background 150ms ease, border-color 150ms ease',
+          background: isActive ? 'rgba(11,29,58,0.06)' : isHovered ? 'rgba(10, 36, 99, 0.04)' : 'transparent',
+          borderLeft: isActive ? '3px solid #C9A84C' : '3px solid transparent',
+          transition: 'background 150ms ease, border-color 150ms ease, border-left-color 150ms ease',
         }}
       >
         <Icon size={14} style={{ color: isActive ? 'var(--text-primary)' : 'var(--text-muted)', flexShrink: 0 }} />
@@ -4635,7 +4635,17 @@ export default function ChatView({ initialView = 'chat' }) {
 
   useEffect(() => { scrollToBottom(); }, [messages, isTyping, streamingContent, scrollToBottom]);
 
-  const inputPlaceholder = 'Ask anything about your documents or Alaska law…';
+  const scrollToRunningPanel = useCallback(() => {
+    setRunPanelOpen(true);
+    setRunPanelFocusId(runningWorkflow?.id || null);
+    requestAnimationFrame(() => {
+      document.getElementById('workflow-run-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }, [runningWorkflow]);
+
+  const inputPlaceholder = runningWorkflow
+    ? 'Ask anything, or wait for your workflow to complete...'
+    : 'Ask anything about your documents or Alaska law…';
 
   // ─── Chat Thread handlers ───
   const handleNewThread = useCallback(() => {
@@ -6351,6 +6361,49 @@ INSTRUCTIONS:
             <EmptyState />
           ) : (
             <div ref={scrollRef} className="px-3 sm:px-4 md:px-10 py-6" style={{ flex: 1, overflowY: 'auto' }}>
+              {runningWorkflow?.status === 'running' && (
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    margin: '8px 16px 16px',
+                    padding: '8px 12px',
+                    background: '#EAF3DE',
+                    border: '0.5px solid #639922',
+                    borderRadius: 8,
+                  }}
+                >
+                  <span
+                    style={{
+                      width: 6,
+                      height: 6,
+                      borderRadius: '50%',
+                      background: '#2A9D6E',
+                      animation: 'pulse 1.4s infinite',
+                      flexShrink: 0,
+                      display: 'inline-block',
+                    }}
+                  />
+                  <span style={{ fontSize: 12, color: '#27500A', flex: 1 }}>
+                    {(runningWorkflow.templateName || 'Workflow')} is running — step {Math.min((runningWorkflow.currentStepIndex ?? 0) + 1, runningWorkflow.steps?.length || 1)} of {runningWorkflow.steps?.length || 1}
+                  </span>
+                  <button
+                    onClick={scrollToRunningPanel}
+                    style={{
+                      fontSize: 11,
+                      color: '#3B6D11',
+                      fontWeight: 500,
+                      textDecoration: 'underline',
+                      cursor: 'pointer',
+                      background: 'none',
+                      border: 'none',
+                    }}
+                  >
+                    View progress →
+                  </button>
+                </div>
+              )}
               {/* ─── Persistent Conversation Context Header ─── */}
               {/* Shows documents / knowledge packs locked to this conversation.
                   Context is locked once the first message is sent — no add/remove mid-conversation. */}
@@ -7527,6 +7580,14 @@ INSTRUCTIONS:
         <WorkflowRunPanel
           userId={currentUserId}
           focusRunId={runPanelFocusId}
+          onSummariseInChat={(prompt) => sendMessage(prompt)}
+          onRunAnother={() => {
+            setRunPanelOpen(false);
+            setRunPanelFocusId(null);
+            setShowTeamPage(false);
+            setShowWorkspacesPanel(false);
+            setShowWorkflowsPanel(true);
+          }}
           onClose={() => { setRunPanelOpen(false); setRunPanelFocusId(null); }}
         />
       )}

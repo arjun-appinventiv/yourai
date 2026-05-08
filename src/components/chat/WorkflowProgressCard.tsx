@@ -50,9 +50,11 @@ export interface WorkflowProgressCardProps {
    * providing those. Default 'standalone' renders the full card.
    */
   variant?: 'standalone' | 'embedded';
+  /** Compact panel mode: keeps chrome but adds step-count strip, mini progress bar, and estimated remaining. */
+  panelMode?: boolean;
 }
 
-export default function WorkflowProgressCard({ runId, workspaceName, onComplete, variant = 'standalone' }: WorkflowProgressCardProps) {
+export default function WorkflowProgressCard({ runId, workspaceName, onComplete, variant = 'standalone', panelMode = false }: WorkflowProgressCardProps) {
   const [run, setRun] = useState<WorkflowRun | null>(() => getRun(runId));
   const [template, setTemplate] = useState<WorkflowTemplate | null>(() => run ? getTemplate(run.templateId) : null);
   const [confirmingCancel, setConfirmingCancel] = useState(false);
@@ -104,6 +106,10 @@ export default function WorkflowProgressCard({ runId, workspaceName, onComplete,
   const isDone = run.status === 'complete';
   const isFailed = run.status === 'failed';
   const isCancelled = run.status === 'cancelled';
+  const estimatedRemaining = Math.max(
+    0,
+    Math.round(((template.estimatedTotalSeconds || 0) / Math.max(1, total)) * Math.max(0, total - completedCount)),
+  );
 
   const totalDuration = run.steps.reduce((a, s) => a + (s.durationSeconds || 0), 0);
 
@@ -121,7 +127,7 @@ export default function WorkflowProgressCard({ runId, workspaceName, onComplete,
     >
       {/* Accent stripe — only in standalone */}
       {!isEmbedded && (
-        <div style={{ height: 3, background: isDone ? 'linear-gradient(to right, #059669, #10B981)' : isFailed ? 'linear-gradient(to right, #DC2626, #EF4444)' : 'linear-gradient(to right, #0A2463, #1E3A8A)' }} />
+        <div style={{ height: 3, background: isDone ? '#2A9D6E' : isFailed ? '#C44F4F' : 'var(--brand-navy)' }} />
       )}
 
       {/* Header — skipped in embedded mode (parent RunRow renders its own) */}
@@ -183,14 +189,38 @@ export default function WorkflowProgressCard({ runId, workspaceName, onComplete,
             ) : (
               <button
                 onClick={() => setConfirmingCancel(true)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#C65454', fontSize: 11, fontWeight: 500, textDecoration: 'underline', padding: 4 }}
+                style={{
+                  display: 'block',
+                  width: panelMode ? '100%' : 'auto',
+                  textAlign: 'center',
+                  fontSize: 11,
+                  color: panelMode ? 'var(--text-tertiary)' : '#C65454',
+                  textDecoration: 'underline',
+                  cursor: 'pointer',
+                  background: 'none',
+                  border: 'none',
+                  padding: 4,
+                  marginTop: panelMode ? 4 : 0,
+                }}
               >
-                Cancel
+                {panelMode ? 'Cancel run' : 'Cancel'}
               </button>
             )}
           </div>
         )}
       </div>
+      )}
+
+      {panelMode && run.status === 'running' && (
+        <div style={{ padding: '0 18px 8px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, fontSize: 10, color: 'var(--text-tertiary)', paddingBottom: 6 }}>
+            <span>{template.practiceArea} · {run.workspaceId ? 'Workspace KB' : 'Global KB'}</span>
+            <span>{completedCount} / {total} steps</span>
+          </div>
+          <div style={{ height: 2, background: 'var(--border-default)', margin: '0 0 6px', borderRadius: 2, overflow: 'hidden' }}>
+            <div style={{ height: '100%', background: 'var(--brand-navy)', borderRadius: 2, transition: 'width 0.4s ease', width: `${progressPct}%` }} />
+          </div>
+        </div>
       )}
 
       {/* Steps */}
@@ -200,6 +230,7 @@ export default function WorkflowProgressCard({ runId, workspaceName, onComplete,
             key={step.stepId}
             step={step}
             index={i}
+            panelMode={panelMode}
             elapsed={i === run.currentStepIndex && step.status === 'running' ? elapsed : null}
             expanded={expandedSteps.has(step.stepId)}
             onToggle={() => setExpandedSteps((prev) => {
@@ -212,13 +243,20 @@ export default function WorkflowProgressCard({ runId, workspaceName, onComplete,
         ))}
       </div>
 
+      {panelMode && run.status === 'running' && (
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'var(--text-tertiary)', padding: '0 10px 8px' }}>
+          <span>Started {formatTime(run.startedAt)}</span>
+          <span>~{estimatedRemaining}s remaining</span>
+        </div>
+      )}
+
       {/* Progress bar — only in standalone; RunRow renders its own in embedded mode */}
-      {!isEmbedded && !isDone && !isCancelled && (
+      {!panelMode && !isEmbedded && !isDone && !isCancelled && (
         <div style={{ padding: '0 18px 14px' }}>
           <div style={{ height: 4, borderRadius: 999, background: '#F3F4F6', overflow: 'hidden' }}>
             <div style={{
               width: `${progressPct}%`, height: '100%',
-              background: isFailed ? '#EF4444' : 'linear-gradient(to right, #0A2463, #1E3A8A)',
+              background: isFailed ? '#C44F4F' : 'var(--brand-navy)',
               transition: 'width 400ms',
             }} />
           </div>
@@ -237,12 +275,30 @@ interface StepRowProps {
   expanded: boolean;
   onToggle: () => void;
   onRetry: () => void;
+  panelMode: boolean;
 }
 
-function StepRow({ step, index, elapsed, expanded, onToggle, onRetry }: StepRowProps) {
+function StepRow({ step, index, elapsed, expanded, onToggle, onRetry, panelMode }: StepRowProps) {
   const IconComp = OP_ICON[step.operation];
 
   const indicator = (() => {
+    if (panelMode) {
+      if (step.status === 'complete') return (
+        <div style={{ width: 20, height: 20, borderRadius: '50%', background: '#EAF3DE', color: '#3B6D11', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, flexShrink: 0 }}>
+          <Check size={11} strokeWidth={3} />
+        </div>
+      );
+      if (step.status === 'running') return (
+        <div style={{ width: 20, height: 20, borderRadius: '50%', background: 'var(--brand-navy)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, flexShrink: 0, animation: 'pulse 1.2s ease-in-out infinite' }}>
+          {index + 1}
+        </div>
+      );
+      if (step.status === 'pending') return (
+        <div style={{ width: 20, height: 20, borderRadius: '50%', background: 'var(--bg-surface-alt)', border: '1px solid var(--text-tertiary)', color: 'var(--text-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 600, flexShrink: 0 }}>
+          {index + 1}
+        </div>
+      );
+    }
     if (step.status === 'pending')   return <CircleDashed size={16} style={{ color: '#D1D5DB' }} />;
     if (step.status === 'running')   return <Loader size={16} className="animate-spin" style={{ color: 'var(--navy)' }} />;
     if (step.status === 'complete')  return <div style={{ width: 16, height: 16, borderRadius: '50%', background: '#5CA868', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Check size={10} color="#fff" strokeWidth={3} /></div>;
@@ -252,8 +308,9 @@ function StepRow({ step, index, elapsed, expanded, onToggle, onRetry }: StepRowP
 
   const nameColor =
     step.status === 'failed' ? '#C65454' :
-    step.status === 'running' ? 'var(--navy)' :
-    step.status === 'pending' || step.status === 'skipped' ? 'var(--text-muted)' :
+    step.status === 'running' ? 'var(--text-primary)' :
+    step.status === 'pending' || step.status === 'skipped' ? 'var(--text-tertiary)' :
+    panelMode && step.status === 'complete' ? 'var(--text-secondary)' :
     'var(--text-primary)';
 
   const clickable = step.status === 'complete' && !!step.output;
@@ -281,7 +338,7 @@ function StepRow({ step, index, elapsed, expanded, onToggle, onRetry }: StepRowP
               Running… {elapsed}s
             </span>
           )}
-          {step.status === 'complete' && step.durationSeconds != null && (
+          {!panelMode && step.status === 'complete' && step.durationSeconds != null && (
             <span style={{ fontSize: 11, color: '#5CA868', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}>
               {step.durationSeconds}s
             </span>
@@ -290,7 +347,13 @@ function StepRow({ step, index, elapsed, expanded, onToggle, onRetry }: StepRowP
             <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Skipped</span>
           )}
         </div>
-        {clickable && (
+        {panelMode && step.status === 'complete' && step.durationSeconds != null && (
+          <span style={{ fontSize: 11, color: 'var(--text-secondary)', flexShrink: 0 }}>{step.durationSeconds}s</span>
+        )}
+        {panelMode && step.status === 'running' && (
+          <span style={{ width: 12, height: 12, border: '1.5px solid #E8EEF4', borderTopColor: '#0B1D3A', borderRadius: '50%', animation: 'spin 0.7s linear infinite', flexShrink: 0, display: 'inline-block' }} />
+        )}
+        {!panelMode && clickable && (
           <ChevronDown size={14} style={{ color: 'var(--text-muted)', transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 150ms', flexShrink: 0 }} />
         )}
       </div>
@@ -328,6 +391,14 @@ function StepRow({ step, index, elapsed, expanded, onToggle, onRetry }: StepRowP
       )}
     </div>
   );
+}
+
+/* ─── Helpers ─── */
+
+function formatTime(iso: string): string {
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return 'just now';
+  return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 }
 
 /* ─── Retry helper — needs to rebuild RunOptions for the runner ─── */

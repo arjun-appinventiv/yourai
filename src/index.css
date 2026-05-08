@@ -9,42 +9,76 @@
    ───────────────────────────────────────────── */
 :root {
   /* ─── Brand Colors ─── */
-  --navy:       #0A2463;  /* Primary: bg, text, buttons */
-  --navy-mid:   #0F2E59;  /* Secondary depth */
-  --navy-light: #1E3A8A;  /* Tertiary borders */
-  --gold:       #C9A84C;  /* Accent, highlights, hover */
-  --gold-soft:  #E8D48B;  /* Secondary gold */
+  --navy:       #0B1D3A;
+  --navy-mid:   #132C54;
+  --navy-light: #1A3A6B;
+  --gold:       #C9A84C;
+  --gold-soft:  #D4B96A;
 
   /* ─── Neutral Colors ─── */
-  --ice:        #F0F3F6;  /* Borders, dividers */
-  --ice-warm:   #F8F4ED;  /* Page background */
-  --slate:      #6B7885;  /* Body text */
-  --text-light: #9CA3AF;  /* Captions, labels */
-  --white:      #FFFFFF;  /* Card backgrounds */
+  --ice:        #E8EEF4;
+  --ice-warm:   #F4F6F9;
+  --cream:      #FAF7F2;
+  --slate:      #3D5A80;
+  --text-light: #9CA3AF;
+  --white:      #FFFFFF;
 
   /* ─── Status Colors ─── */
-  --success:       #5CA868;  /* Success states */
-  --success-soft:  #E7F3E9;  /* Success backgrounds */
-  --error:         #C65454;  /* Error states */
-  --error-soft:    #F9E7E7;  /* Error backgrounds */
-  --warning:       #E8A33D;  /* Warning states */
-  --warning-soft:  #FBEED5;  /* Warning backgrounds */
+  --success:       #5CA868;
+  --success-soft:  #E7F3E9;
+  --error:         #C65454;
+  --error-soft:    #F9E7E7;
+  --warning:       #E8A33D;
+  --warning-soft:  #FBEED5;
+  /* Premium status palette */
+  --success-bg:    #ECFDF5;
+  --success-text:  #15573C;
+  --warning-bg:    #FFFBEB;
+  --warning-border:#FCD34D;
+  --warning-text:  #92400E;
+  --danger-bg:     #FEF2F2;
+  --danger-border: #FCA5A5;
+  --danger-text:   #7D2C2C;
 
   /* ─── Semantic Text Tokens ─── */
-  --text-primary:   #0A2463;  /* = navy */
-  --text-secondary: #6B7885;  /* = slate */
-  --text-muted:     #9CA3AF;  /* = text-light */
-  --muted:          #9CA3AF;  /* legacy alias */
+  --text-primary:   #070E1A;
+  --text-secondary: #0B1D3A;
+  --text-muted:     #98A2B3;
+  --text-tertiary:  #94A3B8;
+  --muted:          #94A3B8;
 
   /* ─── Border Tokens ─── */
-  --border:     #F0F3F6;  /* = ice */
-  --border-mid: #D6DDE4;  /* medium-strength border */
+  --border:         #EAECF0;
+  --border-mid:     #D0D5DD;
+  --border-strong:  #98A2B3;
+  /* Alias used by new workflow-runs components */
+  --border-default: #EAECF0;
+
+  /* ─── Surface Tokens ─── */
+  --bg-surface-alt: #F8F9FA;
+
+  /* ─── Brand Aliases (used by workflow-runs components) ─── */
+  --brand-navy: #0B1D3A;
+  --brand-gold: #C9A84C;
+  --font-body:  'DM Sans', sans-serif;
+
+  /* ─── Focus & Interaction ─── */
+  --focus-ring: rgba(201, 168, 76, 0.18);
+
+  /* ─── Elevation ─── */
+  --shadow-1:    0 1px 2px rgba(11, 29, 58, 0.04);
+  --shadow-2:    0 2px 8px rgba(11, 29, 58, 0.06);
+  --shadow-3:    0 8px 24px rgba(11, 29, 58, 0.08);
+  --shadow-4:    0 12px 32px rgba(11, 29, 58, 0.14);
+  --shadow-5:    0 4px 12px rgba(11, 29, 58, 0.18);
+  --shadow-card: 0 8px 24px rgba(11, 29, 58, 0.08);
+  --shadow-soft: 0 4px 16px rgba(11, 29, 58, 0.06);
 
   /* ─── Border Radius Scale ─── */
-  --radius-sm:   6px;    /* Buttons, inputs */
-  --radius-md:   12px;   /* Cards, modals */
-  --radius-lg:   20px;   /* Hero sections */
-  --radius-pill: 999px;  /* Badges */
+  --radius-sm:   6px;
+  --radius-md:   12px;
+  --radius-lg:   20px;
+  --radius-pill: 999px;
 
   /* ─── Spacing Scale (4px base grid) ─── */
   --space-1:  4px;
@@ -59,13 +93,6 @@
   --space-16: 64px;
   --space-20: 80px;
 
-  /* ─── Elevation (5-level shadow scale) ─── */
-  --shadow-1: 0 1px 2px rgba(10, 36, 99, 0.04);                              /* Subtle */
-  --shadow-2: 0 2px 8px rgba(10, 36, 99, 0.06);                              /* Cards */
-  --shadow-3: 0 8px 24px rgba(10, 36, 99, 0.08);                             /* Modals */
-  --shadow-4: 0 12px 32px rgba(10, 36, 99, 0.14);                            /* Floating panels */
-  --shadow-5: 0 4px 12px rgba(10, 36, 99, 0.18);                             /* Buttons (hover) */
-
   /* ─── Motion ─── */
   --transition-base: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
   --transition-fast: all 0.2s ease-out;
@@ -74,7 +101,7 @@
 
 body {
   font-family: 'DM Sans', sans-serif;
-  background-color: var(--ice-warm);
+  background-color: var(--cream);
   color: var(--text-secondary);
   margin: 0;
   padding: 0;
@@ -82,11 +109,11 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Focus ring utility — uses navy ring per DS */
+/* Focus ring utility */
 input:focus, select:focus, textarea:focus {
   border-color: var(--gold) !important;
   outline: none;
-  box-shadow: 0 0 0 3px rgba(201, 168, 76, 0.15);
+  box-shadow: 0 0 0 3px var(--focus-ring);
 }
 /* Opt-out for inline textareas embedded inside styled containers (e.g. chat input) */
 textarea.no-focus-ring:focus {

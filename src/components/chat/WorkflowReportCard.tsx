@@ -388,6 +388,10 @@ function AuditStepRow({ step, index, expanded, onToggle, onRetry }: {
 
 /* ─── Printable (Save-as-PDF) window ─────────────────────────────── */
 
+export function openWorkflowReportPrintableWindow(report: WorkflowReport, userName?: string): void {
+  return openPrintableWindow(report, userName);
+}
+
 function openPrintableWindow(report: WorkflowReport, userName?: string): void {
   const w = window.open('', '_blank', 'width=900,height=1200');
   if (!w) return;

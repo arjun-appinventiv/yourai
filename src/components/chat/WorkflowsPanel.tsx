@@ -1,66 +1,107 @@
-/* ─────────────── Workflow Templates Picker ───────────────
- *
- * Modal overlay — matches the Knowledge Packs panel layout: 900px wide,
- * sticky header, filter pills, search, list of cards. Dispatches to the
- * parent for Run / Edit / Duplicate / Delete / Create actions so the
- * parent controls modal chrome and which surface the workflow runs on
- * (workspace vs main chat).
- */
-
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
-  X, Plus, Search, MoreVertical, Edit3, Copy, Trash2,
-  Clock, Loader, Zap, Briefcase as BriefcaseIcon,
-  FileText, Search as SearchIcon, GitCompare, FileOutput,
-  BookOpen, ShieldCheck, Star, ArrowLeft, ArrowRight, TrendingUp,
-  CheckCircle2, XCircle, Sparkles,
+  ArrowLeft,
+  ArrowRight,
+  BookOpen,
+  Clock,
+  Copy,
+  Edit3,
+  FileOutput,
+  FileText,
+  GitCompare,
+  Loader,
+  MoreVertical,
+  Plus,
+  Search,
+  ShieldCheck,
+  Sparkles,
+  Star,
+  Trash2,
+  TrendingUp,
+  X,
+  Zap,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useRole } from '../../context/RoleContext';
+import { useToast } from '../../components/Toast';
 import {
-  type WorkflowTemplate, type WorkflowVisibility, type WorkflowOperation,
-  type WorkflowRun,
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '../../components/ui/tooltip';
+import {
   type PermissionContext,
+  type WorkflowOperation,
+  type WorkflowRun,
+  type WorkflowTemplate,
   OPERATION_CONFIG,
-  listTemplatesForUser, seedTemplatesIfEmpty, getActiveRunId, getRun,
+  canCreateWorkflow,
+  canDeleteTemplate,
+  canEditTemplate,
+  getActiveRunId,
+  getRun,
+  isFavouriteTemplate,
   listRuns,
-  canCreateWorkflow, canEditTemplate, canDeleteTemplate,
-  isFavouriteTemplate, toggleFavouriteTemplate,
+  listTemplatesForUser,
+  seedTemplatesIfEmpty,
+  toggleFavouriteTemplate,
 } from '../../lib/workflow';
 import { MOCK_WORKFLOW_TEMPLATES } from '../../lib/mockWorkflows';
 
-/* ─── Icon map — keeps OPERATION_CONFIG's icon string → component ─── */
-const OP_ICON: Record<WorkflowOperation, React.ComponentType<{ size?: number; style?: React.CSSProperties }>> = {
-  read_documents:           FileText,
-  analyse_clauses:          SearchIcon,
+const OP_ICON: Record<
+  WorkflowOperation,
+  React.ComponentType<{ size?: number; style?: React.CSSProperties }>
+> = {
+  read_documents: FileText,
+  analyse_clauses: Search,
   compare_against_standard: GitCompare,
-  generate_report:          FileOutput,
-  research_precedents:      BookOpen,
-  compliance_check:         ShieldCheck,
+  generate_report: FileOutput,
+  research_precedents: BookOpen,
+  compliance_check: ShieldCheck,
 };
 
-/* ─── Relative date helper (mirrors the one in WorkspacesPage) ─── */
-function relativeFrom(iso: string): string {
-  const d = new Date(iso);
-  if (isNaN(d.getTime())) return '—';
-  const diff = Date.now() - d.getTime();
-  const days = Math.floor(diff / 86_400_000);
-  if (days < 1) return 'today';
-  if (days < 2) return 'yesterday';
-  if (days < 30) return `${days} days ago`;
-  const months = Math.floor(days / 30);
-  if (months < 12) return `${months} mo ago`;
-  return `${Math.floor(months / 12)} yr ago`;
-}
+const VISIBILITY_BADGE = {
+  platform: { bg: 'var(--navy)', color: '#FFFFFF', border: 'var(--navy)', label: 'Platform' },
+  org: { bg: 'rgba(11,29,58,0.06)', color: 'var(--navy)', border: 'var(--ice)', label: 'Your Org' },
+  personal: { bg: 'var(--ice-warm)', color: 'var(--slate)', border: 'var(--ice)', label: 'Yours' },
+} as const;
 
-/* ─── Visibility badge styling ─── */
-const VISIBILITY_BADGE: Record<WorkflowVisibility, { bg: string; color: string; border: string; label: string }> = {
-  platform: { bg: '#F3F0E8',  color: '#0A2463', border: '#E5E0D0',  label: 'Platform' },
-  org:      { bg: '#EFF6FF',  color: '#1D4ED8', border: '#BFDBFE',  label: 'Your Org' },
-  personal: { bg: '#F3F4F6',  color: '#6B7280', border: '#E5E7EB',  label: 'Yours' },
+const PRACTICE_THEME: Record<string, { accent: string; bg: string; iconBg: string; tint: string }> = {
+  Legal: {
+    accent: 'var(--navy-light)',
+    bg: 'linear-gradient(180deg, #F7F9FC 0%, #FFFFFF 100%)',
+    iconBg: '#EDF2F7',
+    tint: '#F7F9FC',
+  },
+  'Compliance & Audit': {
+    accent: 'var(--gold)',
+    bg: 'linear-gradient(180deg, #FBF8EF 0%, #FFFFFF 100%)',
+    iconBg: 'rgba(201,168,76,0.14)',
+    tint: '#FCFAF4',
+  },
+  default: {
+    accent: 'var(--navy)',
+    bg: 'linear-gradient(180deg, #F7F9FC 0%, #FFFFFF 100%)',
+    iconBg: '#E8EEF4',
+    tint: '#F8FAFC',
+  },
 };
 
-type FilterKey = 'all' | WorkflowVisibility;
+const STEP_TYPE_DESCRIPTIONS: Record<string, string> = {
+  read_documents: 'processes your uploaded files',
+  analyse_clauses: 'identifies non-standard terms',
+  compare_against_standard: 'benchmarks against your playbook',
+  generate_report: 'produces your final output',
+  research_precedents: 'looks up relevant precedents and supporting authority',
+  compliance_check: 'checks materials against compliance requirements',
+  custom: 'runs a custom step',
+};
+
+type FilterKey = 'all' | 'platform' | 'org' | 'personal';
+type SortMode = 'default' | 'duration';
+type DrawerSection = 'overview' | 'recent-runs';
 
 export interface WorkflowsPanelProps {
   onClose: () => void;
@@ -71,24 +112,95 @@ export interface WorkflowsPanelProps {
   onDelete: (id: string) => void;
 }
 
-export default function WorkflowsPanel({ onClose, onCreateNew, onRun, onEdit, onDuplicate, onDelete }: WorkflowsPanelProps) {
+function formatRelativeDate(iso?: string | null): string {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '—';
+  const diff = Date.now() - d.getTime();
+  const mins = Math.floor(diff / 60000);
+  const hours = Math.floor(diff / 3600000);
+  const days = Math.floor(diff / 86400000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins} min ago`;
+  if (hours < 24) return `${hours}h ago`;
+  if (days === 1) return 'yesterday';
+  if (days < 30) return `${days} days ago`;
+  return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+}
+
+function formatDuration(seconds?: number | null): string {
+  if (!seconds || Number.isNaN(seconds)) return '—';
+  if (seconds < 60) return `${seconds}s`;
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return secs ? `${mins}m ${secs}s` : `${mins}m`;
+}
+
+function formatInitials(name?: string): string {
+  if (!name) return 'YA';
+  return name
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join('');
+}
+
+function themeFor(practiceArea: string) {
+  return PRACTICE_THEME[practiceArea] || PRACTICE_THEME.default;
+}
+
+function getRunDuration(run: WorkflowRun, template: WorkflowTemplate): number {
+  const fromSteps = run.steps.reduce((sum, step) => sum + (step.durationSeconds || 0), 0);
+  return fromSteps || template.estimatedTotalSeconds || 0;
+}
+
+function getRunActorName(run: WorkflowRun, currentUserId: string, currentUserName: string): string {
+  if (run.userId === currentUserId) return currentUserName || 'You';
+  const fallback = run.userId.replace(/^user-/, '').replace(/^m-/, '').replace(/[-_]/g, ' ');
+  return fallback
+    .split(' ')
+    .filter(Boolean)
+    .map((part) => part[0].toUpperCase() + part.slice(1))
+    .join(' ');
+}
+
+function getLastRunLabel(template: WorkflowTemplate, currentUserId: string, sortedRuns: WorkflowRun[]) {
+  const templateRuns = sortedRuns.filter((run) => run.templateId === template.id);
+  const userRun = templateRuns.find((run) => run.userId === currentUserId);
+  const anyRun = templateRuns[0];
+
+  if (userRun) {
+    return `Last run by you · ${formatRelativeDate(userRun.completedAt || userRun.startedAt)}`;
+  }
+  if (anyRun) {
+    return `Last run · ${formatRelativeDate(anyRun.completedAt || anyRun.startedAt)}`;
+  }
+  return 'Never run — be the first';
+}
+
+function describeStep(step: WorkflowTemplate['steps'][number], index: number) {
+  const config = OPERATION_CONFIG[step.operation];
+  const base = STEP_TYPE_DESCRIPTIONS[step.operation] || STEP_TYPE_DESCRIPTIONS.custom;
+  return `Step ${index + 1}: ${config?.label || step.name} — ${base}. ${step.instruction}`;
+}
+
+export default function WorkflowsPanel({
+  onClose,
+  onCreateNew,
+  onRun,
+  onEdit,
+  onDuplicate,
+  onDelete,
+}: WorkflowsPanelProps) {
+  const navigate = useNavigate();
+  const showToast = useToast();
   const { operator } = useAuth();
   const { currentRole, isOrgAdmin, isExternalUser } = useRole();
 
-  // Clients (External Users) never access Workflows. Belt-and-suspenders
-  // with the upstream sidebar gate — if this panel somehow mounts for an
-  // External (stale URL, deep link, etc.) it renders nothing and closes.
-  useEffect(() => {
-    if (isExternalUser) onClose();
-  }, [isExternalUser, onClose]);
-  if (isExternalUser) return null;
-
   const currentUserId = operator?.id || 'user-ryan';
+  const currentUserName = operator?.name || 'You';
 
-  // PermissionContext shape the lib/workflow helpers accept.
-  // Super-Admin detection for the tenant app isn't wired up yet — ORG_ADMIN
-  // is the highest level a user can be inside /chat. So isSuperAdmin=false
-  // here; the SA portal would supply its own version of this component.
   const ctx: PermissionContext = useMemo(() => ({
     userId: currentUserId,
     isSuperAdmin: false,
@@ -99,849 +211,1344 @@ export default function WorkflowsPanel({ onClose, onCreateNew, onRun, onEdit, on
   const [templates, setTemplates] = useState<WorkflowTemplate[]>([]);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<FilterKey>('all');
+  const [sortMode, setSortMode] = useState<SortMode>('default');
+  const [recentRunsOnly, setRecentRunsOnly] = useState(false);
   const [menuOpenFor, setMenuOpenFor] = useState<string | null>(null);
-  // Right-rail workflow inspector (audit #8) — clicking a card body opens
-  // a 380 px detail rail with the full step pipeline, description, and a
-  // bigger Run CTA. Run/Edit/Duplicate/Delete buttons inside the card all
-  // stopPropagation so they keep working independently.
-  const [inspectedTemplateId, setInspectedTemplateId] = useState<string | null>(null);
-
-  // Snapshot the active-run info once so the picker can visually dim the
-  // corresponding card's Run button. Changing activeRunId during the
-  // lifetime of this modal is rare; re-reading on close is enough.
+  const [selectedTemplate, setSelectedTemplate] = useState<WorkflowTemplate | null>(null);
+  const [drawerSection, setDrawerSection] = useState<DrawerSection>('overview');
   const [activeTemplateId, setActiveTemplateId] = useState<string | null>(null);
-  const [activeRun, setActiveRun] = useState<WorkflowRun | null>(null);
-  const [recentRuns, setRecentRuns] = useState<WorkflowRun[]>([]);
-  // Tick so the star icon re-renders instantly after toggle
-  const [favTick, setFavTick] = useState(0);
+  const [runs, setRuns] = useState<WorkflowRun[]>([]);
+  const platformCardRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   useEffect(() => {
     seedTemplatesIfEmpty(MOCK_WORKFLOW_TEMPLATES);
-    refresh();
-    const rid = getActiveRunId();
-    if (rid) {
-      const run = getRun(rid);
-      if (run && (run.status === 'running')) {
-        setActiveTemplateId(run.templateId);
-        setActiveRun(run);
-      }
-    }
-    // Last 5 finished runs for the "Recent runs" strip
-    const all = listRuns()
-      .filter((r) => r.status !== 'running' && r.userId === currentUserId)
-      .slice(0, 5);
-    setRecentRuns(all);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const refresh = () => {
     setTemplates(listTemplatesForUser(currentUserId, currentRole));
-  };
+    const allRuns = listRuns().sort((a, b) => {
+      const aTime = new Date(a.completedAt || a.startedAt).getTime();
+      const bTime = new Date(b.completedAt || b.startedAt).getTime();
+      return bTime - aTime;
+    });
+    setRuns(allRuns);
+    const activeRunId = getActiveRunId();
+    if (activeRunId) {
+      const activeRun = getRun(activeRunId);
+      if (activeRun?.status === 'running') setActiveTemplateId(activeRun.templateId);
+    }
+  }, [currentRole, currentUserId]);
 
-  // Externals see only Platform templates — the filter pills would be
-  // mostly empty buckets. Skip them entirely and rely on the upstream
-  // visibility filter to keep things clean.
-  const showFilters = !isExternalUser;
+  if (isExternalUser) return null;
 
-  // Counts per bucket before search narrows things further, so the pill
-  // numbers stay stable while the user types.
   const counts = useMemo(() => ({
     all: templates.length,
-    platform: templates.filter((t) => t.visibility === 'platform').length,
-    org:      templates.filter((t) => t.visibility === 'org').length,
-    personal: templates.filter((t) => t.visibility === 'personal' && t.createdBy === currentUserId).length,
-  }), [templates, currentUserId]);
+    platform: templates.filter((template) => template.visibility === 'platform').length,
+    org: templates.filter((template) => template.visibility === 'org').length,
+    personal: templates.filter((template) => template.visibility === 'personal' && template.createdBy === currentUserId).length,
+  }), [currentUserId, templates]);
 
-  const scoped = useMemo(() => {
-    if (filter === 'all') return templates;
-    if (filter === 'personal') return templates.filter((t) => t.visibility === 'personal' && t.createdBy === currentUserId);
-    return templates.filter((t) => t.visibility === filter);
-  }, [templates, filter, currentUserId]);
-
-  const filtered = useMemo(() => {
-    if (!search.trim()) return scoped;
-    const q = search.toLowerCase();
-    return scoped.filter((t) =>
-      t.name.toLowerCase().includes(q) ||
-      (t.description || '').toLowerCase().includes(q) ||
-      (t.practiceArea || '').toLowerCase().includes(q),
-    );
-  }, [scoped, search]);
-
-  const handleDelete = (t: WorkflowTemplate) => {
-    if (!confirm(`Delete "${t.name}"? This can't be undone.`)) return;
-    onDelete(t.id);
-    setMenuOpenFor(null);
-    setTemplates((prev) => prev.filter((x) => x.id !== t.id));
-  };
-
-  // Aggregate stats for the hero strip (matches Figma: "in use", "templates", "docs")
-  const runsThisWeek = useMemo(() => {
+  const userRunsThisWeek = useMemo(() => {
     const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-    return recentRuns.filter((r) => {
-      const when = r.completedAt ? new Date(r.completedAt).getTime() : new Date(r.startedAt).getTime();
-      return when >= weekAgo;
-    }).length;
-  }, [recentRuns]);
+    return runs.filter((run) => {
+      const at = new Date(run.completedAt || run.startedAt).getTime();
+      return run.userId === currentUserId && at >= weekAgo;
+    });
+  }, [currentUserId, runs]);
 
-  const avgRunSeconds = useMemo(() => {
-    if (templates.length === 0) return 0;
-    const total = templates.reduce((a, t) => a + (t.estimatedTotalSeconds || 0), 0);
-    return Math.round(total / templates.length);
+  const avgDuration = useMemo(() => {
+    if (!templates.length) return 0;
+    return Math.round(
+      templates.reduce((sum, template) => sum + (template.estimatedTotalSeconds || 0), 0) / templates.length,
+    );
   }, [templates]);
 
-  // Count of templates that have ever been run (proxy for "in use")
-  const inUseCount = useMemo(() => {
-    const usedIds = new Set(recentRuns.map((r) => r.templateId));
-    if (activeRun) usedIds.add(activeRun.templateId);
-    return usedIds.size || (activeTemplateId ? 1 : 0);
-  }, [recentRuns, activeRun, activeTemplateId]);
+  const popularTemplateId = useMemo(() => {
+    const counts = new Map<string, number>();
+    runs.forEach((run) => {
+      counts.set(run.templateId, (counts.get(run.templateId) || 0) + 1);
+    });
+    const ranked = Array.from(counts.entries()).sort((a, b) => b[1] - a[1])[0];
+    return ranked && ranked[1] > 0 ? ranked[0] : null;
+  }, [runs]);
 
-  // Total docs processed across all recent runs
-  const docsProcessed = useMemo(() => {
-    return recentRuns.reduce((sum, r) => sum + (r.uploadedDocs?.length || 0), 0);
-  }, [recentRuns]);
+  const filteredTemplates = useMemo(() => {
+    let next = templates.filter((template) => {
+      if (filter === 'all') return true;
+      if (filter === 'personal') return template.visibility === 'personal' && template.createdBy === currentUserId;
+      return template.visibility === filter;
+    });
 
-  const inspectedTemplate = useMemo(
-    () => (inspectedTemplateId ? templates.find((t) => t.id === inspectedTemplateId) || null : null),
-    [templates, inspectedTemplateId],
-  );
-  // Close the rail if the inspected template is removed (delete, filter
-  // visibility change). Without this the rail keeps a stale reference.
-  useEffect(() => {
-    if (inspectedTemplateId && !inspectedTemplate) setInspectedTemplateId(null);
-  }, [inspectedTemplateId, inspectedTemplate]);
+    if (recentRunsOnly) {
+      const recentIds = new Set(userRunsThisWeek.map((run) => run.templateId));
+      next = next.filter((template) => recentIds.has(template.id));
+    }
 
-  return (
-    <div style={{
-      flex: 1, display: 'flex', flexDirection: 'column',
-      background: '#FAF6EE',
-      minWidth: 0, minHeight: 0, overflow: 'hidden',
-    }}>
-      {/* ─── Breadcrumb bar (back-to-chat, consistent with Workspaces/Team) ─── */}
-      <div style={{
-        padding: '12px 36px',
-        borderBottom: '1px solid rgba(10,36,99,0.06)',
-        background: '#FDFBF5',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        flexShrink: 0,
-      }}>
-        <button
-          onClick={onClose}
-          style={{
-            display: 'inline-flex', alignItems: 'center', gap: 6,
-            padding: '6px 10px', marginLeft: -10, borderRadius: 8,
-            background: 'transparent', border: 'none', cursor: 'pointer',
-            color: 'var(--text-muted)', fontSize: 13,
-          }}
-          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--navy)'; (e.currentTarget as HTMLButtonElement).style.background = '#F3ECDD'; }}
-          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)'; (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; }}
-        >
-          <ArrowLeft size={14} /> Dashboard
-        </button>
-        {canCreateWorkflow(ctx) && (
-          <button
-            onClick={onCreateNew}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 8, backgroundColor: 'var(--navy)', color: 'white', border: 'none', fontSize: 13, fontWeight: 500, cursor: 'pointer', boxShadow: '0 2px 6px rgba(10,36,99,0.14)' }}
-          >
-            <Plus size={14} /> New Workflow
-          </button>
-        )}
-      </div>
+    if (search.trim()) {
+      const q = search.trim().toLowerCase();
+      next = next.filter((template) =>
+        template.name.toLowerCase().includes(q) ||
+        template.practiceArea.toLowerCase().includes(q) ||
+        (template.description || '').toLowerCase().includes(q) ||
+        (template.outputLabel || '').toLowerCase().includes(q),
+      );
+    }
 
-      {/* ─── Hero — eyebrow + title + description + running-in pill + stats ─── */}
-      <div style={{
-        padding: '20px 36px 18px',
-        borderBottom: '1px solid rgba(10,36,99,0.06)',
-        background: '#FDFBF5',
-        flexShrink: 0,
-      }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 24, flexWrap: 'wrap' }}>
-          <div style={{ flex: '1 1 340px', minWidth: 0 }}>
-            {/* Eyebrow pill — signals the module identity */}
-            <span style={{
-              display: 'inline-flex', alignItems: 'center', gap: 5,
-              fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
-              fontSize: 10, fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase',
-              color: '#8A6D1F', background: '#F3E4BC', border: '1px solid #E8D59A',
-              padding: '3px 10px', borderRadius: 999, marginBottom: 10,
-            }}>
-              <Sparkles size={10} style={{ color: '#8A6D1F' }} />
-              AI Pipelines
-            </span>
-            <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 26, color: 'var(--navy)', margin: 0, lineHeight: 1.15 }}>
-              From documents to deliverables, in one click
-            </h1>
-            <p style={{ fontSize: 13, color: '#374151', marginTop: 6, lineHeight: 1.55, maxWidth: 620 }}>
-              Chain AI steps into a reusable pipeline — read documents, analyse clauses, check compliance, and produce a structured report automatically.
-            </p>
-            {/* Running-in context pill — display only, no action */}
-            <div style={{
-              display: 'inline-flex', alignItems: 'center', gap: 6,
-              marginTop: 12, padding: '6px 12px',
-              border: '1px solid var(--navy)', borderRadius: 999,
-              fontSize: 12, fontWeight: 500, color: 'var(--navy)',
-              background: 'transparent',
-            }}>
-              Running in: Global / Main Site
-            </div>
-          </div>
-          <div style={{ display: 'flex', gap: 24, flexShrink: 0, alignItems: 'flex-start', marginTop: 4 }}>
-            <StatTile icon={TrendingUp} value={inUseCount}        label="In use" />
-            <StatTile icon={Zap}        value={templates.length}  label="Templates" />
-            <StatTile icon={Clock}      value={docsProcessed > 0 ? `${docsProcessed}+` : `~${Math.round(avgRunSeconds / 60)}m avg`} label={docsProcessed > 0 ? 'Docs processed' : 'Avg run time'} />
-          </div>
-        </div>
-      </div>
+    if (sortMode === 'duration') {
+      next = [...next].sort((a, b) => (a.estimatedTotalSeconds || 0) - (b.estimatedTotalSeconds || 0));
+    }
 
-      {/* ─── Scroll area + right-rail inspector (audit #8) ─── */}
-      <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'row' }}>
-      <div style={{ flex: 1, minWidth: 0, overflowY: 'auto', padding: '24px 36px 36px' }}>
-        {/* Running-now banner */}
-        {activeRun && (
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: 14,
-            padding: '14px 18px', marginBottom: 20,
-            background: '#FFFFFF',
-            border: '1px solid #F3E4BC',
-            borderLeft: '3px solid #C9A84C',
-            borderRadius: 10,
-            boxShadow: '0 2px 8px rgba(201,168,76,0.08)',
-          }}>
-            <div style={{
-              width: 14, height: 14, borderRadius: '50%',
-              border: '2px solid #C9A84C', borderTopColor: 'transparent',
-              animation: 'spin 0.9s linear infinite', flexShrink: 0,
-            }} />
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--navy)' }}>
-                Running now: {activeRun.templateName}
-              </div>
-              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
-                Step {Math.min((activeRun.currentStepIndex ?? 0) + 1, activeRun.steps.length)} of {activeRun.steps.length} · started {relativeFrom(activeRun.startedAt)}
-              </div>
-            </div>
-            <button
-              onClick={onClose}
-              style={{ fontSize: 12, color: 'var(--navy)', background: 'transparent', border: '1px solid var(--navy)', padding: '6px 14px', borderRadius: 8, cursor: 'pointer', fontWeight: 500, flexShrink: 0 }}
-            >
-              View run →
-            </button>
-          </div>
-        )}
+    return next;
+  }, [currentUserId, filter, recentRunsOnly, search, sortMode, templates, userRunsThisWeek]);
 
-        {/* Filter tabs (underline style) + search */}
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
-          marginBottom: 22, borderBottom: '1px solid rgba(10,36,99,0.08)',
-        }}>
-          {showFilters && (
-            <div style={{ display: 'flex', alignItems: 'stretch', gap: 4, flexWrap: 'wrap' }}>
-              <FilterTab label="All"       count={counts.all}      active={filter === 'all'}      onClick={() => setFilter('all')} />
-              <FilterTab label="Platform"  count={counts.platform} active={filter === 'platform'} onClick={() => setFilter('platform')} />
-              <FilterTab label="Your Org"  count={counts.org}      active={filter === 'org'}      onClick={() => setFilter('org')} />
-              <FilterTab label="Yours"     count={counts.personal} active={filter === 'personal'} onClick={() => setFilter('personal')} />
-            </div>
-          )}
-          <div style={{ position: 'relative', flex: 1, minWidth: 260, marginLeft: 'auto', paddingBottom: 10 }}>
-            <Search size={14} style={{ position: 'absolute', left: 12, top: 'calc(50% - 5px)', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search workflows..."
-              style={{ width: '100%', height: 36, borderRadius: 999, border: '1px solid var(--border)', paddingLeft: 36, fontSize: 13, outline: 'none', boxSizing: 'border-box', background: '#fff' }}
-            />
-          </div>
-        </div>
+  const handleDashboardBack = () => {
+    onClose();
+    navigate('/app/dashboard');
+  };
 
-        {/* ─── Unified card grid — single grid, no section headers ─── */}
-        {filtered.length === 0 ? (
-          <EmptyState
-            searchActive={!!search.trim()}
-            canCreate={canCreateWorkflow(ctx)}
-            onCreate={onCreateNew}
-          />
-        ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: 20 }}>
-            {filtered.map((t) => (
-              <WorkflowCard
-                key={t.id}
-                template={t}
-                ctx={ctx}
-                isRunning={activeTemplateId === t.id}
-                inspected={inspectedTemplateId === t.id}
-                menuOpen={menuOpenFor === t.id}
-                onInspect={() => setInspectedTemplateId(t.id)}
-                onToggleMenu={() => setMenuOpenFor((x) => (x === t.id ? null : t.id))}
-                onCloseMenu={() => setMenuOpenFor(null)}
-                onRun={() => onRun(t)}
-                onEdit={() => { onEdit(t); setMenuOpenFor(null); }}
-                onDuplicate={() => { onDuplicate(t); setMenuOpenFor(null); }}
-                onDelete={() => handleDelete(t)}
-                isFav={(favTick, isFavouriteTemplate(currentUserId, t.id))}
-                onToggleFav={() => { toggleFavouriteTemplate(currentUserId, t.id); setFavTick((n) => n + 1); }}
-              />
-            ))}
-          </div>
-        )}
+  const resetTransientState = () => {
+    setRecentRunsOnly(false);
+    setSortMode('default');
+  };
 
-        {/* ─── Recent runs ─── */}
-        {recentRuns.length > 0 && (
-          <div style={{ marginTop: 48, paddingTop: 40, borderTop: '1px solid rgba(10,36,99,0.08)' }}>
-            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 14 }}>
-              <div>
-                <div style={{ fontFamily: "'DM Serif Display', serif", fontSize: 20, color: 'var(--navy)', lineHeight: 1.2 }}>
-                  Recent runs
-                </div>
-                <div style={{ fontSize: 12, color: '#6B7280', marginTop: 2 }}>
-                  Your last {recentRuns.length} workflow{recentRuns.length !== 1 ? 's' : ''}.
-                </div>
-              </div>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 340px))', gap: 16 }}>
-              {recentRuns.map((r) => {
-                const ok = r.status === 'complete';
-                const dur = r.steps.reduce((a, s) => a + (s.durationSeconds || 0), 0);
-                const docs = r.uploadedDocs?.length || 0;
-                return (
-                  <div
-                    key={r.id}
-                    style={{
-                      background: '#fff',
-                      border: '1px solid rgba(10,36,99,0.08)',
-                      borderRadius: 12,
-                      padding: '14px 16px',
-                      display: 'flex', flexDirection: 'column', gap: 8,
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      {ok ? <CheckCircle2 size={14} style={{ color: '#5CA868' }} /> : <XCircle size={14} style={{ color: '#C65454' }} />}
-                      <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {r.templateName}
-                      </span>
-                    </div>
-                    <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', fontSize: 11, color: '#6B7280' }}>
-                      <span>{ok ? 'Completed' : r.status === 'failed' ? 'Failed' : 'Cancelled'}</span>
-                      <span>·</span>
-                      <span>{relativeFrom(r.completedAt || r.startedAt)}</span>
-                      <span>·</span>
-                      <span>{dur}s total</span>
-                      {docs > 0 && (<><span>·</span><span>{docs} doc{docs !== 1 ? 's' : ''}</span></>)}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-      </div>
+  const handleTabChange = (nextFilter: FilterKey) => {
+    setFilter(nextFilter);
+    resetTransientState();
+  };
 
-      {inspectedTemplate && (
-        <WorkflowInspector
-          template={inspectedTemplate}
-          ctx={ctx}
-          isRunning={activeTemplateId === inspectedTemplate.id}
-          onClose={() => setInspectedTemplateId(null)}
-          onRun={() => onRun(inspectedTemplate)}
-          onEdit={() => onEdit(inspectedTemplate)}
-          onDuplicate={() => onDuplicate(inspectedTemplate)}
-        />
-      )}
-      </div>
-    </div>
-  );
-}
+  const openDrawer = (template: WorkflowTemplate, section: DrawerSection = 'overview') => {
+    setSelectedTemplate(template);
+    setDrawerSection(section);
+  };
 
-/* ─── WorkflowInspector — right rail with full pipeline + Run CTA (audit #8) ─── */
-function WorkflowInspector({ template, ctx, isRunning, onClose, onRun, onEdit, onDuplicate }: {
-  template: WorkflowTemplate;
-  ctx: PermissionContext;
-  isRunning: boolean;
-  onClose: () => void;
-  onRun: () => void;
-  onEdit: () => void;
-  onDuplicate: () => void;
-}) {
-  const theme = themeFor(template.practiceArea);
-  const HeroIcon = (template.steps[0] && OP_ICON[template.steps[0].operation]) || Zap;
-  const badge = VISIBILITY_BADGE[template.visibility];
-  const canEdit = canEditTemplate(template, ctx);
-  return (
-    <aside style={{
-      width: 380, flexShrink: 0,
-      borderLeft: '1px solid rgba(10,36,99,0.10)',
-      background: '#FFFFFF',
-      display: 'flex', flexDirection: 'column', minHeight: 0,
-    }}>
-      {/* Practice-area top stripe (matches the card top stripe) */}
-      <div style={{ height: 3, background: theme.accent, flexShrink: 0 }} />
+  const handleRunWorkflow = (template: WorkflowTemplate) => {
+    setSelectedTemplate(null);
+    onRun(template);
+  };
 
-      {/* Header — icon + practice area + title + close */}
-      <div style={{ padding: '20px 22px 16px', borderBottom: '1px solid rgba(10,36,99,0.06)', display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-        <div style={{ width: 44, height: 44, borderRadius: 12, background: theme.iconBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-          <HeroIcon size={20} style={{ color: theme.accent }} />
-        </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: theme.accent }}>
-            {template.practiceArea}
-          </div>
-          <h2 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 22, color: 'var(--navy)', margin: '4px 0 0', lineHeight: 1.2, letterSpacing: '-0.01em' }}>
-            {template.name}
-          </h2>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
-            <span style={{
-              fontSize: 11, padding: '3px 9px', borderRadius: 999,
-              background: template.visibility === 'platform' ? 'var(--navy)' : badge.bg,
-              color: template.visibility === 'platform' ? '#FFFFFF' : badge.color,
-              border: template.visibility === 'platform' ? '1px solid var(--navy)' : `1px solid ${badge.border}`,
-              fontWeight: 500,
-            }}>{badge.label}</span>
-            <span style={{
-              display: 'inline-flex', alignItems: 'center', gap: 4,
-              fontSize: 11, padding: '3px 9px', borderRadius: 999,
-              background: '#F3F4F6', color: '#6B7280', border: '1px solid #E5E7EB',
-            }}>
-              <Clock size={10} /> {template.steps.length} steps · ~{template.estimatedTotalSeconds}s
-            </span>
-          </div>
-        </div>
-        <button
-          onClick={onClose}
-          title="Close"
-          style={{ width: 28, height: 28, borderRadius: 6, background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
-          onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(15,23,42,0.06)'; }}
-          onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
-        >
-          <X size={14} style={{ color: 'var(--text-muted)' }} />
-        </button>
-      </div>
+  const handleToggleFavourite = (template: WorkflowTemplate) => {
+    const nowStarred = toggleFavouriteTemplate(currentUserId, template.id);
+    setTemplates((prev) => [...prev]);
+    setSelectedTemplate((prev) => (prev?.id === template.id ? { ...prev } : prev));
 
-      {/* Description */}
-      {template.description && (
-        <div style={{ padding: '14px 22px', borderBottom: '1px solid rgba(10,36,99,0.06)' }}>
-          <p style={{ fontSize: 13, color: '#374151', lineHeight: 1.6, margin: 0 }}>{template.description}</p>
-        </div>
-      )}
+    if (nowStarred) {
+      showToast({
+        message: 'Saved to favourites.',
+        actionLabel: 'View on your dashboard →',
+        onAction: () => navigate('/app/dashboard'),
+      });
+      return;
+    }
 
-      {/* Pipeline steps — vertical list with name + per-step duration */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '14px 0 16px' }}>
-        <div style={{ padding: '0 22px 8px', fontSize: 10, color: 'var(--text-muted)', fontFamily: "'IBM Plex Mono', ui-monospace, monospace", letterSpacing: '0.12em', textTransform: 'uppercase' }}>Pipeline</div>
-        {template.steps.map((s, i) => {
-          const Icon = OP_ICON[s.operation] || Zap;
-          const cfg = OPERATION_CONFIG[s.operation];
-          const isLast = i === template.steps.length - 1;
-          return (
-            <div key={s.id} style={{ padding: '8px 22px', display: 'flex', alignItems: 'flex-start', gap: 12, position: 'relative' }}>
-              {/* Step number circle + connector */}
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0 }}>
-                <div style={{ width: 26, height: 26, borderRadius: '50%', background: 'var(--navy)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 600 }}>
-                  {i + 1}
-                </div>
-                {!isLast && <div style={{ width: 1, flex: 1, background: 'rgba(10,36,99,0.10)', minHeight: 20, marginTop: 2 }} />}
-              </div>
-              <div style={{ flex: 1, minWidth: 0, paddingBottom: isLast ? 0 : 4 }}>
-                <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--text-primary)', fontWeight: 500 }}>
-                  <Icon size={13} style={{ color: 'var(--navy)', flexShrink: 0 }} />
-                  {s.name || cfg?.label || s.operation}
-                </div>
-                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
-                  {cfg?.label && s.name && cfg.label !== s.name ? `${cfg.label} · ` : ''}
-                  ~{s.estimatedSeconds || cfg?.defaultSeconds || 0}s
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
+    showToast('Removed from favourites.');
+  };
 
-      {/* Footer — Edit + Run */}
-      <div style={{ padding: '14px 22px', borderTop: '1px solid rgba(10,36,99,0.06)', display: 'flex', alignItems: 'center', gap: 8 }}>
-        {canEdit && (
-          <button
-            onClick={onEdit}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '9px 14px', borderRadius: 8, background: '#fff', color: 'var(--text-primary)', border: '1px solid var(--border)', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}
-          >
-            <Edit3 size={12} /> Edit
-          </button>
-        )}
-        <button
-          onClick={onDuplicate}
-          style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '9px 14px', borderRadius: 8, background: '#fff', color: 'var(--text-primary)', border: '1px solid var(--border)', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}
-        >
-          <Copy size={12} /> Duplicate
-        </button>
-        <div style={{ flex: 1 }} />
-        <button
-          onClick={onRun}
-          disabled={isRunning}
-          style={{
-            display: 'inline-flex', alignItems: 'center', gap: 6,
-            padding: '9px 18px', borderRadius: 10,
-            backgroundColor: isRunning ? '#9CA3AF' : 'var(--navy)',
-            color: '#fff', border: 'none',
-            fontSize: 13, fontWeight: 600,
-            cursor: isRunning ? 'not-allowed' : 'pointer',
-            boxShadow: isRunning ? 'none' : '0 1px 2px rgba(10,36,99,0.12)',
-          }}
-        >
-          {isRunning ? <><Loader size={12} className="animate-spin" /> Running…</> : <>Run <ArrowRight size={13} /></>}
-        </button>
-      </div>
-    </aside>
-  );
-}
+  const handleRunsMetricClick = () => {
+    if (userRunsThisWeek.length > 0) {
+      setRecentRunsOnly(true);
+      setSortMode('default');
+      return;
+    }
+    const firstPlatform = templates.find((template) => template.visibility === 'platform');
+    if (firstPlatform) {
+      platformCardRefs.current[firstPlatform.id]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  };
 
-/* ─── Hero stat tile — stacked uppercase label + big value ─── */
-function StatTile({ icon: Icon, value, label }: { icon: React.ComponentType<{ size?: number; style?: React.CSSProperties }>; value: number | string; label: string }) {
-  return (
-    <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'flex-start', gap: 2, padding: 0, minWidth: 70 }}>
-      <span style={{
-        display: 'inline-flex', alignItems: 'center', gap: 5,
-        fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
-        fontSize: 10, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase',
-        color: '#8A6D1F',
-      }}>
-        <Icon size={11} style={{ color: '#8A6D1F' }} />
-        {label}
-      </span>
-      <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 22, fontWeight: 500, color: 'var(--navy)', lineHeight: 1.1 }}>
-        {value}
-      </span>
-    </div>
-  );
-}
-
-/* ─── Practice-area theming — subtle tint on each card ─── */
-const PRACTICE_THEME: Record<string, { accent: string; bg: string; iconBg: string }> = {
-  'Legal':              { accent: '#1E3A8A', bg: 'linear-gradient(135deg, #EEF2FF 0%, #F8FAFF 100%)', iconBg: '#DDE6FE' },
-  'Litigation':         { accent: '#7C2D12', bg: 'linear-gradient(135deg, #FEF3E8 0%, #FFFBF5 100%)', iconBg: '#FED7AA' },
-  'Compliance & Audit': { accent: '#991B1B', bg: 'linear-gradient(135deg, #FEF2F2 0%, #FFFBFB 100%)', iconBg: '#FECACA' },
-  'Corporate':          { accent: '#0F766E', bg: 'linear-gradient(135deg, #ECFDF5 0%, #F7FEFB 100%)', iconBg: '#CCFBF1' },
-  'Tax':                { accent: '#5B21B6', bg: 'linear-gradient(135deg, #F5F3FF 0%, #FBFAFE 100%)', iconBg: '#DDD6FE' },
-  'Employment':         { accent: '#B45309', bg: 'linear-gradient(135deg, #FEF3C7 0%, #FFFBEB 100%)', iconBg: '#FDE68A' },
-  'Real Estate':        { accent: '#065F46', bg: 'linear-gradient(135deg, #ECFDF5 0%, #F7FEFB 100%)', iconBg: '#A7F3D0' },
-  'IP & Tech':          { accent: '#1E40AF', bg: 'linear-gradient(135deg, #EFF6FF 0%, #FAFCFF 100%)', iconBg: '#BFDBFE' },
-};
-function themeFor(area: string) {
-  return PRACTICE_THEME[area] || { accent: '#0A2463', bg: 'linear-gradient(135deg, #F3ECDD 0%, #FAF6EE 100%)', iconBg: '#F0E7D2' };
-}
-
-/* ─── Filter tab — underline-active style, count pill beside label ─── */
-function FilterTab({ label, count, active, onClick }: { label: string; count: number; active: boolean; onClick: () => void }) {
-  return (
-    <button
-      onClick={onClick}
+  const emptyState = (
+    <div
       style={{
-        display: 'inline-flex', alignItems: 'center', gap: 7,
-        padding: '10px 12px 12px', marginBottom: -1,
-        cursor: 'pointer', background: 'transparent', border: 'none',
-        borderBottom: `2px solid ${active ? 'var(--navy)' : 'transparent'}`,
-        color: active ? 'var(--navy)' : 'var(--text-muted)',
-        fontSize: 13, fontWeight: active ? 600 : 500,
-        transition: 'color 120ms, border-color 120ms',
+        padding: '42px 28px',
+        borderRadius: 16,
+        border: '1px solid var(--ice)',
+        background: '#FFFFFF',
+        boxShadow: '0 1px 3px rgba(11,29,58,0.04)',
+        textAlign: 'center',
       }}
-      onMouseEnter={(e) => { if (!active) (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-primary)'; }}
-      onMouseLeave={(e) => { if (!active) (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)'; }}
     >
-      <span>{label}</span>
-      <span style={{
-        fontSize: 11, fontWeight: 600,
-        padding: '1px 7px', borderRadius: 999,
-        background: active ? 'var(--ice-warm)' : '#F3F4F6',
-        color: active ? 'var(--navy)' : '#6B7280',
-        minWidth: 18, textAlign: 'center', lineHeight: 1.4,
-      }}>
-        {count}
-      </span>
-    </button>
-  );
-}
-
-/* ─── Empty state ─── */
-function EmptyState({ searchActive, canCreate, onCreate }: { searchActive: boolean; canCreate: boolean; onCreate: () => void }) {
-  return (
-    <div style={{ textAlign: 'center', padding: '56px 24px', color: 'var(--text-muted)' }}>
-      <BriefcaseIcon size={36} style={{ margin: '0 auto 14px', opacity: 0.4, color: 'var(--text-muted)' }} />
-      <div style={{ fontSize: 15, fontWeight: 500, color: 'var(--text-primary)' }}>
-        {searchActive ? 'No workflows match your search.' : 'No workflows yet'}
+      <div style={{ fontFamily: "'DM Serif Display', serif", fontSize: 26, color: 'var(--navy)' }}>
+        No workflows match this view
       </div>
-      {!searchActive && (
-        <div style={{ fontSize: 12, marginTop: 6, maxWidth: 380, margin: '6px auto 0', lineHeight: 1.55 }}>
-          Workflows let you run a sequence of AI tasks over your documents and get a compiled report at the end.
-        </div>
-      )}
-      {!searchActive && canCreate && (
+      <p style={{ marginTop: 10, fontSize: 13, color: 'var(--slate)', lineHeight: 1.6 }}>
+        Try a different tab or search, or create a new workflow to get started.
+      </p>
+      {canCreateWorkflow(ctx) && (
         <button
-          onClick={onCreate}
-          style={{ marginTop: 18, display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 18px', borderRadius: 10, backgroundColor: 'var(--navy)', color: 'white', border: 'none', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}
+          type="button"
+          onClick={onCreateNew}
+          style={{
+            marginTop: 18,
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+            padding: '10px 18px',
+            borderRadius: 10,
+            background: 'var(--navy)',
+            color: '#fff',
+            border: 'none',
+            cursor: 'pointer',
+            fontSize: 13,
+            fontWeight: 600,
+          }}
         >
           <Plus size={14} /> New Workflow
         </button>
       )}
     </div>
   );
+
+  return (
+    <TooltipProvider delayDuration={300}>
+      <div
+        style={{
+          position: 'relative',
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          minWidth: 0,
+          minHeight: 0,
+          overflow: 'hidden',
+          background: 'var(--ice-warm)',
+        }}
+      >
+        <div
+          style={{
+            padding: '14px 36px',
+            borderBottom: '1px solid var(--ice)',
+            background: '#FFFFFF',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexShrink: 0,
+          }}
+        >
+          <button
+            type="button"
+            onClick={handleDashboardBack}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '6px 10px',
+              marginLeft: -10,
+              borderRadius: 8,
+              background: 'transparent',
+              border: 'none',
+              color: 'var(--muted)',
+              fontSize: 13,
+              fontWeight: 500,
+              cursor: 'pointer',
+            }}
+          >
+            <ArrowLeft size={14} /> Dashboard
+          </button>
+
+          {canCreateWorkflow(ctx) && (
+            <button
+              type="button"
+              onClick={onCreateNew}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+              padding: '8px 16px',
+              borderRadius: 10,
+              backgroundColor: 'var(--navy)',
+              color: 'white',
+              border: 'none',
+              fontSize: 13,
+                fontWeight: 600,
+                cursor: 'pointer',
+                boxShadow: '0 2px 6px rgba(10,36,99,0.14)',
+              }}
+            >
+              <Plus size={14} /> New Workflow
+            </button>
+          )}
+        </div>
+
+        <div
+          style={{
+            padding: '30px 36px 22px',
+            borderBottom: '1px solid var(--ice)',
+            background: 'linear-gradient(180deg, #FFFFFF 0%, var(--ice-warm) 100%)',
+            flexShrink: 0,
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 24, flexWrap: 'wrap' }}>
+            <div style={{ flex: '1 1 340px', minWidth: 0 }}>
+              <div
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: '6px 12px',
+                  borderRadius: 999,
+                  background: 'rgba(201,168,76,0.12)',
+                  border: '1px solid rgba(201,168,76,0.22)',
+                  fontSize: 11,
+                  letterSpacing: '0.08em',
+                  fontWeight: 600,
+                  color: 'var(--gold)',
+                  textTransform: 'uppercase',
+                  marginBottom: 12,
+                }}
+              >
+                <Sparkles size={11} /> AI Pipelines
+              </div>
+              <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 28, color: 'var(--navy)', margin: 0, lineHeight: 1.2, letterSpacing: '-0.025em' }}>
+                Workflows
+              </h1>
+              <p style={{ fontSize: 13, color: 'var(--slate)', marginTop: 10, lineHeight: 1.6, maxWidth: 680 }}>
+                Chain multiple AI steps into a reusable pipeline — read documents, analyse clauses, check compliance, and produce a structured report, all with one click.
+              </p>
+              <div
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  marginTop: 14,
+                  padding: '8px 12px',
+                  borderRadius: 999,
+                  border: '1px solid var(--ice)',
+                  background: '#FFFFFF',
+                  color: 'var(--navy)',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  boxShadow: '0 1px 3px rgba(11,29,58,0.04)',
+                }}
+              >
+                Running in: Global / Main Site
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: 12, flexShrink: 0, flexWrap: 'wrap' }}>
+              <StatTile
+                icon={Zap}
+                value={templates.length}
+                label="Templates"
+                interactive
+                onClick={() => handleTabChange('all')}
+                tooltip="View all available workflows"
+              />
+              <StatTile
+                icon={TrendingUp}
+                value={userRunsThisWeek.length}
+                label={userRunsThisWeek.length > 0 ? 'Runs / week' : 'No runs yet'}
+                interactive
+                onClick={handleRunsMetricClick}
+                tooltip={userRunsThisWeek.length > 0 ? 'Filter to recently run workflows' : 'Run a workflow to start tracking'}
+              />
+              <StatTile
+                icon={Clock}
+                value={`~${avgDuration}s`}
+                label="Avg duration"
+                interactive
+                onClick={() => {
+                  setSortMode('duration');
+                  setRecentRunsOnly(false);
+                }}
+                tooltip="Sort by duration"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div style={{ flex: 1, overflowY: 'auto', padding: '24px 36px 36px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap', marginBottom: 20 }}>
+            <div
+              style={{
+                display: 'inline-flex',
+                alignItems: 'stretch',
+                gap: 8,
+                padding: 8,
+                borderRadius: 28,
+                background: '#EEF2F6',
+                border: '1px solid var(--ice)',
+                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.65)',
+                flexWrap: 'wrap',
+              }}
+            >
+              <FilterPill label="All" count={counts.all} active={filter === 'all'} tooltip="All available workflows" onClick={() => handleTabChange('all')} />
+              <FilterPill label="Platform" count={counts.platform} active={filter === 'platform'} tooltip="Maintained by YourAI" onClick={() => handleTabChange('platform')} />
+              <FilterPill label="Your Org" count={counts.org} active={filter === 'org'} tooltip="Shared across your organisation" onClick={() => handleTabChange('org')} />
+              <FilterPill label="Yours" count={counts.personal} active={filter === 'personal'} tooltip="Visible only to you" onClick={() => handleTabChange('personal')} />
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginLeft: 'auto', flexWrap: 'wrap' }}>
+              <div
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  height: 40,
+                  borderRadius: 12,
+                  border: '1px solid var(--ice)',
+                  background: '#fff',
+                  padding: '0 12px',
+                  boxShadow: '0 1px 3px rgba(11,29,58,0.04)',
+                }}
+              >
+                <span style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 600 }}>Sort</span>
+                <select
+                  value={sortMode}
+                  onChange={(e) => {
+                    const next = e.target.value as SortMode;
+                    setSortMode(next);
+                    setRecentRunsOnly(false);
+                  }}
+                  style={{
+                    border: 'none',
+                    background: 'transparent',
+                    color: 'var(--navy)',
+                    fontSize: 12,
+                    fontWeight: 600,
+                    outline: 'none',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <option value="default">Recommended</option>
+                  <option value="duration">Duration (shortest first)</option>
+                </select>
+              </div>
+
+              <div style={{ position: 'relative', flex: 1, minWidth: 240, maxWidth: 360 }}>
+              <Search size={14} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search workflows..."
+                style={{
+                  width: '100%',
+                  height: 40,
+                  borderRadius: 12,
+                  border: '1px solid var(--ice)',
+                  paddingLeft: 36,
+                  fontSize: 13,
+                  outline: 'none',
+                  boxSizing: 'border-box',
+                  background: '#fff',
+                  color: 'var(--navy)',
+                  boxShadow: '0 1px 3px rgba(11,29,58,0.04)',
+                }}
+              />
+              </div>
+            </div>
+          </div>
+
+          {filteredTemplates.length === 0 ? (
+            emptyState
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: 20 }}>
+              {filteredTemplates.map((template) => (
+                <div
+                  key={template.id}
+                  ref={(node) => {
+                    if (template.visibility === 'platform') platformCardRefs.current[template.id] = node;
+                  }}
+                  style={{ display: 'flex', height: '100%' }}
+                >
+                  <WorkflowCard
+                    template={template}
+                    ctx={ctx}
+                    isRunning={activeTemplateId === template.id}
+                    isFav={isFavouriteTemplate(currentUserId, template.id)}
+                    menuOpen={menuOpenFor === template.id}
+                    lastRunLabel={getLastRunLabel(template, currentUserId, runs)}
+                    isPopular={popularTemplateId === template.id}
+                    onOpenDetails={() => openDrawer(template)}
+                    onOpenRunHistory={() => openDrawer(template, 'recent-runs')}
+                    onRun={() => handleRunWorkflow(template)}
+                    onEdit={() => {
+                      onEdit(template);
+                      setMenuOpenFor(null);
+                    }}
+                    onDuplicate={() => {
+                      onDuplicate(template);
+                      setMenuOpenFor(null);
+                      setTemplates(listTemplatesForUser(currentUserId, currentRole));
+                    }}
+                    onDelete={() => {
+                      onDelete(template.id);
+                      setMenuOpenFor(null);
+                      setTemplates(listTemplatesForUser(currentUserId, currentRole));
+                    }}
+                    onToggleFav={() => handleToggleFavourite(template)}
+                    onToggleMenu={() => setMenuOpenFor((prev) => (prev === template.id ? null : template.id))}
+                    onCloseMenu={() => setMenuOpenFor(null)}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <WorkflowDetailDrawer
+          template={selectedTemplate}
+          currentUserId={currentUserId}
+          currentUserName={currentUserName}
+          initialSection={drawerSection}
+          runs={runs}
+          onClose={() => setSelectedTemplate(null)}
+          onRun={(template) => handleRunWorkflow(template)}
+        />
+      </div>
+    </TooltipProvider>
+  );
 }
 
-/* ─── Workflow card ─── */
+function StatTile({
+  icon: Icon,
+  value,
+  label,
+  interactive = false,
+  onClick,
+  tooltip,
+}: {
+  icon: React.ComponentType<{ size?: number; style?: React.CSSProperties }>;
+  value: number | string;
+  label: string;
+  interactive?: boolean;
+  onClick?: () => void;
+  tooltip?: string;
+}) {
+  const [hovered, setHovered] = useState(false);
+
+  const content = (
+    <button
+      type="button"
+      onClick={onClick}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        padding: '14px 18px',
+        minWidth: 136,
+        borderRadius: 16,
+        border: '1px solid var(--ice)',
+        background: '#FFFFFF',
+        boxShadow: hovered && interactive ? '0 4px 16px rgba(11,29,58,0.06)' : '0 1px 3px rgba(11,29,58,0.04)',
+        cursor: interactive ? 'pointer' : 'default',
+        textAlign: 'left',
+        transition: 'box-shadow 150ms ease, border-color 150ms ease',
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--gold)', marginBottom: 8 }}>
+        <Icon size={12} />
+        <span
+          style={{
+            fontSize: 11,
+            letterSpacing: '0.1em',
+            textTransform: 'uppercase',
+            fontWeight: 600,
+            textDecoration: hovered && interactive ? 'underline' : 'none',
+          }}
+        >
+          {label}
+        </span>
+      </div>
+      <div style={{ fontFamily: "'DM Serif Display', serif", fontSize: 18, color: 'var(--navy)', lineHeight: 1.1 }}>
+        {value}
+      </div>
+    </button>
+  );
+
+  if (!tooltip) return content;
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{content}</TooltipTrigger>
+      <TooltipContent>{tooltip}</TooltipContent>
+    </Tooltip>
+  );
+}
+
+function FilterPill({
+  label,
+  count,
+  active,
+  tooltip,
+  onClick,
+}: {
+  label: string;
+  count: number;
+  active: boolean;
+  tooltip?: string;
+  onClick: () => void;
+}) {
+  const button = (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 8,
+        justifyContent: 'center',
+        minHeight: 58,
+        padding: active ? '12px 26px 16px' : '12px 22px',
+        borderRadius: 24,
+        border: active ? '1px solid rgba(11,29,58,0.06)' : '1px solid transparent',
+        background: active ? '#FFFFFF' : 'transparent',
+        color: active ? 'var(--navy)' : 'rgba(11,29,58,0.82)',
+        fontSize: 13,
+        fontWeight: active ? 700 : 600,
+        cursor: 'pointer',
+        boxShadow: active ? '0 6px 18px rgba(11,29,58,0.08)' : 'none',
+        position: 'relative',
+        transition: 'background-color 150ms ease, box-shadow 150ms ease, color 150ms ease',
+      }}
+    >
+      <span>{label}</span>
+      <span
+        style={{
+          minWidth: 24,
+          height: 24,
+          borderRadius: 999,
+          padding: '0 7px',
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: active ? 'rgba(11,29,58,0.08)' : '#FFFFFF',
+          border: active ? 'none' : '1px solid rgba(11,29,58,0.06)',
+          color: active ? 'var(--navy)' : 'var(--slate)',
+          fontSize: 12,
+          fontWeight: 700,
+        }}
+      >
+        {count}
+      </span>
+      {active && (
+        <span
+          aria-hidden="true"
+          style={{
+            position: 'absolute',
+            left: 24,
+            right: 24,
+            bottom: 10,
+            height: 4,
+            borderRadius: 999,
+            background: 'var(--navy)',
+          }}
+        />
+      )}
+    </button>
+  );
+
+  if (!tooltip) return button;
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{button}</TooltipTrigger>
+      <TooltipContent>{tooltip}</TooltipContent>
+    </Tooltip>
+  );
+}
+
 interface CardProps {
   template: WorkflowTemplate;
   ctx: PermissionContext;
   isRunning: boolean;
-  inspected?: boolean;
   isFav: boolean;
   menuOpen: boolean;
-  onInspect?: () => void;
-  onToggleMenu: () => void;
-  onCloseMenu: () => void;
+  lastRunLabel: string;
+  isPopular: boolean;
+  onOpenDetails: () => void;
+  onOpenRunHistory: () => void;
   onRun: () => void;
   onEdit: () => void;
   onDuplicate: () => void;
   onDelete: () => void;
   onToggleFav: () => void;
+  onToggleMenu: () => void;
+  onCloseMenu: () => void;
 }
 
-function WorkflowCard({ template, ctx, isRunning, inspected, isFav, menuOpen, onInspect, onToggleMenu, onCloseMenu, onRun, onEdit, onDuplicate, onDelete, onToggleFav }: CardProps) {
+function WorkflowCard({
+  template,
+  ctx,
+  isRunning,
+  isFav,
+  menuOpen,
+  lastRunLabel,
+  isPopular,
+  onOpenDetails,
+  onOpenRunHistory,
+  onRun,
+  onEdit,
+  onDuplicate,
+  onDelete,
+  onToggleFav,
+  onToggleMenu,
+  onCloseMenu,
+}: CardProps) {
   const badge = VISIBILITY_BADGE[template.visibility];
+  const theme = themeFor(template.practiceArea);
   const canEdit = canEditTemplate(template, ctx);
   const canDelete = canDeleteTemplate(template, ctx);
-  const isDraftByMe = template.status === 'draft' && template.createdBy === ctx.userId;
-  const theme = themeFor(template.practiceArea);
-
-  // Operation flow preview — show first 5 step icons with arrow separators.
-  // Gives a visual pipeline preview so users can tell at a glance what
-  // the workflow does, not just read a description.
   const flowOps = template.steps.slice(0, 5);
   const flowRemaining = Math.max(0, template.steps.length - flowOps.length);
+  const requiredDocs = template.requiredDocs?.length ? template.requiredDocs : ['1 document'];
+  const [bodyHovered, setBodyHovered] = useState(false);
+  const [starHovered, setStarHovered] = useState(false);
 
-  // Use the first step's operation icon so every card reads uniquely at-a-glance
-  // (falls back to Zap if unknown).
-  const HeroIcon = (template.steps[0] && OP_ICON[template.steps[0].operation]) || Zap;
-  // Inspected card gets a navy border so the user sees which card the
-  // open right-rail is anchored to.
-  const restingBorder = inspected ? 'var(--navy)' : 'rgba(10,36,99,0.08)';
-  const restingShadow = inspected ? '0 4px 14px rgba(10,36,99,0.10)' : '0 1px 3px rgba(10,36,99,0.03)';
   return (
     <div
-      onClick={(e) => {
-        // Inner buttons (Run / Edit / Star / kebab) all stopPropagation,
-        // so this only fires when the user clicks empty card chrome.
-        if (onInspect) onInspect();
-      }}
       style={{
-        borderRadius: 12,
-        border: '1px solid ' + restingBorder,
+        borderRadius: 16,
+        border: bodyHovered ? '1px solid var(--navy-light)' : '1px solid var(--ice)',
         background: '#FFFFFF',
-        display: 'flex', flexDirection: 'column',
+        display: 'flex',
+        flexDirection: 'column',
+        minHeight: 352,
+        height: '100%',
+        width: '100%',
         overflow: 'hidden',
-        transition: 'box-shadow 0.18s ease, border-color 0.18s ease',
-        boxShadow: restingShadow,
-        cursor: onInspect ? 'pointer' : 'default',
+        boxShadow: bodyHovered ? '0 4px 16px rgba(11,29,58,0.06)' : '0 1px 3px rgba(11,29,58,0.04)',
+        transition: 'background-color 150ms ease, border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease',
+        transform: bodyHovered ? 'translateY(-1px)' : 'translateY(0)',
       }}
-      onMouseEnter={(e) => { if (!inspected) e.currentTarget.style.boxShadow = '0 8px 24px rgba(10,36,99,0.08)'; }}
-      onMouseLeave={(e) => { if (!inspected) e.currentTarget.style.boxShadow = '0 1px 3px rgba(10,36,99,0.03)'; }}
     >
-      {/* ── Practice-area top stripe ── */}
-      <div style={{ height: 3, background: theme.accent }} />
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={onOpenDetails}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            onOpenDetails();
+          }
+        }}
+        onMouseEnter={() => setBodyHovered(true)}
+        onMouseLeave={() => setBodyHovered(false)}
+        style={{ cursor: 'pointer', outline: 'none' }}
+      >
+        <div
+          style={{
+            padding: '20px 20px 16px',
+            background: theme.bg,
+            borderBottom: '1px solid var(--ice)',
+            position: 'relative',
+          }}
+        >
+          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: theme.accent, opacity: 0.9 }} />
 
-      {/* ── Header ── */}
-      <div style={{ padding: '14px 18px 10px' }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-          <div style={{ width: 32, height: 32, borderRadius: 8, background: 'var(--ice-warm)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, border: '1px solid var(--border)' }}>
-            <HeroIcon size={16} style={{ color: 'var(--navy)' }} />
-          </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: theme.accent }}>
-              {template.practiceArea}
-            </div>
-            <div style={{ fontSize: 17, fontWeight: 600, color: 'var(--navy)', lineHeight: 1.3, marginTop: 2 }}>
-              {template.name}
-            </div>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 2, flexShrink: 0 }}>
-            <button
-              onClick={(e) => { e.stopPropagation(); onToggleFav(); }}
-              title={isFav ? 'Remove from favourites' : 'Add to favourites — appears in chat empty state'}
-              style={{ padding: 6, borderRadius: 6, background: 'none', border: '1px solid transparent', cursor: 'pointer', display: 'flex' }}
-              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(0,0,0,0.04)'; }}
-              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+            <div
+              style={{
+                width: 38,
+                height: 38,
+                borderRadius: 10,
+                background: theme.iconBg,
+                border: '1px solid rgba(11,29,58,0.06)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}
             >
-              <Star size={15} style={{ color: isFav ? '#E0A12E' : 'var(--text-muted)', fill: isFav ? '#E0A12E' : 'transparent' }} />
-            </button>
-            <div style={{ position: 'relative' }}>
-              <button
-                onClick={(e) => { e.stopPropagation(); onToggleMenu(); }}
-                title="More actions"
-                style={{ padding: 6, borderRadius: 6, background: 'none', border: '1px solid transparent', cursor: 'pointer', display: 'flex' }}
-                onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(0,0,0,0.04)'; }}
-                onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+              <Zap size={18} style={{ color: theme.accent }} />
+            </div>
+
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: theme.accent }}>
+                {template.practiceArea}
+              </div>
+              <div
+                style={{
+                  fontSize: 15,
+                  fontWeight: 700,
+                  color: bodyHovered ? 'var(--gold)' : 'var(--navy)',
+                  lineHeight: 1.3,
+                  marginTop: 4,
+                  transition: 'color 150ms ease',
+                }}
               >
-                <MoreVertical size={14} style={{ color: 'var(--text-muted)' }} />
-              </button>
-              {menuOpen && (
-                <>
-                  <div onClick={onCloseMenu} style={{ position: 'fixed', inset: 0, zIndex: 65 }} />
-                  <div
+                {template.name}
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onToggleFav();
+                    }}
+                    onMouseEnter={() => setStarHovered(true)}
+                    onMouseLeave={() => setStarHovered(false)}
                     style={{
-                      position: 'absolute', top: 'calc(100% + 4px)', right: 0,
-                      width: 180, background: '#fff',
-                      border: '1px solid var(--border)', borderRadius: 10,
-                      boxShadow: '0 8px 24px rgba(10,36,99,0.12)', overflow: 'hidden', zIndex: 66,
+                      padding: 6,
+                      borderRadius: 8,
+                      background: 'transparent',
+                      border: 'none',
+                      cursor: 'pointer',
+                      display: 'flex',
                     }}
                   >
-                    {canEdit && <MenuItem icon={Edit3} label="Edit" onClick={onEdit} />}
-                    <MenuItem icon={Copy} label="Duplicate" onClick={onDuplicate} />
-                    {canDelete && <MenuItem icon={Trash2} label="Delete" danger onClick={onDelete} />}
-                  </div>
-                </>
+                    <Star
+                      size={15}
+                      style={{
+                        color: '#EF9F27',
+                        fill: isFav ? '#EF9F27' : starHovered ? 'rgba(239,159,39,0.4)' : 'transparent',
+                        opacity: isFav && starHovered ? 0.7 : 1,
+                        transition: 'fill 150ms ease, opacity 150ms ease',
+                      }}
+                    />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {isFav ? 'Remove from favourites' : 'Save to favourites — appears on your dashboard'}
+                </TooltipContent>
+              </Tooltip>
+
+              {template.visibility !== 'platform' && (
+                <div style={{ position: 'relative' }}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          onToggleMenu();
+                        }}
+                        style={{
+                          padding: 6,
+                          borderRadius: 8,
+                          background: 'transparent',
+                          border: 'none',
+                          cursor: 'pointer',
+                          display: 'flex',
+                        }}
+                      >
+                        <MoreVertical size={14} style={{ color: 'var(--text-muted)' }} />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent>More options</TooltipContent>
+                  </Tooltip>
+
+                  {menuOpen && (
+                    <>
+                      <div onClick={onCloseMenu} style={{ position: 'fixed', inset: 0, zIndex: 65 }} />
+                      <div
+                        style={{
+                          position: 'absolute',
+                          top: 'calc(100% + 4px)',
+                          right: 0,
+                          width: 184,
+                          background: '#fff',
+                          border: '1px solid var(--ice)',
+                          borderRadius: 12,
+                          boxShadow: '0 8px 24px rgba(10,36,99,0.12)',
+                          overflow: 'hidden',
+                          zIndex: 66,
+                        }}
+                      >
+                        {canEdit && <MenuItem icon={Edit3} label="Edit" onClick={onEdit} />}
+                        <MenuItem icon={Copy} label="Duplicate" onClick={onDuplicate} />
+                        {canDelete && <MenuItem icon={Trash2} label="Delete" danger onClick={onDelete} />}
+                      </div>
+                    </>
+                  )}
+                </div>
               )}
             </div>
           </div>
-        </div>
 
-        {/* Pill tags row — visibility + steps/time + draft flag */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 10, flexWrap: 'wrap' }}>
-          <span
-            title={template.visibility === 'platform' ? 'Maintained by YourAI' : template.visibility === 'org' ? 'Shared with your organisation' : 'Only visible to you'}
-            style={{
-              fontSize: 11, padding: '3px 9px', borderRadius: 999,
-              background: template.visibility === 'platform' ? 'var(--navy)' : badge.bg,
-              color: template.visibility === 'platform' ? '#FFFFFF' : badge.color,
-              border: template.visibility === 'platform' ? '1px solid var(--navy)' : `1px solid ${badge.border}`,
-              fontWeight: 500, letterSpacing: '0.01em',
-            }}
-          >
-            {badge.label}
-          </span>
-          <span style={{
-            display: 'inline-flex', alignItems: 'center', gap: 4,
-            fontSize: 11, padding: '3px 9px', borderRadius: 999,
-            background: '#F3F4F6', color: '#6B7280', border: '1px solid #E5E7EB',
-          }}>
-            <Clock size={10} /> {template.steps.length} steps · ~{template.estimatedTotalSeconds}s
-          </span>
-          {isDraftByMe && (
-            <span style={{ fontSize: 11, padding: '3px 9px', borderRadius: 999, background: '#FEF3C7', color: '#92400E', fontWeight: 500, border: '1px solid #FDE68A' }}>Draft</span>
-          )}
-        </div>
-      </div>
-
-      {/* ── PIPELINE section — operation flow preview ── */}
-      <div style={{ padding: '10px 18px 0', borderTop: '1px solid rgba(10,36,99,0.06)', marginTop: 4 }}>
-        <div style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', fontSize: 10, fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#9CA3AF', marginBottom: 10, marginTop: 8 }}>
-          Pipeline
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'nowrap', overflow: 'hidden' }}>
-          {flowOps.map((s, i) => {
-            const Icon = OP_ICON[s.operation] || Zap;
-            const cfg = OPERATION_CONFIG[s.operation];
-            return (
-              <React.Fragment key={s.id}>
-                <span
-                  title={`${i + 1}. ${cfg?.label || s.operation}`}
-                  style={{
-                    width: 28, height: 28, borderRadius: 7,
-                    background: 'var(--ice-warm)', border: '1px solid var(--border)',
-                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                    flexShrink: 0,
-                  }}
-                >
-                  <Icon size={13} style={{ color: 'var(--navy)' }} />
-                </span>
-                {i < flowOps.length - 1 && (
-                  <ArrowRight size={10} style={{ color: '#9CA3AF', flexShrink: 0 }} />
-                )}
-              </React.Fragment>
-            );
-          })}
-          {flowRemaining > 0 && (
-            <span style={{ fontSize: 11, color: '#6B7280', marginLeft: 4, flexShrink: 0 }}>
-              +{flowRemaining} more
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 12 }}>
+            {lastRunLabel.startsWith('Last run by you') && (
+              <span
+                style={{
+                  fontSize: 10,
+                  padding: '2px 8px',
+                  borderRadius: 999,
+                  background: '#FFFFFF',
+                  color: 'var(--slate)',
+                  border: '1px solid var(--ice)',
+                  fontWeight: 600,
+                }}
+              >
+                Last run by you
+              </span>
+            )}
+            {isPopular && (
+              <span
+                style={{
+                  fontSize: 10,
+                  padding: '2px 8px',
+                  borderRadius: 999,
+                  background: '#FFFFFF',
+                  color: 'var(--slate)',
+                  border: '1px solid var(--ice)',
+                  fontWeight: 600,
+                }}
+              >
+                Popular in your org
+              </span>
+            )}
+            <span
+              style={{
+                fontSize: 10,
+                padding: '2px 8px',
+                borderRadius: 999,
+                background: badge.bg,
+                color: badge.color,
+                border: `1px solid ${badge.border}`,
+                fontWeight: 700,
+              }}
+            >
+              {badge.label}
             </span>
-          )}
+            <span
+              style={{
+                fontSize: 10,
+                padding: '2px 8px',
+                borderRadius: 999,
+                background: '#FFFFFF',
+                color: 'var(--slate)',
+                border: '1px solid var(--ice)',
+                fontWeight: 600,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 4,
+              }}
+            >
+              <Clock size={10} /> {template.steps.length} steps · ~{template.estimatedTotalSeconds}s
+            </span>
+          </div>
         </div>
-      </div>
 
-      {/* ── Description ── */}
-      <p
-        style={{
-          fontSize: 13, color: '#374151',
-          lineHeight: 1.55, margin: '12px 18px 0',
-          display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as any,
-          overflow: 'hidden', textOverflow: 'ellipsis',
-        }}
-      >
-        {template.description || <span style={{ fontStyle: 'italic', color: '#9CA3AF' }}>No description.</span>}
-      </p>
+        <div style={{ padding: '18px 20px 0' }}>
+          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 12 }}>
+            Pipeline
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
+            {flowOps.map((step, index) => {
+              const OpIcon = OP_ICON[step.operation];
+              const tooltip = `Step ${index + 1}: ${OPERATION_CONFIG[step.operation]?.label || step.name} — ${STEP_TYPE_DESCRIPTIONS[step.operation] || STEP_TYPE_DESCRIPTIONS.custom}`;
+              return (
+                <React.Fragment key={step.id}>
+                  <Tooltip delayDuration={300}>
+                    <TooltipTrigger asChild>
+                      <div
+                        style={{
+                          width: 32,
+                          height: 32,
+                          borderRadius: 8,
+                          background: '#FFFFFF',
+                          border: '1px solid var(--ice)',
+                          boxShadow: '0 1px 2px rgba(11,29,58,0.04)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flexShrink: 0,
+                        }}
+                        onClick={(event) => event.stopPropagation()}
+                      >
+                        <OpIcon size={14} style={{ color: theme.accent }} />
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>{tooltip}</TooltipContent>
+                  </Tooltip>
+                  {index < flowOps.length - 1 && <ArrowRight size={10} style={{ color: 'var(--muted)', flexShrink: 0 }} />}
+                </React.Fragment>
+              );
+            })}
+            {flowRemaining > 0 && (
+              <span style={{ fontSize: 11, color: 'var(--muted)', marginLeft: 4 }}>
+                +{flowRemaining} more
+              </span>
+            )}
+          </div>
 
-      {/* ── Footer ── */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '14px 18px', marginTop: 'auto' }}>
-        <span style={{ fontSize: 11, color: '#6B7280' }}>
-          Updated {relativeFrom(template.updatedAt)}
-        </span>
-        <button
-          onClick={(e) => { e.stopPropagation(); onRun(); }}
-          disabled={isRunning}
+          <div className="output-label" style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 10 }}>
+            <span className="output-prefix" style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 500 }}>Output:</span>
+            <span className="output-value" style={{ fontSize: 11, color: 'var(--slate)' }}>
+              {template.outputLabel || 'Structured workflow report'}
+            </span>
+          </div>
+
+          <div className="docs-needed" style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 6 }}>
+            <span className="docs-label" style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 500 }}>Needs:</span>
+            <span className="docs-value" style={{ fontSize: 11, color: 'var(--slate)' }}>
+              {requiredDocs.join(', ')}
+            </span>
+          </div>
+        </div>
+
+        <p
           style={{
-            display: 'inline-flex', alignItems: 'center', gap: 6,
-            padding: '9px 20px', borderRadius: 10,
-            backgroundColor: isRunning ? '#9CA3AF' : 'var(--navy)',
-            color: '#fff', border: 'none',
-            fontSize: 13, fontWeight: 600,
-            cursor: isRunning ? 'not-allowed' : 'pointer',
-            opacity: isRunning ? 0.8 : 1,
-            boxShadow: isRunning ? 'none' : '0 1px 2px rgba(10,36,99,0.12)',
-            transition: 'all 150ms ease',
+            fontSize: 13,
+            color: 'var(--slate)',
+            lineHeight: 1.6,
+            margin: '14px 20px 0',
+            display: '-webkit-box',
+            WebkitLineClamp: 3,
+            WebkitBoxOrient: 'vertical' as any,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            minHeight: 62,
+            paddingBottom: 16,
           }}
         >
-          {isRunning ? <><Loader size={12} className="animate-spin" /> Running…</> : <>Run <ArrowRight size={13} /></>}
-        </button>
+          {template.description}
+        </p>
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 10, padding: '16px 20px 18px', borderTop: '1px solid var(--ice)', marginTop: 'auto' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 4 }}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                onClick={onOpenRunHistory}
+                style={{
+                  fontSize: 12,
+                  color: 'var(--muted)',
+                  background: 'transparent',
+                  border: 'none',
+                  padding: 0,
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                }}
+              >
+                {lastRunLabel}
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <button
+                type="button"
+                onClick={onOpenRunHistory}
+                style={{ background: 'transparent', border: 'none', padding: 0, cursor: 'pointer', color: 'inherit' }}
+              >
+                View run history →
+              </button>
+            </TooltipContent>
+          </Tooltip>
+
+          <button
+            type="button"
+            onClick={onOpenDetails}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              padding: 0,
+              color: 'var(--navy)',
+              fontSize: 12,
+              fontWeight: 600,
+              cursor: 'pointer',
+              lineHeight: 1.5,
+            }}
+          >
+            Preview what this produces →
+          </button>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+          {template.visibility === 'platform' && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  onClick={onDuplicate}
+                  style={{
+                  background: 'transparent',
+                  border: 'none',
+                  padding: 0,
+                  color: 'var(--navy)',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  lineHeight: 1.5,
+                }}
+              >
+                Duplicate workflow →
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>Creates a copy in your personal workflows</TooltipContent>
+            </Tooltip>
+          )}
+
+          <Tooltip delayDuration={400}>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                onClick={onRun}
+                disabled={isRunning}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: '10px 20px',
+                  borderRadius: 12,
+                  backgroundColor: isRunning ? 'var(--muted)' : 'var(--navy)',
+                  color: '#fff',
+                  border: 'none',
+                  fontSize: 13,
+                  fontWeight: 700,
+                  cursor: isRunning ? 'not-allowed' : 'pointer',
+                  opacity: isRunning ? 0.8 : 1,
+                  boxShadow: isRunning ? 'none' : '0 6px 16px rgba(11,29,58,0.16)',
+                }}
+              >
+                {isRunning ? <><Loader size={12} className="animate-spin" /> Running…</> : <>Run <ArrowRight size={13} /></>}
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>
+              {`Run ${template.name} · ~${template.estimatedTotalSeconds}s · needs ${requiredDocs.join(', ')}`}
+            </TooltipContent>
+          </Tooltip>
+        </div>
       </div>
     </div>
   );
 }
 
-function MenuItem({ icon: Icon, label, danger, onClick }: { icon: React.ComponentType<{ size?: number; style?: React.CSSProperties }>; label: string; danger?: boolean; onClick: () => void }) {
+function WorkflowDetailDrawer({
+  template,
+  currentUserId,
+  currentUserName,
+  initialSection,
+  runs,
+  onClose,
+  onRun,
+}: {
+  template: WorkflowTemplate | null;
+  currentUserId: string;
+  currentUserName: string;
+  initialSection: DrawerSection;
+  runs: WorkflowRun[];
+  onClose: () => void;
+  onRun: (template: WorkflowTemplate) => void;
+}) {
+  const recentRunsRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (template && initialSection === 'recent-runs' && recentRunsRef.current) {
+      recentRunsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [initialSection, template]);
+
+  if (!template) return null;
+
+  const badge = VISIBILITY_BADGE[template.visibility];
+  const templateRuns = runs
+    .filter((run) => run.templateId === template.id)
+    .slice(0, 3);
+
+  return (
+    <>
+      <div
+        onClick={onClose}
+        style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(7,14,26,0.18)',
+          zIndex: 80,
+        }}
+      />
+      <aside
+        style={{
+          position: 'fixed',
+          top: 0,
+          right: 0,
+          width: 420,
+          maxWidth: 'calc(100vw - 24px)',
+          height: '100vh',
+          background: '#fff',
+          zIndex: 81,
+          boxShadow: '-12px 0 32px rgba(7,14,26,0.14)',
+          display: 'flex',
+          flexDirection: 'column',
+          animation: 'slide-in-from-right-2 0.2s ease',
+        }}
+      >
+        <div style={{ padding: '24px 24px 18px', borderBottom: '1px solid var(--ice)', background: 'linear-gradient(180deg, #FFFFFF 0%, #F9FBFD 100%)' }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+            <div style={{ minWidth: 0 }}>
+              <h2 style={{ margin: 0, fontFamily: "'DM Serif Display', serif", fontSize: 26, lineHeight: 1.15, color: 'var(--navy)', letterSpacing: '-0.02em' }}>
+                {template.name}
+              </h2>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 10 }}>
+                <span
+                  style={{
+                    fontSize: 10,
+                    padding: '2px 8px',
+                    borderRadius: 999,
+                    background: badge.bg,
+                    color: badge.color,
+                    border: `1px solid ${badge.border}`,
+                    fontWeight: 700,
+                  }}
+                >
+                  {badge.label}
+                </span>
+                <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 999, background: 'var(--ice-warm)', color: 'var(--slate)', border: '1px solid var(--ice)', fontWeight: 600 }}>
+                  {template.practiceArea}
+                </span>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={onClose}
+              style={{
+                width: 34,
+                height: 34,
+                borderRadius: 999,
+                border: '1px solid var(--ice)',
+                background: '#fff',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                flexShrink: 0,
+              }}
+            >
+              <X size={16} />
+            </button>
+          </div>
+        </div>
+
+        <div style={{ flex: 1, overflowY: 'auto', padding: '22px 24px 28px', background: '#FFFFFF' }}>
+          <DrawerSection title="What you'll get">
+            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--muted)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
+              Output type
+            </div>
+            <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--navy)' }}>
+              {template.outputLabel || 'Structured workflow report'}
+            </div>
+            <p style={{ margin: '10px 0 0', fontSize: 13, lineHeight: 1.6, color: 'var(--slate)' }}>
+              {template.description}
+            </p>
+          </DrawerSection>
+
+          <DrawerSection title="What you need">
+            {(template.requiredDocs?.length ? template.requiredDocs : ['1 document']).map((doc) => (
+              <div key={doc} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, fontSize: 13, color: 'var(--slate)', lineHeight: 1.5, marginTop: 8 }}>
+                <div style={{ width: 6, height: 6, borderRadius: 999, background: 'var(--gold)', marginTop: 7, flexShrink: 0 }} />
+                <span>{doc}</span>
+              </div>
+            ))}
+          </DrawerSection>
+
+          <DrawerSection title="Steps">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              {template.steps.map((step, index) => {
+                const Icon = OP_ICON[step.operation];
+                return (
+                  <div key={step.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                    <div style={{ width: 32, height: 32, borderRadius: 10, background: '#F4F6F9', border: '1px solid #E8EEF4', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <Icon size={15} style={{ color: '#3D5A80' }} />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
+                        {index + 1}. {step.name}
+                      </div>
+                      <div style={{ marginTop: 4, fontSize: 13, lineHeight: 1.6, color: 'var(--slate)' }}>
+                        {describeStep(step, index)}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </DrawerSection>
+
+          <div ref={recentRunsRef}>
+            <DrawerSection title="Recent runs">
+              {templateRuns.length > 0 ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {templateRuns.map((run) => (
+                    <div
+                      key={run.id}
+                      style={{
+                        padding: '12px 14px',
+                        borderRadius: 12,
+                        border: '1px solid var(--ice)',
+                        background: 'var(--ice-warm)',
+                        fontSize: 13,
+                        color: 'var(--slate)',
+                      }}
+                    >
+                      {`Run by ${formatInitials(getRunActorName(run, currentUserId, currentUserName))} · ${formatRelativeDate(run.completedAt || run.startedAt)} · ${formatDuration(getRunDuration(run, template))}`}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div style={{ fontSize: 13, color: 'var(--muted)' }}>
+                  No runs yet — be the first.
+                </div>
+              )}
+            </DrawerSection>
+          </div>
+        </div>
+
+        <div style={{ padding: '16px 24px 22px', borderTop: '1px solid var(--ice)', background: '#FFFFFF' }}>
+          <button
+            type="button"
+            onClick={() => onRun(template)}
+            style={{
+              width: '100%',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+              padding: '11px 18px',
+              borderRadius: 12,
+              background: 'var(--navy)',
+              color: '#fff',
+              border: 'none',
+              fontSize: 14,
+              fontWeight: 700,
+              cursor: 'pointer',
+            }}
+          >
+            Run <ArrowRight size={14} />
+          </button>
+        </div>
+      </aside>
+    </>
+  );
+}
+
+function DrawerSection({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section style={{ marginBottom: 28 }}>
+      <h3 style={{ margin: '0 0 12px', fontSize: 12, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--muted)' }}>
+        {title}
+      </h3>
+      {children}
+    </section>
+  );
+}
+
+function MenuItem({
+  icon: Icon,
+  label,
+  danger,
+  onClick,
+}: {
+  icon: React.ComponentType<{ size?: number; style?: React.CSSProperties }>;
+  label: string;
+  danger?: boolean;
+  onClick: () => void;
+}) {
   return (
     <div
       onClick={onClick}
       style={{
-        display: 'flex', alignItems: 'center', gap: 8,
-        padding: '9px 12px', cursor: 'pointer',
-        fontSize: 12, color: danger ? '#C65454' : 'var(--text-secondary)',
-        transition: 'background 100ms',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 8,
+        padding: '10px 12px',
+        cursor: 'pointer',
+        fontSize: 12,
+        color: danger ? 'var(--gold)' : 'var(--slate)',
       }}
-      onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--ice-warm)'; }}
-      onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+      onMouseEnter={(event) => { event.currentTarget.style.background = 'var(--ice-warm)'; }}
+      onMouseLeave={(event) => { event.currentTarget.style.background = 'transparent'; }}
     >
       <Icon size={13} style={{ color: danger ? '#C65454' : 'var(--text-muted)' }} />
       <span>{label}</span>
     </div>
-  );
-}
-
-function PracticeAreaBadge({ area }: { area: string }) {
-  return (
-    <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 999, background: 'var(--ice-warm)', color: 'var(--navy)', border: '1px solid var(--border)', fontWeight: 500 }}>
-      {area}
-    </span>
-  );
-}
-
-function OperationPill({ operation }: { operation: WorkflowOperation }) {
-  const cfg = OPERATION_CONFIG[operation];
-  const Icon = OP_ICON[operation];
-  return (
-    <span
-      title={cfg.description}
-      className={cfg.color}
-      style={{
-        display: 'inline-flex', alignItems: 'center', gap: 4,
-        fontSize: 10, padding: '2px 8px', borderRadius: 999,
-        fontWeight: 500, border: '1px solid',
-      }}
-    >
-      <Icon size={10} />
-      {cfg.label}
-    </span>
   );
 }

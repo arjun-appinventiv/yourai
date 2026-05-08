@@ -1,300 +1,241 @@
-/* ─────────────── Workflow Run Panel (multi-run) ───────────────
- *
- * Right-docked panel that shows ALL active and recently finished
- * workflow runs. Users can kick off multiple workflows in parallel
- * and monitor them side-by-side, Cursor-style.
- *
- * Layout:
- *   ┌──────────────────────────────┐
- *   │ WORKFLOW RUNS (2 active)     │
- *   │                              │
- *   │ ▼ Due Diligence · Running… ◉ │  ← auto-expanded while running
- *   │   [ProgressCard]             │
- *   │                              │
- *   │ ▶ Contract Risk · Running… ◉ │  ← collapsed by user
- *   │                              │
- *   │ ▶ NDA Checker · Complete ✓   │  ← collapsed by default on done
- *   │                              │
- *   │ ▶ Compliance Audit · Failed ✗│
- *   └──────────────────────────────┘
- *
- * State model:
- *   - Lists runs from localStorage (listRuns), newest first
- *   - Filters to the current user and to status ∈ running|complete|failed
- *     within the last 24 hours (older runs live on the Workflow Templates
- *     page "Recent runs" section)
- *   - Subscribes to each visible running run so progress updates live
- *   - Expands running runs by default; user can collapse
- *   - Completed/failed runs start collapsed; user can expand to see report
- */
-
 import React, { useEffect, useMemo, useState } from 'react';
-import { X, ChevronDown, ChevronRight, Loader, CheckCircle2, XCircle, Zap, Maximize2, Minimize2 } from 'lucide-react';
-import { listRuns, getRun, type WorkflowRun } from '../../lib/workflow';
+import { Filter, Maximize2, Minimize2, X } from 'lucide-react';
+import { listRuns, type WorkflowRun } from '../../lib/workflow';
 import { subscribeRun } from '../../lib/workflowRunner';
-import WorkflowProgressCard from './WorkflowProgressCard';
-import WorkflowReportCard from './WorkflowReportCard';
+import StatusBadge from './workflow-runs/StatusBadge';
+import WorkflowRunCard from './workflow-runs/WorkflowRunCard';
 
 interface Props {
   userId: string;
   onClose: () => void;
-  /** Optional: run id to auto-expand (e.g. the one we just started) */
   focusRunId?: string | null;
+  onSummariseInChat?: (prompt: string) => void;
+  onRunAnother?: () => void;
 }
 
-function runBucket(r: WorkflowRun): 'running' | 'complete' | 'failed' | 'cancelled' {
-  return r.status;
-}
+type FilterState = 'all' | 'running' | 'complete';
 
 export default function WorkflowRunPanel({ userId, onClose, focusRunId }: Props) {
-  const [tick, setTick] = useState(0); // forces re-read of listRuns on subscription ticks
-  const [expanded, setExpanded] = useState<Set<string>>(() => new Set(focusRunId ? [focusRunId] : []));
-  // Fullscreen — overlays everything, takes whole viewport. Useful when the
-  // user is drilling into a long Report and wants reading room.
+  const [tick, setTick] = useState(0);
   const [fullscreen, setFullscreen] = useState(false);
+  const [activeFilter, setActiveFilter] = useState<FilterState>('all');
+  const [expandedRunId, setExpandedRunId] = useState<string | null>(focusRunId || null);
 
-  // Pull runs fresh on each tick
   const runs = useMemo<WorkflowRun[]>(() => {
-    const all = listRuns().filter((r) => r.userId === userId);
-    const DAY = 24 * 60 * 60 * 1000;
-    const cutoff = Date.now() - DAY;
-    const recent = all.filter((r) => {
-      if (r.status === 'running') return true;
-      const when = r.completedAt ? new Date(r.completedAt).getTime() : new Date(r.startedAt).getTime();
-      return when >= cutoff;
-    });
-    // Running first, then by most recent start
-    return recent.sort((a, b) => {
-      const ar = a.status === 'running' ? 0 : 1;
-      const br = b.status === 'running' ? 0 : 1;
-      if (ar !== br) return ar - br;
-      return new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime();
-    });
+    const all = listRuns().filter((run) => run.userId === userId);
+    const cutoff = Date.now() - (24 * 60 * 60 * 1000);
+    return all
+      .filter((run) => {
+        if (run.status === 'failed') return false;
+        if (run.status === 'running') return true;
+        const time = run.completedAt ? new Date(run.completedAt).getTime() : new Date(run.startedAt).getTime();
+        return time >= cutoff;
+      })
+      .sort((a, b) => {
+        const aRank = a.status === 'running' ? 0 : 1;
+        const bRank = b.status === 'running' ? 0 : 1;
+        if (aRank !== bRank) return aRank - bRank;
+        return new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime();
+      });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId, tick]);
+  }, [tick, userId]);
 
-  // Subscribe to all running runs so progress updates bump `tick`
   useEffect(() => {
-    const unsubs: Array<() => void> = [];
-    for (const r of runs) {
-      if (r.status !== 'running') continue;
-      unsubs.push(subscribeRun(r.id, () => setTick((n) => n + 1)));
+    const unsubs = runs
+      .filter((run) => run.status === 'running')
+      .map((run) => subscribeRun(run.id, () => setTick((value) => value + 1)));
+    return () => { unsubs.forEach((unsubscribe) => unsubscribe()); };
+  }, [runs]);
+
+  useEffect(() => {
+    if (focusRunId) {
+      setExpandedRunId(focusRunId);
+      return;
     }
-    return () => { unsubs.forEach((u) => u()); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [runs.map((r) => r.id + r.status).join('|')]);
-
-  // Auto-expand any new running run that wasn't in the set yet
-  useEffect(() => {
-    setExpanded((prev) => {
-      const next = new Set(prev);
-      for (const r of runs) {
-        if (r.status === 'running' && !next.has(r.id) && !prev.has(r.id)) {
-          next.add(r.id);
-        }
-      }
-      if (focusRunId && !next.has(focusRunId)) next.add(focusRunId);
-      return next;
+    setExpandedRunId((current) => {
+      if (current && runs.some((run) => run.id === current)) return current;
+      const running = runs.find((run) => run.status === 'running');
+      return running?.id || runs[0]?.id || null;
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [runs.length, focusRunId]);
+  }, [focusRunId, runs]);
 
-  const toggle = (id: string) => {
-    setExpanded((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      return next;
-    });
+  const filteredRuns = runs.filter((run) => {
+    if (activeFilter === 'all') return true;
+    if (activeFilter === 'running') return run.status === 'running';
+    if (activeFilter === 'complete') return run.status === 'complete';
+    return false;
+  });
+
+  const expandedVisible = expandedRunId
+    ? filteredRuns.find((run) => run.id === expandedRunId) || null
+    : null;
+
+  const visibleRuns = expandedVisible ? [expandedVisible] : filteredRuns;
+
+  const counts = {
+    running: runs.filter((run) => run.status === 'running').length,
+    complete: runs.filter((run) => run.status === 'complete').length,
   };
 
-  const activeCount = runs.filter((r) => r.status === 'running').length;
-
   return (
-    <div
-      style={fullscreen ? {
-        position: 'fixed', inset: 0, zIndex: 90,
-        background: '#FDFBF5',
-        display: 'flex', flexDirection: 'column',
-        boxShadow: '0 0 0 1px var(--border)',
-      } : {
-        width: 480, flexShrink: 0,
-        background: '#FDFBF5',
-        borderLeft: '1px solid var(--border)',
-        display: 'flex', flexDirection: 'column',
-        minHeight: 0,
-        boxShadow: '-4px 0 16px rgba(10,36,99,0.08)',
-      }}
+    <aside
+      id="workflow-run-panel"
+      style={fullscreen ? fullscreenStyle : dockedStyle}
+      aria-label="Workflow Runs"
     >
-      {/* Header */}
-      <div
-        style={{
-          padding: '14px 18px',
-          borderBottom: '1px solid var(--border)',
-          background: 'linear-gradient(180deg, #FFFFFF 0%, #FAFBFC 100%)',
-          display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0,
-        }}
-      >
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#6B7280' }}>
-            {runs.length === 0 ? 'No recent runs' : activeCount > 0 ? `${activeCount} running · ${runs.length - activeCount} recent` : `${runs.length} recent`}
+      <div style={headerStyle}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>Workflow Runs</div>
+            <div style={{ fontSize: 22, fontFamily: "'DM Serif Display', serif", color: 'var(--text-primary)', lineHeight: 1.1, marginTop: 2 }}>
+              {runs.length} recent
+            </div>
           </div>
-          <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 16, fontWeight: 600, color: 'var(--navy)', marginTop: 2 }}>
-            Workflow runs
-          </div>
-        </div>
-        {fullscreen && (
-          <button
-            onClick={() => setFullscreen(false)}
-            style={{ padding: '6px 10px', borderRadius: 8, background: 'transparent', border: '1px solid transparent', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--text-muted)', fontFamily: "'DM Sans', sans-serif" }}
-            onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = '#F3F4F6'; (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)'; (e.currentTarget as HTMLElement).style.color = 'var(--navy)'; }}
-            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.borderColor = 'transparent'; (e.currentTarget as HTMLElement).style.color = 'var(--text-muted)'; }}
-          >
-            &larr; Back to panel
-          </button>
-        )}
-        <button
-          onClick={() => setFullscreen((v) => !v)}
-          title={fullscreen ? 'Exit fullscreen' : 'Expand to fullscreen'}
-          style={{ padding: 8, borderRadius: 8, background: 'transparent', border: '1px solid transparent', cursor: 'pointer', display: 'flex' }}
-          onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = '#F3F4F6'; (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)'; }}
-          onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.borderColor = 'transparent'; }}
-        >
-          {fullscreen ? <Minimize2 size={15} style={{ color: '#4B5563' }} /> : <Maximize2 size={15} style={{ color: '#4B5563' }} />}
-        </button>
-        <button
-          onClick={onClose}
-          title="Close"
-          style={{ padding: 8, borderRadius: 8, background: 'transparent', border: '1px solid transparent', cursor: 'pointer', display: 'flex' }}
-          onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = '#F3F4F6'; (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)'; }}
-          onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.borderColor = 'transparent'; }}
-        >
-          <X size={14} style={{ color: '#9CA3AF' }} />
-        </button>
-      </div>
 
-      {/* Body — list of runs (flat white so cards don't nest visually) */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: fullscreen ? '20px 20px 40px' : '14px 14px 32px', background: '#FFFFFF' }}>
-        {runs.length === 0 ? (
-          <EmptyState />
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxWidth: fullscreen ? 880 : 'none', margin: fullscreen ? '0 auto' : 0 }}>
-            {runs.map((r) => (
-              <RunRow
-                key={r.id}
-                run={r}
-                isExpanded={expanded.has(r.id)}
-                onToggle={() => toggle(r.id)}
-              />
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function EmptyState() {
-  return (
-    <div style={{ textAlign: 'center', padding: '48px 24px', color: '#4B5563' }}>
-      <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'var(--ice-warm)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px' }}>
-        <Zap size={22} style={{ color: 'var(--navy)' }} />
-      </div>
-      <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)' }}>
-        No workflow runs yet
-      </div>
-      <div style={{ fontSize: 12, marginTop: 6, maxWidth: 300, margin: '6px auto 0', lineHeight: 1.55 }}>
-        Kick off a workflow from the Workflows panel in the sidebar and it will appear here. You can run multiple in parallel.
-      </div>
-    </div>
-  );
-}
-
-/* ─── Individual run row — collapsible header + expanded body ─── */
-function RunRow({ run, isExpanded, onToggle }: { run: WorkflowRun; isExpanded: boolean; onToggle: () => void }) {
-  const isRunning = run.status === 'running';
-  const isComplete = run.status === 'complete';
-  const isFailed = run.status === 'failed';
-  const isCancelled = run.status === 'cancelled';
-
-  const accent =
-    isRunning ? 'var(--navy)' :
-    isComplete ? '#5CA868' :
-    isFailed ? '#C65454' :
-    '#9CA3AF';
-
-  const bg =
-    isRunning ? '#FFFFFF' :
-    isComplete ? '#F5FBF6' :
-    isFailed ? '#FBF4F4' :
-    '#F9FAFB';
-
-  const statusText =
-    isRunning ? `Running · step ${Math.min((run.currentStepIndex ?? 0) + 1, run.steps.length)}/${run.steps.length}` :
-    isComplete ? `Complete · ${run.steps.length} step${run.steps.length !== 1 ? 's' : ''}` :
-    isFailed ? 'Failed' :
-    'Cancelled';
-
-  const StatusIcon = isRunning ? Loader : isComplete ? CheckCircle2 : isFailed ? XCircle : XCircle;
-
-  return (
-    <div style={{ border: '1px solid #EEF0F3', borderLeft: `3px solid ${accent}`, borderRadius: 10, background: '#FFFFFF', overflow: 'hidden', boxShadow: '0 1px 2px rgba(10,36,99,0.04)' }}>
-      {/* Collapsible header — single surface, no duplicate title below */}
-      <button
-        onClick={onToggle}
-        style={{
-          width: '100%',
-          display: 'flex', alignItems: 'center', gap: 10,
-          padding: '14px 16px',
-          background: 'transparent', border: 'none', cursor: 'pointer',
-          textAlign: 'left',
-        }}
-      >
-        {isExpanded
-          ? <ChevronDown size={14} style={{ color: '#9CA3AF', flexShrink: 0 }} />
-          : <ChevronRight size={14} style={{ color: '#9CA3AF', flexShrink: 0 }} />
-        }
-        <StatusIcon
-          size={14}
-          className={isRunning ? 'animate-spin' : ''}
-          style={{ color: accent, flexShrink: 0 }}
-        />
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {run.templateName}
-          </div>
-          <div style={{ fontSize: 12, color: '#6B7280', marginTop: 2 }}>
-            {statusText}
-          </div>
-        </div>
-      </button>
-
-      {/* Run-level progress bar — sits directly under the header as a clear ruler */}
-      {isRunning && (
-        <div style={{ padding: '0 16px 10px' }}>
-          <div style={{ width: '100%', height: 3, borderRadius: 2, background: '#EEF0F3', overflow: 'hidden' }}>
-            <div
-              style={{
-                height: '100%',
-                width: `${Math.round(((run.currentStepIndex ?? 0) / Math.max(1, run.steps.length)) * 100)}%`,
-                background: accent,
-                transition: 'width 300ms ease',
-              }}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, paddingTop: 2 }}>
+            <IconButton
+              label="Show all runs"
+              onClick={() => setActiveFilter('all')}
+              icon={<Filter size={15} />}
+            />
+            <IconButton
+              label={fullscreen ? 'Collapse panel' : 'Expand panel'}
+              onClick={() => setFullscreen((prev) => !prev)}
+              icon={fullscreen ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
+            />
+            <IconButton
+              label="Close panel"
+              onClick={onClose}
+              icon={<X size={15} />}
             />
           </div>
         </div>
-      )}
 
-      {/* Expanded body — embedded ProgressCard has no outer chrome */}
-      {isExpanded && (
-        <div style={{ padding: '0 16px 14px', borderTop: '1px solid #F3F4F6' }}>
-          <WorkflowProgressCard runId={run.id} workspaceName={null} variant="embedded" />
-          {run.status === 'complete' && run.reportCardData && (
-            <div style={{ marginTop: 12 }}>
-              <WorkflowReportCard report={run.reportCardData} />
-            </div>
-          )}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 12 }}>
+          <FilterPill
+            label={`Running ${counts.running}`}
+            variant="running"
+            active={activeFilter === 'running'}
+            onClick={() => setActiveFilter(activeFilter === 'running' ? 'all' : 'running')}
+          />
+          <FilterPill
+            label={`Completed ${counts.complete}`}
+            variant="complete"
+            active={activeFilter === 'complete'}
+            onClick={() => setActiveFilter(activeFilter === 'complete' ? 'all' : 'complete')}
+          />
         </div>
-      )}
-    </div>
+      </div>
+
+      <div style={{ flex: 1, overflowY: 'auto', padding: 14, display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {visibleRuns.length === 0 ? (
+          <div style={{ border: '1px solid var(--border-default)', borderRadius: 14, background: '#FFFFFF', padding: 18, fontSize: 12.5, color: 'var(--text-secondary)', lineHeight: 1.7 }}>
+            No workflow runs match this filter yet.
+          </div>
+        ) : (
+          visibleRuns.map((run) => (
+            <WorkflowRunCard
+              key={run.id}
+              run={run}
+              isExpanded={expandedRunId === run.id}
+              onToggle={() => setExpandedRunId((current) => current === run.id ? null : run.id)}
+            />
+          ))
+        )}
+      </div>
+    </aside>
   );
 }
+
+function IconButton({
+  label,
+  icon,
+  onClick,
+}: {
+  label: string;
+  icon: React.ReactNode;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      aria-label={label}
+      title={label}
+      onClick={onClick}
+      style={{
+        width: 32,
+        height: 32,
+        borderRadius: 10,
+        border: '1px solid var(--border-default)',
+        background: '#FFFFFF',
+        color: 'var(--text-secondary)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        cursor: 'pointer',
+      }}
+    >
+      {icon}
+    </button>
+  );
+}
+
+function FilterPill({
+  label,
+  variant,
+  active,
+  onClick,
+}: {
+  label: string;
+  variant: 'running' | 'complete';
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        background: 'transparent',
+        border: 'none',
+        padding: 0,
+        cursor: 'pointer',
+        transform: active ? 'translateY(-1px)' : 'none',
+      }}
+      aria-pressed={active}
+    >
+      <StatusBadge label={label} variant={variant} />
+    </button>
+  );
+}
+
+const dockedStyle: React.CSSProperties = {
+  width: 500,
+  flexShrink: 0,
+  background: '#FAFBFC',
+  borderLeft: '1px solid var(--border-default)',
+  display: 'flex',
+  flexDirection: 'column',
+  minHeight: 0,
+  boxShadow: '-4px 0 16px rgba(11,29,58,0.04)',
+};
+
+const fullscreenStyle: React.CSSProperties = {
+  position: 'fixed',
+  inset: 0,
+  zIndex: 90,
+  background: '#FAFBFC',
+  display: 'flex',
+  flexDirection: 'column',
+  boxShadow: '0 0 0 1px var(--border-default)',
+};
+
+const headerStyle: React.CSSProperties = {
+  position: 'sticky',
+  top: 0,
+  zIndex: 2,
+  padding: '16px 18px 14px',
+  borderBottom: '1px solid var(--border-default)',
+  background: '#FFFFFF',
+  display: 'grid',
+  gap: 0,
+  flexShrink: 0,
+};
