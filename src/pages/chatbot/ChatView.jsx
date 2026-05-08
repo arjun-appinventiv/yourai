@@ -8,7 +8,8 @@ import {
   LayoutDashboard, Send, MapPin, FileSearch, Lock, X, AlertTriangle, Info, Zap,
   BookOpen, UserPlus, Trash2, Edit3, Copy, Phone, Mail, Briefcase, Hash, Menu,
   Package, Link2, File, Upload, Paperclip, Database, GitBranch, Settings, LogOut,
-  CreditCard, Folder, FolderPlus, ArrowLeft, User, MoreHorizontal, Check, Home
+  CreditCard, Folder, FolderPlus, ArrowLeft, User, MoreHorizontal, Check, Home,
+  Bookmark, ArrowRight, ExternalLink
 } from 'lucide-react';
 import { useRole } from '../../context/RoleContext';
 import { useAuth } from '../../context/AuthContext';
@@ -2231,6 +2232,7 @@ function DocumentVaultPanel({
   const [renameDraft, setRenameDraft] = useState('');
   const [openMenuFor, setOpenMenuFor] = useState(null); // doc id
   const [expandedSet, setExpandedSet] = useState(() => new Set());
+  const [selectedDocId, setSelectedDocId] = useState(null); // inspect panel
 
   // ─── Find / search filters (P8 v1) ───
   // Filter chips operate on the same scoped doc set as the table; they
@@ -2613,11 +2615,45 @@ Rules:
     );
   }
 
+  // ─── Vault display helpers ───
+  const fileTypeBadge = (fileName) => {
+    const ext = (fileName || '').split('.').pop().toUpperCase();
+    const map = {
+      PDF:  { bg: '#FEE2E2', color: '#B91C1C' },
+      DOCX: { bg: '#DBEAFE', color: '#1D4ED8' },
+      DOC:  { bg: '#DBEAFE', color: '#1D4ED8' },
+      XLSX: { bg: '#DCFCE7', color: '#166534' },
+      XLS:  { bg: '#DCFCE7', color: '#166534' },
+      TXT:  { bg: '#F1F5F9', color: '#475569' },
+    };
+    return { label: ext || 'FILE', ...(map[ext] || { bg: '#F1F5F9', color: '#64748B' }) };
+  };
+  const relativeTime = (dateStr) => {
+    const t = Date.parse(dateStr);
+    if (!t) return dateStr || '—';
+    const diff = Date.now() - t;
+    const days = Math.floor(diff / (24 * 60 * 60 * 1000));
+    if (days < 1) return 'today';
+    if (days === 1) return '1d ago';
+    if (days < 30) return `${days}d ago`;
+    const mo = Math.floor(days / 30);
+    return mo < 12 ? `${mo}mo ago` : `${Math.floor(mo / 12)}y ago`;
+  };
+  const docTags = (d, folderName) => {
+    const tags = [];
+    if (d.isGlobal) tags.push({ label: 'Org-wide', bg: '#ECFDF5', color: '#166534' });
+    if (d.addedFromChat) tags.push({ label: 'from chat', bg: '#F1F5F9', color: '#475569' });
+    if (folderName) tags.push({ label: folderName, bg: '#EDE9FE', color: '#6D28D9' });
+    return tags;
+  };
+
+  const selectedDoc = selectedDocId ? filteredDocs.find((d) => d.id === selectedDocId) || null : null;
+
   const emptyCopy = currentFolderId
     ? { title: `Nothing in ${currentFolder?.name || 'this folder'} yet`, body: 'Drop a doc here or upload a new one to fill it.' }
     : search
     ? { title: 'No matches', body: 'Try a different term, or clear the search to see everything.' }
-    : { title: 'Build your firm’s library', body: 'Drop a folder or upload your first document.' };
+    : { title: 'Build your firm\'s library', body: 'Drop a folder or upload your first document.' };
 
   // Grid template depends on whether we're in a folder (no Folder column).
   // At root view, Folder is the primary (leading) column — case-file first
@@ -3019,8 +3055,8 @@ Rules:
             </div>
             )}
 
-            {/* Documents table */}
-            <div style={{ maxWidth: 1080, margin: '0 auto', padding: '8px 28px 48px' }}>
+            {/* Documents list — rich cards */}
+            <div style={{ maxWidth: 1080, margin: '0 auto', padding: '8px 28px 24px' }}>
               <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-muted)', fontFamily: "'IBM Plex Mono', ui-monospace, monospace", marginBottom: 8 }}>
                 {currentFolderId ? 'Documents in this folder' : 'All documents'}
               </div>
@@ -3041,122 +3077,106 @@ Rules:
                 </div>
               ) : (
                 <div style={{ background: '#fff', borderRadius: 12, border: '1px solid var(--border)', overflow: 'hidden' }}>
-                  {/* Header row */}
-                  <div style={{
-                    display: 'grid', gridTemplateColumns: gridCols,
-                    alignItems: 'center', height: 36,
-                    padding: '0 16px', gap: 12,
-                    fontSize: 10, color: 'var(--text-muted)',
-                    fontFamily: "'IBM Plex Mono', ui-monospace, monospace",
-                    letterSpacing: '0.08em', textTransform: 'uppercase',
-                    borderBottom: '1px solid var(--border)',
-                    background: '#FAFBFC',
-                  }}>
-                    {!currentFolderId && <div>Folder</div>}
-                    <div>Name</div>
-                    <div>Owner</div>
-                    <div style={{ textAlign: 'right' }}>Size</div>
-                    <div>Modified</div>
-                    <div></div>
-                  </div>
-                  {/* Body rows */}
-                  {filteredDocs.map((d) => {
+                  {filteredDocs.map((d, idx) => {
                     const isOwner = d.ownerId === currentUserId;
                     const canEdit = isOrgAdmin || isOwner || !d.ownerId;
-                    const ownerLabel = d.isGlobal ? 'Org-wide' : (isOwner ? 'You' : (d.ownerName || 'Member'));
-                    const ownerColor = d.isGlobal ? '#9A7A22' : (isOwner ? 'var(--navy)' : 'var(--text-secondary)');
+                    const ownerLabel = isOwner ? 'You' : (d.ownerName || 'Member');
                     const docFolder = d.folderId ? visibleFolders.find((f) => f.id === d.folderId) : null;
                     const isMenuOpen = openMenuFor === d.id;
                     const isDocActive = activeDocument?.id === d.id;
+                    const isSelected = selectedDocId === d.id;
+                    const badge = fileTypeBadge(d.fileName);
+                    const tags = docTags(d, docFolder?.name || null);
                     return (
                       <div
                         key={d.id}
                         style={{
-                          display: 'grid', gridTemplateColumns: gridCols,
-                          alignItems: 'center', height: 56,
-                          padding: '0 16px', gap: 12,
-                          borderBottom: '1px solid #EEF0F3',
-                          fontSize: 13,
-                          cursor: onSelect ? 'pointer' : 'default',
+                          display: 'flex', alignItems: 'flex-start', gap: 14,
+                          padding: '14px 16px',
+                          borderBottom: idx < filteredDocs.length - 1 ? '1px solid #EEF0F3' : 'none',
+                          background: isSelected ? 'rgba(10,36,99,0.04)' : '#fff',
+                          cursor: 'pointer',
                           transition: 'background 100ms',
                         }}
-                        onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(10,36,99,0.04)'; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; }}
-                        onClick={() => { if (onSelect) onSelect(d); }}
+                        onMouseEnter={(e) => { if (!isSelected) e.currentTarget.style.background = 'rgba(10,36,99,0.025)'; }}
+                        onMouseLeave={(e) => { if (!isSelected) e.currentTarget.style.background = '#fff'; }}
+                        onClick={() => setSelectedDocId(isSelected ? null : d.id)}
                       >
-                        {/* FOLDER (primary, bold — case-file mental model) */}
-                        {!currentFolderId && (
-                          <div style={{ minWidth: 0 }}>
-                            {docFolder ? (
-                              <button
-                                onClick={(e) => { e.stopPropagation(); setCurrentFolderId(docFolder.id); }}
-                                style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: 0, fontFamily: "'DM Sans', sans-serif", fontSize: 14, fontWeight: 600, color: 'var(--navy)', background: 'none', border: 'none', cursor: 'pointer', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' }}
-                              >
-                                <Folder size={13} /> {docFolder.name}
-                              </button>
-                            ) : (
-                              <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 14, fontWeight: 600, color: 'var(--text-muted)' }}>—</span>
-                            )}
-                          </div>
-                        )}
-                        {/* NAME */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
-                          <div style={{ width: 32, height: 32, borderRadius: 8, background: 'var(--ice-warm)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                            <File size={15} style={{ color: d.isGlobal ? '#9A7A22' : 'var(--navy)' }} />
-                          </div>
-                          <div style={{ minWidth: 0 }}>
-                            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {/* File type badge */}
+                        <div style={{ width: 44, height: 44, borderRadius: 8, background: badge.bg, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1 }}>
+                          <span style={{ fontSize: 9, fontWeight: 700, color: badge.color, fontFamily: "'IBM Plex Mono', monospace", letterSpacing: '0.03em', lineHeight: 1 }}>{badge.label}</span>
+                        </div>
+
+                        {/* Main content */}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                            <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1 }}>
                               {d.name}
-                              {d.addedFromChat && <span style={{ marginLeft: 6, fontSize: 10, fontStyle: 'italic', color: 'var(--text-muted)', fontWeight: 400 }}>· from chat</span>}
+                            </span>
+                          </div>
+                          {tags.length > 0 && (
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 5 }}>
+                              {tags.map((t) => (
+                                <span key={t.label} style={{ display: 'inline-flex', alignItems: 'center', padding: '2px 8px', borderRadius: 999, background: t.bg, color: t.color, fontSize: 11, fontWeight: 500 }}>{t.label}</span>
+                              ))}
                             </div>
-                            <div style={{ fontSize: 11, color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.fileName}</div>
+                          )}
+                          <div style={{ marginTop: 5, fontSize: 12, color: 'var(--text-muted)', display: 'flex', flexWrap: 'wrap', gap: 4, alignItems: 'center' }}>
+                            {d.fileSize && <span>{d.fileSize}</span>}
+                            {d.fileSize && <span>·</span>}
+                            <span>Owner: {ownerLabel}</span>
+                            {d.createdAt && <><span>·</span><span>Modified {d.createdAt}</span></>}
                           </div>
                         </div>
-                        {/* OWNER */}
-                        <div style={{ fontSize: 12, color: ownerColor, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{ownerLabel}</div>
-                        {/* SIZE */}
-                        <div style={{ fontSize: 12, color: 'var(--text-muted)', textAlign: 'right' }}>{d.fileSize || '—'}</div>
-                        {/* MODIFIED */}
-                        <div style={{ fontSize: 12, color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.createdAt}</div>
-                        {/* ACTIONS */}
-                        <div onClick={(e) => e.stopPropagation()} style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}>
+
+                        {/* Right-side actions */}
+                        <div onClick={(e) => e.stopPropagation()} style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, marginTop: 2 }}>
+                          <span style={{ fontSize: 12, color: 'var(--text-muted)', minWidth: 42, textAlign: 'right', marginRight: 2 }}>{relativeTime(d.createdAt)}</span>
+                          <button title="Pin" style={{ padding: 4, background: 'none', border: 'none', cursor: 'pointer', display: 'flex', borderRadius: 4, color: 'var(--text-muted)' }}
+                            onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--navy)'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; }}
+                          >
+                            <Bookmark size={14} />
+                          </button>
                           {onSelect && (
                             <button
-                              onClick={() => onSelect(d)}
-                              style={{ padding: '4px 10px', borderRadius: 6, background: isDocActive ? '#5CA868' : 'var(--navy)', color: '#fff', border: 'none', fontSize: 11, fontWeight: 500, cursor: 'pointer' }}
+                              onClick={(e) => { e.stopPropagation(); onSelect(d); }}
+                              style={{ padding: '5px 12px', borderRadius: 8, background: isDocActive ? '#5CA868' : 'var(--navy)', color: '#fff', border: 'none', fontSize: 12, fontWeight: 500, cursor: 'pointer', whiteSpace: 'nowrap' }}
                             >
-                              {isDocActive ? 'Active' : 'Snap to chat'}
+                              {isDocActive ? 'Active' : 'Use in chat'}
                             </button>
                           )}
                           {canEdit && (
-                            <button
-                              onClick={() => setOpenMenuFor(isMenuOpen ? null : d.id)}
-                              title="More"
-                              style={{ padding: 4, background: 'none', border: 'none', cursor: 'pointer', display: 'flex', borderRadius: 4 }}
-                              onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(15,23,42,0.06)'; }}
-                              onMouseLeave={(e) => { e.currentTarget.style.background = 'none'; }}
-                            >
-                              <MoreVertical size={14} style={{ color: 'var(--text-muted)' }} />
-                            </button>
-                          )}
-                          {isMenuOpen && (
-                            <>
-                              <div onClick={() => setOpenMenuFor(null)} style={{ position: 'fixed', inset: 0, zIndex: 30 }} />
-                              <div style={{ position: 'absolute', top: 30, right: 0, minWidth: 180, background: '#fff', borderRadius: 8, border: '1px solid var(--border)', boxShadow: '0 8px 24px rgba(15,23,42,0.12)', zIndex: 31, overflow: 'hidden' }}>
-                                <button onClick={() => { onEdit?.(d); setOpenMenuFor(null); }} style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '8px 12px', background: 'none', border: 'none', fontSize: 12, color: 'var(--text-primary)', cursor: 'pointer', textAlign: 'left' }} onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(15,23,42,0.04)'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'none'; }}>
-                                  <Edit3 size={12} /> Edit
-                                </button>
-                                {isOrgAdmin && (
-                                  <button onClick={() => { onToggleGlobal?.(d.id, !d.isGlobal); setOpenMenuFor(null); }} style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '8px 12px', background: 'none', border: 'none', fontSize: 12, color: 'var(--text-primary)', cursor: 'pointer', textAlign: 'left' }} onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(15,23,42,0.04)'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'none'; }}>
-                                    <Share2 size={12} /> {d.isGlobal ? 'Make personal' : 'Share org-wide'}
-                                  </button>
-                                )}
-                                <div style={{ borderTop: '1px solid var(--border)' }} />
-                                <button onClick={() => { onDelete?.(d.id); setOpenMenuFor(null); }} style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '8px 12px', background: 'none', border: 'none', fontSize: 12, color: '#C65454', cursor: 'pointer', textAlign: 'left' }} onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(198,84,84,0.06)'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'none'; }}>
-                                  <Trash2 size={12} /> Delete
-                                </button>
-                              </div>
-                            </>
+                            <div style={{ position: 'relative' }}>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); setOpenMenuFor(isMenuOpen ? null : d.id); }}
+                                title="More"
+                                style={{ padding: 4, background: 'none', border: 'none', cursor: 'pointer', display: 'flex', borderRadius: 4 }}
+                                onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(15,23,42,0.06)'; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.background = 'none'; }}
+                              >
+                                <MoreVertical size={14} style={{ color: 'var(--text-muted)' }} />
+                              </button>
+                              {isMenuOpen && (
+                                <>
+                                  <div onClick={() => setOpenMenuFor(null)} style={{ position: 'fixed', inset: 0, zIndex: 30 }} />
+                                  <div style={{ position: 'absolute', top: 30, right: 0, minWidth: 180, background: '#fff', borderRadius: 8, border: '1px solid var(--border)', boxShadow: '0 8px 24px rgba(15,23,42,0.12)', zIndex: 31, overflow: 'hidden' }}>
+                                    <button onClick={() => { onEdit?.(d); setOpenMenuFor(null); }} style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '8px 12px', background: 'none', border: 'none', fontSize: 12, color: 'var(--text-primary)', cursor: 'pointer', textAlign: 'left' }} onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(15,23,42,0.04)'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'none'; }}>
+                                      <Edit3 size={12} /> Edit
+                                    </button>
+                                    {isOrgAdmin && (
+                                      <button onClick={() => { onToggleGlobal?.(d.id, !d.isGlobal); setOpenMenuFor(null); }} style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '8px 12px', background: 'none', border: 'none', fontSize: 12, color: 'var(--text-primary)', cursor: 'pointer', textAlign: 'left' }} onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(15,23,42,0.04)'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'none'; }}>
+                                        <Share2 size={12} /> {d.isGlobal ? 'Make personal' : 'Share org-wide'}
+                                      </button>
+                                    )}
+                                    <div style={{ borderTop: '1px solid var(--border)' }} />
+                                    <button onClick={() => { onDelete?.(d.id); setOpenMenuFor(null); }} style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '8px 12px', background: 'none', border: 'none', fontSize: 12, color: '#C65454', cursor: 'pointer', textAlign: 'left' }} onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(198,84,84,0.06)'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'none'; }}>
+                                      <Trash2 size={12} /> Delete
+                                    </button>
+                                  </div>
+                                </>
+                              )}
+                            </div>
                           )}
                         </div>
                       </div>
@@ -3165,8 +3185,93 @@ Rules:
                 </div>
               )}
             </div>
+
+            {/* "Can't find it?" footer */}
+            <div style={{ maxWidth: 1080, margin: '0 auto', padding: '0 28px 40px', textAlign: 'center' }}>
+              <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+                Can't find it?{' '}
+                <button
+                  onClick={() => { setSearch(''); setAskQuery(''); document.querySelector('[placeholder="Ask the vault or search documents…"]')?.focus(); }}
+                  style={{ background: 'none', border: 'none', padding: 0, fontSize: 13, color: 'var(--navy)', fontWeight: 500, cursor: 'pointer', textDecoration: 'underline' }}
+                >
+                  Ask the vault.
+                </button>
+              </span>
+            </div>
           </div>
         </div>
+
+        {/* ── RIGHT INSPECT PANEL ── */}
+        {selectedDoc && (
+          <div style={{ width: 300, flexShrink: 0, borderLeft: '1px solid var(--border)', background: '#fff', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            {/* Header */}
+            <div style={{ padding: '16px 16px 12px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                  {(() => { const b = fileTypeBadge(selectedDoc.fileName); return (
+                    <div style={{ width: 36, height: 36, borderRadius: 8, background: b.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <span style={{ fontSize: 9, fontWeight: 700, color: b.color, fontFamily: "'IBM Plex Mono', monospace" }}>{b.label}</span>
+                    </div>
+                  ); })()}
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', lineHeight: 1.3 }}>{selectedDoc.name}</div>
+                    <span style={{ display: 'inline-block', marginTop: 3, fontSize: 10, fontWeight: 500, padding: '1px 7px', borderRadius: 999, background: '#EEF2FF', color: '#4338CA' }}>Latest version</span>
+                  </div>
+                </div>
+              </div>
+              <button onClick={() => setSelectedDocId(null)} style={{ padding: 4, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', flexShrink: 0 }}>
+                <X size={14} />
+              </button>
+            </div>
+
+            {/* Tabs — Details only (Preview is a future phase) */}
+            <div style={{ padding: '0 16px', borderBottom: '1px solid var(--border)', display: 'flex', gap: 0 }}>
+              <button style={{ padding: '10px 0', marginRight: 20, fontSize: 13, fontWeight: 600, color: 'var(--navy)', background: 'none', border: 'none', borderBottom: '2px solid var(--navy)', cursor: 'pointer' }}>Details</button>
+              {selectedDoc.sampleUrl && (
+                <button
+                  onClick={() => window.open(selectedDoc.sampleUrl, '_blank')}
+                  style={{ padding: '10px 0', fontSize: 13, fontWeight: 400, color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer' }}
+                >Preview</button>
+              )}
+            </div>
+
+            {/* Details */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {[
+                { label: 'Owner', value: selectedDoc.ownerId === currentUserId ? 'You' : (selectedDoc.ownerName || 'Member') },
+                { label: 'Status', value: selectedDoc.isGlobal ? 'Org-wide' : 'Personal' },
+                { label: 'Modified', value: selectedDoc.createdAt || '—' },
+                { label: 'Size', value: selectedDoc.fileSize || '—' },
+                ...(selectedDoc.description ? [{ label: 'Description', value: selectedDoc.description }] : []),
+              ].map(({ label, value }) => (
+                <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+                  <span style={{ fontSize: 12, color: 'var(--text-muted)', flexShrink: 0, width: 90 }}>{label}</span>
+                  <span style={{ fontSize: 12, color: 'var(--text-primary)', fontWeight: 500, textAlign: 'right', flex: 1 }}>{value}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* CTAs */}
+            <div style={{ padding: '12px 16px', borderTop: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {onSelect && (
+                <button
+                  onClick={() => { onSelect(selectedDoc); setSelectedDocId(null); }}
+                  style={{ width: '100%', height: 40, borderRadius: 10, background: 'var(--navy)', color: '#fff', border: 'none', fontSize: 13, fontWeight: 500, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                >
+                  Use in chat <ArrowRight size={14} />
+                </button>
+              )}
+              {selectedDoc.sampleUrl && (
+                <button
+                  onClick={() => window.open(selectedDoc.sampleUrl, '_blank')}
+                  style={{ width: '100%', height: 36, borderRadius: 10, background: '#fff', color: 'var(--navy)', border: '1px solid var(--border)', fontSize: 13, fontWeight: 500, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                >
+                  Open preview <ExternalLink size={13} />
+                </button>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
