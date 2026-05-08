@@ -9,7 +9,7 @@ import {
   BookOpen, UserPlus, Trash2, Edit3, Copy, Phone, Mail, Briefcase, Hash, Menu,
   Package, Link2, File, Upload, Paperclip, Database, GitBranch, Settings, LogOut,
   CreditCard, Folder, FolderPlus, ArrowLeft, User, MoreHorizontal, Check, Home,
-  Bookmark, ArrowRight, ExternalLink
+  Bookmark, ArrowRight, ExternalLink, Layers
 } from 'lucide-react';
 import { useRole } from '../../context/RoleContext';
 import { useAuth } from '../../context/AuthContext';
@@ -6836,7 +6836,7 @@ INSTRUCTIONS:
                               color: 'var(--text-primary)', cursor: 'pointer', whiteSpace: 'nowrap',
                             }}
                           >
-                            <span style={{ width: 8, height: 8, borderRadius: '50%', background: dotColor, flexShrink: 0 }} />
+                            <MessageSquare size={14} style={{ flexShrink: 0, color: 'var(--navy)' }} />
                             <span>{getIntentLabel(activeIntent)}</span>
                             <ChevronDown size={12} style={{ transform: isIntentDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 150ms' }} />
                           </button>
@@ -6935,7 +6935,7 @@ INSTRUCTIONS:
                           cursor: 'pointer', whiteSpace: 'nowrap', maxWidth: 220,
                         }}
                       >
-                        <span style={{ width: 8, height: 8, borderRadius: '50%', background: activeKnowledgePack ? '#C9A84C' : '#CBD5E1', flexShrink: 0 }} />
+                        <Layers size={14} style={{ flexShrink: 0, color: activeKnowledgePack ? '#7A6520' : 'var(--text-muted)' }} />
                         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {activeKnowledgePack ? activeKnowledgePack.name : 'Pick a pack'}
                         </span>
@@ -7462,7 +7462,7 @@ INSTRUCTIONS:
                             maxWidth: 160,
                           }}
                         >
-                          <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#C9A84C', flexShrink: 0 }} />
+                          <Layers size={13} style={{ flexShrink: 0, color: '#7A6520' }} />
                           <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {activeKnowledgePack.name.length > 12 ? `${activeKnowledgePack.name.slice(0, 12)}…` : activeKnowledgePack.name}
                           </span>
@@ -7487,7 +7487,7 @@ INSTRUCTIONS:
                                 cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
                               }}
                             >
-                              <span style={{ width: 7, height: 7, borderRadius: '50%', background: dotColor, flexShrink: 0 }} />
+                              <MessageSquare size={13} style={{ flexShrink: 0, color: 'var(--navy)' }} />
                               {getIntentLabel(activeIntent)}
                               <ChevronDown size={12} style={{ transform: isIntentDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 150ms' }} />
                             </button>
