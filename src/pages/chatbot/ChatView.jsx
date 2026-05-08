@@ -589,19 +589,6 @@ function Sidebar({ activeKey, onOpenChat, onOpenPromptTemplates, onOpenClients, 
         </button>
       </div>
 
-      {/* ═══ ZONE 1.5 — Search Chats (top-level) ═══ */}
-      {!isExternalUser && (
-        <div style={{ padding: '12px 14px 0', position: 'relative' }}>
-          <Search size={14} style={{ position: 'absolute', left: 24, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
-          <input
-            value={threadSearch}
-            onChange={(e) => onThreadSearchChange(e.target.value)}
-            placeholder="Search Chats"
-            style={{ width: '100%', height: 40, borderRadius: 8, border: '1px solid var(--border)', paddingLeft: 34, paddingRight: 10, fontSize: 14, outline: 'none', boxSizing: 'border-box', fontFamily: "'DM Sans', sans-serif", color: 'var(--text-primary)', background: '#fff' }}
-          />
-        </div>
-      )}
-
       {/* ═══ ZONE 2 — New Chat Button ═══ */}
       {/* External Users don't have a personal chat — they only use workspace
           chats, which have their own 'New chat' button inside the workspace
@@ -6797,26 +6784,8 @@ INSTRUCTIONS:
                     })()}
                   </div>
 
-                  {/* Divider + 3-pill row (+Attach / Intent / SearchScope / Pack) */}
+                  {/* Divider + 3-pill row (Intent / SearchScope / Pack) */}
                   <div style={{ borderTop: '1px solid var(--border)', marginTop: 12, paddingTop: 12, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                    {/* + Attach button — opens YourVault picker modal. Restored
-                        for direct vault attach access; mirrors the + on populated chat. */}
-                    <button
-                      onClick={() => setIsVaultPickerModalOpen(true)}
-                      title="Attach a document from YourVault"
-                      style={{
-                        display: 'inline-flex', alignItems: 'center', gap: 6,
-                        padding: '8px 12px', borderRadius: 999,
-                        fontSize: 13, fontFamily: "'DM Sans', sans-serif", fontWeight: 500,
-                        border: activeVaultDocument ? '1px solid var(--navy)' : '1px solid var(--border)',
-                        background: activeVaultDocument ? 'rgba(10, 36, 99, 0.06)' : '#fff',
-                        color: 'var(--navy)', cursor: 'pointer', whiteSpace: 'nowrap',
-                        transition: 'all 150ms ease',
-                      }}
-                    >
-                      <Plus size={14} />
-                      {activeVaultDocument && <span>Attached</span>}
-                    </button>
 
                     {/* Intent dropdown pill — bucket-color dot prefix (matches
                         populated-chat pill + audit note #4 "color dot carries
