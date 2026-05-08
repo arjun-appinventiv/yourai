@@ -913,10 +913,10 @@ function PromptTemplatesPanel({ templates, onUsePrompt, onClose, onCreateNew, on
           </button>
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 24, flexWrap: 'wrap' }}>
             <div style={{ minWidth: 0, flex: 1 }}>
-              <h1 style={{ fontFamily: "'Fraunces', serif", fontSize: 34, color: 'var(--navy)', margin: 0, lineHeight: 1.15, letterSpacing: '-0.01em' }}>
-                Choose a prompt, fill the blanks, send
+              <h1 style={{ fontFamily: "'Fraunces', serif", fontSize: 32, fontWeight: 500, color: 'var(--text-primary)', margin: 0, lineHeight: 1.15, letterSpacing: '-0.5px' }}>
+                Choose a proven prompt, fill the blanks, send
               </h1>
-              <p style={{ fontSize: 14, color: 'var(--text-muted)', marginTop: 10, lineHeight: 1.55, maxWidth: 680 }}>
+              <p style={{ fontSize: 13.5, color: 'var(--text-secondary)', marginTop: 8, lineHeight: 1.55, maxWidth: 680 }}>
                 Start every analysis or draft from a proven template. Pick one, customise the blanks, and send — the AI does the rest.
               </p>
             </div>
@@ -933,22 +933,21 @@ function PromptTemplatesPanel({ templates, onUsePrompt, onClose, onCreateNew, on
       {/* ── Filter tabs + search ── */}
       <div style={{ maxWidth: 1100, margin: '0 auto', padding: '20px 36px 0', width: '100%', boxSizing: 'border-box' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-          {/* Category tabs */}
-          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', flex: 1 }}>
+          {/* Category segmented pills */}
+          <div style={{ display: 'inline-flex', border: '1px solid #e2e3e7', borderRadius: 9, background: '#fff', padding: 3, flexWrap: 'wrap', flex: 1 }}>
             {categories.map(c => {
               const active = filterCat === c;
-              const col = c !== 'All' ? promptCatColor(c) : null;
               return (
                 <button
                   key={c}
                   onClick={() => setFilterCat(c)}
                   style={{
-                    padding: '7px 14px', borderRadius: 8, fontSize: 12, fontWeight: 500,
-                    border: '1px solid ' + (active ? (col ? col.border : 'var(--navy)') : 'var(--border)'),
-                    background: active ? (col ? col.bg : 'var(--navy)') : '#fff',
-                    color: active ? (col ? col.text : 'white') : 'var(--text-secondary)',
-                    cursor: 'pointer', transition: 'all 120ms',
-                    borderLeft: active && col ? `3px solid ${col.border}` : undefined,
+                    display: 'inline-flex', alignItems: 'center', gap: 6,
+                    padding: '6px 12px', borderRadius: 6, fontSize: 12.5, fontWeight: active ? 600 : 400,
+                    border: 'none',
+                    background: active ? 'var(--gold-bg)' : 'transparent',
+                    color: active ? 'var(--text-primary)' : 'var(--text-secondary)',
+                    cursor: 'pointer', transition: 'all 120ms', whiteSpace: 'nowrap',
                   }}
                 >
                   {c}
@@ -986,45 +985,53 @@ function PromptTemplatesPanel({ templates, onUsePrompt, onClose, onCreateNew, on
                   key={t.id}
                   style={{
                     background: '#fff',
-                    borderRadius: 12,
+                    borderRadius: 14,
                     border: '1px solid var(--border)',
-                    borderLeft: `4px solid ${col.border}`,
                     display: 'flex', flexDirection: 'column',
                     overflow: 'hidden',
-                    transition: 'box-shadow 150ms, transform 150ms',
+                    transition: 'box-shadow 150ms, border-color 150ms',
                   }}
                   onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 4px 16px rgba(10,36,99,0.08)'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
                   onMouseLeave={e => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.transform = 'translateY(0)'; }}
                 >
                   <div style={{ padding: '18px 20px', flex: 1, display: 'flex', flexDirection: 'column', gap: 10 }}>
-                    {/* Category label */}
-                    <span style={{
-                      alignSelf: 'flex-start',
-                      fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase',
-                      padding: '3px 9px', borderRadius: 6,
-                      background: col.bg, color: col.text,
-                      fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
-                    }}>{t.category}</span>
-                    {/* Title */}
-                    <div style={{ fontFamily: "'Fraunces', serif", fontSize: 18, color: 'var(--navy)', lineHeight: 1.25, letterSpacing: '-0.01em' }}>
-                      {t.title}
+                    {/* Top row: icon + info */}
+                    <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
+                      {/* Category icon tile */}
+                      <div style={{ width: 40, height: 40, borderRadius: 10, background: col.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: col.text }}>
+                        <FileText size={18} />
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        {/* Title */}
+                        <div style={{ fontFamily: "'Fraunces', serif", fontSize: 21, fontWeight: 500, color: 'var(--text-primary)', lineHeight: 1.2, letterSpacing: '-0.3px' }}>
+                          {t.title}
+                        </div>
+                        {/* Category tag */}
+                        <div style={{ marginTop: 6, display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span style={{
+                            fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase',
+                            padding: '3px 8px', borderRadius: 5,
+                            background: col.bg, color: col.text,
+                          }}>{t.category}</span>
+                        </div>
+                      </div>
                     </div>
                     {/* Description */}
                     <p style={{
-                      fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.55, margin: 0,
-                      display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+                      fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.55, margin: 0,
+                      display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
                       flex: 1,
                     }}>
                       {t.prompt}
                     </p>
                     {/* Created */}
-                    <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Created {t.createdAt}</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Created {t.createdAt}</div>
                   </div>
                   {/* Action footer */}
-                  <div style={{ padding: '12px 20px', borderTop: '1px solid var(--border)', background: '#FBFAF7', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                  <div style={{ padding: '12px 20px', borderTop: '1px solid var(--border)', background: '#FAFAF8', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
                     <button
                       onClick={() => { onDelete(t.id); }}
-                      style={{ padding: '5px 10px', borderRadius: 7, border: '1px solid var(--border)', background: '#fff', fontSize: 11, color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
+                      style={{ padding: '5px 10px', borderRadius: 7, border: '1px solid var(--border)', background: '#fff', fontSize: 12, color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
                     >
                       <Trash2 size={12} style={{ color: '#C65454' }} /> Delete
                     </button>
@@ -1034,8 +1041,8 @@ function PromptTemplatesPanel({ templates, onUsePrompt, onClose, onCreateNew, on
                         display: 'inline-flex', alignItems: 'center', gap: 5,
                         padding: '8px 18px', borderRadius: 8,
                         background: 'var(--navy)', color: '#fff',
-                        border: 'none', fontSize: 12, fontWeight: 600,
-                        cursor: 'pointer', letterSpacing: '0.01em',
+                        border: 'none', fontSize: 12.5, fontWeight: 500,
+                        cursor: 'pointer',
                       }}
                     >
                       Use →
@@ -1448,14 +1455,14 @@ function KnowledgePacksPanel({ packs, onClose, onCreateNew, onEdit, onDelete, on
         <div style={{ flex: 1, minWidth: 0, overflowY: 'auto' }}>
           {/* Hero */}
           <div style={{ maxWidth: 1080, margin: '0 auto', padding: '32px 28px 18px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-              <Sparkles size={14} style={{ color: 'var(--gold)' }} />
-              <span style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", letterSpacing: '0.1em', textTransform: 'uppercase' }}>Knowledge Packs</span>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginBottom: 8 }}>
+              <Sparkles size={13} style={{ color: 'var(--gold)' }} />
+              <span style={{ fontSize: 11, color: 'var(--gold)', fontWeight: 600, letterSpacing: '1.4px', textTransform: 'uppercase' }}>Knowledge Packs</span>
             </div>
-            <h1 style={{ fontFamily: "'Fraunces', serif", fontSize: 30, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.02em', lineHeight: 1.2 }}>
+            <h1 style={{ fontFamily: "'Fraunces', serif", fontSize: 38, fontWeight: 500, color: 'var(--text-primary)', margin: 0, letterSpacing: '-1px', lineHeight: 1.1 }}>
               Reference packs, ready in one click
             </h1>
-            <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 8, lineHeight: 1.6, maxWidth: 640 }}>
+            <p style={{ fontSize: 14, color: 'var(--text-secondary)', marginTop: 10, lineHeight: 1.55, maxWidth: 760 }}>
               Curated collections of policies, playbooks, and precedents — maintained by your team.
               Attach to any chat in one click to ground every answer in the right source material.
             </p>
@@ -1698,23 +1705,24 @@ function PackRow({ pack, activePack, inspected, currentUserId, isOrgAdmin, onIns
         if (onInspect) onInspect(pack);
       }}
       style={{
-        padding: '16px 18px', borderRadius: 12,
+        padding: '20px', borderRadius: 14,
         border: '1px solid ' + restingBorder,
         transition: 'all 0.15s', background: '#fff',
-        display: 'flex', flexDirection: 'column', minHeight: 168,
+        display: 'flex', flexDirection: 'column', gap: 14,
         boxShadow: restingShadow,
         cursor: onInspect ? 'pointer' : 'default',
+        position: 'relative',
       }}
       onMouseEnter={(e) => { if (!isActive && !inspected) { e.currentTarget.style.boxShadow = '0 4px 14px rgba(15,23,42,0.06)'; e.currentTarget.style.borderColor = 'var(--navy)'; } }}
       onMouseLeave={(e) => { if (!isActive && !inspected) { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.borderColor = 'var(--border)'; } }}
     >
       {/* Header row — icon, title block, kebab */}
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-        <div style={{ width: 40, height: 40, borderRadius: 10, backgroundColor: pack.isGlobal ? 'rgba(201,168,76,0.15)' : 'var(--ice-warm)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-          <Package size={18} style={{ color: pack.isGlobal ? '#9A7A22' : 'var(--navy)' }} />
+        <div style={{ width: 38, height: 38, borderRadius: 9, background: 'var(--gold-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <Package size={18} style={{ color: 'var(--text-primary)' }} />
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{pack.name}</div>
+          <div style={{ fontFamily: "'Fraunces', serif", fontSize: 22, fontWeight: 500, color: 'var(--text-primary)', letterSpacing: '-0.4px', lineHeight: 1.15, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{pack.name}</div>
           <div style={{ marginTop: 4 }}>
             <span
               title={pack.isGlobal ? 'Shared with the whole organisation' : isOwner ? 'Only visible to you' : `Owned by ${pack.ownerName}`}
@@ -1755,34 +1763,34 @@ function PackRow({ pack, activePack, inspected, currentUserId, isOrgAdmin, onIns
 
       {/* Description (clamped to 2 lines so cards stay even-height) */}
       <p style={{
-        fontSize: 12, color: 'var(--text-muted)',
-        lineHeight: 1.55, margin: '10px 0 0',
+        fontSize: 13.5, color: 'var(--text-secondary)',
+        lineHeight: 1.55, margin: 0,
         display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
       }}>{pack.description}</p>
 
       {/* Footer — pushes to the bottom of the card, fixed-row metadata + actions */}
-      <div style={{ marginTop: 'auto', paddingTop: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--text-muted)' }}>
-            <FileText size={11} /> {pack.docs?.length || 0} doc{(pack.docs?.length || 0) !== 1 ? 's' : ''}
+      <div style={{ marginTop: 'auto', paddingTop: 12, borderTop: '1px solid #f0f0f3', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 18, minWidth: 0 }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12.5, color: 'var(--text-secondary)' }}>
+            <FileText size={12} style={{ color: 'var(--text-muted)' }} /> {pack.docs?.length || 0} doc{(pack.docs?.length || 0) !== 1 ? 's' : ''}
           </span>
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--text-muted)' }}>
-            <Link2 size={11} /> {pack.links?.length || 0} link{(pack.links?.length || 0) !== 1 ? 's' : ''}
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12.5, color: 'var(--text-secondary)' }}>
+            <Link2 size={12} style={{ color: 'var(--text-muted)' }} /> {pack.links?.length || 0} link{(pack.links?.length || 0) !== 1 ? 's' : ''}
           </span>
         </div>
         {canToggleGlobal && (
           <span
             onClick={(e) => { e.stopPropagation(); onToggleGlobal?.(pack.id, !pack.isGlobal); }}
             title={pack.isGlobal ? 'Shared org-wide — click to make personal' : 'Share with entire organisation'}
-            style={{ width: 28, height: 16, borderRadius: 999, background: pack.isGlobal ? 'var(--navy)' : '#CBD5E1', position: 'relative', transition: 'background 150ms', flexShrink: 0, cursor: 'pointer' }}
+            style={{ width: 32, height: 18, borderRadius: 999, background: pack.isGlobal ? 'var(--green)' : '#d4d6dc', position: 'relative', transition: 'background 0.15s', flexShrink: 0, cursor: 'pointer' }}
           >
-            <span style={{ position: 'absolute', top: 2, left: pack.isGlobal ? 14 : 2, width: 12, height: 12, borderRadius: '50%', background: '#fff', boxShadow: '0 1px 2px rgba(0,0,0,0.2)', transition: 'left 150ms' }} />
+            <span style={{ position: 'absolute', top: 2, left: pack.isGlobal ? 14 : 2, width: 14, height: 14, borderRadius: '50%', background: '#fff', boxShadow: '0 1px 2px rgba(0,0,0,0.12)', transition: 'left 0.15s' }} />
           </span>
         )}
         {onSelect && (
           <button
             onClick={(e) => { e.stopPropagation(); onSelect(pack); }}
-            style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '6px 14px', borderRadius: 6, backgroundColor: isActive ? '#5CA868' : 'var(--navy)', color: 'white', border: 'none', fontSize: 12, fontWeight: 500, cursor: 'pointer', flexShrink: 0 }}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '9px 16px', borderRadius: 8, background: isActive ? '#5CA868' : 'var(--navy)', color: '#fff', border: 'none', fontSize: 13, fontWeight: 500, cursor: 'pointer', flexShrink: 0 }}
           >
             {isActive ? <><CheckCircle size={12} /> Active</> : 'Snap to chat'}
           </button>
@@ -2777,11 +2785,11 @@ Rules:
             <div style={{ maxWidth: 1080, margin: '0 auto', padding: '32px 28px 14px' }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
                 <div style={{ minWidth: 0, flex: 1 }}>
-                  <h1 style={{ fontFamily: "'Fraunces', serif", fontSize: 34, color: 'var(--navy)', margin: 0, letterSpacing: '-0.02em', lineHeight: 1.15 }}>
+                  <h1 style={{ fontFamily: "'Fraunces', serif", fontSize: 36, fontWeight: 500, color: 'var(--text-primary)', margin: 0, letterSpacing: '-1px', lineHeight: 1.1 }}>
                     {currentFolder ? currentFolder.name : 'Ask across your documents'}
                   </h1>
                   {!currentFolder && (
-                    <p style={{ fontSize: 14, color: 'var(--text-muted)', marginTop: 10, lineHeight: 1.55, maxWidth: 720 }}>
+                    <p style={{ fontSize: 13.5, color: 'var(--text-secondary)', marginTop: 8, lineHeight: 1.5, maxWidth: 580 }}>
                       YourVault is your firm's AI-powered document library. Ask a question, find what you need, and use the right document in chat.
                     </p>
                   )}
@@ -2828,9 +2836,9 @@ Rules:
             <div style={{ maxWidth: 1080, margin: '0 auto', padding: '6px 28px 14px' }}>
               <div style={{
                 position: 'relative',
-                border: '1.5px solid rgba(201,168,76,0.45)',
-                borderRadius: 14, background: '#fff',
-                padding: '14px 18px',
+                border: '1.5px solid var(--gold-border)',
+                borderRadius: 12, background: '#fff',
+                padding: '14px 16px',
                 display: 'flex', alignItems: 'flex-start', gap: 14,
               }}>
                 <Sparkles size={18} style={{ color: 'var(--gold)', flexShrink: 0, marginTop: 2 }} />
@@ -2848,9 +2856,9 @@ Rules:
                     onKeyDown={(e) => { if (e.key === 'Enter') handleAskAnything(); }}
                     disabled={askLoading}
                     placeholder="Ask the vault or search documents…"
-                    style={{ width: '100%', height: 24, border: 'none', outline: 'none', fontSize: 15, color: 'var(--text-primary)', background: 'transparent', fontFamily: "inherit" }}
+                    style={{ width: '100%', height: 24, border: 'none', outline: 'none', fontSize: 14.5, color: 'var(--text-secondary)', background: 'transparent', fontFamily: "inherit" }}
                   />
-                  <div style={{ marginTop: 4, fontSize: 12, color: 'var(--text-muted)' }}>
+                  <div style={{ marginTop: 3, fontSize: 12.5, color: 'var(--text-muted)' }}>
                     e.g., "find indemnification clauses across Acme contracts"
                   </div>
                 </div>
@@ -2865,75 +2873,76 @@ Rules:
             </div>
 
             {/* ─── Step-numbered toolbar — 1. Visualize · context · 3. Refine · 4. Move ─── */}
-            <div style={{
-              maxWidth: 1080, margin: '0 auto', padding: '0 28px 14px',
-              display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap',
-            }}>
-              {/* 1. Visualize — List/Grid toggle (visual only — list is the default render) */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", letterSpacing: '0.06em' }}>1. Visualize</span>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 0, padding: 0, borderRadius: 10, border: '1px solid var(--border)', background: '#fff', overflow: 'hidden' }}>
-                  <button style={{
-                    padding: '7px 14px', fontSize: 12, fontFamily: "inherit",
-                    fontWeight: 500, background: 'var(--navy)', color: '#fff',
-                    border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6,
-                  }}>
-                    List
-                  </button>
-                  <button style={{
-                    padding: '7px 14px', fontSize: 12, fontFamily: "inherit",
-                    fontWeight: 500, background: '#fff', color: 'var(--text-secondary)',
-                    border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6,
-                  }}>
-                    Grid
+            <div style={{ maxWidth: 1080, margin: '0 auto', padding: '0 28px 0' }}>
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 22, flexWrap: 'wrap',
+                padding: '14px 18px',
+                border: '1px solid #e6e7ec', borderBottom: 'none',
+                borderRadius: '12px 12px 0 0',
+                background: '#fafaf8',
+                fontSize: 13,
+              }}>
+                {/* 1. Visualize — List/Grid toggle */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>1. Visualize</span>
+                  <div style={{ display: 'inline-flex', gap: 0, borderRadius: 8, padding: 3, background: '#fff', border: '1px solid #e2e3e7' }}>
+                    <button style={{
+                      padding: '5px 14px', fontSize: 12.5, fontFamily: "inherit",
+                      fontWeight: 500, background: 'var(--navy)', color: '#fff',
+                      border: 'none', cursor: 'pointer', borderRadius: 6, display: 'inline-flex', alignItems: 'center', gap: 5,
+                    }}>
+                      List
+                    </button>
+                    <button style={{
+                      padding: '5px 14px', fontSize: 12.5, fontFamily: "inherit",
+                      fontWeight: 400, background: 'transparent', color: 'var(--text-secondary)',
+                      border: 'none', cursor: 'pointer', borderRadius: 6, display: 'inline-flex', alignItems: 'center', gap: 5,
+                    }}>
+                      Grid
+                    </button>
+                  </div>
+                </div>
+
+                {/* Context: "{N} docs in {folder}" */}
+                <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
+                  {filteredDocs.length} {filteredDocs.length === 1 ? 'doc' : 'docs'}{currentFolder ? ` in ${currentFolder.name}` : ''}
+                </span>
+
+                <div style={{ flex: 1 }} />
+
+                {/* 3. Refine */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>3. Refine</span>
+                  <button
+                    onClick={() => setOpenFilterMenu(openFilterMenu === 'refine' ? null : 'refine')}
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 6,
+                      padding: '6px 12px', borderRadius: 8,
+                      border: '1px solid #e2e3e7', background: '#fff',
+                      fontSize: 12.5, fontFamily: "inherit",
+                      color: 'var(--text-primary)', cursor: 'pointer',
+                    }}
+                  >
+                    <Search size={12} />
+                    Refine
+                    <ChevronRight size={12} style={{ transform: openFilterMenu === 'refine' ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 150ms', color: 'var(--text-muted)' }} />
                   </button>
                 </div>
-              </div>
 
-              {/* Context: "{N} docs in {folder}" */}
-              <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
-                {filteredDocs.length} {filteredDocs.length === 1 ? 'doc' : 'docs'}{currentFolder ? ` in ${currentFolder.name}` : ''}
-              </span>
-
-              <div style={{ flex: 1 }} />
-
-              {/* 3. Refine — single dropdown collapsing the existing chips */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", letterSpacing: '0.06em' }}>3. Refine</span>
-                <button
-                  onClick={() => setOpenFilterMenu(openFilterMenu === 'refine' ? null : 'refine')}
-                  style={{
-                    display: 'inline-flex', alignItems: 'center', gap: 6,
-                    padding: '7px 14px', borderRadius: 10,
-                    border: '1px solid var(--border)', background: '#fff',
-                    fontSize: 12, fontFamily: "inherit", fontWeight: 500,
-                    color: 'var(--text-primary)', cursor: 'pointer',
-                  }}
-                >
+                {/* 4. Move */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>4. Move</span>
                   <span style={{
-                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                    width: 14, height: 14,
+                    display: 'inline-flex', alignItems: 'center', gap: 6,
+                    padding: '6px 12px', borderRadius: 8,
+                    border: '1px dashed #c8cad0', background: '#fff',
+                    fontSize: 12.5, fontFamily: "inherit",
+                    color: 'var(--text-secondary)',
                   }}>
-                    <Search size={12} />
+                    <FileText size={12} />
+                    Drag a doc into chat
                   </span>
-                  Refine
-                  <ChevronRight size={12} style={{ transform: openFilterMenu === 'refine' ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 150ms', color: 'var(--text-muted)' }} />
-                </button>
-              </div>
-
-              {/* 4. Move — drag-to-chat affordance hint */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", letterSpacing: '0.06em' }}>4. Move</span>
-                <span style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 6,
-                  padding: '7px 14px', borderRadius: 10,
-                  border: '1px dashed var(--border)', background: '#FBFAF7',
-                  fontSize: 12, fontFamily: "inherit",
-                  color: 'var(--text-muted)',
-                }}>
-                  <FileText size={12} />
-                  Drag a doc into chat
-                </span>
+                </div>
               </div>
             </div>
 
@@ -3026,14 +3035,10 @@ Rules:
             </div>
             )}
 
-            {/* Documents list — rich cards */}
-            <div style={{ maxWidth: 1080, margin: '0 auto', padding: '8px 28px 24px' }}>
-              <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-muted)', fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", marginBottom: 8 }}>
-                {currentFolderId ? 'Documents in this folder' : 'All documents'}
-              </div>
-
+            {/* Documents list — rich table */}
+            <div style={{ maxWidth: 1080, margin: '0 auto', padding: '0 28px 24px' }}>
               {filteredDocs.length === 0 ? (
-                <div style={{ padding: '64px 24px', textAlign: 'center', borderRadius: 12, border: '1px dashed var(--border)', background: '#fff' }}>
+                <div style={{ padding: '64px 24px', textAlign: 'center', borderRadius: '0 0 12px 12px', border: '1px solid #e6e7ec', borderTop: 'none', background: '#fff' }}>
                   <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'var(--ice-warm)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
                     <FolderOpen size={26} style={{ color: 'var(--navy)' }} />
                   </div>
@@ -3047,7 +3052,13 @@ Rules:
                   )}
                 </div>
               ) : (
-                <div style={{ background: '#fff', borderRadius: 12, border: '1px solid var(--border)', overflow: 'hidden' }}>
+                <div style={{ background: '#fff', borderRadius: '0 0 12px 12px', border: '1px solid #e6e7ec', borderTop: 'none', overflow: 'hidden' }}>
+                  {/* Column headers */}
+                  <div style={{ display: 'flex', alignItems: 'center', padding: '11px 18px', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '1px', textTransform: 'uppercase', borderBottom: '1px solid #f0f0f3' }}>
+                    <div style={{ flex: 1 }}>Document</div>
+                    <div style={{ width: 130 }}>Last Used</div>
+                    <div style={{ width: 170 }} />
+                  </div>
                   {filteredDocs.map((d, idx) => {
                     const isOwner = d.ownerId === currentUserId;
                     const canEdit = isOrgAdmin || isOwner || !d.ownerId;
@@ -3062,57 +3073,58 @@ Rules:
                       <div
                         key={d.id}
                         style={{
-                          display: 'flex', alignItems: 'flex-start', gap: 14,
-                          padding: '14px 16px',
-                          borderBottom: idx < filteredDocs.length - 1 ? '1px solid #EEF0F3' : 'none',
-                          background: isSelected ? 'rgba(10,36,99,0.04)' : '#fff',
+                          display: 'flex', alignItems: 'center', gap: 12,
+                          padding: '14px 18px',
+                          borderBottom: idx < filteredDocs.length - 1 ? '1px solid #f3f3f5' : 'none',
+                          background: isSelected ? '#fdf6e7' : '#fff',
                           cursor: 'pointer',
                           transition: 'background 100ms',
                         }}
-                        onMouseEnter={(e) => { if (!isSelected) e.currentTarget.style.background = 'rgba(10,36,99,0.025)'; }}
+                        onMouseEnter={(e) => { if (!isSelected) e.currentTarget.style.background = '#fafafa'; }}
                         onMouseLeave={(e) => { if (!isSelected) e.currentTarget.style.background = '#fff'; }}
                         onClick={() => setSelectedDocId(isSelected ? null : d.id)}
                       >
-                        {/* File type badge */}
-                        <div style={{ width: 44, height: 44, borderRadius: 8, background: badge.bg, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1 }}>
-                          <span style={{ fontSize: 9, fontWeight: 700, color: badge.color, fontFamily: "'IBM Plex Mono', monospace", letterSpacing: '0.03em', lineHeight: 1 }}>{badge.label}</span>
+                        {/* File type icon */}
+                        <div style={{ width: 36, height: 44, borderRadius: 6, background: badge.color, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          <span style={{ fontSize: 9, fontWeight: 700, color: '#fff', fontFamily: "'IBM Plex Mono', monospace", letterSpacing: '0.5px', lineHeight: 1 }}>{badge.label}</span>
                         </div>
 
                         {/* Main content */}
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-                            <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1 }}>
-                              {d.name}
-                            </span>
+                          <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 6, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {d.name}
                           </div>
                           {tags.length > 0 && (
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 5 }}>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 6 }}>
                               {tags.map((t) => (
                                 <span key={t.label} style={{ display: 'inline-flex', alignItems: 'center', padding: '2px 8px', borderRadius: 999, background: t.bg, color: t.color, fontSize: 11, fontWeight: 500 }}>{t.label}</span>
                               ))}
                             </div>
                           )}
-                          <div style={{ marginTop: 5, fontSize: 12, color: 'var(--text-muted)', display: 'flex', flexWrap: 'wrap', gap: 4, alignItems: 'center' }}>
+                          <div style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'flex', flexWrap: 'wrap', gap: 4, alignItems: 'center' }}>
                             {d.fileSize && <span>{d.fileSize}</span>}
                             {d.fileSize && <span>·</span>}
-                            <span>Owner: {ownerLabel}</span>
-                            {d.createdAt && <><span>·</span><span>Modified {d.createdAt}</span></>}
+                            <span>{ownerLabel}</span>
                           </div>
                         </div>
 
-                        {/* Right-side actions */}
-                        <div onClick={(e) => e.stopPropagation()} style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, marginTop: 2 }}>
-                          <span style={{ fontSize: 12, color: 'var(--text-muted)', minWidth: 42, textAlign: 'right', marginRight: 2 }}>{relativeTime(d.createdAt)}</span>
-                          <button title="Pin" style={{ padding: 4, background: 'none', border: 'none', cursor: 'pointer', display: 'flex', borderRadius: 4, color: 'var(--text-muted)' }}
+                        {/* Last used column */}
+                        <div onClick={(e) => e.stopPropagation()} style={{ width: 130, fontSize: 13, color: 'var(--text-secondary)', flexShrink: 0 }}>
+                          {relativeTime(d.createdAt)}
+                        </div>
+
+                        {/* Actions column */}
+                        <div onClick={(e) => e.stopPropagation()} style={{ width: 170, display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'flex-end', flexShrink: 0 }}>
+                          <button title="Pin" style={{ width: 28, height: 28, borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#fff', border: '1px solid #e6e7ec', cursor: 'pointer', color: 'var(--text-muted)' }}
                             onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--navy)'; }}
                             onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; }}
                           >
-                            <Bookmark size={14} />
+                            <Bookmark size={13} />
                           </button>
                           {onSelect && (
                             <button
                               onClick={(e) => { e.stopPropagation(); onSelect(d); }}
-                              style={{ padding: '5px 12px', borderRadius: 8, background: isDocActive ? '#5CA868' : 'var(--navy)', color: '#fff', border: 'none', fontSize: 12, fontWeight: 500, cursor: 'pointer', whiteSpace: 'nowrap' }}
+                              style={{ padding: '6px 14px', borderRadius: 7, background: isDocActive ? '#5CA868' : 'var(--navy)', color: '#fff', border: 'none', fontSize: 12.5, fontWeight: 500, cursor: 'pointer', whiteSpace: 'nowrap' }}
                             >
                               {isDocActive ? 'Active' : 'Use in chat'}
                             </button>
@@ -3122,7 +3134,7 @@ Rules:
                               <button
                                 onClick={(e) => { e.stopPropagation(); setOpenMenuFor(isMenuOpen ? null : d.id); }}
                                 title="More"
-                                style={{ padding: 4, background: 'none', border: 'none', cursor: 'pointer', display: 'flex', borderRadius: 4 }}
+                                style={{ padding: 4, background: 'none', border: 'none', cursor: 'pointer', display: 'flex', borderRadius: 4, color: 'var(--text-muted)' }}
                                 onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(15,23,42,0.06)'; }}
                                 onMouseLeave={(e) => { e.currentTarget.style.background = 'none'; }}
                               >

@@ -133,6 +133,14 @@ const TYPE_FILTERS: { value: string; label: string }[] = [
   ...Object.entries(PRACTICE_META).map(([key, meta]) => ({ value: key, label: meta.label })),
 ];
 
+const STATUS_FILTER_OPTS: { value: string; label: string }[] = [
+  { value: 'all',           label: 'All' },
+  { value: 'ready_indexed', label: 'Ready (indexed)' },
+  { value: 'ready_shared',  label: 'Ready (shared)' },
+  { value: 'review',        label: 'Needs review' },
+  { value: 'empty',         label: 'No documents' },
+];
+
 const SORT_OPTIONS: { value: string; label: string }[] = [
   { value: 'recent',   label: 'Recent' },
   { value: 'name',     label: 'Name (A → Z)' },
@@ -177,6 +185,7 @@ export default function WorkspacesPage({ onBack, onOpenWorkspace, onToast }: Wor
   const [presetCategory, setPresetCategory] = useState<PracticeAreaKey | null>(null);
   // Toolbar filters
   const [typeFilter, setTypeFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<string>('recent');
 
   useEffect(() => {
@@ -203,6 +212,9 @@ export default function WorkspacesPage({ onBack, onOpenWorkspace, onToast }: Wor
     }
     if (typeFilter !== 'all') {
       list = list.filter((w) => inferPracticeArea(w) === typeFilter);
+    }
+    if (statusFilter !== 'all') {
+      list = list.filter((w) => inferStatus(w).kind === statusFilter);
     }
     list = [...list];
     if (sortBy === 'name') list.sort((a, b) => a.name.localeCompare(b.name));
@@ -231,7 +243,7 @@ export default function WorkspacesPage({ onBack, onOpenWorkspace, onToast }: Wor
     onOpenWorkspace(ws.id);
   };
 
-  const filtersActive = typeFilter !== 'all' || sortBy !== 'recent';
+  const filtersActive = typeFilter !== 'all' || statusFilter !== 'all' || sortBy !== 'recent';
 
   return (
     <div style={{ flex: 1, minWidth: 0, height: '100vh', overflowY: 'auto', background: '#FBFAF7' }}>
@@ -251,10 +263,10 @@ export default function WorkspacesPage({ onBack, onOpenWorkspace, onToast }: Wor
           )}
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 24, flexWrap: 'wrap', marginTop: 10 }}>
             <div style={{ minWidth: 0, flex: 1 }}>
-              <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 36, color: 'var(--navy)', margin: 0, lineHeight: 1.15, letterSpacing: '-0.01em' }}>
+              <h1 style={{ fontFamily: "'Fraunces', serif", fontSize: 36, color: 'var(--text-primary)', margin: 0, lineHeight: 1.15, letterSpacing: '-0.5px' }}>
                 One workspace per matter
               </h1>
-              <p style={{ fontSize: 14, color: 'var(--text-muted)', marginTop: 10, lineHeight: 1.55, maxWidth: 720 }}>
+              <p style={{ fontSize: 14.5, color: 'var(--text-secondary)', marginTop: 8, lineHeight: 1.55, maxWidth: 720 }}>
                 Each workspace holds documents, chats, and team for one case, deal, or engagement.
               </p>
             </div>
@@ -280,14 +292,15 @@ export default function WorkspacesPage({ onBack, onOpenWorkspace, onToast }: Wor
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search workspaces by matter, client, member, or document…"
-              style={{ width: '100%', height: 44, borderRadius: 12, border: '1px solid var(--border)', paddingLeft: 38, paddingRight: 14, fontSize: 13, outline: 'none', boxSizing: 'border-box', fontFamily: "'DM Sans', sans-serif", background: '#fff' }}
+              style={{ width: '100%', height: 44, borderRadius: 12, border: '1px solid var(--border)', paddingLeft: 38, paddingRight: 14, fontSize: 13, outline: 'none', boxSizing: 'border-box', fontFamily: "inherit", background: '#fff' }}
             />
           </div>
-          <FilterChip label="Category" value={TYPE_FILTERS.find((o) => o.value === typeFilter)?.label || 'All'} options={TYPE_FILTERS} onChange={setTypeFilter} />
-          <FilterChip label="Sort"     value={SORT_OPTIONS.find((o) => o.value === sortBy)?.label || 'Recent'} options={SORT_OPTIONS} onChange={setSortBy} />
+          <FilterChip label="Type"   value={TYPE_FILTERS.find((o) => o.value === typeFilter)?.label || 'All'} options={TYPE_FILTERS} onChange={setTypeFilter} />
+          <FilterChip label="Status" value={STATUS_FILTER_OPTS.find((o) => o.value === statusFilter)?.label || 'All'} options={STATUS_FILTER_OPTS} onChange={setStatusFilter} />
+          <FilterChip label="Sort"   value={SORT_OPTIONS.find((o) => o.value === sortBy)?.label || 'Recent'} options={SORT_OPTIONS} onChange={setSortBy} />
           {filtersActive && (
             <button
-              onClick={() => { setTypeFilter('all'); setSortBy('recent'); }}
+              onClick={() => { setTypeFilter('all'); setStatusFilter('all'); setSortBy('recent'); }}
               style={{ background: 'none', border: 'none', padding: '6px 8px', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 12 }}
             >
               Clear filters
@@ -328,8 +341,8 @@ export default function WorkspacesPage({ onBack, onOpenWorkspace, onToast }: Wor
             display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap',
           }}>
             <div style={{ display: 'flex', flexDirection: 'column', minWidth: 220 }}>
-              <span style={{ fontFamily: "'DM Serif Display', serif", fontSize: 18, color: 'var(--navy)' }}>Create from category</span>
-              <span style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>Pick the category that fits the matter, then fill in the details.</span>
+              <span style={{ fontFamily: "'Fraunces', serif", fontSize: 20, color: 'var(--text-primary)', fontWeight: 500 }}>Create from template</span>
+              <span style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 2 }}>Use templates only after checking existing matches.</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginLeft: 'auto' }}>
               {WORKSPACE_CATEGORIES.map((t) => {
@@ -340,14 +353,14 @@ export default function WorkspacesPage({ onBack, onOpenWorkspace, onToast }: Wor
                     onClick={() => { setPresetCategory(t.id); setCreating(true); }}
                     style={{
                       display: 'inline-flex', alignItems: 'center', gap: 8,
-                      padding: '9px 14px', borderRadius: 10,
-                      border: '1px solid var(--border)', background: '#fff',
-                      fontSize: 13, fontFamily: "'DM Sans', sans-serif", fontWeight: 500,
+                      padding: '9px 16px', borderRadius: 999,
+                      border: '1px solid #e2e3e7', background: '#fff',
+                      fontSize: 13, fontWeight: 400,
                       color: 'var(--text-primary)', cursor: 'pointer',
                       transition: 'all 150ms ease',
                     }}
-                    onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--navy)'; }}
-                    onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border)'; }}
+                    onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = '#fafafa'; }}
+                    onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = '#fff'; }}
                   >
                     <Icon size={14} style={{ color: t.accent }} />
                     {t.label}
@@ -390,7 +403,7 @@ function FilterChip({ label, value, options, onChange }: {
           display: 'inline-flex', alignItems: 'center', gap: 8,
           padding: '10px 14px', borderRadius: 12,
           border: '1px solid var(--border)', background: '#fff',
-          fontSize: 13, fontFamily: "'DM Sans', sans-serif", fontWeight: 500,
+          fontSize: 13, fontFamily: "inherit", fontWeight: 500,
           color: 'var(--text-primary)', cursor: 'pointer', whiteSpace: 'nowrap',
         }}
       >
@@ -514,20 +527,20 @@ function WorkspaceCard({ workspace, onClick }: { workspace: Workspace; onClick: 
 
       {/* Title + description */}
       <div>
-        <div style={{ fontFamily: "'DM Serif Display', serif", fontSize: 22, color: 'var(--navy)', lineHeight: 1.2, letterSpacing: '-0.01em' }}>
+        <div style={{ fontFamily: "'Fraunces', serif", fontSize: 22, fontWeight: 500, color: 'var(--text-primary)', lineHeight: 1.15, letterSpacing: '-0.4px' }}>
           {workspace.name}
         </div>
         <div style={{
-          fontSize: 13, color: 'var(--text-muted)', marginTop: 8,
+          fontSize: 13.5, color: 'var(--text-secondary)', marginTop: 8,
           display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
-          overflow: 'hidden', textOverflow: 'ellipsis', lineHeight: 1.55,
+          overflow: 'hidden', textOverflow: 'ellipsis', lineHeight: 1.5,
         }}>
           {workspace.description || <span style={{ fontStyle: 'italic' }}>No description.</span>}
         </div>
       </div>
 
       {/* Meta row */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 14, fontSize: 11, color: 'var(--text-muted)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14, fontSize: 12.5, color: 'var(--text-secondary)', paddingTop: 12, borderTop: '1px solid #f0f0f3' }}>
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
           <UsersIcon size={12} /> {members.length} member{members.length !== 1 ? 's' : ''}
         </span>
@@ -583,9 +596,24 @@ function WorkspaceCard({ workspace, onClick }: { workspace: Workspace; onClick: 
         )}
       </div>
 
+      {/* Status banner */}
+      {(() => {
+        const st = inferStatus(workspace);
+        if (st.kind === 'empty') return null;
+        return (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px', borderRadius: 8, fontSize: 13, fontWeight: 500, background: st.bg, color: st.color }}>
+            {st.kind === 'review'
+              ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" strokeDasharray="4 3"/></svg>
+              : <svg width="14" height="14" viewBox="0 0 24 24" fill={st.color}><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm-1.4 14.6L6 12l1.4-1.4 3.2 3.2L16.6 8 18 9.4l-7.4 7.2z"/></svg>
+            }
+            {st.label}
+          </div>
+        );
+      })()}
+
       {/* Access label */}
-      <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--text-muted)' }}>
-        {access.isExternal ? <Globe size={12} /> : <Check size={12} />}
+      <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12.5, color: 'var(--text-secondary)' }}>
+        {access.isExternal ? <Globe size={13} /> : <Check size={13} />}
         Access: {access.label}
       </div>
     </div>
@@ -627,7 +655,7 @@ function CreateWorkspaceModal({ currentUserId, currentUserName, currentUserEmail
       <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 580, maxHeight: '88vh', backgroundColor: 'white', borderRadius: 16, boxShadow: '0 20px 60px rgba(0,0,0,0.25)', zIndex: 71, display: 'flex', flexDirection: 'column' }}>
         <div className="flex items-center justify-between" style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)' }}>
           <div>
-            <h3 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 18, color: 'var(--text-primary)', margin: 0 }}>New Workspace</h3>
+            <h3 style={{ fontFamily: "'Fraunces', serif", fontSize: 18, color: 'var(--text-primary)', margin: 0 }}>New Workspace</h3>
             <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
               Step {step} of 3 · {step === 1 ? 'Details' : step === 2 ? 'Add members' : 'Add documents'}
             </p>
@@ -751,7 +779,7 @@ function StepDetails({ name, setName, description, setDescription, category, set
 }) {
   const [nameError, setNameError] = useState('');
   const [catOpen, setCatOpen] = useState(false);
-  const inputStyle: React.CSSProperties = { width: '100%', height: 40, border: '1px solid var(--border)', borderRadius: 8, padding: '0 12px', fontSize: 13, outline: 'none', boxSizing: 'border-box', fontFamily: "'DM Sans', sans-serif" };
+  const inputStyle: React.CSSProperties = { width: '100%', height: 40, border: '1px solid var(--border)', borderRadius: 8, padding: '0 12px', fontSize: 13, outline: 'none', boxSizing: 'border-box', fontFamily: "inherit" };
   const labelStyle: React.CSSProperties = { fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 };
   const currentCat = category ? WORKSPACE_CATEGORIES.find((c) => c.id === category) : null;
   return (
@@ -871,7 +899,7 @@ function StepMembers({ currentUserId, currentUserName, currentUserEmail, isOrgAd
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       <div>
-        <h3 style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 15, fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>Add team members</h3>
+        <h3 style={{ fontFamily: "inherit", fontSize: 15, fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>Add team members</h3>
         <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>Who is working on this matter?</p>
       </div>
 
@@ -906,7 +934,7 @@ function StepMembers({ currentUserId, currentUserName, currentUserEmail, isOrgAd
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Search by name or email..."
-            style={{ width: '100%', height: 38, borderRadius: 8, border: '1px solid var(--border)', paddingLeft: 34, fontSize: 13, outline: 'none', boxSizing: 'border-box', fontFamily: "'DM Sans', sans-serif" }}
+            style={{ width: '100%', height: 38, borderRadius: 8, border: '1px solid var(--border)', paddingLeft: 34, fontSize: 13, outline: 'none', boxSizing: 'border-box', fontFamily: "inherit" }}
           />
         </div>
         <div style={{ maxHeight: 240, overflowY: 'auto', marginTop: 8, borderRadius: 10, border: '1px solid var(--border)' }}>
@@ -993,7 +1021,7 @@ function StepDocuments({ docs, setDocs, currentUserId, currentUserName }: {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       <div>
-        <h3 style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 15, fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>Upload workspace documents</h3>
+        <h3 style={{ fontFamily: "inherit", fontSize: 15, fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>Upload workspace documents</h3>
         <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4, lineHeight: 1.5 }}>
           These become the workspace knowledge base. The AI searches these documents first when answering questions in this workspace.
         </p>

@@ -363,10 +363,10 @@ export default function WorkflowsPanel({
         textAlign: 'center',
       }}
     >
-      <div style={{ fontFamily: "'DM Serif Display', serif", fontSize: 26, color: 'var(--navy)' }}>
+      <div style={{ fontFamily: "'Fraunces', serif", fontSize: 22, fontWeight: 500, color: 'var(--text-primary)' }}>
         No workflows match this view
       </div>
-      <p style={{ marginTop: 10, fontSize: 13, color: 'var(--slate)', lineHeight: 1.6 }}>
+      <p style={{ marginTop: 10, fontSize: 13.5, color: 'var(--text-secondary)', lineHeight: 1.55 }}>
         Try a different tab or search, or create a new workflow to get started.
       </p>
       {canCreateWorkflow(ctx) && (
@@ -493,10 +493,10 @@ export default function WorkflowsPanel({
               >
                 <Sparkles size={11} /> AI Pipelines
               </div>
-              <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 28, color: 'var(--navy)', margin: 0, lineHeight: 1.2, letterSpacing: '-0.025em' }}>
+              <h1 style={{ fontFamily: "'Fraunces', serif", fontSize: 32, fontWeight: 500, color: 'var(--text-primary)', margin: 0, lineHeight: 1.15, letterSpacing: '-0.8px' }}>
                 Workflows
               </h1>
-              <p style={{ fontSize: 13, color: 'var(--slate)', marginTop: 10, lineHeight: 1.6, maxWidth: 680 }}>
+              <p style={{ fontSize: 13.5, color: 'var(--text-secondary)', marginTop: 8, lineHeight: 1.55, maxWidth: 700 }}>
                 Chain multiple AI steps into a reusable pipeline — read documents, analyse clauses, check compliance, and produce a structured report, all with one click.
               </p>
               <div
@@ -743,7 +743,7 @@ function StatTile({
           {label}
         </span>
       </div>
-      <div style={{ fontFamily: "'DM Serif Display', serif", fontSize: 18, color: 'var(--navy)', lineHeight: 1.1 }}>
+      <div style={{ fontFamily: "'Fraunces', serif", fontSize: 30, fontWeight: 500, color: 'var(--text-primary)', lineHeight: 1 }}>
         {value}
       </div>
     </button>
@@ -952,10 +952,12 @@ function WorkflowCard({
               </div>
               <div
                 style={{
-                  fontSize: 15,
-                  fontWeight: 700,
-                  color: bodyHovered ? 'var(--gold)' : 'var(--navy)',
-                  lineHeight: 1.3,
+                  fontFamily: "'Fraunces', serif",
+                  fontSize: 19,
+                  fontWeight: 500,
+                  letterSpacing: '-0.3px',
+                  color: bodyHovered ? 'var(--gold)' : 'var(--text-primary)',
+                  lineHeight: 1.15,
                   marginTop: 4,
                   transition: 'color 150ms ease',
                 }}
@@ -1364,7 +1366,7 @@ function WorkflowDetailDrawer({
         <div style={{ padding: '24px 24px 18px', borderBottom: '1px solid var(--ice)', background: 'linear-gradient(180deg, #FFFFFF 0%, #F9FBFD 100%)' }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
             <div style={{ minWidth: 0 }}>
-              <h2 style={{ margin: 0, fontFamily: "'DM Serif Display', serif", fontSize: 26, lineHeight: 1.15, color: 'var(--navy)', letterSpacing: '-0.02em' }}>
+              <h2 style={{ margin: 0, fontFamily: "'Fraunces', serif", fontSize: 24, fontWeight: 500, lineHeight: 1.15, color: 'var(--text-primary)', letterSpacing: '-0.5px' }}>
                 {template.name}
               </h2>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 10 }}>
