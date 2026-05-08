@@ -752,8 +752,9 @@ function Sidebar({ activeKey, onOpenChat, onOpenPromptTemplates, onOpenClients, 
                         {t.searchSnippet}
                       </div>
                     ) : (
-                      <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>
-                        {t.updatedAt} &middot; {t.messageCount} msgs
+                      <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2, display: 'flex', alignItems: 'center', gap: 4 }}>
+                        {t.messageCount === 0 && <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#22C55E', flexShrink: 0, display: 'inline-block' }} />}
+                        <span>{t.updatedAt}{t.messageCount > 0 ? ` · ${t.messageCount} msgs` : ''}</span>
                       </div>
                     ))}
                   </div>
@@ -4367,8 +4368,8 @@ function EmptyState() {
     <div className="px-4 sm:px-6" style={{ paddingTop: '12vh', paddingBottom: 24 }}>
       <div style={{ maxWidth: 880, width: '100%', margin: '0 auto' }}>
         <div style={{ textAlign: 'center' }}>
-          <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'linear-gradient(135deg, #C9A84C 0%, #E8D48B 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 10px', boxShadow: '0 2px 8px rgba(201, 168, 76, 0.24)' }}>
-            <Sparkles size={17} color="#fff" />
+          <div style={{ margin: '0 auto 16px', display: 'flex', justifyContent: 'center' }}>
+            <Sparkles size={32} style={{ color: '#C9A84C' }} />
           </div>
           <h2
             className="text-5xl sm:text-6xl"
@@ -6440,7 +6441,7 @@ INSTRUCTIONS:
       <div style={{ flex: 1, display: (showTeamPage || showWorkspacesPanel || showWorkflowsPanel || editingWorkflow || showDocumentVaultPanel || showKnowledgePacksPanel || showPromptPanel) ? 'none' : 'flex', flexDirection: 'column', minWidth: 0 }}>
         <TopNav plan={plan} usage={usage} onOpenSidebar={() => setSidebarOpen(true)} />
 
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#fff', minHeight: 0 }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: 'var(--cream)', minHeight: 0 }}>
           {/* Document limit banners */}
           {docPct >= 100 && (
             <div className="px-3 sm:px-6 md:px-10 py-2.5 flex items-center gap-2 sm:gap-3 flex-wrap" style={{ backgroundColor: '#F9E7E7', borderBottom: '1px solid #F9E7E7' }}>
@@ -6759,8 +6760,8 @@ INSTRUCTIONS:
                 {/* ─── Primary input box ─── */}
                 <div style={{
                   display: 'flex', flexDirection: 'column',
-                  border: '1.5px solid var(--border-mid)', borderRadius: 18, background: '#fff',
-                  padding: '14px 16px', boxShadow: '0 2px 12px rgba(10, 36, 99, 0.04)',
+                  border: '1px solid var(--border)', borderRadius: 18, background: '#fff',
+                  padding: '16px 18px', boxShadow: '0 2px 16px rgba(10, 36, 99, 0.06)',
                 }}>
                   <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
                     <textarea
@@ -7018,8 +7019,8 @@ INSTRUCTIONS:
                 {/* ─── Optional box: Upload + Source + Pack repeats + Quick starts ─── */}
                 <div style={{
                   marginTop: 14,
-                  border: '1.5px solid var(--border-mid)', borderRadius: 14, background: '#fff',
-                  padding: '14px 16px',
+                  border: '1px solid var(--border)', borderRadius: 14, background: '#fff',
+                  padding: '14px 18px',
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
                     <span style={{
@@ -7129,7 +7130,7 @@ INSTRUCTIONS:
                                 }}
                                 style={{
                                   display: 'inline-flex', alignItems: 'center', gap: 8,
-                                  padding: '8px 14px', borderRadius: 12,
+                                  padding: '8px 16px', borderRadius: 999,
                                   fontSize: 13, fontFamily: "'DM Sans', sans-serif", fontWeight: 500,
                                   border: '1px solid var(--border)', background: '#fff',
                                   color: 'var(--text-primary)', cursor: 'pointer', whiteSpace: 'nowrap',
@@ -7667,8 +7668,9 @@ INSTRUCTIONS:
                 primary actions; the remaining intents are reachable via the
                 input-box intent dropdown (with verb buckets + descriptions). */}
 
-            <div style={{ textAlign: 'center', fontSize: 11, color: 'var(--text-muted)', marginTop: showEmptyState ? 18 : 6, lineHeight: 1.45 }}>
-              YourAI may produce inaccurate information. Always verify critical outputs. <strong>Private &amp; encrypted.</strong>
+            <div style={{ textAlign: 'center', fontSize: 12, color: 'var(--text-muted)', marginTop: showEmptyState ? 18 : 6, lineHeight: 1.45, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+              <Lock size={12} style={{ flexShrink: 0 }} />
+              <span>Private &amp; encrypted. Verify critical outputs.</span>
             </div>
           </div>
 
