@@ -508,7 +508,7 @@ function Sidebar({ activeKey, onOpenChat, onOpenPromptTemplates, onOpenClients, 
         onMouseLeave={() => setHoveredItem(null)}
         style={{
           display: 'flex', alignItems: 'center', gap: 8,
-          height: 32, padding: '7px 8px 7px 10px', borderRadius: 6,
+          height: 38, padding: '7px 8px 7px 10px', borderRadius: 8,
           cursor: item.onClick ? 'pointer' : 'default',
           userSelect: 'none',
           background: isActive ? 'rgba(11,29,58,0.06)' : isHovered ? 'rgba(10, 36, 99, 0.04)' : 'transparent',
@@ -516,8 +516,8 @@ function Sidebar({ activeKey, onOpenChat, onOpenPromptTemplates, onOpenClients, 
           transition: 'background 150ms ease, border-color 150ms ease, border-left-color 150ms ease',
         }}
       >
-        <Icon size={14} style={{ color: isActive ? 'var(--text-primary)' : 'var(--text-muted)', flexShrink: 0 }} />
-        <span style={{ flex: 1, fontSize: 13, fontWeight: isActive ? 500 : 400, color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+        <Icon size={16} style={{ color: isActive ? 'var(--text-primary)' : 'var(--text-muted)', flexShrink: 0 }} />
+        <span style={{ flex: 1, fontSize: 14, fontWeight: isActive ? 500 : 400, color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
           {item.label}
         </span>
         {item.badge && (
@@ -526,7 +526,7 @@ function Sidebar({ activeKey, onOpenChat, onOpenPromptTemplates, onOpenClients, 
           </span>
         )}
         {item.rightText && !item.badge && (
-          <span style={{ fontSize: 11, color: 'var(--text-muted)', flexShrink: 0 }}>
+          <span style={{ fontSize: 12, color: 'var(--text-muted)', flexShrink: 0 }}>
             {item.rightText}
           </span>
         )}
@@ -543,7 +543,7 @@ function Sidebar({ activeKey, onOpenChat, onOpenPromptTemplates, onOpenClients, 
         padding: '0 8px', marginBottom: 4, cursor: 'pointer', userSelect: 'none',
       }}
     >
-      <span style={{ fontSize: 10, fontWeight: 500, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+      <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
         {label}
       </span>
       <ChevronDown size={12} style={{
@@ -570,11 +570,11 @@ function Sidebar({ activeKey, onOpenChat, onOpenPromptTemplates, onOpenClients, 
       )}
     <div
       className={`fixed inset-y-0 left-0 z-40 transform transition-transform md:relative md:translate-x-0 md:flex ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}
-      style={{ width: 248, minWidth: 248, background: '#fff', borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}
+      style={{ width: 300, minWidth: 300, background: '#fff', borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}
     >
       {/* ═══ ZONE 1 — Header ═══ */}
-      <div style={{ padding: '14px 12px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <span style={{ fontFamily: "'DM Serif Display', serif", fontSize: 18 }}>
+      <div style={{ padding: '16px 14px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <span style={{ fontFamily: "'DM Serif Display', serif", fontSize: 22 }}>
           <span style={{ color: 'var(--navy)' }}>Your</span><span style={{ color: '#C9A84C' }}>AI</span>
         </span>
         {/* Close button — mobile only */}
@@ -590,13 +590,13 @@ function Sidebar({ activeKey, onOpenChat, onOpenPromptTemplates, onOpenClients, 
 
       {/* ═══ ZONE 1.5 — Search Chats (top-level) ═══ */}
       {!isExternalUser && (
-        <div style={{ padding: '12px 12px 0', position: 'relative' }}>
+        <div style={{ padding: '12px 14px 0', position: 'relative' }}>
           <Search size={14} style={{ position: 'absolute', left: 24, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
           <input
             value={threadSearch}
             onChange={(e) => onThreadSearchChange(e.target.value)}
             placeholder="Search Chats"
-            style={{ width: '100%', height: 36, borderRadius: 8, border: '1px solid var(--border)', paddingLeft: 34, paddingRight: 10, fontSize: 13, outline: 'none', boxSizing: 'border-box', fontFamily: "'DM Sans', sans-serif", color: 'var(--text-primary)', background: '#fff' }}
+            style={{ width: '100%', height: 40, borderRadius: 8, border: '1px solid var(--border)', paddingLeft: 34, paddingRight: 10, fontSize: 14, outline: 'none', boxSizing: 'border-box', fontFamily: "'DM Sans', sans-serif", color: 'var(--text-primary)', background: '#fff' }}
           />
         </div>
       )}
@@ -606,15 +606,15 @@ function Sidebar({ activeKey, onOpenChat, onOpenPromptTemplates, onOpenClients, 
           chats, which have their own 'New chat' button inside the workspace
           sidebar. Hide this CTA for them. */}
       {!isExternalUser && (
-      <div style={{ padding: '10px 12px 0' }}>
+      <div style={{ padding: '10px 14px 0' }}>
         <button
           onClick={onNewThread}
           style={{
-            width: '100%', height: 40, borderRadius: 10,
+            width: '100%', height: 46, borderRadius: 10,
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             padding: '0 12px', background: 'var(--navy)',
             border: 'none',
-            fontSize: 13, fontWeight: 500, color: '#fff',
+            fontSize: 15, fontWeight: 500, color: '#fff',
             cursor: 'pointer', transition: 'background 150ms ease, box-shadow 150ms ease',
             boxShadow: '0 1px 2px rgba(10, 36, 99, 0.18)',
           }}
@@ -633,7 +633,7 @@ function Sidebar({ activeKey, onOpenChat, onOpenPromptTemplates, onOpenClients, 
       )}
 
       {/* ═══ Scrollable area: sections ═══ */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '12px 12px 0', display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div style={{ flex: 1, overflowY: 'auto', padding: '14px 14px 0', display: 'flex', flexDirection: 'column', gap: 14 }}>
 
         {/* ═══ ZONE 3 — WORKSPACE Section ═══ */}
         <div>
@@ -667,7 +667,7 @@ function Sidebar({ activeKey, onOpenChat, onOpenPromptTemplates, onOpenClients, 
         {adminItems.length > 0 && (
           <div>
             <div style={{ display: 'flex', alignItems: 'center', padding: '0 8px', marginBottom: 4 }}>
-              <span style={{ fontSize: 10, fontWeight: 500, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 Admin
               </span>
             </div>
@@ -682,7 +682,7 @@ function Sidebar({ activeKey, onOpenChat, onOpenPromptTemplates, onOpenClients, 
         {!isExternalUser && (
         <div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 8px', marginBottom: 4 }}>
-            <span style={{ fontSize: 10, fontWeight: 500, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
               Recent Chats
             </span>
             <Search size={12} style={{ color: 'var(--text-muted)', opacity: 0.6 }} />
