@@ -6927,12 +6927,12 @@ INSTRUCTIONS:
                     <div style={{ position: 'relative', flex: 1 }} ref={intentDropdownRef}>
                       <button
                         onClick={() => setIsIntentDropdownOpen(v => !v)}
-                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '10px 14px', borderRadius: 999, border: '1px solid var(--chip-border)', background: '#fff', fontSize: 13.5, fontFamily: 'inherit', fontWeight: 500, color: 'var(--text-primary)', cursor: 'pointer', transition: 'background 0.12s ease, border-color 0.12s ease' }}
-                        onMouseEnter={(e) => { e.currentTarget.style.background = '#fafafa'; e.currentTarget.style.borderColor = '#d4d6dc'; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.borderColor = 'var(--chip-border)'; }}
+                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '10px 14px', borderRadius: 10, border: '1.5px solid #d0d3db', background: isIntentDropdownOpen ? '#f0f2f6' : '#f5f6f9', fontSize: 13.5, fontFamily: 'inherit', fontWeight: 500, color: 'var(--text-primary)', cursor: 'pointer', transition: 'background 0.12s ease, border-color 0.12s ease', boxShadow: '0 1px 2px rgba(0,0,0,0.04)' }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = '#eef0f5'; e.currentTarget.style.borderColor = '#b8bcc8'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = isIntentDropdownOpen ? '#f0f2f6' : '#f5f6f9'; e.currentTarget.style.borderColor = '#d0d3db'; }}
                       >
                         <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <MessageSquare size={16} style={{ color: 'var(--text-primary)', flexShrink: 0 }} />
+                          <MessageSquare size={16} style={{ color: 'var(--navy)', flexShrink: 0 }} />
                           {getIntentLabel(activeIntent)}
                         </span>
                         <ChevronDown size={14} style={{ color: 'var(--text-muted)', flexShrink: 0, transform: isIntentDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 150ms' }} />
@@ -6940,7 +6940,7 @@ INSTRUCTIONS:
                       {isIntentDropdownOpen && (
                         <>
                           <div onClick={() => setIsIntentDropdownOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 50 }} />
-                          <div style={{ position: 'absolute', bottom: 'calc(100% + 6px)', left: 0, width: 280, backgroundColor: 'white', borderRadius: 12, border: '1px solid var(--border)', boxShadow: '0 12px 32px rgba(0,0,0,0.14)', zIndex: 51, maxHeight: 420, overflowY: 'auto' }}>
+                          <div style={{ position: 'absolute', top: 'calc(100% + 6px)', left: 0, width: 280, backgroundColor: 'white', borderRadius: 12, border: '1px solid var(--border)', boxShadow: '0 12px 32px rgba(0,0,0,0.14)', zIndex: 51, maxHeight: 420, overflowY: 'auto' }}>
                             {groupIntentsByBucket(INTENTS.map(i => i.id)).map((bucket, bucketIdx) => {
                               const dotColor = BUCKET_COLORS[bucket.label] || 'var(--text-muted)';
                               return (
@@ -6980,12 +6980,12 @@ INSTRUCTIONS:
                     <div style={{ position: 'relative', flex: 1 }} ref={scopeInputRef}>
                       <button
                         onClick={() => setIsScopeOpenInput(v => !v)}
-                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '10px 14px', borderRadius: 999, border: '1px solid var(--chip-border)', background: '#fff', fontSize: 13.5, fontFamily: 'inherit', fontWeight: 500, color: 'var(--text-primary)', cursor: 'pointer', transition: 'background 0.12s ease, border-color 0.12s ease' }}
-                        onMouseEnter={(e) => { e.currentTarget.style.background = '#fafafa'; e.currentTarget.style.borderColor = '#d4d6dc'; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.borderColor = 'var(--chip-border)'; }}
+                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '10px 14px', borderRadius: 10, border: '1.5px solid #d0d3db', background: isScopeOpenInput ? '#f0f2f6' : '#f5f6f9', fontSize: 13.5, fontFamily: 'inherit', fontWeight: 500, color: 'var(--text-primary)', cursor: 'pointer', transition: 'background 0.12s ease, border-color 0.12s ease', boxShadow: '0 1px 2px rgba(0,0,0,0.04)' }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = '#eef0f5'; e.currentTarget.style.borderColor = '#b8bcc8'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = isScopeOpenInput ? '#f0f2f6' : '#f5f6f9'; e.currentTarget.style.borderColor = '#d0d3db'; }}
                       >
                         <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <Search size={16} style={{ color: 'var(--text-primary)', flexShrink: 0 }} />
+                          <Search size={16} style={{ color: 'var(--navy)', flexShrink: 0 }} />
                           {getScopeOption(searchScope).label}
                         </span>
                         <ChevronDown size={14} style={{ color: 'var(--text-muted)', flexShrink: 0, transform: isScopeOpenInput ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 150ms' }} />
@@ -6993,7 +6993,7 @@ INSTRUCTIONS:
                       {isScopeOpenInput && (
                         <>
                           <div onClick={() => setIsScopeOpenInput(false)} style={{ position: 'fixed', inset: 0, zIndex: 50 }} />
-                          <div style={{ position: 'absolute', bottom: 'calc(100% + 8px)', left: 0, width: 290, backgroundColor: '#fff', borderRadius: 14, border: '1px solid var(--border)', boxShadow: '0 12px 32px rgba(0,0,0,0.14)', zIndex: 51, overflow: 'hidden' }}>
+                          <div style={{ position: 'absolute', top: 'calc(100% + 8px)', left: 0, width: 290, backgroundColor: '#fff', borderRadius: 14, border: '1px solid var(--border)', boxShadow: '0 12px 32px rgba(0,0,0,0.14)', zIndex: 51, overflow: 'hidden' }}>
                             <div style={{ padding: '12px 16px 6px', fontSize: 10, color: 'var(--text-muted)', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', letterSpacing: '0.14em', textTransform: 'uppercase' }}>Search within</div>
                             {SCOPE_OPTIONS.map((opt) => {
                               const isCurrent = opt.id === searchScope;
@@ -7027,12 +7027,12 @@ INSTRUCTIONS:
                     <div style={{ position: 'relative', flex: 1 }} ref={kpMenuRef}>
                       <button
                         onClick={() => setIsKpMenuOpen(v => !v)}
-                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '10px 14px', borderRadius: 999, border: '1px solid var(--chip-border)', background: '#fff', fontSize: 13.5, fontFamily: 'inherit', fontWeight: 500, color: 'var(--text-primary)', cursor: 'pointer', transition: 'background 0.12s ease, border-color 0.12s ease' }}
-                        onMouseEnter={(e) => { e.currentTarget.style.background = '#fafafa'; e.currentTarget.style.borderColor = '#d4d6dc'; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.borderColor = 'var(--chip-border)'; }}
+                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '10px 14px', borderRadius: 10, border: '1.5px solid #d0d3db', background: isKpMenuOpen ? '#f0f2f6' : '#f5f6f9', fontSize: 13.5, fontFamily: 'inherit', fontWeight: 500, color: 'var(--text-primary)', cursor: 'pointer', transition: 'background 0.12s ease, border-color 0.12s ease', boxShadow: '0 1px 2px rgba(0,0,0,0.04)' }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = '#eef0f5'; e.currentTarget.style.borderColor = '#b8bcc8'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = isKpMenuOpen ? '#f0f2f6' : '#f5f6f9'; e.currentTarget.style.borderColor = '#d0d3db'; }}
                       >
                         <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <Package size={16} style={{ color: 'var(--text-primary)', flexShrink: 0 }} />
+                          <Package size={16} style={{ color: 'var(--navy)', flexShrink: 0 }} />
                           {activeKnowledgePack ? activeKnowledgePack.name : 'Knowledge Pack'}
                         </span>
                         <ChevronDown size={14} style={{ color: 'var(--text-muted)', flexShrink: 0, transform: isKpMenuOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 150ms' }} />
@@ -7043,7 +7043,7 @@ INSTRUCTIONS:
                         return (
                           <>
                             <div onClick={() => { setIsKpMenuOpen(false); setKpQuery(''); }} style={{ position: 'fixed', inset: 0, zIndex: 50 }} />
-                            <div style={{ position: 'absolute', bottom: 'calc(100% + 8px)', right: 0, width: 280, backgroundColor: '#fff', borderRadius: 12, border: '1px solid var(--border)', boxShadow: '0 12px 32px rgba(0,0,0,0.14)', zIndex: 51, overflow: 'hidden', display: 'flex', flexDirection: 'column', maxHeight: 360 }}>
+                            <div style={{ position: 'absolute', top: 'calc(100% + 8px)', right: 0, width: 280, backgroundColor: '#fff', borderRadius: 12, border: '1px solid var(--border)', boxShadow: '0 12px 32px rgba(0,0,0,0.14)', zIndex: 51, overflow: 'hidden', display: 'flex', flexDirection: 'column', maxHeight: 360 }}>
                               {knowledgePacks.length > 5 && (
                                 <div style={{ padding: '8px 10px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
                                   <input autoFocus type="text" value={kpQuery} onChange={(e) => setKpQuery(e.target.value)} placeholder="Search packs…" style={{ width: '100%', padding: '6px 10px', borderRadius: 8, border: '1px solid var(--border)', fontSize: 12, fontFamily: 'inherit', outline: 'none' }} onClick={(e) => e.stopPropagation()} />
