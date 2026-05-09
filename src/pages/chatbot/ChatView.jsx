@@ -462,12 +462,6 @@ function Sidebar({ activeKey, onOpenChat, onOpenPromptTemplates, onOpenClients, 
   //      "ask your admin to add people" state rather than a dead link)
   //   + New chat is rendered separately in Zone 2 (visible to all)
   const workspaceItems = [
-    // "Home" — first nav item under WORKSPACE, per Figma. Opens General Chat
-    // (same target as Chat; serves as the primary landing entry point).
-    { id: 'home', icon: Home, label: 'Home', onClick: onOpenChat },
-    // "Chat" entry — direct link to General Chat, the post-login default
-    // surface. (The former tile-based Home page was retired in favour of
-    // landing users directly in chat.)
     { id: 'chat', icon: MessageSquare, label: 'Chat', onClick: onOpenChat },
     { id: 'workspaces', icon: Briefcase, label: 'Workspaces', rightText: String(workspaceCount ?? 0), onClick: onOpenWorkspaces },
     !isExternalUser && { id: 'invite-team', icon: UserPlus, label: 'Invite Team', rightText: memberCount != null ? String(memberCount) : undefined, onClick: onOpenInviteTeam },
@@ -902,14 +896,14 @@ function PromptTemplatesPanel({ templates, onUsePrompt, onClose, onCreateNew, on
     <div style={{ flex: 1, minWidth: 0, height: '100vh', overflowY: 'auto', background: '#FBFAF7', display: 'flex', flexDirection: 'column' }}>
       {/* ── Page chrome bar ── */}
       <div style={{ background: '#fff', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
-        <div style={{ maxWidth: 1100, margin: '0 auto', padding: '28px 36px 24px' }}>
+        <div style={{ padding: '28px 36px 24px' }}>
           <button
             onClick={onClose}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '8px 18px', borderRadius: 8, background: 'var(--navy)', border: 'none', cursor: 'pointer', color: '#fff', fontSize: 13, fontWeight: 500, marginBottom: 12 }}
-            onMouseEnter={e => { e.currentTarget.style.background = '#07183F'; }}
-            onMouseLeave={e => { e.currentTarget.style.background = 'var(--navy)'; }}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 13px', borderRadius: 7, border: '1px solid var(--border)', background: '#fff', cursor: 'pointer', color: 'var(--text-secondary)', fontSize: 13, fontWeight: 400, marginBottom: 12 }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--navy)'; e.currentTarget.style.color = 'var(--navy)'; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
           >
-            <ArrowLeft size={14} /> Back to chat
+            <ArrowLeft size={13} /> Back to chat
           </button>
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 24, flexWrap: 'wrap' }}>
             <div style={{ minWidth: 0, flex: 1 }}>
@@ -1331,11 +1325,11 @@ function KnowledgePacksPanel({ packs, onClose, onCreateNew, onEdit, onDelete, on
       <div style={{ padding: '12px 28px', borderBottom: '1px solid var(--border)', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
         <button
           onClick={onClose}
-          style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '8px 18px', borderRadius: 8, background: 'var(--navy)', border: 'none', cursor: 'pointer', color: '#fff', fontSize: 13, fontWeight: 500 }}
-          onMouseEnter={(e) => { e.currentTarget.style.background = '#07183F'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--navy)'; }}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 13px', borderRadius: 7, border: '1px solid var(--border)', background: '#fff', cursor: 'pointer', color: 'var(--text-secondary)', fontSize: 13, fontWeight: 400 }}
+          onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--navy)'; e.currentTarget.style.color = 'var(--navy)'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
         >
-          <ArrowLeft size={14} /> Back to chat
+          <ArrowLeft size={13} /> Back to chat
         </button>
         <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", letterSpacing: '0.08em', textTransform: 'uppercase' }}>Knowledge Packs</span>
       </div>
@@ -2660,11 +2654,11 @@ Rules:
       <div style={{ padding: '12px 28px', borderBottom: '1px solid var(--border)', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
         <button
           onClick={onClose}
-          style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '8px 18px', borderRadius: 8, background: 'var(--navy)', border: 'none', cursor: 'pointer', color: '#fff', fontSize: 13, fontWeight: 500 }}
-          onMouseEnter={(e) => { e.currentTarget.style.background = '#07183F'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--navy)'; }}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 13px', borderRadius: 7, border: '1px solid var(--border)', background: '#fff', cursor: 'pointer', color: 'var(--text-secondary)', fontSize: 13, fontWeight: 400 }}
+          onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--navy)'; e.currentTarget.style.color = 'var(--navy)'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
         >
-          <ArrowLeft size={14} /> Back to chat
+          <ArrowLeft size={13} /> Back to chat
         </button>
         <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", letterSpacing: '0.08em', textTransform: 'uppercase' }}>YourVault</span>
       </div>

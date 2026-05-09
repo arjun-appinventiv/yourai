@@ -300,7 +300,6 @@ export default function WorkflowsPanel({
 
   const handleDashboardBack = () => {
     onClose();
-    navigate('/app/dashboard');
   };
 
   const resetTransientState = () => {
@@ -426,18 +425,19 @@ export default function WorkflowsPanel({
               display: 'inline-flex',
               alignItems: 'center',
               gap: 6,
-              padding: '6px 10px',
-              marginLeft: -10,
-              borderRadius: 8,
-              background: 'transparent',
-              border: 'none',
-              color: 'var(--muted)',
+              padding: '6px 13px',
+              borderRadius: 7,
+              background: '#fff',
+              border: '1px solid var(--border)',
+              color: 'var(--text-secondary)',
               fontSize: 13,
-              fontWeight: 500,
+              fontWeight: 400,
               cursor: 'pointer',
             }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--navy)'; (e.currentTarget as HTMLButtonElement).style.color = 'var(--navy)'; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border)'; (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-secondary)'; }}
           >
-            <ArrowLeft size={14} /> Dashboard
+            <ArrowLeft size={13} /> Back to chat
           </button>
 
           {canCreateWorkflow(ctx) && (

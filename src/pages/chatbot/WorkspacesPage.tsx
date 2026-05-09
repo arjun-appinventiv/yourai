@@ -254,11 +254,11 @@ export default function WorkspacesPage({ onBack, onOpenWorkspace, onToast }: Wor
           {!isExternalUser && (
             <button
               onClick={onBack}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '8px 18px', borderRadius: 8, background: 'var(--navy)', border: 'none', cursor: 'pointer', color: '#fff', fontSize: 13, fontWeight: 500 }}
-              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = '#07183F'; }}
-              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = 'var(--navy)'; }}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 13px', borderRadius: 7, border: '1px solid var(--border)', background: '#fff', cursor: 'pointer', color: 'var(--text-secondary)', fontSize: 13, fontWeight: 400 }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--navy)'; (e.currentTarget as HTMLButtonElement).style.color = 'var(--navy)'; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border)'; (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-secondary)'; }}
             >
-              <ArrowLeft size={14} /> Back to chat
+              <ArrowLeft size={13} /> Back to chat
             </button>
           )}
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 24, flexWrap: 'wrap', marginTop: 10 }}>
