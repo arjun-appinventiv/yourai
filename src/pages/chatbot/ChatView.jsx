@@ -2679,7 +2679,7 @@ Rules:
               already conveys the key fields. */}
       <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
         {/* ── LEFT RAIL: Matters / Filter / My Folders ── */}
-        <div style={{ width: 260, flexShrink: 0, borderRight: '1px solid var(--border)', background: '#FAF8F4', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <div style={{ width: 300, flexShrink: 0, borderRight: '1px solid var(--border)', background: '#FAF8F4', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           <div style={{ flex: 1, overflowY: 'auto', paddingBottom: 16 }}>
             {/* MATTERS section */}
             {(() => {
@@ -2699,8 +2699,8 @@ Rules:
               return (
                 <>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 16px 8px' }}>
-                    <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}>Matters</span>
-                    <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--gold)', letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}>{MATTERS.filter(m => m.id !== 'm5').length} Active</span>
+                    <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}>Matters</span>
+                    <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--gold)', letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}>{MATTERS.filter(m => m.id !== 'm5').length} Active</span>
                   </div>
                   {MATTERS.map((matter) => {
                     const isExpanded = expandedMatters.has(matter.id);
@@ -2717,10 +2717,10 @@ Rules:
                           onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(15,23,42,0.04)'; }}
                           onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
                         >
-                          <ChevronRight size={12} style={{ color: 'var(--text-muted)', flexShrink: 0, transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 150ms' }} />
-                          <span style={{ width: 8, height: 8, borderRadius: '50%', background: matter.color, flexShrink: 0 }} />
-                          <span style={{ flex: 1, fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{matter.name}</span>
-                          <span style={{ fontSize: 12, color: 'var(--text-muted)', flexShrink: 0 }}>{matter.count}</span>
+                          <ChevronRight size={13} style={{ color: 'var(--text-muted)', flexShrink: 0, transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 150ms' }} />
+                          <span style={{ width: 9, height: 9, borderRadius: '50%', background: matter.color, flexShrink: 0 }} />
+                          <span style={{ flex: 1, fontSize: 14, fontWeight: 500, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{matter.name}</span>
+                          <span style={{ fontSize: 13, color: 'var(--text-muted)', flexShrink: 0 }}>{matter.count}</span>
                         </div>
                         {isExpanded && matter.folders.length > 0 && (
                           <div style={{ marginLeft: 12 }}>
@@ -2735,19 +2735,19 @@ Rules:
                                   onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = 'rgba(15,23,42,0.06)'; }}
                                   onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
                                 >
-                                  <Folder size={13} style={{ color: isActive ? '#d4b96a' : '#c9a04a', flexShrink: 0 }} />
-                                  <span style={{ flex: 1, fontSize: 12.5, color: isActive ? '#fff' : 'var(--text-primary)', fontWeight: isActive ? 600 : 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sf.name}</span>
-                                  <span style={{ fontSize: 11, color: isActive ? 'rgba(255,255,255,0.65)' : 'var(--text-muted)', flexShrink: 0 }}>{sf.count}</span>
+                                  <Folder size={14} style={{ color: isActive ? '#d4b96a' : '#c9a04a', flexShrink: 0 }} />
+                                  <span style={{ flex: 1, fontSize: 13.5, color: isActive ? '#fff' : 'var(--text-primary)', fontWeight: isActive ? 600 : 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sf.name}</span>
+                                  <span style={{ fontSize: 12, color: isActive ? 'rgba(255,255,255,0.65)' : 'var(--text-muted)', flexShrink: 0 }}>{sf.count}</span>
                                   {sf.hasActivity && <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#e55151', flexShrink: 0 }} />}
                                 </div>
                               );
                             })}
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 10px 5px 14px', cursor: 'pointer', margin: '1px 6px', color: 'var(--text-muted)', fontSize: 12 }}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 10px 5px 14px', cursor: 'pointer', margin: '1px 6px', color: 'var(--text-muted)', fontSize: 13 }}
                               onClick={() => setCreatingFolder(true)}
                               onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--navy)'; }}
                               onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; }}
                             >
-                              <Plus size={11} /> Add sub-folder
+                              <Plus size={12} /> Add sub-folder
                             </div>
                           </div>
                         )}
@@ -2760,7 +2760,7 @@ Rules:
 
             {/* FILTER (CROSS-MATTER) section */}
             <div style={{ margin: '12px 10px', border: '1px solid var(--border)', borderRadius: 10, background: '#fff', padding: '12px' }}>
-              <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', marginBottom: 8 }}>Filter (Cross-Matter)</div>
+              <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', marginBottom: 8 }}>Filter (Cross-Matter)</div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                 {[
                   { label: 'Privileged', color: '#e55151' },
@@ -2770,7 +2770,7 @@ Rules:
                   { label: 'Pinned' },
                   { label: 'Mine' },
                 ].map((pill) => (
-                  <button key={pill.label} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 10px', borderRadius: 999, border: '1px solid var(--border)', background: '#fff', fontSize: 12, color: 'var(--text-primary)', cursor: 'pointer', fontFamily: 'inherit' }}
+                  <button key={pill.label} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 10px', borderRadius: 999, border: '1px solid var(--border)', background: '#fff', fontSize: 13, color: 'var(--text-primary)', cursor: 'pointer', fontFamily: 'inherit' }}
                     onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--navy)'; }}
                     onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border)'; }}
                   >
@@ -2784,24 +2784,24 @@ Rules:
             {/* MY FOLDERS section */}
             {(childrenByParent.get(null) || []).length > 0 && (
               <div style={{ margin: '4px 10px 0', border: '1px solid var(--border)', borderRadius: 10, background: '#fff', padding: '12px' }}>
-                <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', marginBottom: 6 }}>My Folders</div>
+                <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', marginBottom: 6 }}>My Folders</div>
                 {(childrenByParent.get(null) || []).map((f) => {
                   const isActive = currentFolderId === f.id;
                   const docCount = documents.filter(d => d.folderId === f.id).length;
                   return (
                     <div key={f.id} onClick={() => setCurrentFolderId(f.id)}
-                      style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', borderRadius: 6, cursor: 'pointer', background: isActive ? 'rgba(10,36,99,0.06)' : 'transparent', transition: 'background 100ms' }}
+                      style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 8px', borderRadius: 6, cursor: 'pointer', background: isActive ? 'rgba(10,36,99,0.06)' : 'transparent', transition: 'background 100ms' }}
                       onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = 'rgba(15,23,42,0.04)'; }}
                       onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = isActive ? 'rgba(10,36,99,0.06)' : 'transparent'; }}
                     >
-                      <Folder size={13} style={{ color: '#c9a04a', flexShrink: 0 }} />
-                      <span style={{ flex: 1, fontSize: 12.5, color: 'var(--text-primary)', fontWeight: isActive ? 600 : 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.name}</span>
-                      <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{docCount}</span>
+                      <Folder size={14} style={{ color: '#c9a04a', flexShrink: 0 }} />
+                      <span style={{ flex: 1, fontSize: 13.5, color: 'var(--text-primary)', fontWeight: isActive ? 600 : 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.name}</span>
+                      <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{docCount}</span>
                     </div>
                   );
                 })}
                 <button onClick={() => setCreatingFolder(true)}
-                  style={{ width: '100%', marginTop: 6, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, fontSize: 11.5, color: 'var(--text-secondary)', background: 'transparent', border: '1px dashed var(--border)', borderRadius: 6, cursor: 'pointer', fontFamily: 'inherit' }}
+                  style={{ width: '100%', marginTop: 6, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, fontSize: 12.5, color: 'var(--text-secondary)', background: 'transparent', border: '1px dashed var(--border)', borderRadius: 6, cursor: 'pointer', fontFamily: 'inherit' }}
                   onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--navy)'; e.currentTarget.style.color = 'var(--navy)'; }}
                   onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
                 >
@@ -3611,17 +3611,14 @@ function AttachMenu({ activePack, activeDocument, activeFolder, folderDocCount, 
 /* ─────────────────── Top Nav ─────────────────── */
 function TopNav({ onOpenSidebar }) {
   return (
-    <div className="px-3 sm:px-4 md:px-6" style={{ height: 50, minHeight: 50, borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff' }}>
-      <div className="flex items-center gap-3 md:gap-4">
-        <button
-          onClick={onOpenSidebar}
-          className="md:hidden p-1 rounded-lg"
-          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}
-          aria-label="Open sidebar"
-        >
-          <Menu size={20} />
-        </button>
-      </div>
+    <div className="md:hidden px-3 sm:px-4" style={{ height: 50, minHeight: 50, borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', background: '#fff' }}>
+      <button
+        onClick={onOpenSidebar}
+        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', padding: 4, borderRadius: 8 }}
+        aria-label="Open sidebar"
+      >
+        <Menu size={20} />
+      </button>
     </div>
   );
 }
