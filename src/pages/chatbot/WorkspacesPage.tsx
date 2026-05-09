@@ -250,7 +250,7 @@ export default function WorkspacesPage({ onBack, onOpenWorkspace, onToast }: Wor
       {/* Page hero — designer note: "Boundary: say exactly what belongs in
           a workspace: docs, chats, members, templates, AI context." */}
       <div style={{ background: '#fff', borderBottom: '1px solid var(--border)' }}>
-        <div style={{ maxWidth: 1180, margin: '0 auto', padding: '28px 36px 24px' }}>
+        <div style={{ padding: '28px 36px 24px' }}>
           {!isExternalUser && (
             <button
               onClick={onBack}
@@ -283,7 +283,7 @@ export default function WorkspacesPage({ onBack, onOpenWorkspace, onToast }: Wor
       </div>
 
       {/* List area */}
-      <div style={{ maxWidth: 1180, margin: '0 auto', padding: '24px 36px 48px' }}>
+      <div style={{ padding: '24px 36px 48px' }}>
         {/* Toolbar: search + filters */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 22, flexWrap: 'wrap' }}>
           <div style={{ position: 'relative', flex: '1 1 320px', minWidth: 260 }}>

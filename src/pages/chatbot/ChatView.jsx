@@ -3500,10 +3500,6 @@ function TopNav({ onOpenSidebar }) {
         >
           <Menu size={20} />
         </button>
-        {/* Small wordmark on top-left (desktop) */}
-        <span className="hidden md:inline-flex" style={{ fontFamily: "'Fraunces', serif", fontSize: 15, letterSpacing: '-0.01em' }}>
-          <span style={{ color: 'var(--navy)' }}>Your</span><span style={{ color: '#C9A84C' }}>AI</span>
-        </span>
       </div>
     </div>
   );

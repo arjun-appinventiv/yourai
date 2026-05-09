@@ -153,7 +153,7 @@ export default function TeamPage({ onBack, onCountChange, onToast }) {
     <div style={{ flex: 1, minWidth: 0, height: '100vh', overflowY: 'auto', background: '#FBFAF7' }}>
       {/* ─── Page header ─── */}
       <div style={{ borderBottom: '1px solid var(--border)', background: '#fff' }}>
-        <div style={{ maxWidth: 1080, margin: '0 auto', padding: '24px 32px 20px' }}>
+        <div style={{ padding: '24px 32px 20px' }}>
           <button
             onClick={onBack}
             style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 8px', marginLeft: -8, borderRadius: 6, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 12 }}
@@ -195,7 +195,7 @@ export default function TeamPage({ onBack, onCountChange, onToast }) {
       </div>
 
       {/* ─── List area ─── */}
-      <div style={{ maxWidth: 1080, margin: '0 auto', padding: '24px 32px 48px' }}>
+      <div style={{ padding: '24px 32px 48px' }}>
         {/* Search bar */}
         <div style={{ position: 'relative', marginBottom: 16 }}>
           <Search size={14} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
