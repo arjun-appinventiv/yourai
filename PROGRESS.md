@@ -32,15 +32,24 @@
 - Header: just the YourAI wordmark (green online dot + user-initial avatar removed)
 - Top-level Search Chats input drives the thread search state
 - New Chat restyled as navy-filled CTA with ⌘N shortcut badge
-- Workspace section: Dashboard (Org Admin), Workspaces, Clients (Org Admin), **Invite Team** (all non-External users — widened from Org-Admin-only so the CTA stays discoverable)
+- Workspace section: Dashboard (Org Admin — opens OrgDashboardPanel, org admins' landing surface on `/chat`), Workspaces, Clients (Org Admin), **Invite Team** (all non-External users — widened from Org-Admin-only so the CTA stays discoverable)
 - Knowledge section: Document vault, Knowledge packs, Workflows, Prompt templates
 - Admin section: Audit Logs, Billing (Org Admin)
 - Recent Chats with dimmed search glyph (the top-level Search Chats already covers it)
 
-### Top bar
+### Top bar / TopNav model selector (2026-05-09)
 - Small `YourAI` wordmark on top-left (balances the right side)
 - Doc counter + subtle vertical divider + `< Main Site` link grouped together
 - Search box on the far right
+- **`TopNav` model selector** (all users, all roles): `YourAI · {model name}` pill always visible. Hamburger is `md:hidden` (mobile only — moved there when model selector was added). 4-model dropdown: Claude 3.7 Sonnet (Default) / Claude 3.5 Haiku (Fast) / GPT-4o / Gemini 1.5 Pro. UI only — no backend wiring. Closes on outside click.
+
+### Org Admin Dashboard (2026-05-09)
+- **`OrgDashboardPanel`** in `ChatView.jsx` — org admins' first view on `/chat` (replaces the general chat empty state for that role).
+- 4 stat cards from live ChatView state: Workspaces / Team Members / Vault Documents / Knowledge Packs.
+- Quick actions (directly below metrics): New Workspace → Workspaces panel; Upload Documents → Document Vault; Add Team Member → Invite Team.
+- Plan Usage bars: Workspaces / Vault Docs / Knowledge Packs / Team Members (limits: 10 / 2000 / 10 / 25).
+- Activity Feed + Plan Usage two-column layout below quick actions.
+- Follows the standard full-page sibling panel pattern — in `closeAllPanels()`, in "hide chat" condition.
 
 ### Workflows — picker, builder, panel (2026-04-24 aashna-reviewed pass, picker + builder rewritten 2026-04-25 from aashna's chat-mode mockups)
 - **Picker (2026-04-25 redesign)**: gold `AI PIPELINES` eyebrow pill + DM Serif title + outlined navy `Running in: Global / Main Site` context pill; right-side StatTiles restacked (uppercase mono label on top, 22px navy value below); filter pills replaced by underline-active tabs with count chip beside each label; rounded-pill search box; **single unified grid** (Featured/Your-Library section split removed) at `repeat(auto-fill, minmax(340px, 1fr))` — no maxWidth cap, naturally reflows from 3 cards across at desktop to 2 / 1 at narrower sizes. Card chrome: practice-area accent restored as a 3px coloured top stripe (Legal=indigo, Compliance=red, Corporate=teal, etc.), 32×32 icon tile, theme-tinted practice-area eyebrow, navy-filled Platform pill, gray-outlined Yours/Your-Org pills, `Clock · N steps · ~Xs` pill, **PIPELINE** section with 28×28 op-icon tiles connected by `→` arrows + `+N more` overflow, 2-line description, `Updated X / Run →` footer. Breadcrumb is `← Dashboard` (was `Back to chat`).
@@ -503,6 +512,38 @@ Reverse chronological. Each entry: *decision — rationale — date*.
 ---
 
 ## Last updated
+
+**2026-05-09** — Chat UX polish + Org Admin Dashboard. Three features shipped across two sessions; one deploy to `yourai/main`.
+
+**1. Removed duplicate pill row from empty-state composer.** The empty-state input had a redundant 3-pill row (Intent / Scope / Pack) duplicating controls already in the Optional box. Removed. Source / Pack selectors in the Optional box also restyled to look like proper clickable chip buttons.
+
+**2. Org Admin Dashboard panel** (`OrgDashboardPanel` in `ChatView.jsx`):
+
+- **Landing**: `useState(isOrgAdmin && initialView !== 'workspaces')` — resolves synchronously from localStorage at mount (RoleContext's `readLocalRegisteredUser` fallback makes this safe even before AuthContext populates). Internal/external users unaffected.
+- **Sidebar nav**: "Dashboard" item at the top of the Workspace section for org admins only (prop `onOpenOrgDashboard`). Active state keyed `'org-dashboard'` via `sidebarActiveKey`.
+- **Panel**: follows the standard full-page sibling pattern — added to `closeAllPanels()` and the "hide chat area" condition. Built inline in ChatView, not imported from `/app/dashboard`.
+
+**3. Static model selector in TopNav.** `YourAI · {model name}` pill always visible for all users. Hamburger moved to `md:hidden` (mobile only). 4-model dropdown (Claude 3.7 Sonnet / 3.5 Haiku / GPT-4o / Gemini 1.5 Pro) — UI only, no backend wiring. Gotcha hit here: `md:hidden` on a div with `display: 'flex'` in an inline `style={{}}` prop **does not work** — inline style specificity overrides Tailwind's responsive hide. Fix: move `display` into the Tailwind class string (`className="md:hidden flex ..."`). Documented as gotcha #33 in CLAUDE.md.
+
+**4. OrgDashboardPanel redesign** (PM: metrics from ChatView features, not portal-level stats):
+
+- **4 stat cards** (live ChatView state, not mockData): Workspaces / Team Members / Vault Documents / Knowledge Packs. Color-coded top borders.
+- **Quick actions directly below metrics**: New Workspace / Upload Documents / Add Team Member (replaces Run Workflow). All three call `closeAllPanels()` then open the real panel.
+- **Classification Queue removed** entirely.
+- **Plan Usage bars**: Workspaces (limit 10) / Vault Docs (limit 2000) / Knowledge Packs (limit 10) / Team Members (limit 25).
+- **Render site** passes live props: `workspaceCount={visibleWorkspaceCount}`, `memberCount={teamMemberCount ?? ORG_USERS.length}`, `vaultCount={documentVault.length}`, `packCount={knowledgePacks.length}`.
+
+**Key decisions**:
+
+- Don't route to `/app/dashboard` — build the panel fresh inside ChatView so it reflects ChatView's own data model.
+- Metrics = what actually exists as product features (Workspaces, Vault Docs, KPs, Team Members) — not portal-level metrics.
+- `isOrgAdmin` is safe as a `useState` initial value because RoleContext resolves synchronously from localStorage (no async gap).
+
+**Bundle**: `index-CHql8uKy.js` (built 2026-05-09, commit `071e0d6`), pushed to `yourai/main`.
+
+**What's next**:
+- Timeline intent removal (still outstanding — 12 touchpoints inventoried across 9 files).
+- Himanshu audit pass on Workflows, Workspaces page, full YourVault, Auth surfaces.
 
 **2026-05-07** — Heavy KP / chat-input bug-fix day. Six deploys to `yourai/main`. Started with the PM still reporting Knowledge Pack grounding broken after yesterday's three-deploy attempt; ended with a comprehensive batch covering every P0 / P1 from a Himanshu deep-audit plus three new asks (thread rename, thread context restore, top-right toasts).
 
