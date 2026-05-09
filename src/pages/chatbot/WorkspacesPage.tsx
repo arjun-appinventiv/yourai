@@ -254,11 +254,11 @@ export default function WorkspacesPage({ onBack, onOpenWorkspace, onToast }: Wor
           {!isExternalUser && (
             <button
               onClick={onBack}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 8px', marginLeft: -8, borderRadius: 6, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 12 }}
-              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-primary)'; }}
-              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)'; }}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '8px 18px', borderRadius: 8, background: 'var(--navy)', border: 'none', cursor: 'pointer', color: '#fff', fontSize: 13, fontWeight: 500 }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = '#07183F'; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = 'var(--navy)'; }}
             >
-              <ArrowLeft size={13} /> Back to chat
+              <ArrowLeft size={14} /> Back to chat
             </button>
           )}
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 24, flexWrap: 'wrap', marginTop: 10 }}>

@@ -510,7 +510,7 @@ function Sidebar({ activeKey, onOpenChat, onOpenPromptTemplates, onOpenClients, 
         onMouseLeave={() => setHoveredItem(null)}
         style={{
           display: 'flex', alignItems: 'center', gap: 8,
-          height: 38, padding: '7px 8px 7px 10px', borderRadius: 8,
+          height: 42, padding: '8px 8px 8px 10px', borderRadius: 8,
           cursor: item.onClick ? 'pointer' : 'default',
           userSelect: 'none',
           background: isActive ? '#ffffff' : isHovered ? 'rgba(15, 28, 63, 0.04)' : 'transparent',
@@ -518,17 +518,17 @@ function Sidebar({ activeKey, onOpenChat, onOpenPromptTemplates, onOpenClients, 
           transition: 'background 150ms ease, box-shadow 150ms ease',
         }}
       >
-        <Icon size={16} style={{ color: isActive ? 'var(--text-primary)' : 'var(--text-muted)', flexShrink: 0 }} />
-        <span style={{ flex: 1, fontSize: 14, fontWeight: isActive ? 500 : 400, color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+        <Icon size={17} style={{ color: isActive ? 'var(--text-primary)' : 'var(--text-muted)', flexShrink: 0 }} />
+        <span style={{ flex: 1, fontSize: 15, fontWeight: isActive ? 500 : 400, color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
           {item.label}
         </span>
         {item.badge && (
-          <span style={{ fontSize: 10, fontWeight: 600, padding: '1px 7px', borderRadius: 999, background: '#E7F3E9', color: '#5CA868', flexShrink: 0 }}>
+          <span style={{ fontSize: 11, fontWeight: 600, padding: '1px 7px', borderRadius: 999, background: '#E7F3E9', color: '#5CA868', flexShrink: 0 }}>
             {item.badge}
           </span>
         )}
         {item.rightText && !item.badge && (
-          <span style={{ fontSize: 12, color: 'var(--text-muted)', flexShrink: 0 }}>
+          <span style={{ fontSize: 13, color: 'var(--text-muted)', flexShrink: 0 }}>
             {item.rightText}
           </span>
         )}
@@ -544,7 +544,7 @@ function Sidebar({ activeKey, onOpenChat, onOpenPromptTemplates, onOpenClients, 
         padding: '0 8px', marginBottom: 4,
       }}
     >
-      <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--section-label)', textTransform: 'uppercase', letterSpacing: '1.2px' }}>
+      <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--section-label)', textTransform: 'uppercase', letterSpacing: '1.2px' }}>
         {label}
       </span>
     </div>
@@ -566,7 +566,7 @@ function Sidebar({ activeKey, onOpenChat, onOpenPromptTemplates, onOpenClients, 
       )}
     <div
       className={`fixed inset-y-0 left-0 z-40 transform transition-transform md:relative md:translate-x-0 md:flex ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}
-      style={{ width: 280, minWidth: 280, background: 'var(--bg-sidebar)', borderRight: '1px solid #e9e2d1', display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}
+      style={{ width: 300, minWidth: 300, background: 'var(--bg-sidebar)', borderRight: '1px solid #e9e2d1', display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}
     >
       {/* ═══ ZONE 1 — Header ═══ */}
       <div style={{ padding: '16px 14px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -638,7 +638,7 @@ function Sidebar({ activeKey, onOpenChat, onOpenPromptTemplates, onOpenClients, 
         {adminItems.length > 0 && (
           <div>
             <div style={{ display: 'flex', alignItems: 'center', padding: '0 8px', marginBottom: 4 }}>
-              <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--section-label)', textTransform: 'uppercase', letterSpacing: '1.2px' }}>
+              <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--section-label)', textTransform: 'uppercase', letterSpacing: '1.2px' }}>
                 Admin
               </span>
             </div>
@@ -653,10 +653,10 @@ function Sidebar({ activeKey, onOpenChat, onOpenPromptTemplates, onOpenClients, 
         {!isExternalUser && (
         <div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 8px', marginBottom: 4 }}>
-            <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--section-label)', textTransform: 'uppercase', letterSpacing: '1.2px' }}>
+            <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--section-label)', textTransform: 'uppercase', letterSpacing: '1.2px' }}>
               Recent Chats
             </span>
-            <Search size={12} style={{ color: 'var(--text-muted)', opacity: 0.7 }} />
+            <Search size={13} style={{ color: 'var(--text-muted)', opacity: 0.7 }} />
           </div>
 
           {/* Recent thread list — 3 max */}
@@ -905,11 +905,11 @@ function PromptTemplatesPanel({ templates, onUsePrompt, onClose, onCreateNew, on
         <div style={{ maxWidth: 1100, margin: '0 auto', padding: '28px 36px 24px' }}>
           <button
             onClick={onClose}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 8px', marginLeft: -8, borderRadius: 6, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 12, marginBottom: 12 }}
-            onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-primary)'; }}
-            onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; }}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '8px 18px', borderRadius: 8, background: 'var(--navy)', border: 'none', cursor: 'pointer', color: '#fff', fontSize: 13, fontWeight: 500, marginBottom: 12 }}
+            onMouseEnter={e => { e.currentTarget.style.background = '#07183F'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'var(--navy)'; }}
           >
-            <ArrowLeft size={13} /> Back to chat
+            <ArrowLeft size={14} /> Back to chat
           </button>
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 24, flexWrap: 'wrap' }}>
             <div style={{ minWidth: 0, flex: 1 }}>
@@ -1331,11 +1331,11 @@ function KnowledgePacksPanel({ packs, onClose, onCreateNew, onEdit, onDelete, on
       <div style={{ padding: '12px 28px', borderBottom: '1px solid var(--border)', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
         <button
           onClick={onClose}
-          style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 8px', marginLeft: -8, borderRadius: 6, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 12 }}
-          onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text-primary)'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; }}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '8px 18px', borderRadius: 8, background: 'var(--navy)', border: 'none', cursor: 'pointer', color: '#fff', fontSize: 13, fontWeight: 500 }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = '#07183F'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--navy)'; }}
         >
-          <ArrowLeft size={13} /> Back to chat
+          <ArrowLeft size={14} /> Back to chat
         </button>
         <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", letterSpacing: '0.08em', textTransform: 'uppercase' }}>Knowledge Packs</span>
       </div>
@@ -2660,11 +2660,11 @@ Rules:
       <div style={{ padding: '12px 28px', borderBottom: '1px solid var(--border)', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
         <button
           onClick={onClose}
-          style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 8px', marginLeft: -8, borderRadius: 6, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 12 }}
-          onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text-primary)'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; }}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '8px 18px', borderRadius: 8, background: 'var(--navy)', border: 'none', cursor: 'pointer', color: '#fff', fontSize: 13, fontWeight: 500 }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = '#07183F'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--navy)'; }}
         >
-          <ArrowLeft size={13} /> Back to chat
+          <ArrowLeft size={14} /> Back to chat
         </button>
         <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", letterSpacing: '0.08em', textTransform: 'uppercase' }}>YourVault</span>
       </div>
