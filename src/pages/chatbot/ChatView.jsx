@@ -25,6 +25,7 @@ import { SAMPLE_PACK_CONTENT } from '../../data/samplePackContent';
 import IntentCard, { isCardIntent, tryParseCardData } from '../../components/chat/cards/IntentCard';
 import WorkflowsPanel from '../../components/chat/WorkflowsPanel';
 import WorkflowBuilder from '../../components/chat/WorkflowBuilder';
+import OrgAdminDashboard from '../org-admin/Dashboard';
 import PreRunModal from '../../components/chat/PreRunModal';
 import WorkflowRunPanel from '../../components/chat/WorkflowRunPanel';
 import IntentArtifactPanel from '../../components/chat/IntentArtifactPanel';
@@ -404,7 +405,7 @@ const riskColors = {
    Layout structure confirmed by Arjun. Not signed off by Ryan.
    All existing nav items preserved — reorganised only. */
 
-function Sidebar({ activeKey, onOpenChat, onOpenPromptTemplates, onOpenClients, onOpenKnowledgePacks, onOpenDocumentVault, onOpenInviteTeam, onOpenAuditLogs, onOpenBilling, onOpenWorkspaces, onOpenWorkflows, promptCount, clientCount, packCount, vaultCount, memberCount, workspaceCount, workflowCount, isOpen, onClose, threads, activeThreadId, onSwitchThread, onNewThread, onDeleteThread, onRenameThread, threadSearch, onThreadSearchChange, onSignOut, runningWorkflow, onViewRunning }) {
+function Sidebar({ activeKey, onOpenChat, onOpenOrgDashboard, onOpenPromptTemplates, onOpenClients, onOpenKnowledgePacks, onOpenDocumentVault, onOpenInviteTeam, onOpenAuditLogs, onOpenBilling, onOpenWorkspaces, onOpenWorkflows, promptCount, clientCount, packCount, vaultCount, memberCount, workspaceCount, workflowCount, isOpen, onClose, threads, activeThreadId, onSwitchThread, onNewThread, onDeleteThread, onRenameThread, threadSearch, onThreadSearchChange, onSignOut, runningWorkflow, onViewRunning }) {
   // Role + permission gating — every nav item decides visibility via hasPermission
   // rather than by comparing role strings directly. See src/lib/roles.ts.
   const { hasPermission, isOrgAdmin, isExternalUser } = useRole();
@@ -462,6 +463,7 @@ function Sidebar({ activeKey, onOpenChat, onOpenPromptTemplates, onOpenClients, 
   //      "ask your admin to add people" state rather than a dead link)
   //   + New chat is rendered separately in Zone 2 (visible to all)
   const workspaceItems = [
+    isOrgAdmin && { id: 'org-dashboard', icon: LayoutDashboard, label: 'Dashboard', onClick: onOpenOrgDashboard },
     { id: 'chat', icon: MessageSquare, label: 'Chat', onClick: onOpenChat },
     { id: 'workspaces', icon: Briefcase, label: 'Workspaces', rightText: String(workspaceCount ?? 0), onClick: onOpenWorkspaces },
     !isExternalUser && { id: 'invite-team', icon: UserPlus, label: 'Invite Team', rightText: memberCount != null ? String(memberCount) : undefined, onClick: onOpenInviteTeam },
@@ -3621,16 +3623,103 @@ function AttachMenu({ activePack, activeDocument, activeFolder, folderDocCount, 
 }
 
 /* ─────────────────── Top Nav ─────────────────── */
+const AI_MODELS = [
+  { id: 'claude-3-7-sonnet', name: 'Claude 3.7 Sonnet', tag: 'Default', desc: 'Most capable — best for complex legal analysis' },
+  { id: 'claude-3-5-haiku', name: 'Claude 3.5 Haiku', tag: 'Fast', desc: 'Faster responses, ideal for quick queries' },
+  { id: 'gpt-4o', name: 'GPT-4o', tag: null, desc: 'OpenAI flagship model' },
+  { id: 'gemini-15-pro', name: 'Gemini 1.5 Pro', tag: null, desc: 'Google\'s advanced multimodal model' },
+];
+
 function TopNav({ onOpenSidebar }) {
+  const [modelOpen, setModelOpen] = React.useState(false);
+  const [selectedModel, setSelectedModel] = React.useState('Claude 3.7 Sonnet');
+  const modelRef = React.useRef(null);
+
+  React.useEffect(() => {
+    if (!modelOpen) return;
+    const handle = (e) => {
+      if (modelRef.current && !modelRef.current.contains(e.target)) setModelOpen(false);
+    };
+    document.addEventListener('mousedown', handle);
+    return () => document.removeEventListener('mousedown', handle);
+  }, [modelOpen]);
+
   return (
-    <div className="md:hidden flex items-center px-3 sm:px-4" style={{ height: 50, minHeight: 50, borderBottom: '1px solid var(--border)', background: '#fff' }}>
+    <div className="flex items-center px-3 sm:px-4" style={{ height: 50, minHeight: 50, borderBottom: '1px solid var(--border)', background: '#fff', gap: 8, flexShrink: 0 }}>
+      {/* Hamburger — mobile only */}
       <button
+        className="md:hidden"
         onClick={onOpenSidebar}
-        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', padding: 4, borderRadius: 8 }}
+        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', padding: 4, borderRadius: 8, flexShrink: 0 }}
         aria-label="Open sidebar"
       >
         <Menu size={20} />
       </button>
+
+      {/* Model selector */}
+      <div style={{ position: 'relative' }} ref={modelRef}>
+        <button
+          onClick={() => setModelOpen(v => !v)}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 7,
+            padding: '6px 11px 6px 9px', borderRadius: 9,
+            border: `1.5px solid ${modelOpen ? 'var(--navy)' : 'var(--border)'}`,
+            background: modelOpen ? 'rgba(15,28,63,0.04)' : '#fff',
+            cursor: 'pointer', fontFamily: 'inherit',
+            transition: 'border-color 0.12s, background 0.12s',
+          }}
+          onMouseEnter={(e) => { if (!modelOpen) { e.currentTarget.style.borderColor = '#b8bcc8'; e.currentTarget.style.background = '#f7f8fb'; } }}
+          onMouseLeave={(e) => { if (!modelOpen) { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.background = '#fff'; } }}
+        >
+          <Sparkles size={13} style={{ color: 'var(--gold)', flexShrink: 0 }} />
+          <span style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--navy)', letterSpacing: '-0.01em' }}>YourAI</span>
+          <span style={{ fontSize: 13, color: '#c4c8d0', fontWeight: 400 }}>·</span>
+          <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-secondary)' }}>{selectedModel}</span>
+          <ChevronDown size={13} style={{ color: 'var(--text-muted)', flexShrink: 0, transform: modelOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 150ms' }} />
+        </button>
+
+        {modelOpen && (
+          <div style={{
+            position: 'absolute', top: 'calc(100% + 8px)', left: 0,
+            width: 310, backgroundColor: '#fff', borderRadius: 14,
+            border: '1px solid var(--border)', boxShadow: '0 12px 32px rgba(0,0,0,0.14)',
+            zIndex: 200, overflow: 'hidden',
+          }}>
+            <div style={{ padding: '10px 14px 6px', fontSize: 10, color: 'var(--text-muted)', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', letterSpacing: '0.14em', textTransform: 'uppercase' }}>
+              AI Model
+            </div>
+            {AI_MODELS.map((m) => {
+              const isCurrent = m.name === selectedModel;
+              return (
+                <div
+                  key={m.id}
+                  onClick={() => { setSelectedModel(m.name); setModelOpen(false); }}
+                  style={{
+                    display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
+                    gap: 10, padding: '10px 14px', cursor: 'pointer',
+                    backgroundColor: isCurrent ? 'rgba(10,36,99,0.04)' : 'transparent',
+                  }}
+                  onMouseEnter={(e) => { if (!isCurrent) e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.02)'; }}
+                  onMouseLeave={(e) => { if (!isCurrent) e.currentTarget.style.backgroundColor = 'transparent'; }}
+                >
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                      <span style={{ fontSize: 13, fontWeight: isCurrent ? 600 : 500, color: isCurrent ? 'var(--navy)' : 'var(--text-primary)' }}>{m.name}</span>
+                      {m.tag && (
+                        <span style={{ fontSize: 10, fontWeight: 600, padding: '1px 7px', borderRadius: 999, background: m.tag === 'Default' ? 'var(--ice-warm)' : '#E7F3E9', color: m.tag === 'Default' ? 'var(--navy)' : '#5CA868', flexShrink: 0 }}>
+                          {m.tag}
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2, lineHeight: 1.4 }}>{m.desc}</div>
+                  </div>
+                  {isCurrent && <Check size={14} style={{ color: 'var(--navy)', flexShrink: 0, marginTop: 2 }} />}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -4541,6 +4630,8 @@ export default function ChatView({ initialView = 'chat' }) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isExternalUser, initialView]);
+  // Org Admin sees the org dashboard on first load; internal/external users skip it
+  const [showOrgDashboard, setShowOrgDashboard] = useState(isOrgAdmin && initialView !== 'workspaces');
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
@@ -6484,10 +6575,12 @@ INSTRUCTIONS:
     setShowClientsPanel(false);
     setShowKnowledgePacksPanel(false);
     setShowDocumentVaultPanel(false);
+    setShowOrgDashboard(false);
     setEditingWorkflow(null);
   };
 
   const sidebarActiveKey = (() => {
+    if (showOrgDashboard) return 'org-dashboard';
     if (showTeamPage) return 'invite-team';
     if (showWorkspacesPanel) return 'workspaces';
     if (showWorkflowsPanel || editingWorkflow) return 'workflows';
@@ -6503,6 +6596,7 @@ INSTRUCTIONS:
       {idleWarning}
       <Sidebar
         activeKey={sidebarActiveKey}
+        onOpenOrgDashboard={() => { closeAllPanels(); setShowOrgDashboard(true); setSidebarOpen(false); }}
         onOpenChat={() => { closeAllPanels(); setSidebarOpen(false); navigate('/chat'); }}
         onOpenPromptTemplates={() => { closeAllPanels(); setShowPromptPanel(true); setSidebarOpen(false); }}
         onOpenClients={() => { closeAllPanels(); setShowClientsPanel(true); setSidebarOpen(false); }}
@@ -6550,7 +6644,7 @@ INSTRUCTIONS:
       {/* Chat main area — hidden when a full-page panel (Team / Workspaces /
           Workflows / Vault / Knowledge Packs / Workflow Builder) is active
           so the sidebar stays visible but the chat UI is replaced. */}
-      <div style={{ flex: 1, display: (showTeamPage || showWorkspacesPanel || showWorkflowsPanel || editingWorkflow || showDocumentVaultPanel || showKnowledgePacksPanel || showPromptPanel) ? 'none' : 'flex', flexDirection: 'column', minWidth: 0 }}>
+      <div style={{ flex: 1, display: (showOrgDashboard || showTeamPage || showWorkspacesPanel || showWorkflowsPanel || editingWorkflow || showDocumentVaultPanel || showKnowledgePacksPanel || showPromptPanel) ? 'none' : 'flex', flexDirection: 'column', minWidth: 0 }}>
         <TopNav plan={plan} usage={usage} onOpenSidebar={() => setSidebarOpen(true)} />
 
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: 'var(--cream)', minHeight: 0 }}>
@@ -7586,7 +7680,7 @@ INSTRUCTIONS:
           run starts and from the sidebar running-strip. Does not
           overlay — it shrinks the chat area so users can keep chatting
           while the workflow runs. ─── */}
-      {runPanelOpen && !showTeamPage && !showWorkspacesPanel && !showWorkflowsPanel && !editingWorkflow && (
+      {runPanelOpen && !showOrgDashboard && !showTeamPage && !showWorkspacesPanel && !showWorkflowsPanel && !editingWorkflow && (
         <WorkflowRunPanel
           userId={currentUserId}
           focusRunId={runPanelFocusId}
@@ -7608,7 +7702,7 @@ INSTRUCTIONS:
           the chat shrinks when open. find_document stays inline. ─── */}
       {(() => {
         if (!activeArtifactMsgId) return null;
-        if (showTeamPage || showWorkspacesPanel || showWorkflowsPanel || editingWorkflow || showDocumentVaultPanel || showKnowledgePacksPanel) return null;
+        if (showOrgDashboard || showTeamPage || showWorkspacesPanel || showWorkflowsPanel || editingWorkflow || showDocumentVaultPanel || showKnowledgePacksPanel) return null;
         const artifactMsg = messages.find((m) => m.id === activeArtifactMsgId);
         if (!artifactMsg || !artifactMsg.cardData || !isCardIntent(artifactMsg.intent) || artifactMsg.intent === 'find_document') return null;
         return (
@@ -7858,6 +7952,29 @@ INSTRUCTIONS:
             setTimeout(() => setToastMsg(''), 3200);
           }}
         />
+      )}
+
+      {/* ─── Org Admin Dashboard Panel ─── */}
+      {showOrgDashboard && (
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, background: '#F8F7F4', overflow: 'hidden' }}>
+          {/* Panel header */}
+          <div style={{ height: 50, minHeight: 50, padding: '0 28px', borderBottom: '1px solid var(--border)', background: '#fff', display: 'flex', alignItems: 'center', gap: 16, flexShrink: 0 }}>
+            <button
+              onClick={() => setShowOrgDashboard(false)}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 13px', borderRadius: 7, border: '1px solid var(--border)', background: '#fff', cursor: 'pointer', color: 'var(--text-secondary)', fontSize: 13, fontWeight: 400, fontFamily: 'inherit' }}
+              onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--navy)'; e.currentTarget.style.color = 'var(--navy)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
+            >
+              <ArrowLeft size={14} />
+              Back to chat
+            </button>
+            <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>Organization Dashboard</span>
+          </div>
+          {/* Dashboard content */}
+          <div style={{ flex: 1, overflowY: 'auto', padding: '28px 40px' }}>
+            <OrgAdminDashboard />
+          </div>
+        </div>
       )}
 
       {/* Plan Comparison Modal */}
