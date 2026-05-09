@@ -2922,11 +2922,14 @@ Rules:
               <div style={{
                 position: 'relative',
                 border: '1.5px solid var(--gold-border)',
-                borderRadius: 12, background: '#fff',
-                padding: '14px 16px',
-                display: 'flex', alignItems: 'flex-start', gap: 14,
+                borderRadius: 14, background: '#fffdf9',
+                padding: '16px 20px',
+                display: 'flex', alignItems: 'center', gap: 16,
+                boxShadow: '0 2px 10px rgba(201,168,76,0.09)',
               }}>
-                <Sparkles size={18} style={{ color: 'var(--gold)', flexShrink: 0, marginTop: 2 }} />
+                <div style={{ width: 40, height: 40, borderRadius: 11, background: 'linear-gradient(135deg, #C9A84C 0%, #e5c465 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 2px 8px rgba(201,168,76,0.32)' }}>
+                  <Sparkles size={18} color="#fff" />
+                </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <input
                     value={askQuery || search}
@@ -2940,17 +2943,23 @@ Rules:
                     }}
                     onKeyDown={(e) => { if (e.key === 'Enter') handleAskAnything(); }}
                     disabled={askLoading}
-                    placeholder="Ask the vault or search documents…"
-                    style={{ width: '100%', height: 24, border: 'none', outline: 'none', fontSize: 14.5, color: 'var(--text-secondary)', background: 'transparent', fontFamily: "inherit" }}
+                    placeholder="Search by file name, description, or ask a question…"
+                    className="no-focus-ring"
+                    style={{ width: '100%', height: 26, border: 'none', outline: 'none', fontSize: 15, color: 'var(--text-primary)', background: 'transparent', fontFamily: "inherit" }}
                   />
-                  <div style={{ marginTop: 3, fontSize: 12.5, color: 'var(--text-muted)' }}>
-                    e.g., "find indemnification clauses across Acme contracts"
+                  <div style={{ marginTop: 4, fontSize: 12, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                      <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#5fb86d', display: 'inline-block', flexShrink: 0 }} />
+                      AI-powered
+                    </span>
+                    <span>·</span>
+                    <span>Searches file names &amp; descriptions across all your documents</span>
                   </div>
                 </div>
                 <kbd style={{
                   display: 'inline-flex', alignItems: 'center', gap: 2,
-                  padding: '4px 8px', borderRadius: 6,
-                  border: '1px solid var(--border)', background: '#FBFAF7',
+                  padding: '5px 9px', borderRadius: 6,
+                  border: '1px solid var(--border)', background: '#fff',
                   fontSize: 11, color: 'var(--text-muted)', fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
                   flexShrink: 0,
                 }}>⌘K</kbd>
@@ -3142,31 +3151,40 @@ Rules:
                 </div>
               ) : (
                 viewMode === 'grid' ? (
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 16, padding: '4px 4px 8px', borderRadius: '0 0 12px 12px', border: '1px solid #e6e7ec', borderTop: 'none', background: '#fff' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 14, padding: '16px', borderRadius: '0 0 12px 12px', border: '1px solid #e6e7ec', borderTop: 'none', background: '#f8f8fb' }}>
                     {filteredDocs.map((d) => {
                       const badge = fileTypeBadge(d.fileName);
                       const isDocActive = activeDocument?.id === d.id;
+                      const ownerLabel = d.ownerId === currentUserId ? 'You' : (d.ownerName || 'Member');
                       return (
                         <div key={d.id}
-                          style={{ padding: 16, borderRadius: 10, border: '1px solid #f0f0f3', background: isDocActive ? '#fdf6e7' : '#fff', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: 10, transition: 'box-shadow 150ms' }}
-                          onMouseEnter={(e) => { e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)'; }}
-                          onMouseLeave={(e) => { e.currentTarget.style.boxShadow = 'none'; }}
+                          style={{ borderRadius: 12, border: isDocActive ? '1.5px solid var(--gold)' : '1px solid #e8e9ee', background: '#fff', cursor: 'pointer', display: 'flex', flexDirection: 'column', overflow: 'hidden', transition: 'box-shadow 150ms, transform 150ms', boxShadow: isDocActive ? '0 0 0 3px rgba(201,168,76,0.12)' : 'none' }}
+                          onMouseEnter={(e) => { e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.10)'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.boxShadow = isDocActive ? '0 0 0 3px rgba(201,168,76,0.12)' : 'none'; e.currentTarget.style.transform = 'translateY(0)'; }}
                         >
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                            <div style={{ width: 36, height: 44, borderRadius: 6, background: badge.color, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                              <span style={{ fontSize: 9, fontWeight: 700, color: '#fff', fontFamily: "'IBM Plex Mono', monospace", letterSpacing: '0.5px' }}>{badge.label}</span>
+                          {/* Card header — doc preview area */}
+                          <div style={{ height: 88, background: badge.color + '16', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', borderBottom: '1px solid #f0f0f4' }}>
+                            <div style={{ width: 46, height: 58, borderRadius: 7, background: badge.color, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', paddingBottom: 8, boxShadow: '0 3px 10px rgba(0,0,0,0.18)', position: 'relative', overflow: 'hidden' }}>
+                              <div style={{ position: 'absolute', top: 0, right: 0, width: 14, height: 14, background: 'rgba(255,255,255,0.25)', borderRadius: '0 7px 0 8px' }} />
+                              <span style={{ fontSize: 9, fontWeight: 800, color: '#fff', fontFamily: "'IBM Plex Mono', monospace", letterSpacing: '0.8px' }}>{badge.label}</span>
                             </div>
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                              <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.name}</div>
-                              <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>{d.fileSize} · {d.ownerId === currentUserId ? 'You' : (d.ownerName || 'Member')}</div>
-                            </div>
+                            {isDocActive && (
+                              <div style={{ position: 'absolute', top: 8, right: 8, background: 'var(--gold)', borderRadius: 5, padding: '2px 7px', fontSize: 9.5, color: '#fff', fontWeight: 700, letterSpacing: '0.04em' }}>Active</div>
+                            )}
                           </div>
-                          {onSelect && (
-                            <button onClick={(e) => { e.stopPropagation(); onSelect(d); }}
-                              style={{ width: '100%', padding: '7px 0', borderRadius: 7, border: 'none', background: 'var(--navy)', color: '#fff', fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }}>
+                          {/* Card body */}
+                          <div style={{ padding: '12px 13px 13px', flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                            <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', lineHeight: 1.35, minHeight: 35 }}>{d.name}</div>
+                            <div style={{ fontSize: 11.5, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 5 }}>
+                              <span>{d.fileSize}</span>
+                              <span style={{ color: '#d4d5da' }}>·</span>
+                              <span>{ownerLabel}</span>
+                            </div>
+                            <button onClick={(e) => { e.stopPropagation(); onSelect ? onSelect(d) : null; }}
+                              style={{ width: '100%', marginTop: 4, padding: '8px 0', borderRadius: 8, border: 'none', background: 'var(--navy)', color: '#fff', fontSize: 12.5, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
                               Use in chat
                             </button>
-                          )}
+                          </div>
                         </div>
                       );
                     })}
