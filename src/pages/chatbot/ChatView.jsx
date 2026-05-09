@@ -3623,7 +3623,7 @@ function AttachMenu({ activePack, activeDocument, activeFolder, folderDocCount, 
 /* ─────────────────── Top Nav ─────────────────── */
 function TopNav({ onOpenSidebar }) {
   return (
-    <div className="md:hidden px-3 sm:px-4" style={{ height: 50, minHeight: 50, borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', background: '#fff' }}>
+    <div className="md:hidden flex items-center px-3 sm:px-4" style={{ height: 50, minHeight: 50, borderBottom: '1px solid var(--border)', background: '#fff' }}>
       <button
         onClick={onOpenSidebar}
         style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', padding: 4, borderRadius: 8 }}
@@ -6914,80 +6914,50 @@ INSTRUCTIONS:
                     })()}
                   </div>
 
-                  {/* Pill row: 3 equal mode / scope / pack pills */}
-                  <div style={{ display: 'flex', gap: 12, marginTop: 16 }}>
+                </div>
 
-                    {/* Pill 1 — Intent/mode */}
-                    <div style={{ position: 'relative', flex: 1 }} ref={intentDropdownRef}>
-                      <button
-                        onClick={() => setIsIntentDropdownOpen(v => !v)}
-                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '10px 14px', borderRadius: 10, border: '1.5px solid #d0d3db', background: isIntentDropdownOpen ? '#f0f2f6' : '#f5f6f9', fontSize: 13.5, fontFamily: 'inherit', fontWeight: 500, color: 'var(--text-primary)', cursor: 'pointer', transition: 'background 0.12s ease, border-color 0.12s ease', boxShadow: '0 1px 2px rgba(0,0,0,0.04)' }}
-                        onMouseEnter={(e) => { e.currentTarget.style.background = '#eef0f5'; e.currentTarget.style.borderColor = '#b8bcc8'; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.background = isIntentDropdownOpen ? '#f0f2f6' : '#f5f6f9'; e.currentTarget.style.borderColor = '#d0d3db'; }}
-                      >
-                        <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <MessageSquare size={16} style={{ color: 'var(--navy)', flexShrink: 0 }} />
-                          {getIntentLabel(activeIntent)}
-                        </span>
-                        <ChevronDown size={14} style={{ color: 'var(--text-muted)', flexShrink: 0, transform: isIntentDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 150ms' }} />
-                      </button>
-                      {isIntentDropdownOpen && (
-                        <>
-                          <div onClick={() => setIsIntentDropdownOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 50 }} />
-                          <div style={{ position: 'absolute', top: 'calc(100% + 6px)', left: 0, width: 280, backgroundColor: 'white', borderRadius: 12, border: '1px solid var(--border)', boxShadow: '0 12px 32px rgba(0,0,0,0.14)', zIndex: 51, maxHeight: 420, overflowY: 'auto' }}>
-                            {groupIntentsByBucket(INTENTS.map(i => i.id)).map((bucket, bucketIdx) => {
-                              const dotColor = BUCKET_COLORS[bucket.label] || 'var(--text-muted)';
-                              return (
-                                <div key={bucket.label}>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 14px 6px', fontSize: 11, color: 'var(--text-primary)', fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', borderTop: bucketIdx === 0 ? 'none' : '1px solid var(--border)', background: bucketIdx === 0 ? 'transparent' : 'rgba(10, 36, 99, 0.02)' }}>
-                                    <span style={{ width: 7, height: 7, borderRadius: '50%', background: dotColor, flexShrink: 0 }} />
-                                    {bucket.label}
-                                  </div>
-                                  {bucket.intents.map((intent) => {
-                                    const isCurrent = activeIntent === intent.id;
-                                    return (
-                                      <div key={intent.id} onClick={() => { setActiveIntent(intent.id); setHasManualIntentPick(true); setIsIntentDropdownOpen(false); }}
-                                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 14px', cursor: 'pointer', fontSize: 13, color: isCurrent ? 'var(--text-primary)' : 'var(--text-secondary)', fontWeight: isCurrent ? 500 : 400, backgroundColor: isCurrent ? 'rgba(10, 36, 99, 0.04)' : 'transparent' }}
-                                        onMouseEnter={(e) => { if (!isCurrent) e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.03)'; }}
-                                        onMouseLeave={(e) => { if (!isCurrent) e.currentTarget.style.backgroundColor = 'transparent'; }}
-                                      >
-                                        <span>{intent.label}</span>
-                                        {isCurrent && <CheckCircle size={14} style={{ color: 'var(--navy)', flexShrink: 0 }} />}
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                              );
-                            })}
-                            {INTENT_DESCRIPTIONS[activeIntent] && (
-                              <div style={{ padding: '10px 14px', borderTop: '1px solid var(--border)', background: '#fafafa', fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-                                <Info size={11} style={{ display: 'inline', marginRight: 6, color: 'var(--text-muted)', verticalAlign: 'middle' }} />
-                                {INTENT_DESCRIPTIONS[activeIntent]}
-                              </div>
-                            )}
-                          </div>
-                        </>
-                      )}
-                    </div>
+                {/* ─── Using row ─── */}
+                <div style={{ textAlign: 'center', margin: '22px 0 18px', fontSize: 13, color: 'var(--text-secondary)' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Using</span>
+                  {' '}<span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{getIntentLabel(activeIntent)}</span>
+                  <span style={{ color: '#c4c8d0', margin: '0 6px' }}>•</span>
+                  <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{getScopeOption(searchScope).label}</span>
+                  {activeKnowledgePack && (
+                    <>
+                      <span style={{ color: '#c4c8d0', margin: '0 6px' }}>•</span>
+                      <span style={{ color: 'var(--gold)', fontWeight: 500 }}>{activeKnowledgePack.name}</span>
+                    </>
+                  )}
+                </div>
 
-                    {/* Pill 2 — Search scope */}
-                    <div style={{ position: 'relative', flex: 1 }} ref={scopeInputRef}>
+                {/* ─── Secondary / optional box ─── */}
+                <div style={{ border: '1px solid #e6e7ec', borderRadius: 14, background: '#fafaf8', padding: '18px 22px' }}>
+                  {/* Optional row: upload + source + pack */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 24, paddingBottom: 14, borderBottom: '1px solid #ececec', fontSize: 13.5, flexWrap: 'wrap' }}>
+                    <span style={{ color: 'var(--text-muted)', fontSize: 13 }}>Optional</span>
+                    <button
+                      onClick={() => setIsVaultPickerModalOpen(true)}
+                      style={{ display: 'flex', alignItems: 'center', gap: 7, color: 'var(--gold)', fontWeight: 500, cursor: 'pointer', background: 'none', border: 'none', fontFamily: 'inherit', fontSize: 13.5, padding: 0 }}
+                    >
+                      <Upload size={16} />
+                      Upload files
+                    </button>
+                    <div style={{ position: 'relative', marginLeft: 'auto' }} ref={scopeInputRef}>
                       <button
                         onClick={() => setIsScopeOpenInput(v => !v)}
-                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '10px 14px', borderRadius: 10, border: '1.5px solid #d0d3db', background: isScopeOpenInput ? '#f0f2f6' : '#f5f6f9', fontSize: 13.5, fontFamily: 'inherit', fontWeight: 500, color: 'var(--text-primary)', cursor: 'pointer', transition: 'background 0.12s ease, border-color 0.12s ease', boxShadow: '0 1px 2px rgba(0,0,0,0.04)' }}
-                        onMouseEnter={(e) => { e.currentTarget.style.background = '#eef0f5'; e.currentTarget.style.borderColor = '#b8bcc8'; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.background = isScopeOpenInput ? '#f0f2f6' : '#f5f6f9'; e.currentTarget.style.borderColor = '#d0d3db'; }}
+                        style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 11px 6px 10px', borderRadius: 8, border: `1.5px solid ${isScopeOpenInput ? 'var(--navy)' : 'var(--border)'}`, background: isScopeOpenInput ? 'rgba(15,28,63,0.04)' : '#fff', cursor: 'pointer', fontFamily: 'inherit', transition: 'border-color 0.12s, background 0.12s' }}
+                        onMouseEnter={(e) => { if (!isScopeOpenInput) { e.currentTarget.style.borderColor = '#b8bcc8'; e.currentTarget.style.background = '#f7f8fb'; } }}
+                        onMouseLeave={(e) => { if (!isScopeOpenInput) { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.background = '#fff'; } }}
                       >
-                        <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <Search size={16} style={{ color: 'var(--navy)', flexShrink: 0 }} />
-                          {getScopeOption(searchScope).label}
-                        </span>
-                        <ChevronDown size={14} style={{ color: 'var(--text-muted)', flexShrink: 0, transform: isScopeOpenInput ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 150ms' }} />
+                        <Search size={13} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+                        <span style={{ fontSize: 12.5, color: 'var(--text-muted)', fontWeight: 400 }}>Source:</span>
+                        <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text-primary)' }}>{getScopeOption(searchScope).label}</span>
+                        <ChevronDown size={12} style={{ color: 'var(--text-muted)', transform: isScopeOpenInput ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 150ms' }} />
                       </button>
                       {isScopeOpenInput && (
                         <>
                           <div onClick={() => setIsScopeOpenInput(false)} style={{ position: 'fixed', inset: 0, zIndex: 50 }} />
-                          <div style={{ position: 'absolute', top: 'calc(100% + 8px)', left: 0, width: 290, backgroundColor: '#fff', borderRadius: 14, border: '1px solid var(--border)', boxShadow: '0 12px 32px rgba(0,0,0,0.14)', zIndex: 51, overflow: 'hidden' }}>
+                          <div style={{ position: 'absolute', top: 'calc(100% + 8px)', right: 0, width: 290, backgroundColor: '#fff', borderRadius: 14, border: '1px solid var(--border)', boxShadow: '0 12px 32px rgba(0,0,0,0.14)', zIndex: 51, overflow: 'hidden' }}>
                             <div style={{ padding: '12px 16px 6px', fontSize: 10, color: 'var(--text-muted)', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', letterSpacing: '0.14em', textTransform: 'uppercase' }}>Search within</div>
                             {SCOPE_OPTIONS.map((opt) => {
                               const isCurrent = opt.id === searchScope;
@@ -7016,20 +6986,17 @@ INSTRUCTIONS:
                         </>
                       )}
                     </div>
-
-                    {/* Pill 3 — Knowledge pack */}
-                    <div style={{ position: 'relative', flex: 1 }} ref={kpMenuRef}>
+                    <div style={{ position: 'relative' }} ref={kpMenuRef}>
                       <button
                         onClick={() => setIsKpMenuOpen(v => !v)}
-                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '10px 14px', borderRadius: 10, border: '1.5px solid #d0d3db', background: isKpMenuOpen ? '#f0f2f6' : '#f5f6f9', fontSize: 13.5, fontFamily: 'inherit', fontWeight: 500, color: 'var(--text-primary)', cursor: 'pointer', transition: 'background 0.12s ease, border-color 0.12s ease', boxShadow: '0 1px 2px rgba(0,0,0,0.04)' }}
-                        onMouseEnter={(e) => { e.currentTarget.style.background = '#eef0f5'; e.currentTarget.style.borderColor = '#b8bcc8'; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.background = isKpMenuOpen ? '#f0f2f6' : '#f5f6f9'; e.currentTarget.style.borderColor = '#d0d3db'; }}
+                        style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 11px 6px 10px', borderRadius: 8, border: `1.5px solid ${isKpMenuOpen ? 'var(--navy)' : 'var(--border)'}`, background: isKpMenuOpen ? 'rgba(15,28,63,0.04)' : '#fff', cursor: 'pointer', fontFamily: 'inherit', transition: 'border-color 0.12s, background 0.12s' }}
+                        onMouseEnter={(e) => { if (!isKpMenuOpen) { e.currentTarget.style.borderColor = '#b8bcc8'; e.currentTarget.style.background = '#f7f8fb'; } }}
+                        onMouseLeave={(e) => { if (!isKpMenuOpen) { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.background = '#fff'; } }}
                       >
-                        <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <Package size={16} style={{ color: 'var(--navy)', flexShrink: 0 }} />
-                          {activeKnowledgePack ? activeKnowledgePack.name : 'Knowledge Pack'}
-                        </span>
-                        <ChevronDown size={14} style={{ color: 'var(--text-muted)', flexShrink: 0, transform: isKpMenuOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 150ms' }} />
+                        <Package size={13} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+                        <span style={{ fontSize: 12.5, color: 'var(--text-muted)', fontWeight: 400 }}>Pack:</span>
+                        <span style={{ fontSize: 12.5, fontWeight: 600, color: activeKnowledgePack ? 'var(--navy)' : 'var(--text-primary)', maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{activeKnowledgePack ? activeKnowledgePack.name : 'None'}</span>
+                        <ChevronDown size={12} style={{ color: 'var(--text-muted)', transform: isKpMenuOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 150ms' }} />
                       </button>
                       {isKpMenuOpen && (() => {
                         const q = kpQuery.trim().toLowerCase();
@@ -7081,46 +7048,6 @@ INSTRUCTIONS:
                           </>
                         );
                       })()}
-                    </div>
-
-                  </div>
-                </div>
-
-                {/* ─── Using row ─── */}
-                <div style={{ textAlign: 'center', margin: '22px 0 18px', fontSize: 13, color: 'var(--text-secondary)' }}>
-                  <span style={{ color: 'var(--text-muted)' }}>Using</span>
-                  {' '}<span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{getIntentLabel(activeIntent)}</span>
-                  <span style={{ color: '#c4c8d0', margin: '0 6px' }}>•</span>
-                  <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{getScopeOption(searchScope).label}</span>
-                  {activeKnowledgePack && (
-                    <>
-                      <span style={{ color: '#c4c8d0', margin: '0 6px' }}>•</span>
-                      <span style={{ color: 'var(--gold)', fontWeight: 500 }}>{activeKnowledgePack.name}</span>
-                    </>
-                  )}
-                </div>
-
-                {/* ─── Secondary / optional box ─── */}
-                <div style={{ border: '1px solid #e6e7ec', borderRadius: 14, background: '#fafaf8', padding: '18px 22px' }}>
-                  {/* Optional row: upload + source + pack */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 24, paddingBottom: 14, borderBottom: '1px solid #ececec', fontSize: 13.5, flexWrap: 'wrap' }}>
-                    <span style={{ color: 'var(--text-muted)', fontSize: 13 }}>Optional</span>
-                    <button
-                      onClick={() => setIsVaultPickerModalOpen(true)}
-                      style={{ display: 'flex', alignItems: 'center', gap: 7, color: 'var(--gold)', fontWeight: 500, cursor: 'pointer', background: 'none', border: 'none', fontFamily: 'inherit', fontSize: 13.5, padding: 0 }}
-                    >
-                      <Upload size={16} />
-                      Upload files
-                    </button>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 'auto', cursor: 'pointer' }} onClick={() => setIsScopeOpenInput(v => !v)}>
-                      <span style={{ color: 'var(--text-secondary)', fontSize: 13 }}>Source:</span>
-                      <span style={{ fontWeight: 500, fontSize: 13, color: 'var(--text-primary)' }}>{getScopeOption(searchScope).label}</span>
-                      <ChevronDown size={13} style={{ color: 'var(--text-muted)' }} />
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }} onClick={() => setIsKpMenuOpen(v => !v)}>
-                      <span style={{ color: 'var(--text-secondary)', fontSize: 13 }}>Pack:</span>
-                      <span style={{ fontWeight: 500, fontSize: 13, color: 'var(--text-primary)' }}>{activeKnowledgePack ? activeKnowledgePack.name : 'M&A Due Diligence'}</span>
-                      <ChevronDown size={13} style={{ color: 'var(--text-muted)' }} />
                     </div>
                   </div>
 
