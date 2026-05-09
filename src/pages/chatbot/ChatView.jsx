@@ -2227,6 +2227,8 @@ function DocumentVaultPanel({
   const [askLoading, setAskLoading]    = useState(false);
   const [askExplanation, setAskExplanation] = useState('');
   const [openFilterMenu, setOpenFilterMenu] = useState(null); // 'date' | 'uploader' | 'type' | 'sort' | null
+  const [viewMode, setViewMode] = useState('list'); // 'list' | 'grid'
+  const [expandedMatters, setExpandedMatters] = useState(() => new Set(['m3'])); // Acme Corp expanded by default
 
   const clearAllFilters = () => {
     setDateFilter('any');
@@ -2676,54 +2678,137 @@ Rules:
               once a `selectedDocId` state is added; the detail strip on row hover
               already conveys the key fields. */}
       <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
-        {/* ── LEFT RAIL: folder tree ── */}
-        <div style={{ width: 280, flexShrink: 0, borderRight: '1px solid var(--border)', background: '#fff', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-          <div style={{ padding: '16px 16px 10px' }}>
-            <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace" }}>Library</div>
-          </div>
-          <div style={{ flex: 1, overflowY: 'auto', paddingBottom: 8 }}>
-            {/* Pinned: All documents */}
-            <div
-              onClick={goToAllDocs}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 8,
-                height: 30, paddingLeft: 16, paddingRight: 12,
-                cursor: 'pointer',
-                background: currentFolderId === null ? 'rgba(10,36,99,0.08)' : 'transparent',
-                color: currentFolderId === null ? 'var(--navy)' : 'var(--text-primary)',
-                fontWeight: currentFolderId === null ? 600 : 400,
-                fontSize: 12,
-                transition: 'background 100ms',
-              }}
-              onMouseEnter={(e) => { if (currentFolderId !== null) e.currentTarget.style.background = 'rgba(15,23,42,0.04)'; }}
-              onMouseLeave={(e) => { if (currentFolderId !== null) e.currentTarget.style.background = 'transparent'; }}
-            >
-              <FolderOpen size={14} style={{ color: currentFolderId === null ? 'var(--navy)' : 'var(--text-muted)' }} />
-              <span style={{ flex: 1 }}>All documents</span>
-              <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>{counts.total}</span>
+        {/* ── LEFT RAIL: Matters / Filter / My Folders ── */}
+        <div style={{ width: 260, flexShrink: 0, borderRight: '1px solid var(--border)', background: '#FAF8F4', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <div style={{ flex: 1, overflowY: 'auto', paddingBottom: 16 }}>
+            {/* MATTERS section */}
+            {(() => {
+              const MATTERS = [
+                { id: 'm1', name: 'Meridian v. Apex', count: 4, color: '#7c6ee6', folders: [] },
+                { id: 'm2', name: 'Harper Trust', count: 2, color: '#5fb86d', folders: [] },
+                { id: 'm3', name: 'Acme Corp', count: 12, color: '#e6a23c', folders: [
+                  { id: 'f-contracts', name: 'Contracts', count: 5, active: true },
+                  { id: 'f-pleadings', name: 'Pleadings', count: 2 },
+                  { id: 'f-discovery', name: 'Discovery', count: 3, hasActivity: true },
+                  { id: 'f-correspondence', name: 'Correspondence', count: 1 },
+                  { id: 'f-workproduct', name: 'Work Product', count: 1, hasActivity: true },
+                ]},
+                { id: 'm4', name: 'Series B Funding', count: 3, color: '#4a90e2', folders: [] },
+                { id: 'm5', name: 'Unassigned', count: 1, color: '#9ca3af', folders: [] },
+              ];
+              return (
+                <>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 16px 8px' }}>
+                    <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}>Matters</span>
+                    <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--gold)', letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}>{MATTERS.filter(m => m.id !== 'm5').length} Active</span>
+                  </div>
+                  {MATTERS.map((matter) => {
+                    const isExpanded = expandedMatters.has(matter.id);
+                    return (
+                      <div key={matter.id}>
+                        <div
+                          onClick={() => {
+                            const next = new Set(expandedMatters);
+                            if (isExpanded) next.delete(matter.id); else next.add(matter.id);
+                            setExpandedMatters(next);
+                            if (matter.id !== 'm3') goToAllDocs();
+                          }}
+                          style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 12px 7px 14px', cursor: 'pointer', borderRadius: 6, margin: '1px 6px', transition: 'background 100ms' }}
+                          onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(15,23,42,0.04)'; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                        >
+                          <ChevronRight size={12} style={{ color: 'var(--text-muted)', flexShrink: 0, transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 150ms' }} />
+                          <span style={{ width: 8, height: 8, borderRadius: '50%', background: matter.color, flexShrink: 0 }} />
+                          <span style={{ flex: 1, fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{matter.name}</span>
+                          <span style={{ fontSize: 12, color: 'var(--text-muted)', flexShrink: 0 }}>{matter.count}</span>
+                        </div>
+                        {isExpanded && matter.folders.length > 0 && (
+                          <div style={{ marginLeft: 12 }}>
+                            {matter.folders.map((sf) => {
+                              const realFolderId = visibleFolders.find(f => f.name === sf.name)?.id || null;
+                              const isActive = currentFolderId && currentFolderId === realFolderId;
+                              return (
+                                <div
+                                  key={sf.id}
+                                  onClick={() => realFolderId ? setCurrentFolderId(realFolderId) : null}
+                                  style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px 6px 14px', cursor: 'pointer', borderRadius: 6, margin: '1px 6px', background: isActive ? 'var(--navy)' : 'transparent', transition: 'background 100ms' }}
+                                  onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = 'rgba(15,23,42,0.06)'; }}
+                                  onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
+                                >
+                                  <Folder size={13} style={{ color: isActive ? '#d4b96a' : '#c9a04a', flexShrink: 0 }} />
+                                  <span style={{ flex: 1, fontSize: 12.5, color: isActive ? '#fff' : 'var(--text-primary)', fontWeight: isActive ? 600 : 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sf.name}</span>
+                                  <span style={{ fontSize: 11, color: isActive ? 'rgba(255,255,255,0.65)' : 'var(--text-muted)', flexShrink: 0 }}>{sf.count}</span>
+                                  {sf.hasActivity && <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#e55151', flexShrink: 0 }} />}
+                                </div>
+                              );
+                            })}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 10px 5px 14px', cursor: 'pointer', margin: '1px 6px', color: 'var(--text-muted)', fontSize: 12 }}
+                              onClick={() => setCreatingFolder(true)}
+                              onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--navy)'; }}
+                              onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; }}
+                            >
+                              <Plus size={11} /> Add sub-folder
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </>
+              );
+            })()}
+
+            {/* FILTER (CROSS-MATTER) section */}
+            <div style={{ margin: '12px 10px', border: '1px solid var(--border)', borderRadius: 10, background: '#fff', padding: '12px' }}>
+              <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', marginBottom: 8 }}>Filter (Cross-Matter)</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {[
+                  { label: 'Privileged', color: '#e55151' },
+                  { label: 'Confidential', color: '#4a90e2' },
+                  { label: 'Final', color: '#5fb86d' },
+                  { label: 'Draft', color: '#e6a23c' },
+                  { label: 'Pinned' },
+                  { label: 'Mine' },
+                ].map((pill) => (
+                  <button key={pill.label} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 10px', borderRadius: 999, border: '1px solid var(--border)', background: '#fff', fontSize: 12, color: 'var(--text-primary)', cursor: 'pointer', fontFamily: 'inherit' }}
+                    onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--navy)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border)'; }}
+                  >
+                    {pill.color && <span style={{ width: 7, height: 7, borderRadius: '50%', background: pill.color, flexShrink: 0 }} />}
+                    {pill.label}
+                  </button>
+                ))}
+              </div>
             </div>
-            {/* Folders eyebrow */}
-            <div style={{ padding: '14px 16px 6px' }}>
-              <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace" }}>Folders</div>
-            </div>
-            {/* Recursive tree */}
-            {(childrenByParent.get(null) || []).length === 0 && (
-              <div style={{ padding: '8px 16px', fontSize: 12, color: 'var(--text-muted)' }}>No folders yet.</div>
+
+            {/* MY FOLDERS section */}
+            {(childrenByParent.get(null) || []).length > 0 && (
+              <div style={{ margin: '4px 10px 0', border: '1px solid var(--border)', borderRadius: 10, background: '#fff', padding: '12px' }}>
+                <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', marginBottom: 6 }}>My Folders</div>
+                {(childrenByParent.get(null) || []).map((f) => {
+                  const isActive = currentFolderId === f.id;
+                  const docCount = documents.filter(d => d.folderId === f.id).length;
+                  return (
+                    <div key={f.id} onClick={() => setCurrentFolderId(f.id)}
+                      style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', borderRadius: 6, cursor: 'pointer', background: isActive ? 'rgba(10,36,99,0.06)' : 'transparent', transition: 'background 100ms' }}
+                      onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = 'rgba(15,23,42,0.04)'; }}
+                      onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = isActive ? 'rgba(10,36,99,0.06)' : 'transparent'; }}
+                    >
+                      <Folder size={13} style={{ color: '#c9a04a', flexShrink: 0 }} />
+                      <span style={{ flex: 1, fontSize: 12.5, color: 'var(--text-primary)', fontWeight: isActive ? 600 : 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.name}</span>
+                      <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{docCount}</span>
+                    </div>
+                  );
+                })}
+                <button onClick={() => setCreatingFolder(true)}
+                  style={{ width: '100%', marginTop: 6, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, fontSize: 11.5, color: 'var(--text-secondary)', background: 'transparent', border: '1px dashed var(--border)', borderRadius: 6, cursor: 'pointer', fontFamily: 'inherit' }}
+                  onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--navy)'; e.currentTarget.style.color = 'var(--navy)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
+                >
+                  <FolderPlus size={11} /> New folder
+                </button>
+              </div>
             )}
-            {(childrenByParent.get(null) || []).map((f) => (
-              <TreeNode key={f.id} folder={f} depth={0} />
-            ))}
-          </div>
-          {/* Footer — + new folder */}
-          <div style={{ padding: 10, borderTop: '1px solid var(--border)', background: '#fff' }}>
-            <button
-              onClick={() => setCreatingFolder(true)}
-              style={{ width: '100%', height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, fontSize: 12, color: 'var(--text-secondary)', background: 'transparent', border: '1px dashed var(--border)', borderRadius: 8, cursor: 'pointer', fontFamily: "inherit" }}
-              onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--navy)'; e.currentTarget.style.color = 'var(--navy)'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
-            >
-              <FolderPlus size={13} /> New folder
-            </button>
           </div>
         </div>
 
@@ -2886,16 +2971,20 @@ Rules:
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>1. Visualize</span>
                   <div style={{ display: 'inline-flex', gap: 0, borderRadius: 8, padding: 3, background: '#fff', border: '1px solid #e2e3e7' }}>
-                    <button style={{
+                    <button onClick={() => setViewMode('list')} style={{
                       padding: '5px 14px', fontSize: 12.5, fontFamily: "inherit",
-                      fontWeight: 500, background: 'var(--navy)', color: '#fff',
+                      fontWeight: viewMode === 'list' ? 500 : 400,
+                      background: viewMode === 'list' ? 'var(--navy)' : 'transparent',
+                      color: viewMode === 'list' ? '#fff' : 'var(--text-secondary)',
                       border: 'none', cursor: 'pointer', borderRadius: 6, display: 'inline-flex', alignItems: 'center', gap: 5,
                     }}>
                       List
                     </button>
-                    <button style={{
+                    <button onClick={() => setViewMode('grid')} style={{
                       padding: '5px 14px', fontSize: 12.5, fontFamily: "inherit",
-                      fontWeight: 400, background: 'transparent', color: 'var(--text-secondary)',
+                      fontWeight: viewMode === 'grid' ? 500 : 400,
+                      background: viewMode === 'grid' ? 'var(--navy)' : 'transparent',
+                      color: viewMode === 'grid' ? '#fff' : 'var(--text-secondary)',
                       border: 'none', cursor: 'pointer', borderRadius: 6, display: 'inline-flex', alignItems: 'center', gap: 5,
                     }}>
                       Grid
@@ -3052,6 +3141,37 @@ Rules:
                   )}
                 </div>
               ) : (
+                viewMode === 'grid' ? (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 16, padding: '4px 4px 8px', borderRadius: '0 0 12px 12px', border: '1px solid #e6e7ec', borderTop: 'none', background: '#fff' }}>
+                    {filteredDocs.map((d) => {
+                      const badge = fileTypeBadge(d.fileName);
+                      const isDocActive = activeDocument?.id === d.id;
+                      return (
+                        <div key={d.id}
+                          style={{ padding: 16, borderRadius: 10, border: '1px solid #f0f0f3', background: isDocActive ? '#fdf6e7' : '#fff', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: 10, transition: 'box-shadow 150ms' }}
+                          onMouseEnter={(e) => { e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)'; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.boxShadow = 'none'; }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <div style={{ width: 36, height: 44, borderRadius: 6, background: badge.color, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                              <span style={{ fontSize: 9, fontWeight: 700, color: '#fff', fontFamily: "'IBM Plex Mono', monospace", letterSpacing: '0.5px' }}>{badge.label}</span>
+                            </div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.name}</div>
+                              <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>{d.fileSize} · {d.ownerId === currentUserId ? 'You' : (d.ownerName || 'Member')}</div>
+                            </div>
+                          </div>
+                          {onSelect && (
+                            <button onClick={(e) => { e.stopPropagation(); onSelect(d); }}
+                              style={{ width: '100%', padding: '7px 0', borderRadius: 7, border: 'none', background: 'var(--navy)', color: '#fff', fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }}>
+                              Use in chat
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
                 <div style={{ background: '#fff', borderRadius: '0 0 12px 12px', border: '1px solid #e6e7ec', borderTop: 'none', overflow: 'hidden' }}>
                   {/* Column headers */}
                   <div style={{ display: 'flex', alignItems: 'center', padding: '11px 18px', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '1px', textTransform: 'uppercase', borderBottom: '1px solid #f0f0f3' }}>
@@ -3166,6 +3286,7 @@ Rules:
                     );
                   })}
                 </div>
+                )
               )}
             </div>
 
