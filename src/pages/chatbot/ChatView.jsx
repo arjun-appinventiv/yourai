@@ -25,7 +25,6 @@ import { SAMPLE_PACK_CONTENT } from '../../data/samplePackContent';
 import IntentCard, { isCardIntent, tryParseCardData } from '../../components/chat/cards/IntentCard';
 import WorkflowsPanel from '../../components/chat/WorkflowsPanel';
 import WorkflowBuilder from '../../components/chat/WorkflowBuilder';
-import OrgAdminDashboard from '../org-admin/Dashboard';
 import PreRunModal from '../../components/chat/PreRunModal';
 import WorkflowRunPanel from '../../components/chat/WorkflowRunPanel';
 import IntentArtifactPanel from '../../components/chat/IntentArtifactPanel';
@@ -45,7 +44,15 @@ import {
   MOCK_RISK_MEMO_CARD,
   MOCK_CLAUSE_ANALYSIS_CARD,
 } from '../../lib/mockCardData';
-import { billingData, subscriptionPlans } from '../../data/mockData';
+import {
+  billingData, subscriptionPlans,
+  currentUser as ORG_CURRENT_USER,
+  workspaces as ORG_WORKSPACES,
+  documents as ORG_DOCUMENTS,
+  orgReports as ORG_REPORTS,
+  activityFeed as ORG_ACTIVITY_FEED,
+  workflowRuns as ORG_WORKFLOW_RUNS,
+} from '../../data/mockData';
 import { callLLM, getApiKey } from '../../lib/llm-client';
 import { extractFileText } from '../../lib/file-parser';
 import { trackDocUpload } from '../../lib/auth';
@@ -3619,6 +3626,181 @@ function AttachMenu({ activePack, activeDocument, activeFolder, folderDocCount, 
         />
       </div>
     </>
+  );
+}
+
+/* ─────────────────── Org Admin Dashboard Panel ─────────────────── */
+function OrgDashboardPanel({ onBack, displayName, orgName }) {
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+  const firstName = (displayName || 'Ryan').split(/\s+/)[0];
+
+  const activeWsCount = ORG_WORKSPACES.filter(w => w.status === 'Active').length;
+  const pendingDocCount = ORG_DOCUMENTS.filter(d => d.classification === 'Pending' || d.classification === 'Flagged for Review').length;
+  const runningWfCount = ORG_WORKFLOW_RUNS.filter(w => w.status === 'Running').length;
+
+  const statCards = [
+    { icon: Briefcase, value: activeWsCount, label: 'Active Workspaces', color: 'var(--navy)' },
+    { icon: FileText, value: ORG_DOCUMENTS.length, label: 'Total Documents', color: 'var(--gold)' },
+    { icon: FileText, value: ORG_REPORTS.length, label: 'Reports Generated', color: '#5CA868' },
+    { icon: Zap, value: runningWfCount, label: 'Workflows Running', color: '#1E3A8A' },
+  ];
+
+  const activityIconMap = {
+    LogIn: LogOut, Upload, CheckCircle, FileText, FileBarChart: FileText,
+    AlertCircle: AlertTriangle, UserPlus, Workflow: Zap, Share: Share2, ExternalLink,
+  };
+
+  const usageBars = [
+    { label: 'Documents', used: billingData.usage.docs.used, limit: billingData.usage.docs.limit },
+    { label: 'Workflows', used: billingData.usage.workflows.used, limit: billingData.usage.workflows.limit },
+    { label: 'Reports', used: ORG_REPORTS.length, limit: 200 },
+    { label: 'Knowledge Packs', used: billingData.usage.knowledgePacks.used, limit: billingData.usage.knowledgePacks.limit },
+  ];
+
+  return (
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, background: '#F8F7F4', overflow: 'hidden' }}>
+      {/* Panel header */}
+      <div style={{ height: 50, padding: '0 28px', borderBottom: '1px solid var(--border)', background: '#fff', display: 'flex', alignItems: 'center', gap: 14, flexShrink: 0 }}>
+        <button
+          onClick={onBack}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 13px', borderRadius: 7, border: '1px solid var(--border)', background: '#fff', cursor: 'pointer', color: 'var(--text-secondary)', fontSize: 13, fontWeight: 400, fontFamily: 'inherit' }}
+          onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--navy)'; e.currentTarget.style.color = 'var(--navy)'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
+        >
+          <ArrowLeft size={14} />
+          Back to chat
+        </button>
+      </div>
+
+      {/* Scrollable content */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '28px 36px' }}>
+        {/* Greeting */}
+        <div style={{ marginBottom: 22 }}>
+          <h1 style={{ fontFamily: "'Fraunces', serif", fontSize: 24, fontWeight: 400, color: 'var(--text-primary)', margin: 0 }}>
+            {greeting}, {firstName}
+          </h1>
+          <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4, marginBottom: 0 }}>
+            Here's what's happening at {orgName || 'your firm'} today.
+          </p>
+          <div style={{ height: 1, background: 'var(--border)', marginTop: 16 }} />
+        </div>
+
+        {/* Stat cards */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 24 }}>
+          {statCards.map((s) => {
+            const Icon = s.icon;
+            return (
+              <div key={s.label} style={{ background: '#fff', border: '1px solid var(--border)', borderTop: `3px solid ${s.color}`, borderRadius: 12, padding: '16px 18px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+                <Icon size={16} style={{ color: s.color, marginBottom: 10, display: 'block' }} />
+                <div style={{ fontSize: 28, fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1 }}>{s.value}</div>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>{s.label}</div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Two-column layout */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: 18, marginBottom: 22 }}>
+          {/* Activity Feed */}
+          <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.04)', overflow: 'hidden' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 18px', borderBottom: '1px solid var(--border)' }}>
+              <h3 style={{ fontFamily: "'Fraunces', serif", fontSize: 15, color: 'var(--text-primary)', fontWeight: 400, margin: 0 }}>Activity Feed</h3>
+              <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Today & Yesterday</span>
+            </div>
+            <div style={{ maxHeight: 390, overflowY: 'auto' }}>
+              {ORG_ACTIVITY_FEED.map((item) => {
+                const IconComp = activityIconMap[item.icon] || CheckCircle;
+                return (
+                  <div key={item.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 18px', borderBottom: '1px solid var(--border)' }}>
+                    <div style={{ width: 28, height: 28, borderRadius: '50%', background: item.user === 'System' ? '#F0F3F6' : 'var(--ice-warm)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1 }}>
+                      <IconComp size={13} style={{ color: item.user === 'System' ? '#1E3A8A' : 'var(--text-muted)' }} />
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontSize: 13, color: 'var(--text-primary)', lineHeight: 1.4, margin: 0 }}>
+                        <span style={{ fontWeight: 500 }}>{item.user}</span>{' '}
+                        <span style={{ color: 'var(--text-secondary)' }}>{item.action}</span>
+                      </p>
+                      {item.workspace && (
+                        <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '2px 0 0' }}>{item.workspace}</p>
+                      )}
+                    </div>
+                    <span style={{ fontSize: 11, color: 'var(--text-muted)', whiteSpace: 'nowrap', flexShrink: 0 }}>{item.time}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Right rail */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            {/* Classification alert */}
+            {pendingDocCount > 0 && (
+              <div style={{ background: '#fff', border: '1px solid var(--border)', borderLeft: '3px solid #C65454', borderRadius: 12, padding: '15px 18px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 5 }}>
+                  <AlertTriangle size={15} style={{ color: '#C65454' }} />
+                  <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>Classification Queue</span>
+                </div>
+                <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '0 0 11px' }}>
+                  {pendingDocCount} document{pendingDocCount > 1 ? 's' : ''} need review
+                </p>
+                <button style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 14px', borderRadius: 8, background: 'var(--navy)', color: '#fff', border: 'none', fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }}>
+                  Review Now <ArrowRight size={12} />
+                </button>
+              </div>
+            )}
+
+            {/* Plan Usage */}
+            <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 12, padding: '15px 18px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)', flex: 1 }}>
+              <h4 style={{ fontFamily: "'Fraunces', serif", fontSize: 15, color: 'var(--text-primary)', fontWeight: 400, margin: '0 0 14px' }}>Plan Usage</h4>
+              {usageBars.map(({ label, used, limit }) => {
+                const pct = Math.min(100, Math.round((used / limit) * 100));
+                const barColor = pct > 80 ? '#C65454' : pct > 50 ? 'var(--gold)' : 'var(--navy)';
+                return (
+                  <div key={label} style={{ marginBottom: 12 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                      <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{label}</span>
+                      <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{used} / {limit.toLocaleString()}</span>
+                    </div>
+                    <div style={{ height: 5, background: '#eee', borderRadius: 3, overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: `${pct}%`, background: barColor, borderRadius: 3, transition: 'width 300ms' }} />
+                    </div>
+                  </div>
+                );
+              })}
+              <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '8px 0 0' }}>
+                {billingData.plan} plan · Renews {billingData.nextRenewal}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Quick actions */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
+          {[
+            { icon: Plus, label: 'New Workspace', desc: 'Create a workspace for a client or matter' },
+            { icon: Upload, label: 'Upload Documents', desc: 'Upload files to an existing workspace' },
+            { icon: Zap, label: 'Run Workflow', desc: 'Execute a workflow template on workspace docs' },
+          ].map((a) => {
+            const Icon = a.icon;
+            return (
+              <button
+                key={a.label}
+                style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 12, padding: '16px 18px', textAlign: 'left', cursor: 'pointer', boxShadow: '0 1px 3px rgba(0,0,0,0.04)', fontFamily: 'inherit', transition: 'box-shadow 150ms' }}
+                onMouseEnter={(e) => { e.currentTarget.style.boxShadow = '0 4px 14px rgba(0,0,0,0.09)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.04)'; }}
+              >
+                <div style={{ width: 34, height: 34, borderRadius: 9, background: 'var(--ice-warm)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 10 }}>
+                  <Icon size={16} style={{ color: 'var(--navy)' }} />
+                </div>
+                <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 3 }}>{a.label}</div>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.4 }}>{a.desc}</div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -7956,25 +8138,11 @@ INSTRUCTIONS:
 
       {/* ─── Org Admin Dashboard Panel ─── */}
       {showOrgDashboard && (
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, background: '#F8F7F4', overflow: 'hidden' }}>
-          {/* Panel header */}
-          <div style={{ height: 50, minHeight: 50, padding: '0 28px', borderBottom: '1px solid var(--border)', background: '#fff', display: 'flex', alignItems: 'center', gap: 16, flexShrink: 0 }}>
-            <button
-              onClick={() => setShowOrgDashboard(false)}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 13px', borderRadius: 7, border: '1px solid var(--border)', background: '#fff', cursor: 'pointer', color: 'var(--text-secondary)', fontSize: 13, fontWeight: 400, fontFamily: 'inherit' }}
-              onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--navy)'; e.currentTarget.style.color = 'var(--navy)'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
-            >
-              <ArrowLeft size={14} />
-              Back to chat
-            </button>
-            <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>Organization Dashboard</span>
-          </div>
-          {/* Dashboard content */}
-          <div style={{ flex: 1, overflowY: 'auto', padding: '28px 40px' }}>
-            <OrgAdminDashboard />
-          </div>
-        </div>
+        <OrgDashboardPanel
+          onBack={() => setShowOrgDashboard(false)}
+          displayName={operator?.name || ORG_CURRENT_USER.name}
+          orgName={ORG_CURRENT_USER.org}
+        />
       )}
 
       {/* Plan Comparison Modal */}
