@@ -5198,6 +5198,11 @@ export default function ChatView({ initialView = 'chat' }) {
   const [isPackPickerModalOpen, setIsPackPickerModalOpen] = useState(false);
   const [packPickerQuery, setPackPickerQuery] = useState('');
   const [isFileDropHover, setIsFileDropHover] = useState(false);
+  // Populated-chat + attach-menu — dropdown that offers both
+  // "Upload from computer" and "Attach from YourVault" so users
+  // don't have to hunt for the drop zone below the input.
+  const [isAttachMenuOpen, setIsAttachMenuOpen] = useState(false);
+  const attachMenuRef = useRef(null);
   // Workspace association — kept for the AttachMenu / vault-doc "Use" path
   // and for downstream label-only metadata.
   const [activeWorkspaceForChat, setActiveWorkspaceForChat] = useState(null);
@@ -7347,7 +7352,7 @@ INSTRUCTIONS:
                   <div style={{ display: 'flex', alignItems: 'center', gap: 24, paddingBottom: 14, borderBottom: '1px solid #ececec', fontSize: 13.5, flexWrap: 'wrap' }}>
                     <span style={{ color: 'var(--text-muted)', fontSize: 13 }}>Optional</span>
                     <button
-                      onClick={() => setIsVaultPickerModalOpen(true)}
+                      onClick={() => dropFileInputRef.current?.click()}
                       style={{ display: 'flex', alignItems: 'center', gap: 7, color: 'var(--gold)', fontWeight: 500, cursor: 'pointer', background: 'none', border: 'none', fontFamily: 'inherit', fontSize: 13.5, padding: 0 }}
                     >
                       <Upload size={16} />
@@ -7744,21 +7749,59 @@ INSTRUCTIONS:
                   {/* Bottom controls row: + attach + scope pill on left, pack + intent + send on right. */}
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <button
-                        onClick={() => setIsVaultPickerModalOpen(true)}
-                        title="Attach a document from YourVault"
-                        style={{
-                          display: 'inline-flex', alignItems: 'center', gap: 6,
-                          padding: '6px 10px', borderRadius: 999,
-                          fontSize: 12, fontWeight: 500,
-                          border: activeVaultDocument ? '1.5px solid var(--navy)' : '1px solid var(--border)',
-                          background: activeVaultDocument ? 'rgba(15, 28, 63, 0.05)' : '#fff',
-                          color: 'var(--navy)', cursor: 'pointer', whiteSpace: 'nowrap',
-                        }}
-                      >
-                        <Plus size={13} />
-                        {activeVaultDocument && <span>Attached</span>}
-                      </button>
+                      <div style={{ position: 'relative' }} ref={attachMenuRef}>
+                        <button
+                          onClick={() => setIsAttachMenuOpen(v => !v)}
+                          title="Attach a document"
+                          style={{
+                            display: 'inline-flex', alignItems: 'center', gap: 6,
+                            padding: '6px 10px', borderRadius: 999,
+                            fontSize: 12, fontWeight: 500,
+                            border: activeVaultDocument ? '1.5px solid var(--navy)' : '1px solid var(--border)',
+                            background: activeVaultDocument ? 'rgba(15, 28, 63, 0.05)' : '#fff',
+                            color: 'var(--navy)', cursor: 'pointer', whiteSpace: 'nowrap',
+                          }}
+                        >
+                          <Plus size={13} />
+                          {activeVaultDocument && <span>Attached</span>}
+                        </button>
+                        {isAttachMenuOpen && (
+                          <>
+                            <div onClick={() => setIsAttachMenuOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 50 }} />
+                            <div style={{
+                              position: 'absolute', bottom: 'calc(100% + 6px)', left: 0, width: 240,
+                              backgroundColor: '#fff', borderRadius: 12, border: '1px solid var(--border)',
+                              boxShadow: '0 12px 32px rgba(0,0,0,0.14)', zIndex: 51, overflow: 'hidden',
+                            }}>
+                              <button
+                                onClick={() => { setIsAttachMenuOpen(false); dropFileInputRef.current?.click(); }}
+                                style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '11px 14px', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}
+                                onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--ice-warm)'; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.background = 'none'; }}
+                              >
+                                <Upload size={14} style={{ color: 'var(--navy)', flexShrink: 0 }} />
+                                <div style={{ minWidth: 0 }}>
+                                  <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>Upload from computer</div>
+                                  <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>PDF, DOCX, TXT, XLSX…</div>
+                                </div>
+                              </button>
+                              <div style={{ height: 1, background: 'var(--border)' }} />
+                              <button
+                                onClick={() => { setIsAttachMenuOpen(false); setIsVaultPickerModalOpen(true); }}
+                                style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '11px 14px', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}
+                                onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--ice-warm)'; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.background = 'none'; }}
+                              >
+                                <FolderOpen size={14} style={{ color: 'var(--navy)', flexShrink: 0 }} />
+                                <div style={{ minWidth: 0 }}>
+                                  <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>Attach from YourVault</div>
+                                  <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>Pick an existing document</div>
+                                </div>
+                              </button>
+                            </div>
+                          </>
+                        )}
+                      </div>
                       <SearchScopePill
                         scope={searchScope}
                         isOpen={isScopeOpenInput}
