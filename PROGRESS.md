@@ -315,7 +315,12 @@ What got deleted in the iteration:
 
 *(Arjun is showing the prod build to the client — Wendy attorney + Ryan Hoke / Robertson — and iterating off their feedback in real time.)*
 
-- **Chat surfaces are settled (2026-05-04 evening).** Three big architectural moves landed and verified clean by Himanshu QA: (1) card-intent results render in the right-rail artifact panel as markdown, (2) doc-source confirmation gates card analyses when docs are attached, (3) chit-chat on card intents goes through the LLM via general_chat override. Plus the chat-killer ReferenceError was root-caused and fixed (was breaking every send including General Chat). All twelve commits deployed. Bundle: `index-D6rEeq-C.js`.
+- **Full-page panel chrome is now uniform across Vault / KP / Workspaces / Workflows** (2026-05-11): warm `#FBFAF7` outer surface + `#fff` top bar + 12×28 top-bar padding + 28px hero/scroll padding. Segmented filter pills (Workflows / Prompt Templates / KP / Vault scope tabs) all share the same chrome — white container + 1px `#e2e3e7` border + gold-bg active.
+- **Org Admin Dashboard build-out (2026-05-09 → 2026-05-11)**: `OrgDashboardPanel` ships 4 live stat cards + quick actions + Activity Feed + Plan Usage + Cost by Client donut + Top Workflows / Top Users visual cards. Most content beyond the live counts is mocked from `data/mockData.js` — wire to real telemetry once backend lands.
+- **In-portal `BillingPanel` for org admins (2026-05-11)**: replaces the prior `/app/billing` redirect. Same full-page sibling pattern as `OrgDashboardPanel`. Content mirrors `OrgBilling.jsx`.
+- **Vault left rail is MATTERS-only** (2026-05-11): cross-matter filter pills moved beneath the search bar; the user-folders block was dropped per PM.
+- **Chat input `+` button = direct file-picker click** (2026-05-11): YourVault attachment moved into the SEARCH WITHIN dropdown (third option: Knowledge Packs replaces the visual-only Workspaces).
+- **Chat surfaces remain settled from 2026-05-04 evening.** Three big architectural moves landed and verified clean by Himanshu QA: (1) card-intent results render in the right-rail artifact panel as markdown, (2) doc-source confirmation gates card analyses when docs are attached, (3) chit-chat on card intents goes through the LLM via general_chat override. Plus the chat-killer ReferenceError was root-caused and fixed (was breaking every send including General Chat). All twelve commits deployed. Bundle: `index-D6rEeq-C.js`.
 - **Three-scope SearchScope dropdown is back** (designer-driven reversal of the 2026-04-30 retirement) — see Recent decisions for the framing. Workspaces option is visual-only; YourVault opens a real doc-picker modal.
 - **Source / Pack pills row in empty-state Optional box is back** (designer-driven reversal). KP picker is now a modal that mirrors the YourVault picker.
 - **Lovable references purged from the project** — `vite.config.ts` (lovable-tagger plugin removed), `package.json` (devDep dropped), README + CLAUDE.md updated. Zero `lovable` matches remain in tracked files.
@@ -512,6 +517,51 @@ Reverse chronological. Each entry: *decision — rationale — date*.
 ---
 
 ## Last updated
+
+**2026-05-11** — UX consistency pass across full-page panels + Org Admin Dashboard build-out + chat input simplification. Nine commits, nine deploys to `yourai/main`.
+
+**1. Workflows chrome aligned with Vault / KP / Workspaces** (`20e6d08` / `index-DX0JO24K.js`). Workflows had been using cool `var(--ice-warm)` (`#F4F6F9`) as its outer surface while every other full-page panel used warm `#FBFAF7` cream. Outer + flat hero now `#FBFAF7`; top bar padding `14px 36px` → `12px 28px`; hero/scroll horizontal padding 36px → 28px. Cards / gold AI PIPELINES eyebrow / practice-area accent stripes unchanged.
+
+**2. Workflows filter pill chrome → prompt-template segmented control** (`dd8f7c7` / `index-DzzqVwrR.js`). Replaced 58px-tall inset-pill segmented control + circular count chips + navy underline bar with the prompt-template chrome: white container + 1px `#e2e3e7` border + radius 9 + padding 3; items 6×12 padding, transparent → `var(--gold-bg)` active, counts inline as small muted numerals.
+
+**3. KP/Vault scope tabs same pattern + Vault left-rail restructure + Vault search redesign** (`45f6a12` / `index-DBvWM09b.js`). Four changes:
+- KP scope tabs (All / Org-wide / Mine) restyled to the prompt-template pattern.
+- Vault scope tabs (top-right) restyled the same way.
+- Vault left rail: removed `FILTER (CROSS-MATTER)` block and `MY FOLDERS` block per PM. Only `MATTERS` remains. Cross-matter pills (Privileged / Confidential / Final / Draft / Pinned / Mine) moved into a horizontal "FILTERS" row directly below the search bar.
+- Vault search bar redesigned: heavy gold-tile gradient + helper-text-inside-the-box → clean 44px conventional search (small Search icon, single-line placeholder, subtle ⌘K hint, navy focus glow on container).
+
+**4. Org Admin Dashboard — Cost by Client donut** (`5f3bb0b` / `index-Buw3GOFG.js`). New card below Activity Feed + Plan Usage. Inline SVG donut (no chart library): 3 slices at 54% navy / 35% gold / 11% slate using `stroke-dasharray` + accumulating `stroke-dashoffset`. Center label `$2.43`. Legend below.
+
+**5. Org Admin Dashboard — Top Workflows + Top Users cards** (`ffb86dd` + `dc5436b` / final `index-DB1lv0w6.js`). First shipped as list rows with thin bars (5 items per section), then converted to a 3-tile hero grid per section per PM "showcase in visual cards" ask. Tiles: icon/avatar circle, big Fraunces number, "runs"/"actions" label, name underneath. Leader (#1) gets gold-bg tint + gold-tinted icon. #4–5 fold into a compact "Also ran" / "Also active" footer so the inactive-Tom signal (Invited tag, dimmed) survives. Data pulled from `mockData.js` (Sarah Chen / James Wu / Ryan Melade / Maria Torres / Tom Bradley; Contract Review Auto-run / Due Diligence / Risk Assessment / Compliance Check / Quarterly Review).
+
+**Dashboard metrics discussion**: proposed AI activity trend + active-vs-invited user count; PM rejected the "vs paid seats" framing (invited users aren't paid). Pivoted to Top Workflows + Top Users which are valuable for "where is adoption concentrated?" without billing baggage.
+
+**6. Chat upload affordance fixes** (`d151d9b` / `index-cgvt1txe.js`):
+- Empty-state "Upload files" button was wired to `setIsVaultPickerModalOpen(true)` despite the literal label, and the comment near `dropFileInputRef` declaration explicitly said the button was supposed to trigger that input. Latent bug. Fixed.
+- Populated-chat `+` button: converted to a dropdown menu (Upload from computer / Attach from YourVault). *(Retired same day — see commit 9.)*
+
+**7. In-portal `BillingPanel` for org admins** (`efcd406` / `index-DEsfCGkp.js`). Sidebar "Billing" used to `navigate('/app/billing')`, bouncing users into the separate org-admin portal. Now opens a `BillingPanel` inside ChatView following the standard full-page sibling pattern (state, `closeAllPanels`, `sidebarActiveKey: 'billing'`, hide-chat condition, run-panel hide condition). Content mirrors `OrgBilling.jsx`: navy hero card (plan + MRR + gold total), 3-col usage meters with proportional bar colors (navy <50% / gold <80% / red >80%), 4-col plan comparison with current plan gold-tagged + outlined navy + Upgrade/Downgrade CTAs, billing history table with per-row PDF download buttons. Sidebar entry already gated to `isOrgAdmin || PERMISSIONS.ACCESS_BILLING`.
+
+**8. SEARCH WITHIN swap + simplify `+` button** (`ef610b0` / `index-DKWhQuTr.js`):
+- `SCOPE_OPTIONS` third option swapped from `workspaces` → `packs` (Knowledge Packs). Picking it opens the existing pack-picker modal (mirrors the YourVault flow). Workspaces scope was visual-only (matter-privilege footgun, no retrieval pipeline) — replacing it with a real picker makes the slot actionable.
+- `+` button reverted to a single-purpose direct file-picker click (no dropdown). YourVault attachment is still reachable through SEARCH WITHIN. Removed unused `isAttachMenuOpen` state and `attachMenuRef`.
+
+**Conventions captured today** (added to CLAUDE.md):
+- Full-page panel chrome alignment (warm `#FBFAF7` surface + 12×28 top bar + 28px hero padding).
+- Segmented filter pill chrome (white container + 1px `#e2e3e7` + gold-bg active).
+- `BillingPanel` is an in-portal full-page sibling, not a route redirect.
+- `SCOPE_OPTIONS` is now `files / vault / packs` (workspaces gone). Third option opens a picker modal — no visual-only scopes.
+- `+` button = direct file-picker click only. Don't reintroduce the 2-option dropdown.
+
+**Branch state note**: Last week's sessions left the worktree on the `tmp` branch (mirrors `yourai/main`). `claude/great-banach` is now 127 commits behind. All commits today went directly to `tmp`, then `git push yourai tmp:main`. The named working branch is effectively vestigial — what matters is that `tmp` stays in sync with `yourai/main`.
+
+**Bundle progression today**: `index-CHql8uKy.js` (yesterday) → `DX0JO24K` → `DzzqVwrR` → `DBvWM09b` → `Buw3GOFG` → `1TgaB_71` → `DB1lv0w6` → `cgvt1txe` → `DEsfCGkp` → **`DKWhQuTr.js`** (current).
+
+**What's next**:
+- Carryover: Timeline intent removal (12 touchpoints inventoried, paused), Audit Logs sidebar no-op (`ChatView.jsx:5745`), mirror artifact panel in `WorkspaceChatView`, Edge prompt tuning for matterName, responsive design first-wave (awaiting PM go-ahead), Himanshu audit pass on un-covered surfaces.
+- New: `BillingPanel` mock content needs real Stripe wiring once backend lands; Cost by Client donut + Top Workflows / Top Users currently mock — wire to real telemetry when that backend story exists.
+
+---
 
 **2026-05-09** — Chat UX polish + Org Admin Dashboard. Three features shipped across two sessions; one deploy to `yourai/main`.
 
