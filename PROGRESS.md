@@ -336,7 +336,7 @@ What got deleted in the iteration:
 
 Short list of probable next priorities based on today's direction — **user should confirm or reorder**:
 
-0. **Audit Logs sidebar entry is a no-op** (Himanshu flagged 2026-05-04). Click handler is literal `() => { /* TODO: Part 5+ wires real audit-logs panel */ }` (`ChatView.jsx:5745`). Either wire a stub panel or hide the sidebar item until the real panel ships. Visible to Org Admin role today.
+0. ~~**Audit Logs sidebar entry is a no-op**~~ — shipped 2026-05-11 (`AuditLogsPanel`, commit `f131f6d`). MVP scope: 5 categories, 16 event types, 2 filters, CSV export. See the 2026-05-11 session entry below for details.
 1. **Mirror the artifact panel pattern in `WorkspaceChatView`**. Workspace chat still renders cards inline. The artifact panel + chip + cardToMarkdown serializers are reusable; the only piece missing is the state hookup and the layout (workspace chat is already laid out as a flex container, so the panel can be a sibling).
 2. **Add new card intents through `cardToMarkdown.ts`** — when expanding the intent system, write the per-intent serializer first; the panel picks it up automatically. See `.claude-context/artifact-panel-pattern.md` for the conventions.
 3. **Edge-side prompt tuning to emit better matterName**. The `pickTitle()` heuristic is a defensive client-side fix; the root cause is the LLM emitting "Risk Assessment of Uploaded Documents" / "Untitled case" for trivial prompts. The system prompt at `api/chat.ts` should explicitly tell the LLM to use the document filename as matterName when no real matter is in scope.
@@ -546,6 +546,30 @@ Reverse chronological. Each entry: *decision — rationale — date*.
 - `SCOPE_OPTIONS` third option swapped from `workspaces` → `packs` (Knowledge Packs). Picking it opens the existing pack-picker modal (mirrors the YourVault flow). Workspaces scope was visual-only (matter-privilege footgun, no retrieval pipeline) — replacing it with a real picker makes the slot actionable.
 - `+` button reverted to a single-purpose direct file-picker click (no dropdown). YourVault attachment is still reachable through SEARCH WITHIN. Removed unused `isAttachMenuOpen` state and `attachMenuRef`.
 
+**9. MVP `AuditLogsPanel` for org admins** (`f131f6d` / `index-DKkIjBH8.js`). The sidebar "Audit Logs" entry had been a no-op stub since the panel was first sketched (Himanshu flagged 2026-05-04). Now opens a real panel following the same in-portal full-page sibling pattern as `OrgDashboardPanel` / `BillingPanel`.
+
+Scope (MVP — 5 categories, 16 event types):
+- **Auth**: signed in · signed out · failed sign-in
+- **Documents**: uploaded · deleted · shared org-wide
+- **Workspaces**: created · deleted · member added · member removed · **external client added** (red "Flagged" pill — privilege-boundary alert)
+- **Users**: invited · role changed · deactivated
+- **Workflows**: run completed · run failed
+
+UX intentionally tight per "MVP, not V1" feedback during the brainstorm:
+- Single table — Timestamp · User · Category · Action · Target
+- Two filters only — User dropdown + Date range (All / Today / Last 7d / Last 30d)
+- CSV export of filtered rows (client-side `Blob` + temporary `<a>` click pattern)
+- Category pills with per-category fill (auth purple / docs navy / workspaces teal / users amber / workflows gold)
+- Empty state when filters return zero
+
+Seed: 30 realistic events in `data/mockData.js` under `auditEvents` spanning the past week, named consistently with `orgUsers` (Sarah Chen / James Wu / Ryan Melade / Maria Torres / Tom Bradley; one anonymous failed-sign-in attempt to demonstrate the failure case).
+
+Imports: added `LogIn`, `Ban`, `AlertCircle` to the lucide-react import to back the icon map.
+
+**Audit-log brainstorm before build**: PM asked which events should be tracked for org admin visibility of team activity, referencing the Activity Feed as the live surface. First pass gave full V1 scope (8 categories incl. severity tiers / bulk-op flags / IP capture); PM pushed back: *"think from MVP perspective, not too detailed like V1."* Trimmed to 5 categories / 16 events / 2 filters / CSV-only export. Lesson: default to MVP-shaped responses for greenfield feature brainstorms — V1 detail can be elicited if needed.
+
+**Client deliverable**: `YourAI_AuditLog_Events.xlsx` — 2-sheet workbook (Overview cover + Tracked Events table with auto-filter and color-coded category pills) for sharing the MVP event coverage with stakeholders. Saved to `~/Desktop/` and the worktree root. Generated via `/tmp/build_audit_xlsx.py`. Format follows `wbs-format.md` conventions (Arial, dark blue title bar, yellow header row 2, thin black borders, freeze panes A3).
+
 **Conventions captured today** (added to CLAUDE.md):
 - Full-page panel chrome alignment (warm `#FBFAF7` surface + 12×28 top bar + 28px hero padding).
 - Segmented filter pill chrome (white container + 1px `#e2e3e7` + gold-bg active).
@@ -555,11 +579,12 @@ Reverse chronological. Each entry: *decision — rationale — date*.
 
 **Branch state note**: Last week's sessions left the worktree on the `tmp` branch (mirrors `yourai/main`). `claude/great-banach` is now 127 commits behind. All commits today went directly to `tmp`, then `git push yourai tmp:main`. The named working branch is effectively vestigial — what matters is that `tmp` stays in sync with `yourai/main`.
 
-**Bundle progression today**: `index-CHql8uKy.js` (yesterday) → `DX0JO24K` → `DzzqVwrR` → `DBvWM09b` → `Buw3GOFG` → `1TgaB_71` → `DB1lv0w6` → `cgvt1txe` → `DEsfCGkp` → **`DKWhQuTr.js`** (current).
+**Bundle progression today**: `index-CHql8uKy.js` (yesterday) → `DX0JO24K` → `DzzqVwrR` → `DBvWM09b` → `Buw3GOFG` → `1TgaB_71` → `DB1lv0w6` → `cgvt1txe` → `DEsfCGkp` → `DKWhQuTr` → **`DKkIjBH8.js`** (current). 10 deploys.
 
 **What's next**:
-- Carryover: Timeline intent removal (12 touchpoints inventoried, paused), Audit Logs sidebar no-op (`ChatView.jsx:5745`), mirror artifact panel in `WorkspaceChatView`, Edge prompt tuning for matterName, responsive design first-wave (awaiting PM go-ahead), Himanshu audit pass on un-covered surfaces.
-- New: `BillingPanel` mock content needs real Stripe wiring once backend lands; Cost by Client donut + Top Workflows / Top Users currently mock — wire to real telemetry when that backend story exists.
+- Carryover: Timeline intent removal (12 touchpoints inventoried, paused), mirror artifact panel in `WorkspaceChatView`, Edge prompt tuning for matterName, responsive design first-wave (awaiting PM go-ahead), Himanshu audit pass on un-covered surfaces.
+- New: `BillingPanel` mock content needs real Stripe wiring once backend lands; Cost by Client donut + Top Workflows / Top Users + audit events currently mock — wire to real telemetry when that backend story exists. Audit Logs V1 (when asked): add severity tiers, IP / user-agent capture, before/after diffs for edits, bulk-operation flags, more granular doc-access events (downloads, renames, moves), per-message AI logging gate (privacy-aware).
+- Done today: Audit Logs sidebar no-op resolved (was on the carryover list since 2026-05-04).
 
 ---
 
