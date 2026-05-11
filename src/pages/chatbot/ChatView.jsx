@@ -3712,6 +3712,56 @@ function OrgDashboardPanel({ onBack, displayName, orgName, workspaceCount, membe
           })}
         </div>
 
+        {/* Activity this week — stacked bar chart */}
+        <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 12, padding: '15px 22px 18px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)', marginBottom: 18 }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 16 }}>
+            <h4 style={{ fontFamily: "'Fraunces', serif", fontSize: 15, color: 'var(--text-primary)', fontWeight: 400, margin: 0 }}>Activity this week</h4>
+            <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Workflow runs · user actions</span>
+          </div>
+          {(() => {
+            const days = [
+              { day: 'Mon', actions: 18, runs:  4 },
+              { day: 'Tue', actions: 34, runs: 10 },
+              { day: 'Wed', actions: 28, runs:  8 },
+              { day: 'Thu', actions: 52, runs: 13 },
+              { day: 'Fri', actions: 47, runs: 14 },
+              { day: 'Sat', actions: 16, runs:  5 },
+              { day: 'Sun', actions: 35, runs:  7 },
+            ];
+            const max = Math.max(...days.map(d => d.runs + d.actions));
+            const chartH = 130;
+            return (
+              <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12 }}>
+                {days.map((d) => {
+                  const total = d.runs + d.actions;
+                  const runsH = (d.runs / max) * chartH;
+                  const actionsH = (d.actions / max) * chartH;
+                  return (
+                    <div key={d.day} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+                      <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 500, height: 14 }}>{total}</span>
+                      <div style={{ width: '100%', maxWidth: 48, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', height: chartH }}>
+                        <div style={{ width: '100%', height: runsH, background: 'var(--gold)', borderRadius: '4px 4px 0 0' }} title={`${d.runs} workflow runs`} />
+                        <div style={{ width: '100%', height: actionsH, background: 'var(--navy)' }} title={`${d.actions} user actions`} />
+                      </div>
+                      <span style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{d.day}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
+          <div style={{ display: 'flex', gap: 18, marginTop: 14, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12, color: 'var(--text-secondary)' }}>
+              <span style={{ width: 10, height: 10, borderRadius: 2, background: 'var(--navy)' }} />
+              User actions
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12, color: 'var(--text-secondary)' }}>
+              <span style={{ width: 10, height: 10, borderRadius: 2, background: 'var(--gold)' }} />
+              Workflow runs
+            </div>
+          </div>
+        </div>
+
         {/* Two-column: Activity Feed + Plan Usage */}
         <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: 18 }}>
           {/* Activity Feed */}
@@ -3882,8 +3932,44 @@ function OrgDashboardPanel({ onBack, displayName, orgName, workspaceCount, membe
           </div>
         </div>
 
+        {/* Insights row — Workflows by Practice Area + Cost by Client */}
+        <div style={{ marginTop: 18, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
+
+        {/* Workflows by Practice Area — horizontal bars */}
+        <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 12, padding: '18px 22px 22px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 16 }}>
+            <h4 style={{ fontFamily: "'Fraunces', serif", fontSize: 15, color: 'var(--text-primary)', fontWeight: 400, margin: 0 }}>Workflows by Practice Area</h4>
+            <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>This week</span>
+          </div>
+          {(() => {
+            const areas = [
+              { name: 'Corporate',  runs: 21, color: '#0E8B7E' },
+              { name: 'Compliance', runs: 18, color: '#C65454' },
+              { name: 'Legal',      runs: 15, color: '#4F46E5' },
+              { name: 'M&A',        runs:  7, color: 'var(--gold)' },
+              { name: 'Employment', runs:  5, color: '#7C5CBF' },
+            ];
+            const max = Math.max(...areas.map(a => a.runs));
+            return (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
+                {areas.map((a) => (
+                  <div key={a.name}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, fontSize: 12.5 }}>
+                      <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{a.name}</span>
+                      <span style={{ color: 'var(--text-muted)' }}>{a.runs} runs</span>
+                    </div>
+                    <div style={{ height: 8, background: '#EFEEEA', borderRadius: 4, overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: `${(a.runs / max) * 100}%`, background: a.color, borderRadius: 4, transition: 'width 300ms' }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
+        </div>
+
         {/* Cost by Client — donut chart */}
-        <div style={{ marginTop: 18, background: '#fff', border: '1px solid var(--border)', borderRadius: 12, padding: '18px 22px 22px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+        <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 12, padding: '18px 22px 22px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
           <h4 style={{ fontFamily: "'Fraunces', serif", fontSize: 15, color: 'var(--text-primary)', fontWeight: 400, margin: '0 0 14px' }}>Cost by Client</h4>
           {(() => {
             const clients = [
@@ -3933,6 +4019,7 @@ function OrgDashboardPanel({ onBack, displayName, orgName, workspaceCount, membe
               </>
             );
           })()}
+        </div>
         </div>
       </div>
     </div>
