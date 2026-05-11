@@ -3649,14 +3649,6 @@ function OrgDashboardPanel({ onBack, displayName, orgName, workspaceCount, membe
     { icon: UserPlus, label: 'Add Team Member',  desc: 'Invite a colleague or client to your workspace',  onClick: onAddTeam },
   ];
 
-  const practiceAreas = [
-    { name: 'Corporate',  runs: 21, color: '#0E8B7E' },
-    { name: 'Compliance', runs: 18, color: '#C65454' },
-    { name: 'Legal',      runs: 15, color: '#4F46E5' },
-    { name: 'M&A',        runs:  7, color: 'var(--gold)' },
-    { name: 'Employment', runs:  5, color: '#7C5CBF' },
-  ];
-
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, background: '#F8F7F4', overflow: 'hidden' }}>
       {/* Panel header */}
@@ -3735,13 +3727,9 @@ function OrgDashboardPanel({ onBack, displayName, orgName, workspaceCount, membe
                 { name: 'Due Diligence Flow',       runs: 17 },
                 { name: 'Risk Assessment Pipeline', runs: 11 },
               ];
-              const also = [
-                { name: 'Compliance Check Pipeline', runs: 6 },
-                { name: 'Quarterly Review Prep',     runs: 3 },
-              ];
               return (
                 <>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, padding: '14px 14px 4px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, padding: '14px 14px 14px' }}>
                     {top3.map((r, i) => {
                       const isLead = i === 0;
                       return (
@@ -3761,15 +3749,6 @@ function OrgDashboardPanel({ onBack, displayName, orgName, workspaceCount, membe
                       );
                     })}
                   </div>
-                  <div style={{ padding: '10px 18px 14px', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}>Also ran</span>
-                    {also.map((r, i) => (
-                      <React.Fragment key={r.name}>
-                        {i > 0 && <span style={{ color: 'var(--text-muted)' }}>·</span>}
-                        <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{r.name} <span style={{ color: 'var(--text-muted)' }}>{r.runs}</span></span>
-                      </React.Fragment>
-                    ))}
-                  </div>
                 </>
               );
             })()}
@@ -3787,13 +3766,9 @@ function OrgDashboardPanel({ onBack, displayName, orgName, workspaceCount, membe
                 { name: 'James Wu',    avatar: 'JW', actions: 64 },
                 { name: 'Ryan Melade', avatar: 'RM', actions: 51 },
               ];
-              const also = [
-                { name: 'Maria Torres', actions: 28 },
-                { name: 'Tom Bradley',  actions:  0, invited: true },
-              ];
               return (
                 <>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, padding: '14px 14px 4px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, padding: '14px 14px 14px' }}>
                     {top3.map((u, i) => {
                       const isLead = i === 0;
                       return (
@@ -3812,22 +3787,6 @@ function OrgDashboardPanel({ onBack, displayName, orgName, workspaceCount, membe
                         </div>
                       );
                     })}
-                  </div>
-                  <div style={{ padding: '10px 18px 14px', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}>Also active</span>
-                    {also.map((u, i) => (
-                      <React.Fragment key={u.name}>
-                        {i > 0 && <span style={{ color: 'var(--text-muted)' }}>·</span>}
-                        <span style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-                          {u.name}{' '}
-                          {u.invited ? (
-                            <span style={{ fontSize: 10, color: 'var(--text-muted)', padding: '1px 6px', borderRadius: 4, border: '1px solid var(--border)', fontWeight: 500 }}>Invited</span>
-                          ) : (
-                            <span style={{ color: 'var(--text-muted)' }}>{u.actions}</span>
-                          )}
-                        </span>
-                      </React.Fragment>
-                    ))}
                   </div>
                 </>
               );
@@ -3922,19 +3881,8 @@ function OrgDashboardPanel({ onBack, displayName, orgName, workspaceCount, membe
           <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Today & yesterday</span>
         </div>
 
-        {/* Activity Feed — full width, with Practice Area chip strip in header */}
+        {/* Activity Feed — full width */}
         <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.04)', marginBottom: 32, overflow: 'hidden' }}>
-          {/* Practice area chip header */}
-          <div style={{ padding: '12px 18px', borderBottom: '1px solid var(--border)', display: 'flex', gap: 18, flexWrap: 'wrap', alignItems: 'center', background: '#FAFAF8' }}>
-            <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}>By practice area</span>
-            {practiceAreas.map((a) => (
-              <span key={a.name} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: 12.5, color: 'var(--text-secondary)' }}>
-                <span style={{ width: 8, height: 8, borderRadius: '50%', background: a.color, flexShrink: 0 }} />
-                {a.name}
-                <span style={{ color: 'var(--text-muted)', fontVariantNumeric: 'tabular-nums' }}>{a.runs}</span>
-              </span>
-            ))}
-          </div>
           {/* Activity items */}
           <div style={{ maxHeight: 440, overflowY: 'auto' }}>
             {ORG_ACTIVITY_FEED.map((item) => {
