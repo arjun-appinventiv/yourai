@@ -518,7 +518,7 @@ Reverse chronological. Each entry: *decision — rationale — date*.
 
 ## Last updated
 
-**2026-05-11** — UX consistency pass across full-page panels + Org Admin Dashboard build-out + chat input simplification. Nine commits, nine deploys to `yourai/main`.
+**2026-05-11** — UX consistency pass across full-page panels + Org Admin Dashboard build-out (charts + restructure) + Audit Logs MVP + chat input simplification. Multiple sessions, fifteen commits, fifteen deploys to `yourai/main`.
 
 **1. Workflows chrome aligned with Vault / KP / Workspaces** (`20e6d08` / `index-DX0JO24K.js`). Workflows had been using cool `var(--ice-warm)` (`#F4F6F9`) as its outer surface while every other full-page panel used warm `#FBFAF7` cream. Outer + flat hero now `#FBFAF7`; top bar padding `14px 36px` → `12px 28px`; hero/scroll horizontal padding 36px → 28px. Cards / gold AI PIPELINES eyebrow / practice-area accent stripes unchanged.
 
@@ -570,21 +570,44 @@ Imports: added `LogIn`, `Ban`, `AlertCircle` to the lucide-react import to back 
 
 **Client deliverable**: `YourAI_AuditLog_Events.xlsx` — 2-sheet workbook (Overview cover + Tracked Events table with auto-filter and color-coded category pills) for sharing the MVP event coverage with stakeholders. Saved to `~/Desktop/` and the worktree root. Generated via `/tmp/build_audit_xlsx.py`. Format follows `wbs-format.md` conventions (Arial, dark blue title bar, yellow header row 2, thin black borders, freeze panes A3).
 
+**10. Org Admin Dashboard — charts + full UX restructure** (`770963b` → `0b57cae` → `5e659d7` → `2137940` → side-by-side rolled into `f131f6d` → `a20f1d9` / current bundle `index-BMy_XH7X.js`). User asked for chart treatments ("piechart or bargraph something") and then for a proper restructure. Six iterations, two PM aesthetic rejections, ended with a 4-zone hierarchy.
+
+Iterations:
+- **Charts pass — one approved, one rejected.** First pass added an "Activity this week" 7-day stacked bar chart (navy actions + gold runs, day-of-week mono labels, per-bar totals) AND a "Workflows by Practice Area" horizontal-bars card alongside Cost by Client. PM reaction to the stacked bar chart: *"very very ugly."* Removed within minutes of deploy.
+- **Engagement-then-feed reorder.** PM ask: "keep [Top Workflows + Top Users + Practice Area + Cost by Client] above Activity Feed and Plan Usage." Moved Activity Feed + Plan Usage from middle-of-page to footer.
+- **Full 4-zone restructure** (the main pass). Six equal-weight horizontal rows collapsed into four hierarchical zones with clear visual ranks:
+  1. **Hero** — greeting (Fraunces 26) + outlined Quick action chips in top-right (icon + label, no descriptions) + slim 4-segment stat strip (single connected card, internal `borderRight`s, mono uppercase eyebrow + Fraunces 26 number — no colored top-borders, no icons, no per-segment shadow).
+  2. **This week** — section heading (Fraunces 18 + mono LAST 7 DAYS eyebrow) + Top Workflows / Top Users tile grids (unchanged) → Cost by Client + Plan usage paired in a 2-col row, equal heights. Cost by Client donut shrunk to 170×170 to fit the half-width column; legend uses ellipsis on long client names. Plan usage kept its stacked-bar layout for the same column width.
+  3. **Recent activity** — section heading + full-width Activity Feed (taller, 440 px max-height). Briefly carried a "By practice area" chip strip in its header (colored dots + name + run count) — PM removed at next pass.
+  4. **Footer** — eliminated. Plan Usage moved up into "This week" zone alongside Cost by Client; Quick Actions moved up into the hero. No standalone footer card remains.
+- **Drop tail rows on top-tile cards.** Removed "Also ran" / "Also active" rows under Top Workflows / Top Users tiles — the top-3 tiles tell the whole story.
+- **Drop the practice-area chip strip.** PM ask in the same pass: remove the "By practice area" header strip from Activity Feed entirely. Practice-area data has now been tried as a standalone bars card AND as a chip strip on the Activity Feed header; both rejected. The Org Dashboard doesn't surface practice-area breakdown.
+
+**Lesson — PM aesthetic threshold for this dashboard is high.** Two visual experiments rejected within minutes of deploy in a single session. When proposing a chart on this surface: mock it tight (no monospace day labels, no per-bar totals, no chunky chrome), and ask whether it shows something the existing tile grids + donut don't already say. Activity tiles + donut already convey "where is engagement concentrated this week" — a temporal chart is redundant.
+
+**Cross-agent commit note.** Mid-session, a parallel Claude agent (separate context, different session) authored commit `f131f6d` for the Audit Logs panel and inadvertently swept up the working-tree's uncommitted dashboard side-by-side change (Cost by Client + Plan usage paired) into the same commit. The push went through before this agent got its own commit in. Net effect was the right outcome but attribution lives on the audit-logs commit, not a standalone dashboard commit. Worth knowing when worktrees are shared across agent sessions: an unrelated commit can land your in-flight edits.
+
 **Conventions captured today** (added to CLAUDE.md):
 - Full-page panel chrome alignment (warm `#FBFAF7` surface + 12×28 top bar + 28px hero padding).
 - Segmented filter pill chrome (white container + 1px `#e2e3e7` + gold-bg active).
 - `BillingPanel` is an in-portal full-page sibling, not a route redirect.
 - `SCOPE_OPTIONS` is now `files / vault / packs` (workspaces gone). Third option opens a picker modal — no visual-only scopes.
 - `+` button = direct file-picker click only. Don't reintroduce the 2-option dropdown.
+- Org Admin Dashboard 4-zone structure (hero / this week / recent activity; no footer).
+- Slim stat strip pattern (single connected card, no per-segment chrome; mono eyebrow + serif number).
+- Quick actions live in hero top-right as outlined chips, not a standalone card.
+- Cost by Client + Plan usage paired in a single 2-col row, equal heights.
+- No "Also ran" / "Also active" tail rows on top-3 tile cards.
+- No practice-area surface on the Org Admin Dashboard (neither standalone card nor header chip strip).
 
 **Branch state note**: Last week's sessions left the worktree on the `tmp` branch (mirrors `yourai/main`). `claude/great-banach` is now 127 commits behind. All commits today went directly to `tmp`, then `git push yourai tmp:main`. The named working branch is effectively vestigial — what matters is that `tmp` stays in sync with `yourai/main`.
 
-**Bundle progression today**: `index-CHql8uKy.js` (yesterday) → `DX0JO24K` → `DzzqVwrR` → `DBvWM09b` → `Buw3GOFG` → `1TgaB_71` → `DB1lv0w6` → `cgvt1txe` → `DEsfCGkp` → `DKWhQuTr` → **`DKkIjBH8.js`** (current). 10 deploys.
+**Bundle progression today**: `index-CHql8uKy.js` (yesterday) → `DX0JO24K` → `DzzqVwrR` → `DBvWM09b` → `Buw3GOFG` → `1TgaB_71` → `DB1lv0w6` → `cgvt1txe` → `DEsfCGkp` → `DKWhQuTr` → `DKYFEGz4` (charts added) → `BR7J7vOb` (Activity-this-week chart removed + reorder) → `DvdSiM8l` (4-zone restructure) → `DKkIjBH8` (Quick actions to hero) → `BudgTcTS` (Audit Logs + Cost/Plan side-by-side) → **`BMy_XH7X.js`** (current — Also rows + practice-area chip dropped). 15 deploys.
 
 **What's next**:
 - Carryover: Timeline intent removal (12 touchpoints inventoried, paused), mirror artifact panel in `WorkspaceChatView`, Edge prompt tuning for matterName, responsive design first-wave (awaiting PM go-ahead), Himanshu audit pass on un-covered surfaces.
 - New: `BillingPanel` mock content needs real Stripe wiring once backend lands; Cost by Client donut + Top Workflows / Top Users + audit events currently mock — wire to real telemetry when that backend story exists. Audit Logs V1 (when asked): add severity tiers, IP / user-agent capture, before/after diffs for edits, bulk-operation flags, more granular doc-access events (downloads, renames, moves), per-message AI logging gate (privacy-aware).
-- Done today: Audit Logs sidebar no-op resolved (was on the carryover list since 2026-05-04).
+- Done today: Audit Logs sidebar no-op resolved (was on the carryover list since 2026-05-04). Org Admin Dashboard restructured to 4-zone hierarchy.
 
 ---
 
