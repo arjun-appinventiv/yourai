@@ -1421,7 +1421,7 @@ function KnowledgePacksPanel({ packs, onClose, onCreateNew, onEdit, onDelete, on
         )}
 
         {/* Scope tabs (segmented control) — replaces the old left-rail pinned filters */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 2, padding: 3, background: '#F0F2F5', borderRadius: 8 }}>
+        <div style={{ display: 'inline-flex', border: '1px solid #e2e3e7', borderRadius: 9, background: '#fff', padding: 3 }}>
           {[
             { id: 'all',  label: 'All',      count: counts.total },
             { id: 'org',  label: 'Org-wide', count: counts.org },
@@ -1431,15 +1431,23 @@ function KnowledgePacksPanel({ packs, onClose, onCreateNew, onEdit, onDelete, on
               key={t.id}
               onClick={() => setScope(t.id)}
               style={{
-                padding: '6px 12px', borderRadius: 6, fontSize: 12, fontWeight: 500,
-                background: scope === t.id ? '#fff' : 'transparent',
-                color: scope === t.id ? 'var(--navy)' : 'var(--text-muted)',
-                border: 'none', cursor: 'pointer',
-                boxShadow: scope === t.id ? '0 1px 2px rgba(15,23,42,0.06)' : 'none',
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                padding: '6px 12px', borderRadius: 6,
+                border: 'none',
+                background: scope === t.id ? 'var(--gold-bg)' : 'transparent',
+                color: scope === t.id ? 'var(--text-primary)' : 'var(--text-secondary)',
+                fontSize: 12.5, fontWeight: scope === t.id ? 600 : 400,
+                cursor: 'pointer', transition: 'all 120ms', whiteSpace: 'nowrap',
                 fontFamily: "inherit",
               }}
             >
-              {t.label} <span style={{ color: 'var(--text-muted)', fontWeight: 400, marginLeft: 2 }}>{t.count}</span>
+              <span>{t.label}</span>
+              <span style={{
+                fontSize: 11,
+                fontWeight: scope === t.id ? 600 : 400,
+                color: scope === t.id ? 'var(--text-primary)' : 'var(--text-muted)',
+                opacity: 0.75,
+              }}>{t.count}</span>
             </button>
           ))}
         </div>
@@ -2762,57 +2770,6 @@ Rules:
               );
             })()}
 
-            {/* FILTER (CROSS-MATTER) section */}
-            <div style={{ margin: '12px 10px', border: '1px solid var(--border)', borderRadius: 10, background: '#fff', padding: '12px' }}>
-              <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', marginBottom: 8 }}>Filter (Cross-Matter)</div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                {[
-                  { label: 'Privileged', color: '#e55151' },
-                  { label: 'Confidential', color: '#4a90e2' },
-                  { label: 'Final', color: '#5fb86d' },
-                  { label: 'Draft', color: '#e6a23c' },
-                  { label: 'Pinned' },
-                  { label: 'Mine' },
-                ].map((pill) => (
-                  <button key={pill.label} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 10px', borderRadius: 999, border: '1px solid var(--border)', background: '#fff', fontSize: 13, color: 'var(--text-primary)', cursor: 'pointer', fontFamily: 'inherit' }}
-                    onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--navy)'; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border)'; }}
-                  >
-                    {pill.color && <span style={{ width: 7, height: 7, borderRadius: '50%', background: pill.color, flexShrink: 0 }} />}
-                    {pill.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* MY FOLDERS section */}
-            {(childrenByParent.get(null) || []).length > 0 && (
-              <div style={{ margin: '4px 10px 0', border: '1px solid var(--border)', borderRadius: 10, background: '#fff', padding: '12px' }}>
-                <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', marginBottom: 6 }}>My Folders</div>
-                {(childrenByParent.get(null) || []).map((f) => {
-                  const isActive = currentFolderId === f.id;
-                  const docCount = documents.filter(d => d.folderId === f.id).length;
-                  return (
-                    <div key={f.id} onClick={() => setCurrentFolderId(f.id)}
-                      style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 8px', borderRadius: 6, cursor: 'pointer', background: isActive ? 'rgba(10,36,99,0.06)' : 'transparent', transition: 'background 100ms' }}
-                      onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = 'rgba(15,23,42,0.04)'; }}
-                      onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = isActive ? 'rgba(10,36,99,0.06)' : 'transparent'; }}
-                    >
-                      <Folder size={14} style={{ color: '#c9a04a', flexShrink: 0 }} />
-                      <span style={{ flex: 1, fontSize: 13.5, color: 'var(--text-primary)', fontWeight: isActive ? 600 : 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.name}</span>
-                      <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{docCount}</span>
-                    </div>
-                  );
-                })}
-                <button onClick={() => setCreatingFolder(true)}
-                  style={{ width: '100%', marginTop: 6, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, fontSize: 12.5, color: 'var(--text-secondary)', background: 'transparent', border: '1px dashed var(--border)', borderRadius: 6, cursor: 'pointer', fontFamily: 'inherit' }}
-                  onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--navy)'; e.currentTarget.style.color = 'var(--navy)'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
-                >
-                  <FolderPlus size={11} /> New folder
-                </button>
-              </div>
-            )}
           </div>
         </div>
 
@@ -2823,7 +2780,7 @@ Rules:
               search input moved into the hero. */}
           {isOrgAdmin && (
             <div style={{ padding: '12px 28px 0', display: 'flex', justifyContent: 'flex-end', flexShrink: 0, background: '#FBFAF7' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 2, padding: 3, background: '#F0F2F5', borderRadius: 8 }}>
+              <div style={{ display: 'inline-flex', border: '1px solid #e2e3e7', borderRadius: 9, background: '#fff', padding: 3 }}>
                 {[
                   { id: 'all',  label: 'All',      count: counts.total },
                   { id: 'org',  label: 'Org-wide', count: counts.org },
@@ -2833,15 +2790,23 @@ Rules:
                     key={t.id}
                     onClick={() => setScope(t.id)}
                     style={{
-                      padding: '6px 12px', borderRadius: 6, fontSize: 12, fontWeight: 500,
-                      background: scope === t.id ? '#fff' : 'transparent',
-                      color: scope === t.id ? 'var(--navy)' : 'var(--text-muted)',
-                      border: 'none', cursor: 'pointer',
-                      boxShadow: scope === t.id ? '0 1px 2px rgba(15,23,42,0.06)' : 'none',
+                      display: 'inline-flex', alignItems: 'center', gap: 6,
+                      padding: '6px 12px', borderRadius: 6,
+                      border: 'none',
+                      background: scope === t.id ? 'var(--gold-bg)' : 'transparent',
+                      color: scope === t.id ? 'var(--text-primary)' : 'var(--text-secondary)',
+                      fontSize: 12.5, fontWeight: scope === t.id ? 600 : 400,
+                      cursor: 'pointer', transition: 'all 120ms', whiteSpace: 'nowrap',
                       fontFamily: "inherit",
                     }}
                   >
-                    {t.label} <span style={{ color: 'var(--text-muted)', fontWeight: 400, marginLeft: 2 }}>{t.count}</span>
+                    <span>{t.label}</span>
+                    <span style={{
+                      fontSize: 11,
+                      fontWeight: scope === t.id ? 600 : 400,
+                      color: scope === t.id ? 'var(--text-primary)' : 'var(--text-muted)',
+                      opacity: 0.75,
+                    }}>{t.count}</span>
                   </button>
                 ))}
               </div>
@@ -2921,52 +2886,67 @@ Rules:
               </div>
             </div>
 
-            {/* ─── Big Ask-anything bar ─── */}
-            <div style={{ maxWidth: 1080, margin: '0 auto', padding: '6px 28px 14px' }}>
+            {/* ─── Search bar (clean, conventional) ─── */}
+            <div style={{ maxWidth: 1080, margin: '0 auto', padding: '6px 28px 12px' }}>
               <div style={{
-                position: 'relative',
-                border: '1.5px solid var(--gold-border)',
-                borderRadius: 14, background: '#fffdf9',
-                padding: '16px 20px',
-                display: 'flex', alignItems: 'center', gap: 16,
-                boxShadow: '0 2px 10px rgba(201,168,76,0.09)',
-              }}>
-                <div style={{ width: 40, height: 40, borderRadius: 11, background: 'linear-gradient(135deg, #C9A84C 0%, #e5c465 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 2px 8px rgba(201,168,76,0.32)' }}>
-                  <Sparkles size={18} color="#fff" />
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <input
-                    value={askQuery || search}
-                    onChange={(e) => {
-                      const v = e.target.value;
-                      setAskQuery(v);
-                      setSearch(v);
-                      if (resultLimit) setResultLimit(null);
-                      if (askExplanation) setAskExplanation('');
-                      if (sortBy !== 'recent') setSortBy('recent');
-                    }}
-                    onKeyDown={(e) => { if (e.key === 'Enter') handleAskAnything(); }}
-                    disabled={askLoading}
-                    placeholder="Search by file name, description, or ask a question…"
-                    className="no-focus-ring"
-                    style={{ width: '100%', height: 26, border: 'none', outline: 'none', fontSize: 15, color: 'var(--text-primary)', background: 'transparent', fontFamily: "inherit" }}
-                  />
-                  <div style={{ marginTop: 4, fontSize: 12, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                      <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#5fb86d', display: 'inline-block', flexShrink: 0 }} />
-                      AI-powered
-                    </span>
-                    <span>·</span>
-                    <span>Searches file names &amp; descriptions across all your documents</span>
-                  </div>
-                </div>
+                display: 'flex', alignItems: 'center', gap: 10,
+                height: 44,
+                border: '1px solid var(--border)',
+                borderRadius: 10,
+                background: '#fff',
+                padding: '0 12px',
+                transition: 'border-color 150ms, box-shadow 150ms',
+              }}
+                onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--navy)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(10,36,99,0.08)'; }}
+                onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.boxShadow = 'none'; }}
+              >
+                <Search size={16} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+                <input
+                  value={askQuery || search}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setAskQuery(v);
+                    setSearch(v);
+                    if (resultLimit) setResultLimit(null);
+                    if (askExplanation) setAskExplanation('');
+                    if (sortBy !== 'recent') setSortBy('recent');
+                  }}
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleAskAnything(); }}
+                  disabled={askLoading}
+                  placeholder="Search documents or ask a question…"
+                  className="no-focus-ring"
+                  style={{ flex: 1, height: '100%', border: 'none', outline: 'none', fontSize: 14, color: 'var(--text-primary)', background: 'transparent', fontFamily: "inherit", minWidth: 0 }}
+                />
                 <kbd style={{
                   display: 'inline-flex', alignItems: 'center', gap: 2,
-                  padding: '5px 9px', borderRadius: 6,
-                  border: '1px solid var(--border)', background: '#fff',
+                  padding: '3px 7px', borderRadius: 5,
+                  border: '1px solid var(--border)', background: '#fafaf8',
                   fontSize: 11, color: 'var(--text-muted)', fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
                   flexShrink: 0,
                 }}>⌘K</kbd>
+              </div>
+            </div>
+
+            {/* ─── Filter chip row (moved out of left rail) ─── */}
+            <div style={{ maxWidth: 1080, margin: '0 auto', padding: '0 28px 14px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', marginRight: 4 }}>Filters</span>
+                {[
+                  { label: 'Privileged', color: '#e55151' },
+                  { label: 'Confidential', color: '#4a90e2' },
+                  { label: 'Final', color: '#5fb86d' },
+                  { label: 'Draft', color: '#e6a23c' },
+                  { label: 'Pinned' },
+                  { label: 'Mine' },
+                ].map((pill) => (
+                  <button key={pill.label} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 10px', borderRadius: 999, border: '1px solid var(--border)', background: '#fff', fontSize: 12.5, color: 'var(--text-primary)', cursor: 'pointer', fontFamily: 'inherit' }}
+                    onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--navy)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border)'; }}
+                  >
+                    {pill.color && <span style={{ width: 7, height: 7, borderRadius: '50%', background: pill.color, flexShrink: 0 }} />}
+                    {pill.label}
+                  </button>
+                ))}
               </div>
             </div>
 
