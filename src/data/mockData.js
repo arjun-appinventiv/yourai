@@ -154,6 +154,51 @@ export const activityFeed = [
   { id:10, user:"David Kim",    action:"(Client) accessed client portal",         workspace:"Acme Corp — NDA Review",      time:"Yesterday 12:55",   icon:"ExternalLink"}
 ];
 
+// Audit log seed — comprehensive event stream. The Activity Feed surfaces
+// the 10-15 most recent items; the full Audit Log panel reads the same
+// list and adds filters + CSV export.
+//
+// Categories (MVP): auth · documents · workspaces · users · workflows.
+// `flagged: true` surfaces a privilege-boundary alert in the table
+// (used for external client added).
+export const auditEvents = [
+  // === Today ===
+  { id:'aud-001', ts:'2026-05-11T14:23:00', user:'Sarah Chen',   avatar:'SC', category:'documents',  icon:'Upload',         action:'Uploaded document',          target:'Acme_NDA_v3.pdf',            workspace:'Acme Corp — NDA Review' },
+  { id:'aud-002', ts:'2026-05-11T13:55:00', user:'James Wu',     avatar:'JW', category:'workflows',  icon:'CheckCircle',    action:'Workflow completed',         target:'Contract Review Auto-run',   workspace:'Acme Corp — NDA Review' },
+  { id:'aud-003', ts:'2026-05-11T11:42:00', user:'Ryan Melade',  avatar:'RM', category:'auth',       icon:'LogIn',          action:'Signed in',                  target:'macOS · Chrome',             workspace:'' },
+  { id:'aud-004', ts:'2026-05-11T11:08:00', user:'Maria Torres', avatar:'MT', category:'documents',  icon:'Upload',         action:'Uploaded document',          target:'Compliance_Checklist.pdf',   workspace:'Acme Corp — NDA Review' },
+  { id:'aud-005', ts:'2026-05-11T10:30:00', user:'Sarah Chen',   avatar:'SC', category:'workflows',  icon:'AlertCircle',    action:'Workflow failed',            target:'Due Diligence Flow · Step 3',workspace:'TechStart Q4 Due Diligence' },
+  { id:'aud-006', ts:'2026-05-11T09:14:00', user:'Ryan Melade',  avatar:'RM', category:'workspaces', icon:'ExternalLink',   action:'Added external client',      target:'David Kim (acme.com)',       workspace:'Acme Corp — NDA Review', flagged:true },
+  { id:'aud-007', ts:'2026-05-11T09:02:00', user:'Sarah Chen',   avatar:'SC', category:'auth',       icon:'LogIn',          action:'Signed in',                  target:'macOS · Chrome',             workspace:'' },
+  // === Yesterday ===
+  { id:'aud-008', ts:'2026-05-10T17:45:00', user:'James Wu',     avatar:'JW', category:'documents',  icon:'Share2',         action:'Shared document org-wide',   target:'Standard_NDA_Template.docx', workspace:'Acme Corp — NDA Review' },
+  { id:'aud-009', ts:'2026-05-10T16:30:00', user:'Ryan Melade',  avatar:'RM', category:'users',      icon:'UserPlus',       action:'Invited team member',        target:'Tom Bradley (tom@hartwell.com)', workspace:'' },
+  { id:'aud-010', ts:'2026-05-10T15:12:00', user:'Sarah Chen',   avatar:'SC', category:'workflows',  icon:'CheckCircle',    action:'Workflow completed',         target:'Risk Assessment Pipeline',   workspace:'TechStart Q4 Due Diligence' },
+  { id:'aud-011', ts:'2026-05-10T14:08:00', user:'Maria Torres', avatar:'MT', category:'documents',  icon:'Trash2',         action:'Deleted document',           target:'Draft_Memo_v1.docx',         workspace:'Employment Contract Review' },
+  { id:'aud-012', ts:'2026-05-10T11:50:00', user:'Unknown',      avatar:'?',  category:'auth',       icon:'AlertTriangle',  action:'Failed sign-in (×3)',        target:'sarah@hartwell.com',         workspace:'' },
+  { id:'aud-013', ts:'2026-05-10T10:22:00', user:'Ryan Melade',  avatar:'RM', category:'workspaces', icon:'Briefcase',      action:'Created workspace',          target:'Acme Corp — NDA Review',     workspace:'' },
+  { id:'aud-014', ts:'2026-05-10T09:35:00', user:'James Wu',     avatar:'JW', category:'auth',       icon:'LogIn',          action:'Signed in',                  target:'macOS · Safari',             workspace:'' },
+  // === 2 days ago ===
+  { id:'aud-015', ts:'2026-05-09T16:55:00', user:'Sarah Chen',   avatar:'SC', category:'workspaces', icon:'UserPlus',       action:'Added workspace member',     target:'Maria Torres',               workspace:'Acme Corp — NDA Review' },
+  { id:'aud-016', ts:'2026-05-09T14:20:00', user:'Ryan Melade',  avatar:'RM', category:'users',      icon:'Shield',         action:'Changed user role',          target:'Sarah Chen · Team → Manager',workspace:'' },
+  { id:'aud-017', ts:'2026-05-09T13:05:00', user:'Maria Torres', avatar:'MT', category:'documents',  icon:'Upload',         action:'Uploaded document',          target:'Healthcare_Policy_Q2.pdf',   workspace:'Healthcare Compliance Audit 2026' },
+  { id:'aud-018', ts:'2026-05-09T11:48:00', user:'James Wu',     avatar:'JW', category:'workflows',  icon:'CheckCircle',    action:'Workflow completed',         target:'Compliance Check Pipeline',  workspace:'Healthcare Compliance Audit 2026' },
+  { id:'aud-019', ts:'2026-05-09T10:15:00', user:'Sarah Chen',   avatar:'SC', category:'auth',       icon:'LogIn',          action:'Signed in',                  target:'macOS · Chrome',             workspace:'' },
+  // === 3 days ago ===
+  { id:'aud-020', ts:'2026-05-08T17:30:00', user:'Ryan Melade',  avatar:'RM', category:'workspaces', icon:'ExternalLink',   action:'Added external client',      target:'Lisa Park (techstart.com)',  workspace:'TechStart Q4 Due Diligence', flagged:true },
+  { id:'aud-021', ts:'2026-05-08T15:22:00', user:'James Wu',     avatar:'JW', category:'documents',  icon:'Upload',         action:'Uploaded document',          target:'TechStart_TermSheet_v2.pdf', workspace:'TechStart Q4 Due Diligence' },
+  { id:'aud-022', ts:'2026-05-08T14:10:00', user:'Sarah Chen',   avatar:'SC', category:'workflows',  icon:'AlertCircle',    action:'Workflow failed',            target:'Contract Review · Step 2',   workspace:'Employment Contract Review' },
+  { id:'aud-023', ts:'2026-05-08T11:35:00', user:'Maria Torres', avatar:'MT', category:'documents',  icon:'Share2',         action:'Shared document org-wide',   target:'Employment_FAQ_2026.pdf',    workspace:'Employment Contract Review' },
+  { id:'aud-024', ts:'2026-05-08T09:55:00', user:'Ryan Melade',  avatar:'RM', category:'workspaces', icon:'Briefcase',      action:'Created workspace',          target:'TechStart Q4 Due Diligence', workspace:'' },
+  // === 4-6 days ago ===
+  { id:'aud-025', ts:'2026-05-07T16:12:00', user:'James Wu',     avatar:'JW', category:'workspaces', icon:'UserPlus',       action:'Added workspace member',     target:'James Wu',                   workspace:'TechStart Q4 Due Diligence' },
+  { id:'aud-026', ts:'2026-05-07T13:48:00', user:'Sarah Chen',   avatar:'SC', category:'documents',  icon:'Trash2',         action:'Deleted document',           target:'Old_Term_Sheet_v0.pdf',      workspace:'TechStart Q4 Due Diligence' },
+  { id:'aud-027', ts:'2026-05-06T15:30:00', user:'Ryan Melade',  avatar:'RM', category:'users',      icon:'UserPlus',       action:'Invited team member',        target:'Maria Torres (maria@hartwell.com)', workspace:'' },
+  { id:'aud-028', ts:'2026-05-06T11:20:00', user:'James Wu',     avatar:'JW', category:'workflows',  icon:'CheckCircle',    action:'Workflow completed',         target:'Quarterly Review Prep',      workspace:'Acme Corp — NDA Review' },
+  { id:'aud-029', ts:'2026-05-05T14:05:00', user:'Ryan Melade',  avatar:'RM', category:'users',      icon:'Ban',            action:'Deactivated user',           target:'former.intern@hartwell.com', workspace:'' },
+  { id:'aud-030', ts:'2026-05-05T09:40:00', user:'Sarah Chen',   avatar:'SC', category:'documents',  icon:'Upload',         action:'Uploaded document',          target:'Series_B_TermSheet.pdf',     workspace:'TechStart Q4 Due Diligence' },
+];
+
 export const deliverables = [
   { id:1, workspace:1, title:"Acme Corp NDA Package",      clientId:1, status:"Shared",   assembledBy:"Sarah Chen",   sharedDate:"Jan 15, 2026", items:["NDA Key Obligations Summary","NDA_Acme_Corp_v3.pdf"] },
   { id:2, workspace:2, title:"TechStart Due Diligence Pack",clientId:2, status:"Draft",    assembledBy:"Ryan Melade",  sharedDate:null,           items:["TechStart Due Diligence Summary","TechStart_TermSheet_v2.pdf"] }

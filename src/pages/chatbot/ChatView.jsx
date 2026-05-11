@@ -9,7 +9,7 @@ import {
   BookOpen, UserPlus, Trash2, Edit3, Copy, Phone, Mail, Briefcase, Hash, Menu,
   Package, Link2, File, Upload, Paperclip, Database, GitBranch, Settings, LogOut,
   CreditCard, Folder, FolderPlus, ArrowLeft, User, MoreHorizontal, Check, Home,
-  Bookmark, ArrowRight, ExternalLink, Layers
+  Bookmark, ArrowRight, ExternalLink, Layers, LogIn, Ban, AlertCircle
 } from 'lucide-react';
 import { useRole } from '../../context/RoleContext';
 import { useAuth } from '../../context/AuthContext';
@@ -51,6 +51,7 @@ import {
   documents as ORG_DOCUMENTS,
   orgReports as ORG_REPORTS,
   activityFeed as ORG_ACTIVITY_FEED,
+  auditEvents as ORG_AUDIT_EVENTS,
   workflowRuns as ORG_WORKFLOW_RUNS,
   orgUsers as ORG_USERS,
 } from '../../data/mockData';
@@ -3834,58 +3835,85 @@ function OrgDashboardPanel({ onBack, displayName, orgName, workspaceCount, membe
           </div>
         </div>
 
-        {/* Cost by Client — single card, donut LEFT, legend RIGHT */}
-        <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 12, padding: '24px 28px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)', marginBottom: 32 }}>
-          {(() => {
-            const clients = [
-              { name: 'Acme Corp',     pct: 54, color: 'var(--navy)' },
-              { name: 'TechStart Inc', pct: 35, color: 'var(--gold)' },
-              { name: 'Chen Family',   pct: 11, color: '#8d97a5' },
-            ];
-            const r = 70;
-            const C = 2 * Math.PI * r;
-            let acc = 0;
-            return (
-              <div style={{ display: 'grid', gridTemplateColumns: '200px 1fr', gap: 36, alignItems: 'center' }}>
-                <svg width={200} height={200} viewBox="0 0 200 200" aria-label="Cost by client donut chart">
-                  <g transform="rotate(-90 100 100)">
-                    {clients.map((c) => {
-                      const len = (c.pct / 100) * C;
-                      const dashOffset = -acc;
-                      acc += len;
-                      return (
-                        <circle
-                          key={c.name}
-                          cx={100} cy={100} r={r}
-                          fill="none"
-                          stroke={c.color}
-                          strokeWidth={30}
-                          strokeDasharray={`${len} ${C - len}`}
-                          strokeDashoffset={dashOffset}
-                        />
-                      );
-                    })}
-                  </g>
-                  <text x={100} y={108} textAnchor="middle" fontFamily="'Fraunces', serif" fontSize={22} fontWeight={500} fill="var(--text-primary)">$2.43</text>
-                </svg>
-                <div>
-                  <h4 style={{ fontFamily: "'Fraunces', serif", fontSize: 17, color: 'var(--text-primary)', fontWeight: 400, margin: '0 0 4px' }}>Cost by Client</h4>
-                  <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '0 0 16px' }}>Per-client AI spend, this week</p>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 11, maxWidth: 360 }}>
+        {/* Cost by Client + Plan usage — 2-col row */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18, marginBottom: 32 }}>
+          {/* Cost by Client */}
+          <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 12, padding: '22px 24px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+            <h4 style={{ fontFamily: "'Fraunces', serif", fontSize: 15, color: 'var(--text-primary)', fontWeight: 400, margin: '0 0 4px' }}>Cost by Client</h4>
+            <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '0 0 14px' }}>Per-client AI spend, this week</p>
+            {(() => {
+              const clients = [
+                { name: 'Acme Corp',     pct: 54, color: 'var(--navy)' },
+                { name: 'TechStart Inc', pct: 35, color: 'var(--gold)' },
+                { name: 'Chen Family',   pct: 11, color: '#8d97a5' },
+              ];
+              const r = 60;
+              const C = 2 * Math.PI * r;
+              let acc = 0;
+              return (
+                <div style={{ display: 'grid', gridTemplateColumns: '170px 1fr', gap: 22, alignItems: 'center' }}>
+                  <svg width={170} height={170} viewBox="0 0 170 170" aria-label="Cost by client donut chart">
+                    <g transform="rotate(-90 85 85)">
+                      {clients.map((c) => {
+                        const len = (c.pct / 100) * C;
+                        const dashOffset = -acc;
+                        acc += len;
+                        return (
+                          <circle
+                            key={c.name}
+                            cx={85} cy={85} r={r}
+                            fill="none"
+                            stroke={c.color}
+                            strokeWidth={26}
+                            strokeDasharray={`${len} ${C - len}`}
+                            strokeDashoffset={dashOffset}
+                          />
+                        );
+                      })}
+                    </g>
+                    <text x={85} y={92} textAnchor="middle" fontFamily="'Fraunces', serif" fontSize={20} fontWeight={500} fill="var(--text-primary)">$2.43</text>
+                  </svg>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                     {clients.map((c) => (
-                      <div key={c.name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 13.5 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
-                          <span style={{ width: 10, height: 10, borderRadius: '50%', background: c.color, flexShrink: 0 }} />
-                          <span style={{ color: 'var(--text-primary)' }}>{c.name}</span>
+                      <div key={c.name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 13 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+                          <span style={{ width: 9, height: 9, borderRadius: '50%', background: c.color, flexShrink: 0 }} />
+                          <span style={{ color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.name}</span>
                         </div>
-                        <span style={{ color: 'var(--text-muted)', fontVariantNumeric: 'tabular-nums' }}>{c.pct}%</span>
+                        <span style={{ color: 'var(--text-muted)', fontVariantNumeric: 'tabular-nums', marginLeft: 8 }}>{c.pct}%</span>
                       </div>
                     ))}
                   </div>
                 </div>
-              </div>
-            );
-          })()}
+              );
+            })()}
+          </div>
+
+          {/* Plan usage */}
+          <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 12, padding: '22px 24px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 4 }}>
+              <h4 style={{ fontFamily: "'Fraunces', serif", fontSize: 15, color: 'var(--text-primary)', fontWeight: 400, margin: 0 }}>Plan usage</h4>
+              <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{billingData.plan} · renews {billingData.nextRenewal}</span>
+            </div>
+            <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '0 0 14px' }}>Subscription quotas, this billing period</p>
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 12 }}>
+              {usageBars.map(({ label, used, limit }) => {
+                const pct = Math.min(100, Math.round((used / limit) * 100));
+                const barColor = pct > 80 ? '#C65454' : pct > 50 ? 'var(--gold)' : 'var(--navy)';
+                return (
+                  <div key={label}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
+                      <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{label}</span>
+                      <span style={{ fontSize: 11, color: 'var(--text-muted)', fontVariantNumeric: 'tabular-nums' }}>{used} / {limit.toLocaleString()}</span>
+                    </div>
+                    <div style={{ height: 5, background: '#eee', borderRadius: 3, overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: `${pct}%`, background: barColor, borderRadius: 3, transition: 'width 300ms' }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </div>
 
         {/* ─────────── Section: Recent activity ─────────── */}
@@ -3932,30 +3960,6 @@ function OrgDashboardPanel({ onBack, displayName, orgName, workspaceCount, membe
           </div>
         </div>
 
-        {/* ─────────── Footer: Plan usage ─────────── */}
-        <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 12, padding: '18px 22px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
-          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 16 }}>
-            <h4 style={{ fontFamily: "'Fraunces', serif", fontSize: 15, color: 'var(--text-primary)', fontWeight: 400, margin: 0 }}>Plan usage</h4>
-            <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{billingData.plan} · renews {billingData.nextRenewal}</span>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 24 }}>
-            {usageBars.map(({ label, used, limit }) => {
-              const pct = Math.min(100, Math.round((used / limit) * 100));
-              const barColor = pct > 80 ? '#C65454' : pct > 50 ? 'var(--gold)' : 'var(--navy)';
-              return (
-                <div key={label}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
-                    <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{label}</span>
-                    <span style={{ fontSize: 11, color: 'var(--text-muted)', fontVariantNumeric: 'tabular-nums' }}>{used} / {limit.toLocaleString()}</span>
-                  </div>
-                  <div style={{ height: 5, background: '#eee', borderRadius: 3, overflow: 'hidden' }}>
-                    <div style={{ height: '100%', width: `${pct}%`, background: barColor, borderRadius: 3, transition: 'width 300ms' }} />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
       </div>
     </div>
   );
@@ -4150,6 +4154,256 @@ function BillingPanel({ onBack }) {
               </tbody>
             </table>
           </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─────────────────── Audit Logs Panel (Org Admin) ─────────────────── */
+const AUDIT_ICON_MAP = {
+  LogIn, LogOut, Upload, Trash2, Share2, UserPlus, Briefcase, Shield, Ban,
+  CheckCircle, AlertCircle, AlertTriangle, ExternalLink,
+};
+const CATEGORY_META = {
+  auth:       { label: 'Auth',       color: '#5B21B6' },
+  documents:  { label: 'Documents',  color: 'var(--navy)' },
+  workspaces: { label: 'Workspaces', color: '#0F766E' },
+  users:      { label: 'Users',      color: '#9A3412' },
+  workflows:  { label: 'Workflows',  color: 'var(--gold)' },
+};
+const DATE_FILTERS = [
+  { id: 'all',   label: 'All time',     days: null },
+  { id: 'today', label: 'Today',         days: 0 },
+  { id: '7d',    label: 'Last 7 days',  days: 7 },
+  { id: '30d',   label: 'Last 30 days', days: 30 },
+];
+
+function formatAuditTs(iso) {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  const sameDay = new Date().toDateString() === d.toDateString();
+  const yesterday = new Date(Date.now() - 86400000).toDateString() === d.toDateString();
+  const time = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  if (sameDay) return `Today, ${time}`;
+  if (yesterday) return `Yesterday, ${time}`;
+  return `${d.toLocaleDateString([], { month: 'short', day: 'numeric' })}, ${time}`;
+}
+
+function AuditLogsPanel({ onBack }) {
+  const [userFilter, setUserFilter] = useState('all');
+  const [dateFilter, setDateFilter] = useState('all');
+  const [isUserOpen, setIsUserOpen] = useState(false);
+  const [isDateOpen, setIsDateOpen] = useState(false);
+
+  const users = useMemo(() => {
+    const set = new Set();
+    ORG_AUDIT_EVENTS.forEach((e) => set.add(e.user));
+    return Array.from(set);
+  }, []);
+
+  const filtered = useMemo(() => {
+    const cutoff = (() => {
+      const f = DATE_FILTERS.find((d) => d.id === dateFilter);
+      if (!f || f.days === null) return null;
+      const t = new Date();
+      if (f.days === 0) { t.setHours(0, 0, 0, 0); return t.getTime(); }
+      return Date.now() - f.days * 86400000;
+    })();
+    return ORG_AUDIT_EVENTS
+      .filter((e) => userFilter === 'all' || e.user === userFilter)
+      .filter((e) => cutoff === null || new Date(e.ts).getTime() >= cutoff);
+  }, [userFilter, dateFilter]);
+
+  const handleExportCSV = () => {
+    const header = ['Timestamp', 'User', 'Category', 'Action', 'Target', 'Workspace', 'Flagged'];
+    const rows = filtered.map((e) => [e.ts, e.user, e.category, e.action, e.target, e.workspace || '', e.flagged ? 'yes' : '']);
+    const csv = [header, ...rows]
+      .map((r) => r.map((v) => `"${String(v || '').replace(/"/g, '""')}"`).join(','))
+      .join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `audit-log-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const currentDateLabel = DATE_FILTERS.find((d) => d.id === dateFilter)?.label || 'All time';
+  const currentUserLabel = userFilter === 'all' ? 'All users' : userFilter;
+
+  return (
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, background: '#F8F7F4', overflow: 'hidden' }}>
+      {/* Panel header */}
+      <div style={{ height: 50, padding: '0 28px', borderBottom: '1px solid var(--border)', background: '#fff', display: 'flex', alignItems: 'center', gap: 14, flexShrink: 0 }}>
+        <button
+          onClick={onBack}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 13px', borderRadius: 7, border: '1px solid var(--border)', background: '#fff', cursor: 'pointer', color: 'var(--text-secondary)', fontSize: 13, fontWeight: 400, fontFamily: 'inherit' }}
+          onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--navy)'; e.currentTarget.style.color = 'var(--navy)'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
+        >
+          <ArrowLeft size={14} />
+          Back to chat
+        </button>
+      </div>
+
+      {/* Scrollable content */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '28px 36px' }}>
+        {/* Page title */}
+        <div style={{ marginBottom: 22 }}>
+          <h1 style={{ fontFamily: "'Fraunces', serif", fontSize: 24, fontWeight: 400, color: 'var(--text-primary)', margin: 0 }}>
+            Audit Log
+          </h1>
+          <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4, marginBottom: 0 }}>
+            Every action your team takes — for compliance reviews and matter governance.
+          </p>
+          <div style={{ height: 1, background: 'var(--border)', marginTop: 16 }} />
+        </div>
+
+        {/* Filter bar */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
+          {/* User filter */}
+          <div style={{ position: 'relative' }}>
+            <button
+              onClick={() => { setIsUserOpen((v) => !v); setIsDateOpen(false); }}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 8, border: '1px solid var(--border)', background: '#fff', fontSize: 12.5, color: 'var(--text-primary)', cursor: 'pointer', fontFamily: 'inherit' }}
+            >
+              <User size={13} style={{ color: 'var(--text-muted)' }} />
+              <span style={{ fontWeight: 500 }}>{currentUserLabel}</span>
+              <ChevronDown size={11} style={{ color: 'var(--text-muted)', transform: isUserOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 150ms' }} />
+            </button>
+            {isUserOpen && (
+              <>
+                <div onClick={() => setIsUserOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 50 }} />
+                <div style={{ position: 'absolute', top: 'calc(100% + 6px)', left: 0, width: 220, background: '#fff', borderRadius: 10, border: '1px solid var(--border)', boxShadow: '0 8px 24px rgba(10,36,99,0.12)', zIndex: 51, overflow: 'hidden' }}>
+                  <button
+                    onClick={() => { setUserFilter('all'); setIsUserOpen(false); }}
+                    style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '9px 14px', background: userFilter === 'all' ? 'var(--ice-warm)' : 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: 'var(--text-primary)', fontFamily: 'inherit', textAlign: 'left' }}
+                  >
+                    All users
+                  </button>
+                  <div style={{ height: 1, background: 'var(--border)' }} />
+                  {users.map((u) => (
+                    <button
+                      key={u}
+                      onClick={() => { setUserFilter(u); setIsUserOpen(false); }}
+                      style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '9px 14px', background: userFilter === u ? 'var(--ice-warm)' : 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: 'var(--text-primary)', fontFamily: 'inherit', textAlign: 'left' }}
+                      onMouseEnter={(e) => { if (userFilter !== u) e.currentTarget.style.background = 'rgba(15,23,42,0.04)'; }}
+                      onMouseLeave={(e) => { if (userFilter !== u) e.currentTarget.style.background = 'none'; }}
+                    >
+                      {u}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Date range filter */}
+          <div style={{ position: 'relative' }}>
+            <button
+              onClick={() => { setIsDateOpen((v) => !v); setIsUserOpen(false); }}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 8, border: '1px solid var(--border)', background: '#fff', fontSize: 12.5, color: 'var(--text-primary)', cursor: 'pointer', fontFamily: 'inherit' }}
+            >
+              <Calendar size={13} style={{ color: 'var(--text-muted)' }} />
+              <span style={{ fontWeight: 500 }}>{currentDateLabel}</span>
+              <ChevronDown size={11} style={{ color: 'var(--text-muted)', transform: isDateOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 150ms' }} />
+            </button>
+            {isDateOpen && (
+              <>
+                <div onClick={() => setIsDateOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 50 }} />
+                <div style={{ position: 'absolute', top: 'calc(100% + 6px)', left: 0, width: 180, background: '#fff', borderRadius: 10, border: '1px solid var(--border)', boxShadow: '0 8px 24px rgba(10,36,99,0.12)', zIndex: 51, overflow: 'hidden' }}>
+                  {DATE_FILTERS.map((d) => (
+                    <button
+                      key={d.id}
+                      onClick={() => { setDateFilter(d.id); setIsDateOpen(false); }}
+                      style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '9px 14px', background: dateFilter === d.id ? 'var(--ice-warm)' : 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: 'var(--text-primary)', fontFamily: 'inherit', textAlign: 'left' }}
+                      onMouseEnter={(e) => { if (dateFilter !== d.id) e.currentTarget.style.background = 'rgba(15,23,42,0.04)'; }}
+                      onMouseLeave={(e) => { if (dateFilter !== d.id) e.currentTarget.style.background = 'none'; }}
+                    >
+                      {d.label}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+
+          <span style={{ fontSize: 12, color: 'var(--text-muted)', marginLeft: 4 }}>
+            {filtered.length} {filtered.length === 1 ? 'event' : 'events'}
+          </span>
+
+          {/* Export CSV — right side */}
+          <button
+            onClick={handleExportCSV}
+            disabled={filtered.length === 0}
+            style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 8, border: '1px solid var(--border)', background: '#fff', fontSize: 12.5, color: 'var(--navy)', fontWeight: 500, cursor: filtered.length === 0 ? 'not-allowed' : 'pointer', fontFamily: 'inherit', opacity: filtered.length === 0 ? 0.5 : 1 }}
+            onMouseEnter={(e) => { if (filtered.length > 0) { e.currentTarget.style.borderColor = 'var(--navy)'; e.currentTarget.style.background = 'var(--ice-warm)'; } }}
+            onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.background = '#fff'; }}
+          >
+            <Download size={13} /> Export CSV
+          </button>
+        </div>
+
+        {/* Events table */}
+        <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ background: 'var(--ice-warm)', borderBottom: '1px solid var(--border)' }}>
+                {['Timestamp', 'User', 'Category', 'Action', 'Target'].map((h) => (
+                  <th key={h} style={{ padding: '10px 16px', textAlign: 'left', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.length === 0 ? (
+                <tr>
+                  <td colSpan={5} style={{ padding: '48px 24px', textAlign: 'center', fontSize: 13, color: 'var(--text-muted)' }}>
+                    No events match these filters.
+                  </td>
+                </tr>
+              ) : filtered.map((e, idx) => {
+                const Icon = AUDIT_ICON_MAP[e.icon] || CheckCircle;
+                const meta = CATEGORY_META[e.category] || { label: e.category, color: 'var(--text-muted)' };
+                return (
+                  <tr key={e.id} style={{ borderBottom: idx === filtered.length - 1 ? 'none' : '1px solid var(--border)' }}>
+                    <td style={{ padding: '12px 16px', fontSize: 12, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{formatAuditTs(e.ts)}</td>
+                    <td style={{ padding: '12px 16px', whiteSpace: 'nowrap' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <div style={{ width: 24, height: 24, borderRadius: '50%', background: 'var(--ice-warm)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 600, color: 'var(--navy)', flexShrink: 0 }}>
+                          {e.avatar}
+                        </div>
+                        <span style={{ fontSize: 13, color: 'var(--text-primary)', fontWeight: 500 }}>{e.user}</span>
+                      </div>
+                    </td>
+                    <td style={{ padding: '12px 16px' }}>
+                      <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: 4, fontSize: 10, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', background: `${meta.color}1a`, color: meta.color }}>
+                        {meta.label}
+                      </span>
+                    </td>
+                    <td style={{ padding: '12px 16px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <Icon size={13} style={{ color: e.flagged ? '#C65454' : 'var(--text-muted)', flexShrink: 0 }} />
+                        <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>{e.action}</span>
+                        {e.flagged && (
+                          <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', padding: '2px 7px', borderRadius: 4, background: '#FCE4D6', color: '#9A3412' }}>Flagged</span>
+                        )}
+                      </div>
+                    </td>
+                    <td style={{ padding: '12px 16px' }}>
+                      <div style={{ fontSize: 13, color: 'var(--text-primary)', fontWeight: 500 }}>{e.target}</div>
+                      {e.workspace && (
+                        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{e.workspace}</div>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
@@ -5167,6 +5421,7 @@ export default function ChatView({ initialView = 'chat' }) {
   // Org Admin sees the org dashboard on first load; internal/external users skip it
   const [showOrgDashboard, setShowOrgDashboard] = useState(isOrgAdmin && initialView !== 'workspaces');
   const [showBillingPanel, setShowBillingPanel] = useState(false);
+  const [showAuditLogsPanel, setShowAuditLogsPanel] = useState(false);
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
@@ -7112,12 +7367,14 @@ INSTRUCTIONS:
     setShowDocumentVaultPanel(false);
     setShowOrgDashboard(false);
     setShowBillingPanel(false);
+    setShowAuditLogsPanel(false);
     setEditingWorkflow(null);
   };
 
   const sidebarActiveKey = (() => {
     if (showOrgDashboard) return 'org-dashboard';
     if (showBillingPanel) return 'billing';
+    if (showAuditLogsPanel) return 'audit-logs';
     if (showTeamPage) return 'invite-team';
     if (showWorkspacesPanel) return 'workspaces';
     if (showWorkflowsPanel || editingWorkflow) return 'workflows';
@@ -7140,7 +7397,7 @@ INSTRUCTIONS:
         onOpenKnowledgePacks={() => { closeAllPanels(); setShowKnowledgePacksPanel(true); setSidebarOpen(false); }}
         onOpenDocumentVault={() => { closeAllPanels(); setShowDocumentVaultPanel(true); setSidebarOpen(false); }}
         onOpenInviteTeam={() => { closeAllPanels(); setShowTeamPage(true); setSidebarOpen(false); }}
-        onOpenAuditLogs={() => { /* TODO: Part 5+ wires real audit-logs panel */ }}
+        onOpenAuditLogs={() => { closeAllPanels(); setShowAuditLogsPanel(true); setSidebarOpen(false); }}
         onOpenBilling={() => { closeAllPanels(); setShowBillingPanel(true); setSidebarOpen(false); }}
         onOpenWorkspaces={() => { closeAllPanels(); navigate('/chat/workspaces'); setShowWorkspacesPanel(true); setSidebarOpen(false); }}
         onOpenWorkflows={() => { closeAllPanels(); setShowWorkflowsPanel(true); setSidebarOpen(false); }}
@@ -7181,7 +7438,7 @@ INSTRUCTIONS:
       {/* Chat main area — hidden when a full-page panel (Team / Workspaces /
           Workflows / Vault / Knowledge Packs / Workflow Builder) is active
           so the sidebar stays visible but the chat UI is replaced. */}
-      <div style={{ flex: 1, display: (showOrgDashboard || showBillingPanel || showTeamPage || showWorkspacesPanel || showWorkflowsPanel || editingWorkflow || showDocumentVaultPanel || showKnowledgePacksPanel || showPromptPanel) ? 'none' : 'flex', flexDirection: 'column', minWidth: 0 }}>
+      <div style={{ flex: 1, display: (showOrgDashboard || showBillingPanel || showAuditLogsPanel || showTeamPage || showWorkspacesPanel || showWorkflowsPanel || editingWorkflow || showDocumentVaultPanel || showKnowledgePacksPanel || showPromptPanel) ? 'none' : 'flex', flexDirection: 'column', minWidth: 0 }}>
         <TopNav plan={plan} usage={usage} onOpenSidebar={() => setSidebarOpen(true)} />
 
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: 'var(--cream)', minHeight: 0 }}>
@@ -8219,7 +8476,7 @@ INSTRUCTIONS:
           run starts and from the sidebar running-strip. Does not
           overlay — it shrinks the chat area so users can keep chatting
           while the workflow runs. ─── */}
-      {runPanelOpen && !showOrgDashboard && !showBillingPanel && !showTeamPage && !showWorkspacesPanel && !showWorkflowsPanel && !editingWorkflow && (
+      {runPanelOpen && !showOrgDashboard && !showBillingPanel && !showAuditLogsPanel && !showTeamPage && !showWorkspacesPanel && !showWorkflowsPanel && !editingWorkflow && (
         <WorkflowRunPanel
           userId={currentUserId}
           focusRunId={runPanelFocusId}
@@ -8512,6 +8769,11 @@ INSTRUCTIONS:
       {/* ─── Billing Panel (Org Admin) ─── */}
       {showBillingPanel && (
         <BillingPanel onBack={() => setShowBillingPanel(false)} />
+      )}
+
+      {/* ─── Audit Logs Panel (Org Admin) ─── */}
+      {showAuditLogsPanel && (
+        <AuditLogsPanel onBack={() => setShowAuditLogsPanel(false)} />
       )}
 
       {/* Plan Comparison Modal */}
