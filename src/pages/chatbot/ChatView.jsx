@@ -3768,6 +3768,86 @@ function OrgDashboardPanel({ onBack, displayName, orgName, workspaceCount, membe
           </div>
         </div>
 
+        {/* Top Workflows + Top Users — engagement this week */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18, marginTop: 18 }}>
+          {/* Top Workflows */}
+          <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.04)', overflow: 'hidden' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 18px', borderBottom: '1px solid var(--border)' }}>
+              <h3 style={{ fontFamily: "'Fraunces', serif", fontSize: 15, color: 'var(--text-primary)', fontWeight: 400, margin: 0 }}>Top Workflows</h3>
+              <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>This week</span>
+            </div>
+            {(() => {
+              const rows = [
+                { name: 'Contract Review Auto-run',   runs: 24 },
+                { name: 'Due Diligence Flow',         runs: 17 },
+                { name: 'Risk Assessment Pipeline',   runs: 11 },
+                { name: 'Compliance Check Pipeline',   runs: 6 },
+                { name: 'Quarterly Review Prep',       runs: 3 },
+              ];
+              const max = rows[0].runs;
+              return (
+                <div>
+                  {rows.map((r) => (
+                    <div key={r.name} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 18px', borderBottom: '1px solid var(--border)' }}>
+                      <div style={{ width: 28, height: 28, borderRadius: 8, background: 'var(--ice-warm)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <Zap size={14} style={{ color: 'var(--navy)' }} />
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 13, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.name}</div>
+                        <div style={{ height: 3, marginTop: 5, background: 'var(--ice-warm)', borderRadius: 2, overflow: 'hidden' }}>
+                          <div style={{ height: '100%', width: `${Math.round((r.runs / max) * 100)}%`, background: 'var(--navy)' }} />
+                        </div>
+                      </div>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', flexShrink: 0, minWidth: 24, textAlign: 'right' }}>{r.runs}</span>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
+          </div>
+
+          {/* Top Users */}
+          <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.04)', overflow: 'hidden' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 18px', borderBottom: '1px solid var(--border)' }}>
+              <h3 style={{ fontFamily: "'Fraunces', serif", fontSize: 15, color: 'var(--text-primary)', fontWeight: 400, margin: 0 }}>Top Users</h3>
+              <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>This week</span>
+            </div>
+            {(() => {
+              const rows = [
+                { name: 'Sarah Chen',   avatar: 'SC', actions: 87 },
+                { name: 'James Wu',     avatar: 'JW', actions: 64 },
+                { name: 'Ryan Melade',  avatar: 'RM', actions: 51 },
+                { name: 'Maria Torres', avatar: 'MT', actions: 28 },
+                { name: 'Tom Bradley',  avatar: 'TB', actions:  0, invited: true },
+              ];
+              const max = rows[0].actions;
+              return (
+                <div>
+                  {rows.map((u) => (
+                    <div key={u.name} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 18px', borderBottom: '1px solid var(--border)', opacity: u.invited ? 0.7 : 1 }}>
+                      <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--ice-warm)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 11, fontWeight: 600, color: 'var(--navy)' }}>
+                        {u.avatar}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, whiteSpace: 'nowrap', overflow: 'hidden' }}>
+                          <span style={{ fontSize: 13, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis' }}>{u.name}</span>
+                          {u.invited && (
+                            <span style={{ fontSize: 10, color: 'var(--text-muted)', padding: '1px 6px', borderRadius: 4, border: '1px solid var(--border)', fontWeight: 500, flexShrink: 0 }}>Invited</span>
+                          )}
+                        </div>
+                        <div style={{ height: 3, marginTop: 5, background: 'var(--ice-warm)', borderRadius: 2, overflow: 'hidden' }}>
+                          <div style={{ height: '100%', width: max > 0 ? `${Math.round((u.actions / max) * 100)}%` : '0%', background: 'var(--gold)' }} />
+                        </div>
+                      </div>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: u.actions > 0 ? 'var(--text-primary)' : 'var(--text-muted)', flexShrink: 0, minWidth: 24, textAlign: 'right' }}>{u.actions}</span>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
+          </div>
+        </div>
+
         {/* Cost by Client — donut chart */}
         <div style={{ marginTop: 18, background: '#fff', border: '1px solid var(--border)', borderRadius: 12, padding: '18px 22px 22px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
           <h4 style={{ fontFamily: "'Fraunces', serif", fontSize: 15, color: 'var(--text-primary)', fontWeight: 400, margin: '0 0 14px' }}>Cost by Client</h4>
