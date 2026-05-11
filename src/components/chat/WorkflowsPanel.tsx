@@ -556,13 +556,10 @@ export default function WorkflowsPanel({
             <div
               style={{
                 display: 'inline-flex',
-                alignItems: 'stretch',
-                gap: 8,
-                padding: 8,
-                borderRadius: 28,
-                background: '#EEF2F6',
-                border: '1px solid var(--ice)',
-                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.65)',
+                border: '1px solid #e2e3e7',
+                borderRadius: 9,
+                background: '#fff',
+                padding: 3,
                 flexWrap: 'wrap',
               }}
             >
@@ -779,55 +776,30 @@ function FilterPill({
       style={{
         display: 'inline-flex',
         alignItems: 'center',
-        gap: 8,
-        justifyContent: 'center',
-        minHeight: 58,
-        padding: active ? '12px 26px 16px' : '12px 22px',
-        borderRadius: 24,
-        border: active ? '1px solid rgba(11,29,58,0.06)' : '1px solid transparent',
-        background: active ? '#FFFFFF' : 'transparent',
-        color: active ? 'var(--navy)' : 'rgba(11,29,58,0.82)',
-        fontSize: 13,
-        fontWeight: active ? 700 : 600,
+        gap: 6,
+        padding: '6px 12px',
+        borderRadius: 6,
+        border: 'none',
+        background: active ? 'var(--gold-bg)' : 'transparent',
+        color: active ? 'var(--text-primary)' : 'var(--text-secondary)',
+        fontSize: 12.5,
+        fontWeight: active ? 600 : 400,
         cursor: 'pointer',
-        boxShadow: active ? '0 6px 18px rgba(11,29,58,0.08)' : 'none',
-        position: 'relative',
-        transition: 'background-color 150ms ease, box-shadow 150ms ease, color 150ms ease',
+        transition: 'all 120ms',
+        whiteSpace: 'nowrap',
       }}
     >
       <span>{label}</span>
       <span
         style={{
-          minWidth: 24,
-          height: 24,
-          borderRadius: 999,
-          padding: '0 7px',
-          display: 'inline-flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          background: active ? 'rgba(11,29,58,0.08)' : '#FFFFFF',
-          border: active ? 'none' : '1px solid rgba(11,29,58,0.06)',
-          color: active ? 'var(--navy)' : 'var(--slate)',
-          fontSize: 12,
-          fontWeight: 700,
+          fontSize: 11,
+          fontWeight: active ? 600 : 400,
+          color: active ? 'var(--text-primary)' : 'var(--text-muted)',
+          opacity: 0.75,
         }}
       >
         {count}
       </span>
-      {active && (
-        <span
-          aria-hidden="true"
-          style={{
-            position: 'absolute',
-            left: 24,
-            right: 24,
-            bottom: 10,
-            height: 4,
-            borderRadius: 999,
-            background: 'var(--navy)',
-          }}
-        />
-      )}
     </button>
   );
 
