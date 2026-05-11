@@ -3777,31 +3777,47 @@ function OrgDashboardPanel({ onBack, displayName, orgName, workspaceCount, membe
               <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>This week</span>
             </div>
             {(() => {
-              const rows = [
-                { name: 'Contract Review Auto-run',   runs: 24 },
-                { name: 'Due Diligence Flow',         runs: 17 },
-                { name: 'Risk Assessment Pipeline',   runs: 11 },
-                { name: 'Compliance Check Pipeline',   runs: 6 },
-                { name: 'Quarterly Review Prep',       runs: 3 },
+              const top3 = [
+                { name: 'Contract Review Auto-run', runs: 24 },
+                { name: 'Due Diligence Flow',       runs: 17 },
+                { name: 'Risk Assessment Pipeline', runs: 11 },
               ];
-              const max = rows[0].runs;
+              const also = [
+                { name: 'Compliance Check Pipeline', runs: 6 },
+                { name: 'Quarterly Review Prep',     runs: 3 },
+              ];
               return (
-                <div>
-                  {rows.map((r) => (
-                    <div key={r.name} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 18px', borderBottom: '1px solid var(--border)' }}>
-                      <div style={{ width: 28, height: 28, borderRadius: 8, background: 'var(--ice-warm)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        <Zap size={14} style={{ color: 'var(--navy)' }} />
-                      </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 13, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.name}</div>
-                        <div style={{ height: 3, marginTop: 5, background: 'var(--ice-warm)', borderRadius: 2, overflow: 'hidden' }}>
-                          <div style={{ height: '100%', width: `${Math.round((r.runs / max) * 100)}%`, background: 'var(--navy)' }} />
+                <>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, padding: '14px 14px 4px' }}>
+                    {top3.map((r, i) => {
+                      const isLead = i === 0;
+                      return (
+                        <div key={r.name} style={{
+                          background: isLead ? 'var(--gold-bg)' : '#FAFAF8',
+                          border: isLead ? '1px solid rgba(201,168,76,0.35)' : '1px solid var(--border)',
+                          borderRadius: 10, padding: '14px 10px 12px', textAlign: 'center',
+                          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+                        }}>
+                          <div style={{ width: 32, height: 32, borderRadius: 9, background: isLead ? 'rgba(201,168,76,0.18)' : 'var(--ice-warm)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <Zap size={14} style={{ color: isLead ? 'var(--gold)' : 'var(--navy)' }} />
+                          </div>
+                          <div style={{ fontFamily: "'Fraunces', serif", fontSize: 28, fontWeight: 500, color: 'var(--text-primary)', lineHeight: 1 }}>{r.runs}</div>
+                          <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>runs</div>
+                          <div style={{ fontSize: 12, color: 'var(--text-primary)', lineHeight: 1.35, fontWeight: 500, minHeight: 32, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{r.name}</div>
                         </div>
-                      </div>
-                      <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', flexShrink: 0, minWidth: 24, textAlign: 'right' }}>{r.runs}</span>
-                    </div>
-                  ))}
-                </div>
+                      );
+                    })}
+                  </div>
+                  <div style={{ padding: '10px 18px 14px', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}>Also ran</span>
+                    {also.map((r, i) => (
+                      <React.Fragment key={r.name}>
+                        {i > 0 && <span style={{ color: 'var(--text-muted)' }}>·</span>}
+                        <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{r.name} <span style={{ color: 'var(--text-muted)' }}>{r.runs}</span></span>
+                      </React.Fragment>
+                    ))}
+                  </div>
+                </>
               );
             })()}
           </div>
@@ -3813,36 +3829,54 @@ function OrgDashboardPanel({ onBack, displayName, orgName, workspaceCount, membe
               <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>This week</span>
             </div>
             {(() => {
-              const rows = [
-                { name: 'Sarah Chen',   avatar: 'SC', actions: 87 },
-                { name: 'James Wu',     avatar: 'JW', actions: 64 },
-                { name: 'Ryan Melade',  avatar: 'RM', actions: 51 },
-                { name: 'Maria Torres', avatar: 'MT', actions: 28 },
-                { name: 'Tom Bradley',  avatar: 'TB', actions:  0, invited: true },
+              const top3 = [
+                { name: 'Sarah Chen',  avatar: 'SC', actions: 87 },
+                { name: 'James Wu',    avatar: 'JW', actions: 64 },
+                { name: 'Ryan Melade', avatar: 'RM', actions: 51 },
               ];
-              const max = rows[0].actions;
+              const also = [
+                { name: 'Maria Torres', actions: 28 },
+                { name: 'Tom Bradley',  actions:  0, invited: true },
+              ];
               return (
-                <div>
-                  {rows.map((u) => (
-                    <div key={u.name} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 18px', borderBottom: '1px solid var(--border)', opacity: u.invited ? 0.7 : 1 }}>
-                      <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--ice-warm)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 11, fontWeight: 600, color: 'var(--navy)' }}>
-                        {u.avatar}
-                      </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, whiteSpace: 'nowrap', overflow: 'hidden' }}>
-                          <span style={{ fontSize: 13, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis' }}>{u.name}</span>
-                          {u.invited && (
-                            <span style={{ fontSize: 10, color: 'var(--text-muted)', padding: '1px 6px', borderRadius: 4, border: '1px solid var(--border)', fontWeight: 500, flexShrink: 0 }}>Invited</span>
+                <>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, padding: '14px 14px 4px' }}>
+                    {top3.map((u, i) => {
+                      const isLead = i === 0;
+                      return (
+                        <div key={u.name} style={{
+                          background: isLead ? 'var(--gold-bg)' : '#FAFAF8',
+                          border: isLead ? '1px solid rgba(201,168,76,0.35)' : '1px solid var(--border)',
+                          borderRadius: 10, padding: '14px 10px 12px', textAlign: 'center',
+                          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+                        }}>
+                          <div style={{ width: 36, height: 36, borderRadius: '50%', background: isLead ? 'rgba(201,168,76,0.18)' : 'var(--ice-warm)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 600, color: isLead ? 'var(--gold)' : 'var(--navy)' }}>
+                            {u.avatar}
+                          </div>
+                          <div style={{ fontFamily: "'Fraunces', serif", fontSize: 28, fontWeight: 500, color: 'var(--text-primary)', lineHeight: 1 }}>{u.actions}</div>
+                          <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>actions</div>
+                          <div style={{ fontSize: 12, color: 'var(--text-primary)', lineHeight: 1.35, fontWeight: 500, minHeight: 32, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{u.name}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div style={{ padding: '10px 18px 14px', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}>Also active</span>
+                    {also.map((u, i) => (
+                      <React.Fragment key={u.name}>
+                        {i > 0 && <span style={{ color: 'var(--text-muted)' }}>·</span>}
+                        <span style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                          {u.name}{' '}
+                          {u.invited ? (
+                            <span style={{ fontSize: 10, color: 'var(--text-muted)', padding: '1px 6px', borderRadius: 4, border: '1px solid var(--border)', fontWeight: 500 }}>Invited</span>
+                          ) : (
+                            <span style={{ color: 'var(--text-muted)' }}>{u.actions}</span>
                           )}
-                        </div>
-                        <div style={{ height: 3, marginTop: 5, background: 'var(--ice-warm)', borderRadius: 2, overflow: 'hidden' }}>
-                          <div style={{ height: '100%', width: max > 0 ? `${Math.round((u.actions / max) * 100)}%` : '0%', background: 'var(--gold)' }} />
-                        </div>
-                      </div>
-                      <span style={{ fontSize: 13, fontWeight: 600, color: u.actions > 0 ? 'var(--text-primary)' : 'var(--text-muted)', flexShrink: 0, minWidth: 24, textAlign: 'right' }}>{u.actions}</span>
-                    </div>
-                  ))}
-                </div>
+                        </span>
+                      </React.Fragment>
+                    ))}
+                  </div>
+                </>
               );
             })()}
           </div>
