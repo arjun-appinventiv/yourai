@@ -404,12 +404,12 @@ export default function WorkflowsPanel({
           minWidth: 0,
           minHeight: 0,
           overflow: 'hidden',
-          background: 'var(--ice-warm)',
+          background: '#FBFAF7',
         }}
       >
         <div
           style={{
-            padding: '14px 36px',
+            padding: '12px 28px',
             borderBottom: '1px solid var(--ice)',
             background: '#FFFFFF',
             display: 'flex',
@@ -466,9 +466,9 @@ export default function WorkflowsPanel({
 
         <div
           style={{
-            padding: '30px 36px 22px',
+            padding: '30px 28px 22px',
             borderBottom: '1px solid var(--ice)',
-            background: 'linear-gradient(180deg, #FFFFFF 0%, var(--ice-warm) 100%)',
+            background: '#FBFAF7',
             flexShrink: 0,
           }}
         >
@@ -551,7 +551,7 @@ export default function WorkflowsPanel({
           </div>
         </div>
 
-        <div style={{ flex: 1, overflowY: 'auto', padding: '24px 36px 36px' }}>
+        <div style={{ flex: 1, overflowY: 'auto', padding: '24px 28px 36px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap', marginBottom: 20 }}>
             <div
               style={{
