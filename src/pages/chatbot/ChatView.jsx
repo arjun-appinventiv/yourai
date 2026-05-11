@@ -3648,6 +3648,14 @@ function OrgDashboardPanel({ onBack, displayName, orgName, workspaceCount, membe
     { icon: UserPlus, label: 'Add Team Member',  desc: 'Invite a colleague or client to your workspace',  onClick: onAddTeam },
   ];
 
+  const practiceAreas = [
+    { name: 'Corporate',  runs: 21, color: '#0E8B7E' },
+    { name: 'Compliance', runs: 18, color: '#C65454' },
+    { name: 'Legal',      runs: 15, color: '#4F46E5' },
+    { name: 'M&A',        runs:  7, color: 'var(--gold)' },
+    { name: 'Employment', runs:  5, color: '#7C5CBF' },
+  ];
+
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, background: '#F8F7F4', overflow: 'hidden' }}>
       {/* Panel header */}
@@ -3665,55 +3673,35 @@ function OrgDashboardPanel({ onBack, displayName, orgName, workspaceCount, membe
 
       {/* Scrollable content */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '28px 36px' }}>
-        {/* Greeting */}
+
+        {/* ─────────── Hero ─────────── */}
         <div style={{ marginBottom: 22 }}>
-          <h1 style={{ fontFamily: "'Fraunces', serif", fontSize: 24, fontWeight: 400, color: 'var(--text-primary)', margin: 0 }}>
+          <h1 style={{ fontFamily: "'Fraunces', serif", fontSize: 26, fontWeight: 400, color: 'var(--text-primary)', margin: 0 }}>
             {greeting}, {firstName}
           </h1>
           <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4, marginBottom: 0 }}>
             Here's what's happening at {orgName || 'your firm'} today.
           </p>
-          <div style={{ height: 1, background: 'var(--border)', marginTop: 16 }} />
         </div>
 
-        {/* Stat cards — live ChatView metrics */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 24 }}>
-          {statCards.map((s) => {
-            const Icon = s.icon;
-            return (
-              <div key={s.label} style={{ background: '#fff', border: '1px solid var(--border)', borderTop: `3px solid ${s.color}`, borderRadius: 12, padding: '16px 18px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
-                <Icon size={16} style={{ color: s.color, marginBottom: 10, display: 'block' }} />
-                <div style={{ fontSize: 28, fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1 }}>{s.value}</div>
-                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>{s.label}</div>
-              </div>
-            );
-          })}
+        {/* Stat strip — single connected card, no top-border colors */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', background: '#fff', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden', marginBottom: 32, boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+          {statCards.map((s, i) => (
+            <div key={s.label} style={{ padding: '16px 20px', borderRight: i < statCards.length - 1 ? '1px solid var(--border)' : 'none' }}>
+              <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}>{s.label}</div>
+              <div style={{ fontFamily: "'Fraunces', serif", fontSize: 26, fontWeight: 500, color: 'var(--text-primary)', lineHeight: 1 }}>{s.value}</div>
+            </div>
+          ))}
         </div>
 
-        {/* Quick actions — directly below metrics */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, marginBottom: 24 }}>
-          {quickActions.map((a) => {
-            const Icon = a.icon;
-            return (
-              <button
-                key={a.label}
-                onClick={a.onClick}
-                style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 12, padding: '16px 18px', textAlign: 'left', cursor: 'pointer', boxShadow: '0 1px 3px rgba(0,0,0,0.04)', fontFamily: 'inherit', transition: 'box-shadow 150ms' }}
-                onMouseEnter={(e) => { e.currentTarget.style.boxShadow = '0 4px 14px rgba(0,0,0,0.09)'; e.currentTarget.style.borderColor = '#c8ccd6'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.04)'; e.currentTarget.style.borderColor = 'var(--border)'; }}
-              >
-                <div style={{ width: 34, height: 34, borderRadius: 9, background: 'var(--ice-warm)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 10 }}>
-                  <Icon size={16} style={{ color: 'var(--navy)' }} />
-                </div>
-                <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 3 }}>{a.label}</div>
-                <div style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.4 }}>{a.desc}</div>
-              </button>
-            );
-          })}
+        {/* ─────────── Section: This week ─────────── */}
+        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 12 }}>
+          <h2 style={{ fontFamily: "'Fraunces', serif", fontSize: 18, fontWeight: 400, color: 'var(--text-primary)', margin: 0 }}>This week</h2>
+          <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Last 7 days</span>
         </div>
 
-        {/* Top Workflows + Top Users — engagement this week */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
+        {/* Top Workflows + Top Users */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18, marginBottom: 18 }}>
           {/* Top Workflows */}
           <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.04)', overflow: 'hidden' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 18px', borderBottom: '1px solid var(--border)' }}>
@@ -3826,45 +3814,8 @@ function OrgDashboardPanel({ onBack, displayName, orgName, workspaceCount, membe
           </div>
         </div>
 
-        {/* Insights row — Workflows by Practice Area + Cost by Client */}
-        <div style={{ marginTop: 18, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
-
-        {/* Workflows by Practice Area — horizontal bars */}
-        <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 12, padding: '18px 22px 22px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
-          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 16 }}>
-            <h4 style={{ fontFamily: "'Fraunces', serif", fontSize: 15, color: 'var(--text-primary)', fontWeight: 400, margin: 0 }}>Workflows by Practice Area</h4>
-            <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>This week</span>
-          </div>
-          {(() => {
-            const areas = [
-              { name: 'Corporate',  runs: 21, color: '#0E8B7E' },
-              { name: 'Compliance', runs: 18, color: '#C65454' },
-              { name: 'Legal',      runs: 15, color: '#4F46E5' },
-              { name: 'M&A',        runs:  7, color: 'var(--gold)' },
-              { name: 'Employment', runs:  5, color: '#7C5CBF' },
-            ];
-            const max = Math.max(...areas.map(a => a.runs));
-            return (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
-                {areas.map((a) => (
-                  <div key={a.name}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, fontSize: 12.5 }}>
-                      <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{a.name}</span>
-                      <span style={{ color: 'var(--text-muted)' }}>{a.runs} runs</span>
-                    </div>
-                    <div style={{ height: 8, background: '#EFEEEA', borderRadius: 4, overflow: 'hidden' }}>
-                      <div style={{ height: '100%', width: `${(a.runs / max) * 100}%`, background: a.color, borderRadius: 4, transition: 'width 300ms' }} />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            );
-          })()}
-        </div>
-
-        {/* Cost by Client — donut chart */}
-        <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 12, padding: '18px 22px 22px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
-          <h4 style={{ fontFamily: "'Fraunces', serif", fontSize: 15, color: 'var(--text-primary)', fontWeight: 400, margin: '0 0 14px' }}>Cost by Client</h4>
+        {/* Cost by Client — single card, donut LEFT, legend RIGHT */}
+        <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 12, padding: '24px 28px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)', marginBottom: 32 }}>
           {(() => {
             const clients = [
               { name: 'Acme Corp',     pct: 54, color: 'var(--navy)' },
@@ -3875,82 +3826,100 @@ function OrgDashboardPanel({ onBack, displayName, orgName, workspaceCount, membe
             const C = 2 * Math.PI * r;
             let acc = 0;
             return (
-              <>
-                <div style={{ display: 'flex', justifyContent: 'center', padding: '6px 0 18px' }}>
-                  <svg width={200} height={200} viewBox="0 0 200 200" aria-label="Cost by client donut chart">
-                    <g transform="rotate(-90 100 100)">
-                      {clients.map((c) => {
-                        const len = (c.pct / 100) * C;
-                        const dashOffset = -acc;
-                        acc += len;
-                        return (
-                          <circle
-                            key={c.name}
-                            cx={100} cy={100} r={r}
-                            fill="none"
-                            stroke={c.color}
-                            strokeWidth={30}
-                            strokeDasharray={`${len} ${C - len}`}
-                            strokeDashoffset={dashOffset}
-                          />
-                        );
-                      })}
-                    </g>
-                    <text x={100} y={108} textAnchor="middle" fontFamily="'Fraunces', serif" fontSize={22} fontWeight={500} fill="var(--text-primary)">$2.43</text>
-                  </svg>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxWidth: 720, margin: '0 auto' }}>
-                  {clients.map((c) => (
-                    <div key={c.name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 13 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <span style={{ width: 9, height: 9, borderRadius: '50%', background: c.color, flexShrink: 0 }} />
-                        <span style={{ color: 'var(--text-primary)' }}>{c.name}</span>
+              <div style={{ display: 'grid', gridTemplateColumns: '200px 1fr', gap: 36, alignItems: 'center' }}>
+                <svg width={200} height={200} viewBox="0 0 200 200" aria-label="Cost by client donut chart">
+                  <g transform="rotate(-90 100 100)">
+                    {clients.map((c) => {
+                      const len = (c.pct / 100) * C;
+                      const dashOffset = -acc;
+                      acc += len;
+                      return (
+                        <circle
+                          key={c.name}
+                          cx={100} cy={100} r={r}
+                          fill="none"
+                          stroke={c.color}
+                          strokeWidth={30}
+                          strokeDasharray={`${len} ${C - len}`}
+                          strokeDashoffset={dashOffset}
+                        />
+                      );
+                    })}
+                  </g>
+                  <text x={100} y={108} textAnchor="middle" fontFamily="'Fraunces', serif" fontSize={22} fontWeight={500} fill="var(--text-primary)">$2.43</text>
+                </svg>
+                <div>
+                  <h4 style={{ fontFamily: "'Fraunces', serif", fontSize: 17, color: 'var(--text-primary)', fontWeight: 400, margin: '0 0 4px' }}>Cost by Client</h4>
+                  <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '0 0 16px' }}>Per-client AI spend, this week</p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
+                    {clients.map((c) => (
+                      <div key={c.name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 13.5 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
+                          <span style={{ width: 10, height: 10, borderRadius: '50%', background: c.color, flexShrink: 0 }} />
+                          <span style={{ color: 'var(--text-primary)' }}>{c.name}</span>
+                        </div>
+                        <span style={{ color: 'var(--text-muted)', fontVariantNumeric: 'tabular-nums' }}>{c.pct}%</span>
                       </div>
-                      <span style={{ color: 'var(--text-muted)' }}>{c.pct}%</span>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </>
+              </div>
             );
           })()}
         </div>
+
+        {/* ─────────── Section: Recent activity ─────────── */}
+        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 12 }}>
+          <h2 style={{ fontFamily: "'Fraunces', serif", fontSize: 18, fontWeight: 400, color: 'var(--text-primary)', margin: 0 }}>Recent activity</h2>
+          <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Today & yesterday</span>
         </div>
 
-        {/* Two-column: Activity Feed + Plan Usage */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: 18, marginTop: 18 }}>
-          {/* Activity Feed */}
-          <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.04)', overflow: 'hidden' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 18px', borderBottom: '1px solid var(--border)' }}>
-              <h3 style={{ fontFamily: "'Fraunces', serif", fontSize: 15, color: 'var(--text-primary)', fontWeight: 400, margin: 0 }}>Activity Feed</h3>
-              <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Today & Yesterday</span>
-            </div>
-            <div style={{ maxHeight: 360, overflowY: 'auto' }}>
-              {ORG_ACTIVITY_FEED.map((item) => {
-                const IconComp = activityIconMap[item.icon] || CheckCircle;
-                return (
-                  <div key={item.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 18px', borderBottom: '1px solid var(--border)' }}>
-                    <div style={{ width: 28, height: 28, borderRadius: '50%', background: item.user === 'System' ? '#F0F3F6' : 'var(--ice-warm)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1 }}>
-                      <IconComp size={13} style={{ color: item.user === 'System' ? '#1E3A8A' : 'var(--text-muted)' }} />
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{ fontSize: 13, color: 'var(--text-primary)', lineHeight: 1.4, margin: 0 }}>
-                        <span style={{ fontWeight: 500 }}>{item.user}</span>{' '}
-                        <span style={{ color: 'var(--text-secondary)' }}>{item.action}</span>
-                      </p>
-                      {item.workspace && (
-                        <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '2px 0 0' }}>{item.workspace}</p>
-                      )}
-                    </div>
-                    <span style={{ fontSize: 11, color: 'var(--text-muted)', whiteSpace: 'nowrap', flexShrink: 0 }}>{item.time}</span>
-                  </div>
-                );
-              })}
-            </div>
+        {/* Activity Feed — full width, with Practice Area chip strip in header */}
+        <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.04)', marginBottom: 32, overflow: 'hidden' }}>
+          {/* Practice area chip header */}
+          <div style={{ padding: '12px 18px', borderBottom: '1px solid var(--border)', display: 'flex', gap: 18, flexWrap: 'wrap', alignItems: 'center', background: '#FAFAF8' }}>
+            <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}>By practice area</span>
+            {practiceAreas.map((a) => (
+              <span key={a.name} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: 12.5, color: 'var(--text-secondary)' }}>
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: a.color, flexShrink: 0 }} />
+                {a.name}
+                <span style={{ color: 'var(--text-muted)', fontVariantNumeric: 'tabular-nums' }}>{a.runs}</span>
+              </span>
+            ))}
           </div>
+          {/* Activity items */}
+          <div style={{ maxHeight: 440, overflowY: 'auto' }}>
+            {ORG_ACTIVITY_FEED.map((item) => {
+              const IconComp = activityIconMap[item.icon] || CheckCircle;
+              return (
+                <div key={item.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 18px', borderBottom: '1px solid var(--border)' }}>
+                  <div style={{ width: 28, height: 28, borderRadius: '50%', background: item.user === 'System' ? '#F0F3F6' : 'var(--ice-warm)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1 }}>
+                    <IconComp size={13} style={{ color: item.user === 'System' ? '#1E3A8A' : 'var(--text-muted)' }} />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ fontSize: 13, color: 'var(--text-primary)', lineHeight: 1.4, margin: 0 }}>
+                      <span style={{ fontWeight: 500 }}>{item.user}</span>{' '}
+                      <span style={{ color: 'var(--text-secondary)' }}>{item.action}</span>
+                    </p>
+                    {item.workspace && (
+                      <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '2px 0 0' }}>{item.workspace}</p>
+                    )}
+                  </div>
+                  <span style={{ fontSize: 11, color: 'var(--text-muted)', whiteSpace: 'nowrap', flexShrink: 0 }}>{item.time}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
 
-          {/* Plan Usage — full height, no classification queue */}
-          <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 12, padding: '15px 18px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
-            <h4 style={{ fontFamily: "'Fraunces', serif", fontSize: 15, color: 'var(--text-primary)', fontWeight: 400, margin: '0 0 16px' }}>Plan Usage</h4>
+        {/* ─────────── Footer: Plan usage + Quick actions ─────────── */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: 18 }}>
+          {/* Plan Usage */}
+          <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 12, padding: '18px 22px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 16 }}>
+              <h4 style={{ fontFamily: "'Fraunces', serif", fontSize: 15, color: 'var(--text-primary)', fontWeight: 400, margin: 0 }}>Plan usage</h4>
+              <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{billingData.plan} · renews {billingData.nextRenewal}</span>
+            </div>
             {usageBars.map(({ label, used, limit }) => {
               const pct = Math.min(100, Math.round((used / limit) * 100));
               const barColor = pct > 80 ? '#C65454' : pct > 50 ? 'var(--gold)' : 'var(--navy)';
@@ -3958,7 +3927,7 @@ function OrgDashboardPanel({ onBack, displayName, orgName, workspaceCount, membe
                 <div key={label} style={{ marginBottom: 14 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
                     <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{label}</span>
-                    <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{used} / {limit.toLocaleString()}</span>
+                    <span style={{ fontSize: 11, color: 'var(--text-muted)', fontVariantNumeric: 'tabular-nums' }}>{used} / {limit.toLocaleString()}</span>
                   </div>
                   <div style={{ height: 5, background: '#eee', borderRadius: 3, overflow: 'hidden' }}>
                     <div style={{ height: '100%', width: `${pct}%`, background: barColor, borderRadius: 3, transition: 'width 300ms' }} />
@@ -3966,9 +3935,30 @@ function OrgDashboardPanel({ onBack, displayName, orgName, workspaceCount, membe
                 </div>
               );
             })}
-            <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '12px 0 0', paddingTop: 10, borderTop: '1px solid var(--border)' }}>
-              {billingData.plan} plan · Renews {billingData.nextRenewal}
-            </p>
+          </div>
+
+          {/* Quick actions — compact icon-buttons */}
+          <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 12, padding: '18px 18px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+            <h4 style={{ fontFamily: "'Fraunces', serif", fontSize: 15, color: 'var(--text-primary)', fontWeight: 400, margin: '0 0 14px' }}>Quick actions</h4>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {quickActions.map((a) => {
+                const Icon = a.icon;
+                return (
+                  <button
+                    key={a.label}
+                    onClick={a.onClick}
+                    style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 8, border: '1px solid var(--border)', background: '#fff', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', transition: 'border-color 150ms, background 150ms' }}
+                    onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--navy)'; e.currentTarget.style.background = 'var(--ice-warm)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.background = '#fff'; }}
+                  >
+                    <div style={{ width: 26, height: 26, borderRadius: 7, background: 'var(--ice-warm)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <Icon size={13} style={{ color: 'var(--navy)' }} />
+                    </div>
+                    <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>{a.label}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>
