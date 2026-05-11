@@ -3939,6 +3939,201 @@ function OrgDashboardPanel({ onBack, displayName, orgName, workspaceCount, membe
   );
 }
 
+/* ─────────────────── Billing Panel (Org Admin) ─────────────────── */
+function BillingPanel({ onBack }) {
+  const [showPlanModal, setShowPlanModalLocal] = useState(false);
+  const plans = [
+    { name: 'Free',         price:   0, features: ['1 user', '50 documents', '10 workflows', '1 knowledge pack'] },
+    { name: 'Professional', price: 149, features: ['Up to 3 users', '500 documents', '100 workflows', '5 knowledge packs'] },
+    { name: 'Team',         price: 299, features: ['Up to 10 users', '2,000 documents', '500 workflows', '20 knowledge packs'], current: true },
+    { name: 'Enterprise',   price: 599, features: ['Unlimited users', 'Unlimited documents', 'Unlimited workflows', 'Unlimited knowledge packs'] },
+  ];
+  const usageLabels = { docs: 'Documents', workflows: 'Workflows', knowledgePacks: 'Knowledge Packs' };
+  const statusColor = (status) => {
+    if (status === 'Paid')    return { bg: '#E2EFDA', color: '#2F6B30' };
+    if (status === 'Pending') return { bg: '#FFF2CC', color: '#92740B' };
+    if (status === 'Failed')  return { bg: '#FCE4D6', color: '#9A3412' };
+    return { bg: 'var(--ice-warm)', color: 'var(--text-secondary)' };
+  };
+
+  return (
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, background: '#F8F7F4', overflow: 'hidden' }}>
+      {/* Panel header */}
+      <div style={{ height: 50, padding: '0 28px', borderBottom: '1px solid var(--border)', background: '#fff', display: 'flex', alignItems: 'center', gap: 14, flexShrink: 0 }}>
+        <button
+          onClick={onBack}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 13px', borderRadius: 7, border: '1px solid var(--border)', background: '#fff', cursor: 'pointer', color: 'var(--text-secondary)', fontSize: 13, fontWeight: 400, fontFamily: 'inherit' }}
+          onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--navy)'; e.currentTarget.style.color = 'var(--navy)'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
+        >
+          <ArrowLeft size={14} />
+          Back to chat
+        </button>
+      </div>
+
+      {/* Scrollable content */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '28px 36px' }}>
+        {/* Page title */}
+        <div style={{ marginBottom: 22 }}>
+          <h1 style={{ fontFamily: "'Fraunces', serif", fontSize: 24, fontWeight: 400, color: 'var(--text-primary)', margin: 0 }}>
+            Billing
+          </h1>
+          <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4, marginBottom: 0 }}>
+            Manage your subscription and view billing history.
+          </p>
+          <div style={{ height: 1, background: 'var(--border)', marginTop: 16 }} />
+        </div>
+
+        {/* Current plan card */}
+        <div style={{ background: 'var(--navy)', color: '#fff', borderRadius: 14, padding: '22px 26px', marginBottom: 24, boxShadow: '0 4px 20px rgba(11,29,58,0.18)', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
+          <div>
+            <span style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'rgba(255,255,255,0.55)', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}>
+              Current Plan
+            </span>
+            <h2 style={{ fontFamily: "'Fraunces', serif", fontSize: 28, marginTop: 6, marginBottom: 0, fontWeight: 500 }}>
+              {billingData.plan}
+            </h2>
+            <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.65)', marginTop: 4, marginBottom: 0 }}>
+              ${billingData.pricePerUser}/user/month &middot; {billingData.users} users
+            </p>
+          </div>
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'rgba(255,255,255,0.55)', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}>
+              Monthly Total
+            </div>
+            <div style={{ fontFamily: "'Fraunces', serif", fontSize: 34, color: 'var(--gold)', fontWeight: 500, lineHeight: 1.1, marginTop: 4 }}>
+              ${billingData.mrr.toLocaleString()}
+            </div>
+            <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)', marginTop: 4, marginBottom: 0 }}>
+              Next renewal: {billingData.nextRenewal}
+            </p>
+          </div>
+        </div>
+
+        {/* Usage meters */}
+        <div style={{ marginBottom: 28 }}>
+          <h3 style={{ fontFamily: "'Fraunces', serif", fontSize: 16, color: 'var(--text-primary)', margin: '0 0 14px', fontWeight: 400 }}>
+            Usage This Period
+          </h3>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
+            {Object.entries(billingData.usage).map(([key, val]) => {
+              const pct = Math.round((val.used / val.limit) * 100);
+              const barColor = pct > 80 ? '#C65454' : pct > 50 ? 'var(--gold)' : 'var(--navy)';
+              return (
+                <div key={key} style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 12, padding: '16px 18px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)' }}>{usageLabels[key]}</span>
+                    <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{pct}%</span>
+                  </div>
+                  <div style={{ height: 6, background: 'var(--ice-warm)', borderRadius: 3, overflow: 'hidden', marginBottom: 8 }}>
+                    <div style={{ height: '100%', width: `${pct}%`, background: barColor, borderRadius: 3, transition: 'width 300ms' }} />
+                  </div>
+                  <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{val.used} / {val.limit.toLocaleString()}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Plan comparison */}
+        <div style={{ marginBottom: 28 }}>
+          <h3 style={{ fontFamily: "'Fraunces', serif", fontSize: 16, color: 'var(--text-primary)', margin: '0 0 14px', fontWeight: 400 }}>
+            Available Plans
+          </h3>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }}>
+            {plans.map((p) => (
+              <div
+                key={p.name}
+                style={{
+                  background: '#fff',
+                  borderRadius: 12,
+                  padding: '18px 18px 16px',
+                  border: p.current ? '2px solid var(--navy)' : '1px solid var(--border)',
+                  boxShadow: p.current ? '0 4px 12px rgba(11,29,58,0.12)' : '0 1px 3px rgba(0,0,0,0.04)',
+                  display: 'flex', flexDirection: 'column', gap: 4,
+                }}
+              >
+                {p.current && (
+                  <span style={{ alignSelf: 'flex-start', fontSize: 10, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', padding: '3px 8px', borderRadius: 4, background: 'var(--gold-bg)', color: '#8a6b1f', marginBottom: 6 }}>
+                    Current Plan
+                  </span>
+                )}
+                <h4 style={{ fontFamily: "'Fraunces', serif", fontSize: 18, color: 'var(--text-primary)', margin: 0, marginTop: p.current ? 0 : 22, fontWeight: 500 }}>
+                  {p.name}
+                </h4>
+                <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '4px 0 14px' }}>
+                  {p.price === 0 ? 'Free' : `$${p.price}/user/mo`}
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flex: 1 }}>
+                  {p.features.map((f, i) => (
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <Check size={12} style={{ color: '#5CA868', flexShrink: 0 }} />
+                      <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{f}</span>
+                    </div>
+                  ))}
+                </div>
+                {!p.current && (
+                  <button
+                    style={{ width: '100%', marginTop: 14, padding: '8px 12px', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, fontSize: 12, fontWeight: 500, border: '1px solid var(--border)', background: '#fff', color: 'var(--navy)', cursor: 'pointer', fontFamily: 'inherit' }}
+                    onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--navy)'; e.currentTarget.style.background = 'var(--ice-warm)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.background = '#fff'; }}
+                  >
+                    {p.price > billingData.pricePerUser ? 'Upgrade' : 'Downgrade'} <ArrowRight size={12} />
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Billing history */}
+        <div>
+          <h3 style={{ fontFamily: "'Fraunces', serif", fontSize: 16, color: 'var(--text-primary)', margin: '0 0 14px', fontWeight: 400 }}>
+            Billing History
+          </h3>
+          <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ background: 'var(--ice-warm)', borderBottom: '1px solid var(--border)' }}>
+                  {['Invoice', 'Date', 'Amount', 'Status', ''].map((h) => (
+                    <th key={h} style={{ padding: '10px 16px', textAlign: 'left', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {billingData.invoices.map((inv, idx) => {
+                  const sc = statusColor(inv.status);
+                  return (
+                    <tr key={inv.id} style={{ borderBottom: idx === billingData.invoices.length - 1 ? 'none' : '1px solid var(--border)' }}>
+                      <td style={{ padding: '12px 16px', fontSize: 13, color: 'var(--text-primary)', fontWeight: 500 }}>{inv.id}</td>
+                      <td style={{ padding: '12px 16px', fontSize: 12, color: 'var(--text-muted)' }}>{inv.date}</td>
+                      <td style={{ padding: '12px 16px', fontSize: 13, color: 'var(--text-primary)' }}>${inv.amount.toLocaleString()}</td>
+                      <td style={{ padding: '12px 16px' }}>
+                        <span style={{ display: 'inline-block', padding: '3px 9px', borderRadius: 999, fontSize: 11, fontWeight: 600, background: sc.bg, color: sc.color }}>
+                          {inv.status}
+                        </span>
+                      </td>
+                      <td style={{ padding: '12px 16px', textAlign: 'right' }}>
+                        <button
+                          style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 6, border: '1px solid var(--border)', background: '#fff', fontSize: 12, color: 'var(--text-secondary)', cursor: 'pointer', fontFamily: 'inherit' }}
+                          onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--navy)'; e.currentTarget.style.color = 'var(--navy)'; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
+                        >
+                          <Download size={11} /> PDF
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ─────────────────── Top Nav ─────────────────── */
 const AI_MODELS = [
   { id: 'claude-3-7-sonnet', name: 'Claude 3.7 Sonnet', tag: 'Default', desc: 'Most capable — best for complex legal analysis' },
@@ -4949,6 +5144,7 @@ export default function ChatView({ initialView = 'chat' }) {
   }, [isExternalUser, initialView]);
   // Org Admin sees the org dashboard on first load; internal/external users skip it
   const [showOrgDashboard, setShowOrgDashboard] = useState(isOrgAdmin && initialView !== 'workspaces');
+  const [showBillingPanel, setShowBillingPanel] = useState(false);
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
@@ -6898,11 +7094,13 @@ INSTRUCTIONS:
     setShowKnowledgePacksPanel(false);
     setShowDocumentVaultPanel(false);
     setShowOrgDashboard(false);
+    setShowBillingPanel(false);
     setEditingWorkflow(null);
   };
 
   const sidebarActiveKey = (() => {
     if (showOrgDashboard) return 'org-dashboard';
+    if (showBillingPanel) return 'billing';
     if (showTeamPage) return 'invite-team';
     if (showWorkspacesPanel) return 'workspaces';
     if (showWorkflowsPanel || editingWorkflow) return 'workflows';
@@ -6926,7 +7124,7 @@ INSTRUCTIONS:
         onOpenDocumentVault={() => { closeAllPanels(); setShowDocumentVaultPanel(true); setSidebarOpen(false); }}
         onOpenInviteTeam={() => { closeAllPanels(); setShowTeamPage(true); setSidebarOpen(false); }}
         onOpenAuditLogs={() => { /* TODO: Part 5+ wires real audit-logs panel */ }}
-        onOpenBilling={() => { navigate('/app/billing'); setSidebarOpen(false); }}
+        onOpenBilling={() => { closeAllPanels(); setShowBillingPanel(true); setSidebarOpen(false); }}
         onOpenWorkspaces={() => { closeAllPanels(); navigate('/chat/workspaces'); setShowWorkspacesPanel(true); setSidebarOpen(false); }}
         onOpenWorkflows={() => { closeAllPanels(); setShowWorkflowsPanel(true); setSidebarOpen(false); }}
         workflowCount={workflowCount}
@@ -6966,7 +7164,7 @@ INSTRUCTIONS:
       {/* Chat main area — hidden when a full-page panel (Team / Workspaces /
           Workflows / Vault / Knowledge Packs / Workflow Builder) is active
           so the sidebar stays visible but the chat UI is replaced. */}
-      <div style={{ flex: 1, display: (showOrgDashboard || showTeamPage || showWorkspacesPanel || showWorkflowsPanel || editingWorkflow || showDocumentVaultPanel || showKnowledgePacksPanel || showPromptPanel) ? 'none' : 'flex', flexDirection: 'column', minWidth: 0 }}>
+      <div style={{ flex: 1, display: (showOrgDashboard || showBillingPanel || showTeamPage || showWorkspacesPanel || showWorkflowsPanel || editingWorkflow || showDocumentVaultPanel || showKnowledgePacksPanel || showPromptPanel) ? 'none' : 'flex', flexDirection: 'column', minWidth: 0 }}>
         <TopNav plan={plan} usage={usage} onOpenSidebar={() => setSidebarOpen(true)} />
 
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: 'var(--cream)', minHeight: 0 }}>
@@ -8040,7 +8238,7 @@ INSTRUCTIONS:
           run starts and from the sidebar running-strip. Does not
           overlay — it shrinks the chat area so users can keep chatting
           while the workflow runs. ─── */}
-      {runPanelOpen && !showOrgDashboard && !showTeamPage && !showWorkspacesPanel && !showWorkflowsPanel && !editingWorkflow && (
+      {runPanelOpen && !showOrgDashboard && !showBillingPanel && !showTeamPage && !showWorkspacesPanel && !showWorkflowsPanel && !editingWorkflow && (
         <WorkflowRunPanel
           userId={currentUserId}
           focusRunId={runPanelFocusId}
@@ -8328,6 +8526,11 @@ INSTRUCTIONS:
           onUploadDocs={() => { closeAllPanels(); setShowDocumentVaultPanel(true); setSidebarOpen(false); }}
           onAddTeam={() => { closeAllPanels(); setShowTeamPage(true); setSidebarOpen(false); }}
         />
+      )}
+
+      {/* ─── Billing Panel (Org Admin) ─── */}
+      {showBillingPanel && (
+        <BillingPanel onBack={() => setShowBillingPanel(false)} />
       )}
 
       {/* Plan Comparison Modal */}
