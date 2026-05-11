@@ -3767,6 +3767,59 @@ function OrgDashboardPanel({ onBack, displayName, orgName, workspaceCount, membe
             </p>
           </div>
         </div>
+
+        {/* Cost by Client — donut chart */}
+        <div style={{ marginTop: 18, background: '#fff', border: '1px solid var(--border)', borderRadius: 12, padding: '18px 22px 22px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+          <h4 style={{ fontFamily: "'Fraunces', serif", fontSize: 15, color: 'var(--text-primary)', fontWeight: 400, margin: '0 0 14px' }}>Cost by Client</h4>
+          {(() => {
+            const clients = [
+              { name: 'Acme Corp',     pct: 54, color: 'var(--navy)' },
+              { name: 'TechStart Inc', pct: 35, color: 'var(--gold)' },
+              { name: 'Chen Family',   pct: 11, color: '#8d97a5' },
+            ];
+            const r = 70;
+            const C = 2 * Math.PI * r;
+            let acc = 0;
+            return (
+              <>
+                <div style={{ display: 'flex', justifyContent: 'center', padding: '6px 0 18px' }}>
+                  <svg width={200} height={200} viewBox="0 0 200 200" aria-label="Cost by client donut chart">
+                    <g transform="rotate(-90 100 100)">
+                      {clients.map((c) => {
+                        const len = (c.pct / 100) * C;
+                        const dashOffset = -acc;
+                        acc += len;
+                        return (
+                          <circle
+                            key={c.name}
+                            cx={100} cy={100} r={r}
+                            fill="none"
+                            stroke={c.color}
+                            strokeWidth={30}
+                            strokeDasharray={`${len} ${C - len}`}
+                            strokeDashoffset={dashOffset}
+                          />
+                        );
+                      })}
+                    </g>
+                    <text x={100} y={108} textAnchor="middle" fontFamily="'Fraunces', serif" fontSize={22} fontWeight={500} fill="var(--text-primary)">$2.43</text>
+                  </svg>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxWidth: 720, margin: '0 auto' }}>
+                  {clients.map((c) => (
+                    <div key={c.name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 13 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <span style={{ width: 9, height: 9, borderRadius: '50%', background: c.color, flexShrink: 0 }} />
+                        <span style={{ color: 'var(--text-primary)' }}>{c.name}</span>
+                      </div>
+                      <span style={{ color: 'var(--text-muted)' }}>{c.pct}%</span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            );
+          })()}
+        </div>
       </div>
     </div>
   );
