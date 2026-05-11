@@ -3675,13 +3675,33 @@ function OrgDashboardPanel({ onBack, displayName, orgName, workspaceCount, membe
       <div style={{ flex: 1, overflowY: 'auto', padding: '28px 36px' }}>
 
         {/* ─────────── Hero ─────────── */}
-        <div style={{ marginBottom: 22 }}>
-          <h1 style={{ fontFamily: "'Fraunces', serif", fontSize: 26, fontWeight: 400, color: 'var(--text-primary)', margin: 0 }}>
-            {greeting}, {firstName}
-          </h1>
-          <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4, marginBottom: 0 }}>
-            Here's what's happening at {orgName || 'your firm'} today.
-          </p>
+        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 24, marginBottom: 22, flexWrap: 'wrap' }}>
+          <div>
+            <h1 style={{ fontFamily: "'Fraunces', serif", fontSize: 26, fontWeight: 400, color: 'var(--text-primary)', margin: 0 }}>
+              {greeting}, {firstName}
+            </h1>
+            <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4, marginBottom: 0 }}>
+              Here's what's happening at {orgName || 'your firm'} today.
+            </p>
+          </div>
+          {/* Quick actions — inline in hero, top-right */}
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {quickActions.map((a) => {
+              const Icon = a.icon;
+              return (
+                <button
+                  key={a.label}
+                  onClick={a.onClick}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '8px 14px', borderRadius: 8, border: '1px solid var(--border)', background: '#fff', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', transition: 'border-color 150ms, background 150ms' }}
+                  onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--navy)'; e.currentTarget.style.background = 'var(--ice-warm)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.background = '#fff'; }}
+                >
+                  <Icon size={14} style={{ color: 'var(--navy)' }} />
+                  {a.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {/* Stat strip — single connected card, no top-border colors */}
@@ -3851,7 +3871,7 @@ function OrgDashboardPanel({ onBack, displayName, orgName, workspaceCount, membe
                 <div>
                   <h4 style={{ fontFamily: "'Fraunces', serif", fontSize: 17, color: 'var(--text-primary)', fontWeight: 400, margin: '0 0 4px' }}>Cost by Client</h4>
                   <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '0 0 16px' }}>Per-client AI spend, this week</p>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 11, maxWidth: 360 }}>
                     {clients.map((c) => (
                       <div key={c.name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 13.5 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
@@ -3912,19 +3932,18 @@ function OrgDashboardPanel({ onBack, displayName, orgName, workspaceCount, membe
           </div>
         </div>
 
-        {/* ─────────── Footer: Plan usage + Quick actions ─────────── */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: 18 }}>
-          {/* Plan Usage */}
-          <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 12, padding: '18px 22px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
-            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 16 }}>
-              <h4 style={{ fontFamily: "'Fraunces', serif", fontSize: 15, color: 'var(--text-primary)', fontWeight: 400, margin: 0 }}>Plan usage</h4>
-              <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{billingData.plan} · renews {billingData.nextRenewal}</span>
-            </div>
+        {/* ─────────── Footer: Plan usage ─────────── */}
+        <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 12, padding: '18px 22px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 16 }}>
+            <h4 style={{ fontFamily: "'Fraunces', serif", fontSize: 15, color: 'var(--text-primary)', fontWeight: 400, margin: 0 }}>Plan usage</h4>
+            <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{billingData.plan} · renews {billingData.nextRenewal}</span>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 24 }}>
             {usageBars.map(({ label, used, limit }) => {
               const pct = Math.min(100, Math.round((used / limit) * 100));
               const barColor = pct > 80 ? '#C65454' : pct > 50 ? 'var(--gold)' : 'var(--navy)';
               return (
-                <div key={label} style={{ marginBottom: 14 }}>
+                <div key={label}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
                     <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{label}</span>
                     <span style={{ fontSize: 11, color: 'var(--text-muted)', fontVariantNumeric: 'tabular-nums' }}>{used} / {limit.toLocaleString()}</span>
@@ -3935,30 +3954,6 @@ function OrgDashboardPanel({ onBack, displayName, orgName, workspaceCount, membe
                 </div>
               );
             })}
-          </div>
-
-          {/* Quick actions — compact icon-buttons */}
-          <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 12, padding: '18px 18px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
-            <h4 style={{ fontFamily: "'Fraunces', serif", fontSize: 15, color: 'var(--text-primary)', fontWeight: 400, margin: '0 0 14px' }}>Quick actions</h4>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {quickActions.map((a) => {
-                const Icon = a.icon;
-                return (
-                  <button
-                    key={a.label}
-                    onClick={a.onClick}
-                    style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 8, border: '1px solid var(--border)', background: '#fff', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', transition: 'border-color 150ms, background 150ms' }}
-                    onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--navy)'; e.currentTarget.style.background = 'var(--ice-warm)'; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.background = '#fff'; }}
-                  >
-                    <div style={{ width: 26, height: 26, borderRadius: 7, background: 'var(--ice-warm)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      <Icon size={13} style={{ color: 'var(--navy)' }} />
-                    </div>
-                    <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>{a.label}</span>
-                  </button>
-                );
-              })}
-            </div>
           </div>
         </div>
       </div>
