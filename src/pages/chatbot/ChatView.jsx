@@ -4141,6 +4141,7 @@ function formatAuditTs(iso) {
 function AuditLogsPanel({ onBack }) {
   const [userFilter, setUserFilter] = useState('all');
   const [dateFilter, setDateFilter] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
   const [isUserOpen, setIsUserOpen] = useState(false);
   const [isDateOpen, setIsDateOpen] = useState(false);
 
@@ -4158,10 +4159,20 @@ function AuditLogsPanel({ onBack }) {
       if (f.days === 0) { t.setHours(0, 0, 0, 0); return t.getTime(); }
       return Date.now() - f.days * 86400000;
     })();
+    const q = searchQuery.trim().toLowerCase();
     return ORG_AUDIT_EVENTS
       .filter((e) => userFilter === 'all' || e.user === userFilter)
-      .filter((e) => cutoff === null || new Date(e.ts).getTime() >= cutoff);
-  }, [userFilter, dateFilter]);
+      .filter((e) => cutoff === null || new Date(e.ts).getTime() >= cutoff)
+      .filter((e) => {
+        if (!q) return true;
+        const hay = [
+          e.ts, formatAuditTs(e.ts),
+          e.user, e.ip, e.category, e.action, e.target, e.workspace,
+          e.flagged ? 'flagged' : '',
+        ].join('   ').toLowerCase();
+        return hay.includes(q);
+      });
+  }, [userFilter, dateFilter, searchQuery]);
 
   const handleExportCSV = () => {
     const header = ['Timestamp', 'User', 'IP', 'Category', 'Action', 'Target', 'Workspace', 'Flagged'];
@@ -4213,6 +4224,31 @@ function AuditLogsPanel({ onBack }) {
 
         {/* Filter bar */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
+          {/* Search — all columns */}
+          <div style={{ position: 'relative', minWidth: 260, flex: '0 1 320px' }}>
+            <Search size={13} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search events…"
+              style={{ width: '100%', padding: '7px 30px 7px 30px', borderRadius: 8, border: '1px solid var(--border)', background: '#fff', fontSize: 12.5, color: 'var(--text-primary)', fontFamily: 'inherit', outline: 'none' }}
+              onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--navy)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(10,36,99,0.08)'; }}
+              onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.boxShadow = 'none'; }}
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                aria-label="Clear search"
+                style={{ position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)', width: 20, height: 20, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: 4, border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--text-muted)' }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--ice-warm)'; e.currentTarget.style.color = 'var(--text-primary)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-muted)'; }}
+              >
+                <X size={12} />
+              </button>
+            )}
+          </div>
+
           {/* User filter */}
           <div style={{ position: 'relative' }}>
             <button
