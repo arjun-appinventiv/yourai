@@ -4164,8 +4164,8 @@ function AuditLogsPanel({ onBack }) {
   }, [userFilter, dateFilter]);
 
   const handleExportCSV = () => {
-    const header = ['Timestamp', 'User', 'Category', 'Action', 'Target', 'Workspace', 'Flagged'];
-    const rows = filtered.map((e) => [e.ts, e.user, e.category, e.action, e.target, e.workspace || '', e.flagged ? 'yes' : '']);
+    const header = ['Timestamp', 'User', 'IP', 'Category', 'Action', 'Target', 'Workspace', 'Flagged'];
+    const rows = filtered.map((e) => [e.ts, e.user, e.ip || '', e.category, e.action, e.target, e.workspace || '', e.flagged ? 'yes' : '']);
     const csv = [header, ...rows]
       .map((r) => r.map((v) => `"${String(v || '').replace(/"/g, '""')}"`).join(','))
       .join('\n');
@@ -4301,7 +4301,7 @@ function AuditLogsPanel({ onBack }) {
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ background: 'var(--ice-warm)', borderBottom: '1px solid var(--border)' }}>
-                {['Timestamp', 'User', 'Category', 'Action', 'Target'].map((h) => (
+                {['Timestamp', 'User', 'IP', 'Category', 'Action', 'Target'].map((h) => (
                   <th key={h} style={{ padding: '10px 16px', textAlign: 'left', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}>{h}</th>
                 ))}
               </tr>
@@ -4309,7 +4309,7 @@ function AuditLogsPanel({ onBack }) {
             <tbody>
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={5} style={{ padding: '48px 24px', textAlign: 'center', fontSize: 13, color: 'var(--text-muted)' }}>
+                  <td colSpan={6} style={{ padding: '48px 24px', textAlign: 'center', fontSize: 13, color: 'var(--text-muted)' }}>
                     No events match these filters.
                   </td>
                 </tr>
@@ -4326,6 +4326,9 @@ function AuditLogsPanel({ onBack }) {
                         </div>
                         <span style={{ fontSize: 13, color: 'var(--text-primary)', fontWeight: 500 }}>{e.user}</span>
                       </div>
+                    </td>
+                    <td style={{ padding: '12px 16px', whiteSpace: 'nowrap', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', fontSize: 12, color: e.ip && !e.ip.startsWith('10.') ? '#9A3412' : 'var(--text-muted)' }}>
+                      {e.ip || '—'}
                     </td>
                     <td style={{ padding: '12px 16px' }}>
                       <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: 4, fontSize: 10, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', background: `${meta.color}1a`, color: meta.color }}>
