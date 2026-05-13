@@ -531,7 +531,15 @@ Reverse chronological. Each entry: *decision — rationale — date*.
 - Quick chips on the empty state are 4 white pills with green-dot prefixes, centered. "More operations" overflow is gone from the empty state — the intent pill's dropdown now surfaces the full bucketed list.
 - SA Compliance & Audit shares filter-bar + table chrome with the chatview `AuditLogsPanel`. Severity is not surfaced (Category covers the bucketing need without a second axis); detail modal + stat cards are not part of either surface.
 
-**Bundle deployed**: TBD (post-push).
+**Bundle deployed**: `index-CACJne-y.js`. Three commits pushed to `yourai/main`: `0b32e2b` (chat composer), `9a5c863` (SA Compliance), `1ac78b8` (docs).
+
+**Source of truth for the designer mockups**: `~/Downloads/yourai-pages-build/` — HTML+CSS prototypes the designer hands over. Today touched `chat.html` (empty state) + `chat-active.html` (populated + dropdown style). Folder also contains `workspaces.html`, `vault.html`, `packs.html`, `workflows.html`, `prompt-templates.html`, `prompt-templates-detail.html`, `yourai.html`, and the shared `yourai-styles.css` (this is the canonical token list — `--green-text: #2a8a4f`, composer beige `#efe9d8`, etc.). See `.claude-context/designer-mockups.md` for the full inventory + what's matched vs pending.
+
+**What's next**:
+- **Match `chat-active.html` populated chat state.** Today's session only borrowed the source-dropdown style. The populated chat in `chat-active.html` has a full conversation chrome: topbar with conversation title + meta icons (timer / member count / 3-dot menu), gold-tinted answer card with citation pills (`%` icon + doc name + `p.X §Y`), gold-rail "Current search:" line with bullseye icon + blue link styling, file chips with red "PDF" badge in the composer, and the same beige composer + Upload bar as the empty state. None of this is wired yet.
+- **Match the remaining mockups**: workspaces / vault / packs / workflows / prompt-templates / prompt-templates-detail / yourai. Each is a separate surface; budget per-screen.
+- **Responsive design first-wave** — still awaiting PM go-ahead from 2026-04-30. Tenant chat across 5 breakpoints + sidebar collapse.
+- **Carryover**: Timeline intent removal (12 touchpoints inventoried, paused since 2026-05-06), mirror artifact panel in `WorkspaceChatView`, Edge prompt tuning for matterName, wire Org Dashboard mock data + audit events + Billing to real telemetry once backend lands.
 
 ---
 
