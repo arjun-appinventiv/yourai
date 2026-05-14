@@ -11,7 +11,7 @@ export default function Layout() {
       <Sidebar />
       <TopBar />
 
-      <main className="pb-12" style={{ marginLeft: 240, paddingTop: 52 }}>
+      <main className="pb-12" style={{ marginLeft: 264, paddingTop: 52 }}>
         <div style={{ padding: '28px 32px' }}>
           <Outlet />
         </div>
