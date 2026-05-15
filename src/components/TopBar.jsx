@@ -57,7 +57,7 @@ export default function TopBar() {
     <>
       <div
         className="fixed top-0 right-0 flex items-center justify-between px-6 bg-white z-30"
-        style={{ left: 264, height: 52, borderBottom: '1px solid var(--border)' }}
+        style={{ left: 288, height: 52, borderBottom: '1px solid var(--border)' }}
       >
         {/* Breadcrumb */}
         <div className="flex items-center gap-2" style={{ fontSize: '13px' }}>

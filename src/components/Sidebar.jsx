@@ -43,7 +43,7 @@ export default function Sidebar() {
     <div
       className="fixed left-0 top-0 bottom-0 flex flex-col z-40"
       style={{
-        width: 264,
+        width: 288,
         backgroundColor: 'var(--navy)',
         borderRight: '1px solid rgba(255,255,255,0.06)',
       }}
@@ -76,7 +76,7 @@ export default function Sidebar() {
           <div key={section.label}>
             <div
               style={{
-                fontSize: '11px',
+                fontSize: '12px',
                 letterSpacing: '0.08em',
                 textTransform: 'uppercase',
                 color: 'rgba(255,255,255,0.3)',
@@ -97,7 +97,7 @@ export default function Sidebar() {
                   backgroundColor: isActive ? 'rgba(255,255,255,0.08)' : 'transparent',
                   borderLeft: isActive ? '3px solid var(--gold)' : '3px solid transparent',
                   color: isActive ? 'white' : 'rgba(255,255,255,0.55)',
-                  fontSize: '14px',
+                  fontSize: '15px',
                   fontWeight: isActive ? 500 : 400,
                   lineHeight: '1.5',
                   display: 'flex',
@@ -114,7 +114,7 @@ export default function Sidebar() {
                   e.currentTarget.style.backgroundColor = isActive ? 'rgba(255,255,255,0.08)' : 'transparent';
                 }}
               >
-                <Icon size={16} />
+                <Icon size={18} />
                 <span>{label}</span>
               </NavLink>
             ))}
