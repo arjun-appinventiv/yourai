@@ -6301,6 +6301,30 @@ export default function ChatView({ initialView = 'chat' }) {
         };
         setMessages((prev) => [...prev, switchNote]);
       }
+    } else if (activeIntent !== 'general_chat' && trimmed.length >= 10) {
+      // Cross-intent hard switch: user has a specific intent active (manual or
+      // otherwise) but their message body strongly matches a *different*
+      // specific intent (detectIntent enforces a +2 keyword margin). Honour
+      // the message verb — switch the active intent rather than running the
+      // task under the wrong system prompt + schema. Pre-2026-05-15 we injected
+      // a soft `crossIntentNudge` HARD CONSTRAINT instead, but the LLM
+      // routinely ignored it and produced clause-analysis output while the
+      // pill still read "Contract Review" — reported by Arjun.
+      const detectedMatch = detectIntent(trimmed, activeIntent);
+      if (detectedMatch && detectedMatch !== activeIntent) {
+        effectiveIntent = detectedMatch;
+        setActiveIntent(detectedMatch);
+        const switchLabel = getIntentLabel(detectedMatch);
+        const switchNote = {
+          id: Date.now() + 0.5,
+          sender: 'bot',
+          content: `Switched to **${switchLabel}** mode — your message reads as a ${switchLabel.toLowerCase()} task.`,
+          timestamp: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
+          sourceBadge: null,
+          isSystemNote: true,
+        };
+        setMessages((prev) => [...prev, switchNote]);
+      }
     }
 
     // Build history for LLM context
