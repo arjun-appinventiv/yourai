@@ -6102,12 +6102,25 @@ export default function ChatView({ initialView = 'chat' }) {
     // Skipped on chit-chat, slash commands, and re-fires from a prior
     // multi-intent pick (skipMultiIntentChoice=true).
     if (!skipMultiIntentChoice && !isChitChat && !trimmed.startsWith('/') && trimmed.length >= 12) {
-      const SEQUENCE_CONNECTOR = /\b(?:and then|then|after that|after which|followed by|also|;|, then)\b/i;
+      // Bare `and` is included (2026-05-16) — real user message "Can you do
+      // contract review and do clause analysis of attached doc" failed to
+      // trigger the gate without it. False-positive risk on phrasings like
+      // "summarise and analyse this doc" is mitigated by the per-intent
+      // >=2-keyword-hit floor in the gate body below — single-verb mentions
+      // don't clear it.
+      const SEQUENCE_CONNECTOR = /\b(?:and then|then|after that|after which|followed by|also|and|;|, then)\b/i;
       if (SEQUENCE_CONNECTOR.test(trimmed)) {
         try {
           const allMatches = detectAllIntents(trimmed);
+          // Floor of >=1 keyword hit per intent (was >=2 in v1, 2026-05-15;
+          // raised to >=1 on 2026-05-16 after real message "Can you do
+          // contract review and do clause analysis of attached doc" failed
+          // to trigger — clause_analysis only had 1 keyword hit). Safe
+          // because most defaults are multi-word distinctive phrases
+          // ("contract review", "clause analysis", "draft an email") and
+          // the connector check above is the real gate.
           const specificMatches = allMatches.filter(
-            (m) => m.intentId !== 'general_chat' && m.intentId !== 'legal_qa' && m.matchCount >= 2
+            (m) => m.intentId !== 'general_chat' && m.intentId !== 'legal_qa' && m.matchCount >= 1
           );
           if (specificMatches.length >= 2) {
             // Cap displayed choices at 3 — anything beyond reads as a wall.
