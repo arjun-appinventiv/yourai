@@ -115,27 +115,21 @@ export async function classifyIntent(
     });
     if (!res.ok || !res.body) return null;
 
-    // Drain the stream into text (response_format: json_object on the
-    // server means the body, once decoded, is one JSON object).
+    // Drain the stream — the Edge function (api/chat.ts) ALREADY
+    // transforms OpenAI's SSE into plain text chunks before returning,
+    // so we just concatenate the decoded text. response_format:
+    // json_object on the server guarantees the concatenated result is
+    // one JSON object. Earlier version of this code mistakenly parsed
+    // the stream as SSE (data: {...} lines), which never matched and
+    // silently failed every call — the classifier was effectively a
+    // no-op for 24h until the parser bug was found 2026-05-16.
     const reader = res.body.getReader();
     const decoder = new TextDecoder();
     let raw = '';
-    // Edge streams in OpenAI SSE format — extract delta.content from
-    // each "data: {...}" line. Cribbed from the main chat reader.
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
-      const chunk = decoder.decode(value, { stream: true });
-      for (const line of chunk.split('\n')) {
-        if (!line.startsWith('data: ')) continue;
-        const payload = line.slice(6).trim();
-        if (!payload || payload === '[DONE]') continue;
-        try {
-          const parsed = JSON.parse(payload);
-          const delta = parsed?.choices?.[0]?.delta?.content;
-          if (typeof delta === 'string') raw += delta;
-        } catch { /* skip malformed line */ }
-      }
+      raw += decoder.decode(value, { stream: true });
     }
     raw += decoder.decode();
     if (!raw.trim()) return null;
