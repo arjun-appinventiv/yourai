@@ -18,6 +18,17 @@ type ChatMessage = { role: 'system' | 'user' | 'assistant'; content: string };
 // src/components/chat/cards/*.tsx. If you add a new card-rendering
 // intent, drop its schema here and ChatView will route it. ──
 const CARD_SCHEMAS: Record<string, string> = {
+  // Intent classifier — not a card, but reuses the JSON-output forcing
+  // path. Returns the routing decision for a user message. Added
+  // 2026-05-16 to replace fragile keyword-based detection (typos,
+  // synonyms, paraphrases break the keyword detector). See
+  // src/lib/intentClassifier.ts.
+  classify: `{
+  "primaryIntent": "string — one of: general_chat, contract_review, legal_research, document_drafting, document_summarisation, case_law_analysis, clause_comparison, email_letter_drafting, legal_qa, risk_assessment, clause_analysis, find_document",
+  "isMultiIntent": false,
+  "otherIntents": ["string — additional intent IDs from the same list, ordered by likelihood (empty array if isMultiIntent is false)"],
+  "confidence": 0.0
+}`,
   document_summarisation: `{
   "documentName": "string — the uploaded doc name",
   "clauseCount": 0,
@@ -210,6 +221,24 @@ Within the legal domain: be concise, accurate, cite jurisdictions where relevant
     // response renders in the corresponding front-end card. Combined
     // with response_format: json_object on the OpenAI call, this
     // guarantees valid JSON output.
+    // ── Doc-attached override ─────────────────────────────────────────
+    // When the client signals a document IS attached (content stitched
+    // into the user message under the [Documents attached…] header),
+    // prepend a hard system instruction that overrides the default
+    // MISSING_DOCUMENT_HANDLING fallback. The LLM sometimes mis-reads
+    // ambiguous multi-task messages and asks for an upload that's
+    // already there — this kill-switch makes that impossible.
+    if (body.docAttached === true) {
+      messages.unshift({
+        role: 'system',
+        content: `CRITICAL CONTEXT: A document IS attached to this conversation. Its full text is included in the user's message below under a "[Documents attached to this conversation]" header. The user has ALREADY uploaded a document.
+
+DO NOT reply with "Upload the document using the + button" or any variation. DO NOT ask the user to upload anything. DO NOT fall through to the MISSING DOCUMENT HANDLING branch above — that branch DOES NOT APPLY here because a document is present.
+
+Use the document content provided. If the user's question is ambiguous, do your best with what's attached. If the attached document genuinely doesn't contain what's needed, say "Not covered by the supplied documents." and explain what IS in it — never ask for a fresh upload.`,
+      });
+    }
+
     cardSchema = CARD_SCHEMAS[body.intent as string];
     if (cardSchema) {
       messages.unshift({

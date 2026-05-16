@@ -60,6 +60,7 @@ import { extractFileText } from '../../lib/file-parser';
 import { trackDocUpload } from '../../lib/auth';
 import { useSessionGuard } from '../../lib/useSessionGuard';
 import { detectIntent, detectAllIntents } from '../../lib/intentDetector';
+import { classifyIntent } from '../../lib/intentClassifier';
 import { INTENTS, DEFAULT_INTENT, getIntentLabel, groupIntentsByBucket, BUCKET_COLORS, INTENT_DESCRIPTIONS, getBucketForIntent } from '../../lib/intents';
 
 // Removed: MOCK_RESPONSES array — replaced with real streaming fetch to /api/chat
@@ -6064,6 +6065,23 @@ export default function ChatView({ initialView = 'chat' }) {
       || !!(sessionDocContext?.docNames || []).length;
     const useChitChatOverride = isChitChat && isCardIntent(activeIntent) && !hasAnyDoc;
 
+    // ─── LLM intent classifier (2026-05-16) ─────────────────────────────
+    // Replaces the brittle keyword detector for the primary routing
+    // decision. Calls /api/chat with intent='classify' + a tight system
+    // prompt; returns {primaryIntent, isMultiIntent, otherIntents,
+    // confidence}. Latency budget 2.5 s — on timeout/failure we fall
+    // back to the keyword detector so the user is never blocked.
+    //
+    // Skipped on chit-chat (no value in classifying "hi"), slash
+    // commands (deterministic routing), and re-fires from a prior gate
+    // pick (the user already chose).
+    let classification = null;
+    if (!skipMultiIntentChoice && !isChitChat && !trimmed.startsWith('/') && trimmed.length >= 8) {
+      try {
+        classification = await classifyIntent(trimmed, activeIntent, hasAnyDoc, { timeoutMs: 2500 });
+      } catch { /* fall back to keyword detector */ }
+    }
+
     // ─── Doc-source confirmation for card intents ──────────────────────
     // When the user asks for a card-intent analysis AND there's already
     // a document in session context (prior turns or active vault doc),
@@ -6078,7 +6096,15 @@ export default function ChatView({ initialView = 'chat' }) {
     // ask the user about doc source BEFORE the auto-switch, otherwise
     // the confirmation skips and the bot silently picks docs.
     let willBeCardIntent = activeIntent;
-    if (!hasManualIntentPick && activeIntent === 'general_chat' && trimmed.length >= 10) {
+    // Prefer the LLM classifier's primaryIntent when available — it
+    // tolerates typos, synonyms, and paraphrases the keyword detector
+    // can't handle. Falls back to keyword detection on classifier
+    // failure / unavailable.
+    if (classification && classification.primaryIntent && classification.primaryIntent !== 'general_chat') {
+      if (!hasManualIntentPick || activeIntent === 'general_chat') {
+        willBeCardIntent = classification.primaryIntent;
+      }
+    } else if (!hasManualIntentPick && activeIntent === 'general_chat' && trimmed.length >= 10) {
       try {
         const detected = detectIntent(trimmed, 'general_chat');
         if (detected && detected !== 'general_chat') willBeCardIntent = detected;
@@ -6102,57 +6128,56 @@ export default function ChatView({ initialView = 'chat' }) {
     // Skipped on chit-chat, slash commands, and re-fires from a prior
     // multi-intent pick (skipMultiIntentChoice=true).
     if (!skipMultiIntentChoice && !isChitChat && !trimmed.startsWith('/') && trimmed.length >= 12) {
-      // Bare `and` is included (2026-05-16) — real user message "Can you do
-      // contract review and do clause analysis of attached doc" failed to
-      // trigger the gate without it. False-positive risk on phrasings like
-      // "summarise and analyse this doc" is mitigated by the per-intent
-      // >=2-keyword-hit floor in the gate body below — single-verb mentions
-      // don't clear it.
-      const SEQUENCE_CONNECTOR = /\b(?:and then|then|after that|after which|followed by|also|and|;|, then)\b/i;
-      if (SEQUENCE_CONNECTOR.test(trimmed)) {
-        try {
-          const allMatches = detectAllIntents(trimmed);
-          // Floor of >=1 keyword hit per intent (was >=2 in v1, 2026-05-15;
-          // raised to >=1 on 2026-05-16 after real message "Can you do
-          // contract review and do clause analysis of attached doc" failed
-          // to trigger — clause_analysis only had 1 keyword hit). Safe
-          // because most defaults are multi-word distinctive phrases
-          // ("contract review", "clause analysis", "draft an email") and
-          // the connector check above is the real gate.
-          const specificMatches = allMatches.filter(
-            (m) => m.intentId !== 'general_chat' && m.intentId !== 'legal_qa' && m.matchCount >= 1
-          );
-          if (specificMatches.length >= 2) {
-            // Cap displayed choices at 3 — anything beyond reads as a wall.
-            const choices = specificMatches.slice(0, 3).map((m) => ({
-              intentId: m.intentId,
-              label: getIntentLabel(m.intentId),
-            }));
-            if (showEmptyState) setShowEmptyState(false);
-            const userMsg = { id: Date.now(), sender: 'user', content: trimmed, timestamp: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) };
-            const confirmMsg = {
-              id: Date.now() + 1,
-              sender: 'bot',
-              content: '',
-              timestamp: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
-              sourceBadge: null,
-              confirmation: {
-                kind: 'multi_intent_pick',
-                choices,
-                pendingMessage: trimmed,
-              },
-            };
-            setMessages((prev) => [...prev, userMsg, confirmMsg]);
-            // Clear the soft pre-send suggestion banner — the gate is now
-            // the authoritative answer to the same question.
-            setSuggestedIntent(null);
-            setSuggestedIntents([]);
-            setDismissedSuggestion(null);
-            setInput('');
-            if (inputRef.current) inputRef.current.style.height = 'auto';
-            return;
-          }
-        } catch { /* fall through to normal send on any detector error */ }
+      // Primary path: trust the LLM classifier's isMultiIntent flag.
+      // Fallback: keyword + connector check when classifier didn't run.
+      let gateChoices = null;
+      if (classification && classification.isMultiIntent && classification.otherIntents.length > 0) {
+        const ids = [classification.primaryIntent, ...classification.otherIntents]
+          .filter((id) => id && id !== 'general_chat' && id !== 'legal_qa');
+        const uniq = Array.from(new Set(ids)).slice(0, 3);
+        if (uniq.length >= 2) {
+          gateChoices = uniq.map((id) => ({ intentId: id, label: getIntentLabel(id) }));
+        }
+      }
+      if (!gateChoices) {
+        const SEQUENCE_CONNECTOR = /\b(?:and then|then|after that|after which|followed by|also|and|;|, then)\b/i;
+        if (SEQUENCE_CONNECTOR.test(trimmed)) {
+          try {
+            const allMatches = detectAllIntents(trimmed);
+            const specificMatches = allMatches.filter(
+              (m) => m.intentId !== 'general_chat' && m.intentId !== 'legal_qa' && m.matchCount >= 1
+            );
+            if (specificMatches.length >= 2) {
+              gateChoices = specificMatches.slice(0, 3).map((m) => ({
+                intentId: m.intentId,
+                label: getIntentLabel(m.intentId),
+              }));
+            }
+          } catch { /* fall through */ }
+        }
+      }
+      if (gateChoices) {
+        if (showEmptyState) setShowEmptyState(false);
+        const userMsg = { id: Date.now(), sender: 'user', content: trimmed, timestamp: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) };
+        const confirmMsg = {
+          id: Date.now() + 1,
+          sender: 'bot',
+          content: '',
+          timestamp: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
+          sourceBadge: null,
+          confirmation: {
+            kind: 'multi_intent_pick',
+            choices: gateChoices,
+            pendingMessage: trimmed,
+          },
+        };
+        setMessages((prev) => [...prev, userMsg, confirmMsg]);
+        setSuggestedIntent(null);
+        setSuggestedIntents([]);
+        setDismissedSuggestion(null);
+        setInput('');
+        if (inputRef.current) inputRef.current.style.height = 'auto';
+        return;
       }
     }
 
@@ -6688,6 +6713,13 @@ export default function ChatView({ initialView = 'chat' }) {
             intent: edgeIntent,
             sessionId: sessionState.sessionKbSnapshotId,
             sessionDocId: sessionState.sessionDocId,
+            // Signal to the Edge that a document IS attached so its
+            // MISSING_DOCUMENT_HANDLING fallback can't fire (the LLM
+            // otherwise sometimes ignores inlined doc content on
+            // ambiguous messages and asks the user to upload — even
+            // though the upload is already there). True when there's
+            // anything stitched into the [Documents attached] block.
+            docAttached: !!(mergedDocContent && mergedDocContent.length > 0),
           }),
         });
 
