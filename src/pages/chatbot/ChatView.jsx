@@ -6143,6 +6143,11 @@ export default function ChatView({ initialView = 'chat' }) {
               },
             };
             setMessages((prev) => [...prev, userMsg, confirmMsg]);
+            // Clear the soft pre-send suggestion banner — the gate is now
+            // the authoritative answer to the same question.
+            setSuggestedIntent(null);
+            setSuggestedIntents([]);
+            setDismissedSuggestion(null);
             setInput('');
             if (inputRef.current) inputRef.current.style.height = 'auto';
             return;
