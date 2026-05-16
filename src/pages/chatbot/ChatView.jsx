@@ -4702,6 +4702,50 @@ function MessageBubble({ msg, onOpenArtifact, isActiveArtifact, onConfirmAction 
           {/* Confirmation message: doc-source picker (use attached vs upload new).
               Rendered as plain prose with two inline text-link actions —
               looks like part of the chat conversation, not a UI card. */}
+          {isBot && msg.confirmation && msg.confirmation.kind === 'multi_intent_pick' && (() => {
+            // Multi-intent clarification: user's message reads as 2+ tasks
+            // (e.g. "do clause analysis and then prepare a contract").
+            // Pause and ask which to run first. Same prose-with-text-links
+            // pattern as the doc-source confirmation — looks like part of
+            // the conversation, not a styled UI component.
+            const choices = msg.confirmation.choices || [];
+            return (
+              <div style={{ fontSize: 14, color: 'var(--text-primary)', lineHeight: 1.7 }}>
+                <p style={{ margin: '0 0 10px 0' }}>
+                  I can only run one operation at a time. Your message looks like {choices.length === 2 ? 'two tasks' : `${choices.length} tasks`} —{' '}
+                  {choices.map((c, i) => (
+                    <React.Fragment key={c.intentId}>
+                      <strong>{c.label}</strong>
+                      {i < choices.length - 2 ? ', ' : i === choices.length - 2 ? ' and ' : ''}
+                    </React.Fragment>
+                  ))}
+                  . Which would you like to do first?
+                </p>
+                <p style={{ margin: 0, fontSize: 13, color: 'var(--text-secondary)' }}>
+                  {choices.map((c, i) => (
+                    <React.Fragment key={c.intentId}>
+                      <a
+                        onClick={() => onConfirmAction && onConfirmAction({
+                          kind: 'pick_intent',
+                          intentId: c.intentId,
+                          label: c.label,
+                          message: msg.confirmation.pendingMessage,
+                          msgId: msg.id,
+                        })}
+                        style={{
+                          color: 'var(--navy)', textDecoration: 'underline',
+                          cursor: 'pointer', fontWeight: 500,
+                        }}
+                      >
+                        {c.label}
+                      </a>
+                      {i < choices.length - 1 && <span style={{ color: 'var(--text-muted)' }}>{'  ·  '}</span>}
+                    </React.Fragment>
+                  ))}
+                </p>
+              </div>
+            );
+          })()}
           {isBot && msg.confirmation && msg.confirmation.kind === 'use_attached_or_new' && (() => {
             const names = msg.confirmation.docNames || [];
             const headDocs = names.slice(0, 3);
@@ -5984,6 +6028,7 @@ export default function ChatView({ initialView = 'chat' }) {
     const trimmed = (text || '').trim();
     if ((!trimmed && pendingAttachments.length === 0) || isTyping) return;
     const skipDocConfirmation = !!(opts && opts.skipDocConfirmation);
+    const skipMultiIntentChoice = !!(opts && opts.skipMultiIntentChoice);
 
     // ─── Chit-chat + card-intent intercept ───────────────────────────
     // When a user picks a card intent (clause_comparison, risk_assessment,
@@ -6039,6 +6084,60 @@ export default function ChatView({ initialView = 'chat' }) {
         if (detected && detected !== 'general_chat') willBeCardIntent = detected;
       } catch { /* ignore */ }
     }
+    // ─── Multi-intent clarification gate ────────────────────────────────
+    // When the user's message reads as TWO+ distinct specific tasks
+    // (e.g. "do clause analysis and then prepare a contract"), pause and
+    // ask which to run first. The send pipeline is single-intent (one
+    // system prompt, one schema, one response), and silently picking
+    // one of the requested operations either drops the other half or
+    // produces a mixed-schema output. Inline orchestration is out of
+    // scope for now (Workflows is the dedicated chained-ops surface,
+    // but the user's team isn't shipping there) — clarifying with the
+    // user is the cheapest correct behaviour.
+    //
+    // Trigger: message has a sequence connector AND detectAllIntents
+    // returns 2+ distinct specific intents each with >=2 keyword hits
+    // (the >=2 floor prevents a single shared word like "document" from
+    // triggering the gate on borderline single-task messages).
+    // Skipped on chit-chat, slash commands, and re-fires from a prior
+    // multi-intent pick (skipMultiIntentChoice=true).
+    if (!skipMultiIntentChoice && !isChitChat && !trimmed.startsWith('/') && trimmed.length >= 12) {
+      const SEQUENCE_CONNECTOR = /\b(?:and then|then|after that|after which|followed by|also|;|, then)\b/i;
+      if (SEQUENCE_CONNECTOR.test(trimmed)) {
+        try {
+          const allMatches = detectAllIntents(trimmed);
+          const specificMatches = allMatches.filter(
+            (m) => m.intentId !== 'general_chat' && m.intentId !== 'legal_qa' && m.matchCount >= 2
+          );
+          if (specificMatches.length >= 2) {
+            // Cap displayed choices at 3 — anything beyond reads as a wall.
+            const choices = specificMatches.slice(0, 3).map((m) => ({
+              intentId: m.intentId,
+              label: getIntentLabel(m.intentId),
+            }));
+            if (showEmptyState) setShowEmptyState(false);
+            const userMsg = { id: Date.now(), sender: 'user', content: trimmed, timestamp: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) };
+            const confirmMsg = {
+              id: Date.now() + 1,
+              sender: 'bot',
+              content: '',
+              timestamp: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
+              sourceBadge: null,
+              confirmation: {
+                kind: 'multi_intent_pick',
+                choices,
+                pendingMessage: trimmed,
+              },
+            };
+            setMessages((prev) => [...prev, userMsg, confirmMsg]);
+            setInput('');
+            if (inputRef.current) inputRef.current.style.height = 'auto';
+            return;
+          }
+        } catch { /* fall through to normal send on any detector error */ }
+      }
+    }
+
     if (isCardIntent(willBeCardIntent) && hasAnyDoc && !skipDocConfirmation && !isChitChat) {
       const allDocNames = [
         ...((sessionDocContext?.docNames) || []),
@@ -6301,7 +6400,7 @@ export default function ChatView({ initialView = 'chat' }) {
         };
         setMessages((prev) => [...prev, switchNote]);
       }
-    } else if (activeIntent !== 'general_chat' && trimmed.length >= 10) {
+    } else if (activeIntent !== 'general_chat' && trimmed.length >= 10 && !skipMultiIntentChoice) {
       // Cross-intent hard switch: user has a specific intent active (manual or
       // otherwise) but their message body strongly matches a *different*
       // specific intent (detectIntent enforces a +2 keyword margin). Honour
@@ -6310,6 +6409,10 @@ export default function ChatView({ initialView = 'chat' }) {
       // a soft `crossIntentNudge` HARD CONSTRAINT instead, but the LLM
       // routinely ignored it and produced clause-analysis output while the
       // pill still read "Contract Review" — reported by Arjun.
+      //
+      // Skipped when re-firing from a multi-intent pick — the user just
+      // deliberately chose one of N intents present in the message; the
+      // hard switch would immediately flip them off it.
       const detectedMatch = detectIntent(trimmed, activeIntent);
       if (detectedMatch && detectedMatch !== activeIntent) {
         effectiveIntent = detectedMatch;
@@ -7595,6 +7698,20 @@ INSTRUCTIONS:
                         confirmation: undefined,
                         content: 'OK — drop the new document via the **+** button or the drop zone below the input, then send your request again.',
                       } : m));
+                    } else if (action.kind === 'pick_intent') {
+                      // Pin the chosen intent (with manual-pick flag so the
+                      // general_chat auto-switch path won't override later),
+                      // collapse the choice prompt into a friendly "Running"
+                      // note, then re-fire sendMessage with skipMultiIntentChoice
+                      // so the gate doesn't re-trigger on the same message.
+                      setActiveIntent(action.intentId);
+                      setHasManualIntentPick(true);
+                      setMessages((prev) => prev.map((m) => m.id === action.msgId ? {
+                        ...m,
+                        confirmation: undefined,
+                        content: `Running **${action.label}** on your request…`,
+                      } : m));
+                      sendMessage(action.message, { skipMultiIntentChoice: true });
                     }
                   }}
                 />
