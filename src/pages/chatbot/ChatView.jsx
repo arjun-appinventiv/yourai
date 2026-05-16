@@ -6035,6 +6035,17 @@ export default function ChatView({ initialView = 'chat' }) {
     // the gate when it first fired). Re-adding it would duplicate the
     // bubble — pass suppressUserMsg=true on re-fires to skip the append.
     const suppressUserMsg = !!(opts && opts.suppressUserMsg);
+    // The multi-intent gate pick re-fires sendMessage *synchronously*
+    // right after setActiveIntent(picked) + setHasManualIntentPick(true).
+    // React hasn't re-rendered yet, so the closure-captured activeIntent
+    // and hasManualIntentPick in this sendMessage call are STALE — both
+    // auto-switch paths below would then mis-route to whatever keyword
+    // matches the message body (Contract Review beats stale general_chat
+    // on a message containing 'contract review'). forceIntent overrides
+    // the captured activeIntent for this call and short-circuits both
+    // auto-switch paths. Bug observed 2026-05-16: user clicked Clause
+    // Analysis in the gate, system still ran Contract Review.
+    const forceIntent = (opts && opts.forceIntent) || null;
 
     // ─── Chit-chat + card-intent intercept ───────────────────────────
     // When a user picks a card intent (clause_comparison, risk_assessment,
@@ -6100,12 +6111,15 @@ export default function ChatView({ initialView = 'chat' }) {
     // ("Do clause analysis of attached doc" → clause_analysis). We must
     // ask the user about doc source BEFORE the auto-switch, otherwise
     // the confirmation skips and the bot silently picks docs.
-    let willBeCardIntent = activeIntent;
+    let willBeCardIntent = forceIntent || activeIntent;
     // Prefer the LLM classifier's primaryIntent when available — it
     // tolerates typos, synonyms, and paraphrases the keyword detector
     // can't handle. Falls back to keyword detection on classifier
-    // failure / unavailable.
-    if (classification && classification.primaryIntent && classification.primaryIntent !== 'general_chat') {
+    // failure / unavailable. Skipped entirely on forceIntent — the
+    // caller already decided.
+    if (forceIntent) {
+      // explicit caller choice wins
+    } else if (classification && classification.primaryIntent && classification.primaryIntent !== 'general_chat') {
       if (!hasManualIntentPick || activeIntent === 'general_chat') {
         willBeCardIntent = classification.primaryIntent;
       }
@@ -6430,8 +6444,11 @@ export default function ChatView({ initialView = 'chat' }) {
     // dropdown — keyword detection would otherwise silently override the
     // deliberate choice and the populated-chat collapsed pill would flip
     // to a different intent label after send (PM-reported regression).
-    let effectiveIntent = activeIntent;
-    if (!hasManualIntentPick && activeIntent === 'general_chat' && trimmed.length >= 10) {
+    let effectiveIntent = forceIntent || activeIntent;
+    if (forceIntent) {
+      // Caller pre-decided the intent (e.g. multi-intent gate pick).
+      // Skip both auto-switch paths — the user just chose explicitly.
+    } else if (!hasManualIntentPick && activeIntent === 'general_chat' && trimmed.length >= 10) {
       const detectedMatch = detectIntent(trimmed, 'general_chat');
       if (detectedMatch) {
         effectiveIntent = detectedMatch;
@@ -7766,7 +7783,7 @@ INSTRUCTIONS:
                         confirmation: undefined,
                         content: `Running **${action.label}** on your request…`,
                       } : m));
-                      sendMessage(action.message, { skipMultiIntentChoice: true, suppressUserMsg: true });
+                      sendMessage(action.message, { skipMultiIntentChoice: true, suppressUserMsg: true, forceIntent: action.intentId });
                     }
                   }}
                 />
