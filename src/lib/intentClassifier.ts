@@ -50,8 +50,30 @@ Context:
 Rules:
 1. Return a single primary intent ID from the list. If unsure between two, pick the more specific one.
 2. If a document IS attached, PREFER document-analysis intents (clause_analysis, risk_assessment, document_summarisation, contract_review, case_law_analysis, clause_comparison) over research intents (legal_research, legal_qa). The user almost always wants you to act on their doc.
-3. If the message describes 2+ distinct operations (e.g. "do clause analysis AND draft an email"), set isMultiIntent=true and list the other intent IDs in otherIntents (ordered by importance). Otherwise isMultiIntent=false and otherIntents=[].
-4. Tolerate typos and paraphrases. "clasue analysis" → clause_analysis. "audit my contract" → contract_review. "what risks does this have" → risk_assessment.
+3. **Multi-intent detection — be liberal here**. If the user names 2+ distinct analysis types or operations, even on the same document, set isMultiIntent=true. Do NOT lump distinct operations into one just because they share a target document. The downstream system can only run ONE schema at a time, so flagging multi-intent lets the user pick which to run first.
+
+   Examples (multi-intent = TRUE):
+   - "do clause analysis and contract review of attached doc" → primary=clause_analysis, isMultiIntent=true, other=["contract_review"]
+   - "Please do a cluase analysis and contract review" → primary=clause_analysis, isMultiIntent=true, other=["contract_review"]  (typo: cluase=clause)
+   - "summarise this and identify risks" → primary=document_summarisation, isMultiIntent=true, other=["risk_assessment"]
+   - "review and compare these contracts" → primary=contract_review, isMultiIntent=true, other=["clause_comparison"]
+   - "analyse the clauses, then draft an amendment" → primary=clause_analysis, isMultiIntent=true, other=["document_drafting"]
+
+   Examples (single intent — isMultiIntent=FALSE):
+   - "review this contract" → single (one operation)
+   - "what risks does this have" → single (risk_assessment)
+   - "summarise this doc" → single
+   - "review this contract for one-sided terms and missing provisions" → single contract_review (modifiers, not distinct ops)
+   - "analyse the indemnification and termination clauses" → single clause_analysis (one op on multiple clauses)
+
+   Heuristic: if removing the conjunction ("and"/"then"/etc.) leaves two complete operation phrases each with its own verb + noun, it's multi-intent.
+
+4. Tolerate typos and paraphrases. Common typos to recognise:
+   - "clasue", "cluase", "calsue", "clausse" → clause
+   - "contarct", "contrct", "contrract" → contract
+   - "analyis", "anaylsis", "analsis" → analysis
+   - "reveiw", "reivew" → review
+   - "summarise", "summarize", "summarrise" → all the same
 5. confidence is 0.0-1.0 — your certainty in primaryIntent.
 6. If the message is truly conversational/empty/off-topic, return primaryIntent="general_chat".
 
@@ -88,7 +110,7 @@ export async function classifyIntent(
         intent: 'classify',
         model: 'gpt-4o-mini',
         temperature: 0,
-        max_tokens: 200,
+        max_tokens: 300,
       }),
     });
     if (!res.ok || !res.body) return null;
@@ -126,13 +148,19 @@ export async function classifyIntent(
     const otherIntents: string[] = Array.isArray(parsed.otherIntents)
       ? parsed.otherIntents.filter((id: any) => typeof id === 'string' && valid.has(id) && id !== parsed.primaryIntent)
       : [];
-    return {
+    const result = {
       primaryIntent: parsed.primaryIntent,
       isMultiIntent: !!parsed.isMultiIntent && otherIntents.length > 0,
       otherIntents,
       confidence: typeof parsed.confidence === 'number' ? parsed.confidence : 0.5,
     };
-  } catch {
+    // Debug visibility — surfaces in DevTools so we can verify the
+    // classifier's decision when intent routing surprises a user.
+    // Cheap to keep in prod; remove if it becomes noise.
+    try { console.info('[intentClassifier]', { input: trimmed.slice(0, 80), ...result }); } catch { /* no-op */ }
+    return result;
+  } catch (err) {
+    try { console.warn('[intentClassifier] failed → falling back to keyword detector', err); } catch { /* no-op */ }
     return null;
   } finally {
     clearTimeout(timeoutId);
