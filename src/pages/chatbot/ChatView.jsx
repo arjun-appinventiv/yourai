@@ -6511,7 +6511,22 @@ export default function ChatView({ initialView = 'chat' }) {
       // Skipped when re-firing from a multi-intent pick — the user just
       // deliberately chose one of N intents present in the message; the
       // hard switch would immediately flip them off it.
-      const detectedMatch = detectIntent(trimmed, activeIntent);
+      // Prefer the classifier's confident primaryIntent over the keyword
+      // detector's +2 margin rule — the classifier handles paraphrases and
+      // typos the keyword detector can't. Fall back to keyword detection on
+      // classifier failure / low confidence.
+      let detectedMatch = null;
+      if (
+        classification &&
+        classification.primaryIntent &&
+        classification.primaryIntent !== activeIntent &&
+        classification.primaryIntent !== 'general_chat' &&
+        classification.confidence >= 0.7
+      ) {
+        detectedMatch = classification.primaryIntent;
+      } else {
+        detectedMatch = detectIntent(trimmed, activeIntent);
+      }
       if (detectedMatch && detectedMatch !== activeIntent) {
         effectiveIntent = detectedMatch;
         setActiveIntent(detectedMatch);
