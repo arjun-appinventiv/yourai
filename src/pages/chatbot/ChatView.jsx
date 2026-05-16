@@ -6030,6 +6030,11 @@ export default function ChatView({ initialView = 'chat' }) {
     if ((!trimmed && pendingAttachments.length === 0) || isTyping) return;
     const skipDocConfirmation = !!(opts && opts.skipDocConfirmation);
     const skipMultiIntentChoice = !!(opts && opts.skipMultiIntentChoice);
+    // When the multi-intent gate's pick_intent re-fires sendMessage, the
+    // user's original message bubble is ALREADY in the thread (added by
+    // the gate when it first fired). Re-adding it would duplicate the
+    // bubble — pass suppressUserMsg=true on re-fires to skip the append.
+    const suppressUserMsg = !!(opts && opts.suppressUserMsg);
 
     // ─── Chit-chat + card-intent intercept ───────────────────────────
     // When a user picks a card intent (clause_comparison, risk_assessment,
@@ -6407,7 +6412,7 @@ export default function ChatView({ initialView = 'chat' }) {
 
     if (showEmptyState) setShowEmptyState(false);
     const userMsg = { id: Date.now(), sender: 'user', content: trimmed, timestamp: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }), attachments: pendingAttachments };
-    setMessages((prev) => [...prev, userMsg]);
+    if (!suppressUserMsg) setMessages((prev) => [...prev, userMsg]);
     setInput('');
     setSuggestedIntent(null);
     setSuggestedIntents([]);
@@ -7761,7 +7766,7 @@ INSTRUCTIONS:
                         confirmation: undefined,
                         content: `Running **${action.label}** on your request…`,
                       } : m));
-                      sendMessage(action.message, { skipMultiIntentChoice: true });
+                      sendMessage(action.message, { skipMultiIntentChoice: true, suppressUserMsg: true });
                     }
                   }}
                 />
