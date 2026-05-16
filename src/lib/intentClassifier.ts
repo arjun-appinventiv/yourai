@@ -138,7 +138,13 @@ export async function classifyIntent(
     const parsed = JSON.parse(raw);
     if (!parsed || typeof parsed.primaryIntent !== 'string') return null;
     const valid = new Set(INTENTS.map((i) => i.id));
-    if (!valid.has(parsed.primaryIntent)) return null;
+    if (!valid.has(parsed.primaryIntent)) {
+      // Classifier returned an intent ID we don't know about (deprecated,
+      // renamed, hallucinated). Log so we can catch drift between the
+      // classifier prompt's intent list and the current INTENTS array.
+      try { console.warn('[intentClassifier] returned unknown intent id', parsed.primaryIntent, '— falling through to keyword detector'); } catch { /* no-op */ }
+      return null;
+    }
     const otherIntents: string[] = Array.isArray(parsed.otherIntents)
       ? parsed.otherIntents.filter((id: any) => typeof id === 'string' && valid.has(id) && id !== parsed.primaryIntent)
       : [];

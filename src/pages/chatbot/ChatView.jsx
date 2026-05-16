@@ -4713,7 +4713,7 @@ function MessageBubble({ msg, onOpenArtifact, isActiveArtifact, onConfirmAction 
             return (
               <div style={{ fontSize: 14, color: 'var(--text-primary)', lineHeight: 1.7 }}>
                 <p style={{ margin: '0 0 10px 0' }}>
-                  I can only run one operation at a time. Your message looks like {choices.length === 2 ? 'two tasks' : `${choices.length} tasks`} —{' '}
+                  I can only run one operation at a time. Your message looks like {choices.length === 2 ? 'two tasks' : choices.length === 3 ? 'three tasks' : choices.length === 4 ? 'four tasks' : `${choices.length} tasks`} —{' '}
                   {choices.map((c, i) => (
                     <React.Fragment key={c.intentId}>
                       <strong>{c.label}</strong>
@@ -4722,7 +4722,7 @@ function MessageBubble({ msg, onOpenArtifact, isActiveArtifact, onConfirmAction 
                   ))}
                   . Which would you like to do first?
                 </p>
-                <p style={{ margin: 0, fontSize: 13, color: 'var(--text-secondary)' }}>
+                <p style={{ margin: 0, fontSize: 13, color: 'var(--text-secondary)', display: 'flex', flexWrap: 'wrap', alignItems: 'center', columnGap: 0, rowGap: 6 }}>
                   {choices.map((c, i) => (
                     <React.Fragment key={c.intentId}>
                       <a
@@ -4736,11 +4736,12 @@ function MessageBubble({ msg, onOpenArtifact, isActiveArtifact, onConfirmAction 
                         style={{
                           color: 'var(--navy)', textDecoration: 'underline',
                           cursor: 'pointer', fontWeight: 500,
+                          whiteSpace: 'nowrap',
                         }}
                       >
                         {c.label}
                       </a>
-                      {i < choices.length - 1 && <span style={{ color: 'var(--text-muted)' }}>{'  ·  '}</span>}
+                      {i < choices.length - 1 && <span style={{ color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{'  ·  '}</span>}
                     </React.Fragment>
                   ))}
                 </p>
@@ -6092,10 +6093,18 @@ export default function ChatView({ initialView = 'chat' }) {
     // commands (deterministic routing), and re-fires from a prior gate
     // pick (the user already chose).
     let classification = null;
+    // Tracks whether we *attempted* the classifier and it returned null —
+    // distinct from "didn't attempt at all" (skipped on chit-chat / slash
+    // / short messages). Used to surface a discreet "(routing fallback
+    // used)" indicator (Q8 decision 2026-05-16).
+    let classifierAttempted = false;
+    let classifierFallback = false;
     if (!skipMultiIntentChoice && !isChitChat && !trimmed.startsWith('/') && trimmed.length >= 8) {
+      classifierAttempted = true;
       try {
         classification = await classifyIntent(trimmed, activeIntent, hasAnyDoc, { timeoutMs: 2500 });
       } catch { /* fall back to keyword detector */ }
+      if (!classification) classifierFallback = true;
     }
 
     // ─── Doc-source confirmation for card intents ──────────────────────
@@ -6153,7 +6162,7 @@ export default function ChatView({ initialView = 'chat' }) {
       if (classification && classification.isMultiIntent && classification.otherIntents.length > 0) {
         const ids = [classification.primaryIntent, ...classification.otherIntents]
           .filter((id) => id && id !== 'general_chat' && id !== 'legal_qa');
-        const uniq = Array.from(new Set(ids)).slice(0, 3);
+        const uniq = Array.from(new Set(ids)).slice(0, 4);
         if (uniq.length >= 2) {
           gateChoices = uniq.map((id) => ({ intentId: id, label: getIntentLabel(id) }));
         }
@@ -6167,7 +6176,7 @@ export default function ChatView({ initialView = 'chat' }) {
               (m) => m.intentId !== 'general_chat' && m.intentId !== 'legal_qa' && m.matchCount >= 1
             );
             if (specificMatches.length >= 2) {
-              gateChoices = specificMatches.slice(0, 3).map((m) => ({
+              gateChoices = specificMatches.slice(0, 4).map((m) => ({
                 intentId: m.intentId,
                 label: getIntentLabel(m.intentId),
               }));
@@ -6200,15 +6209,21 @@ export default function ChatView({ initialView = 'chat' }) {
       }
     }
 
-    if (isCardIntent(willBeCardIntent) && hasAnyDoc && !skipDocConfirmation && !isChitChat) {
-      const allDocNames = [
-        ...((sessionDocContext?.docNames) || []),
-        ...pendingAttachments.map((a) => a.name),
-        activeVaultDocument?.name,
-        activeVaultFolder ? `${activeVaultFolder.name} (folder)` : null,
-      ].filter(Boolean);
-      // Dedupe (prior turn's doc may also appear in pendingAttachments).
-      const uniqueDocNames = Array.from(new Set(allDocNames));
+    // Doc-source confirmation only fires when MULTIPLE distinct docs are
+    // attached (PM call 2026-05-16) — with a single doc the question
+    // "use this one or upload new?" is noise: the user obviously
+    // attached the one doc for a reason. Multi-doc still warrants the
+    // ask so the user can pick which to analyse. Single-doc just runs.
+    const _allDocNames = [
+      ...((sessionDocContext?.docNames) || []),
+      ...pendingAttachments.map((a) => a.name),
+      activeVaultDocument?.name,
+      activeVaultFolder ? `${activeVaultFolder.name} (folder)` : null,
+    ].filter(Boolean);
+    const _uniqueDocNames = Array.from(new Set(_allDocNames));
+    const multipleDocsAttached = _uniqueDocNames.length >= 2;
+    if (isCardIntent(willBeCardIntent) && multipleDocsAttached && !skipDocConfirmation && !isChitChat) {
+      const uniqueDocNames = _uniqueDocNames;
       if (showEmptyState) setShowEmptyState(false);
       const userMsg = { id: Date.now(), sender: 'user', content: trimmed, timestamp: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) };
       const confirmMsg = {
@@ -6435,6 +6450,24 @@ export default function ChatView({ initialView = 'chat' }) {
     setPendingAttachments([]);
     setIsTyping(true);
     setStreamingContent('');
+
+    // ─── Classifier fallback indicator (Q8, 2026-05-16) ───
+    // If we attempted the LLM classifier and got null back (timeout,
+    // network failure, malformed response), surface a discreet system
+    // note in the thread so the user knows routing accuracy may be
+    // reduced for this turn. Distinct from "didn't attempt" (chit-chat
+    // / slash / re-fires), which never shows this note.
+    if (classifierFallback) {
+      const fallbackNote = {
+        id: Date.now() + 0.25,
+        sender: 'bot',
+        content: 'Routing classifier unavailable — used keyword fallback. Intent accuracy may be reduced for this message.',
+        timestamp: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
+        sourceBadge: null,
+        isSystemNote: true,
+      };
+      setMessages((prev) => [...prev, fallbackNote]);
+    }
 
     // ─── Hard Intent Guardrail ───
     // If the user is in General Chat but their message clearly matches a specific intent,
