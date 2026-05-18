@@ -9,7 +9,8 @@ import {
   BookOpen, UserPlus, Trash2, Edit3, Copy, Phone, Mail, Briefcase, Hash, Menu,
   Package, Link2, File, Upload, Paperclip, Database, GitBranch, Settings, LogOut,
   CreditCard, Folder, FolderPlus, ArrowLeft, User, MoreHorizontal, Check, Home,
-  Bookmark, ArrowRight, ExternalLink, Layers, LogIn, Ban, AlertCircle
+  Bookmark, ArrowRight, ExternalLink, Layers, LogIn, Ban, AlertCircle,
+  Cloud, HardDrive
 } from 'lucide-react';
 import { useRole } from '../../context/RoleContext';
 import { useAuth } from '../../context/AuthContext';
@@ -2142,6 +2143,45 @@ function EditKnowledgePackModal({ pack, initialFiles = [], onClose, onSave }) {
 }
 
 /* ─────────────────── YourVault Panel ─────────────────── */
+
+/* Brand glyphs for the three connector buttons. Inline SVG so we don't
+   pull in another icon library; sized via the `size` prop. Static/frames
+   only — no real OAuth or sync. */
+function BrandLogo({ source, size = 18 }) {
+  if (source === 'google_drive') {
+    // Google Drive — the canonical 3-color triangular folder mark.
+    return (
+      <svg width={size} height={size} viewBox="0 0 87.3 78" aria-hidden="true">
+        <path d="M6.6 66.85l3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3L27.5 53H0c0 1.55.4 3.1 1.2 4.5z" fill="#0066da" />
+        <path d="M43.65 25L29.9 1.2C28.55 2 27.4 3.1 26.6 4.5L1.2 48.4c-.8 1.4-1.2 2.95-1.2 4.5h27.5z" fill="#00ac47" />
+        <path d="M73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5h-27.5l5.85 11.5z" fill="#ea4335" />
+        <path d="M43.65 25L57.4 1.2C56.05.4 54.5 0 52.9 0H34.4c-1.6 0-3.15.45-4.5 1.2z" fill="#00832d" />
+        <path d="M59.8 53H27.5L13.75 76.8c1.35.8 2.9 1.2 4.5 1.2h50.8c1.6 0 3.15-.45 4.5-1.2z" fill="#2684fc" />
+        <path d="M73.4 26.5L60.7 4.5c-.8-1.4-1.95-2.5-3.3-3.3L43.65 25l16.15 28h27.45c0-1.55-.4-3.1-1.2-4.5z" fill="#ffba00" />
+      </svg>
+    );
+  }
+  if (source === 'onedrive') {
+    // OneDrive — the four-bubble cloud.
+    return (
+      <svg width={size} height={size} viewBox="0 0 32 20" aria-hidden="true">
+        <path d="M19.2 3.2a8 8 0 0 0-14.5 3.4A6 6 0 0 0 6 18h17.2a5.4 5.4 0 0 0 1.1-10.7A6 6 0 0 0 19.2 3.2z" fill="#0078D4" />
+        <path d="M24.3 7.3A6 6 0 0 0 19.2 3.2a7.95 7.95 0 0 0-7.05.13 8 8 0 0 1 11.9 4 5.4 5.4 0 0 1 .25 0z" fill="#28A8EA" />
+      </svg>
+    );
+  }
+  if (source === 'imanage') {
+    // iManage — orange diamond brand mark (simplified).
+    return (
+      <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">
+        <rect x="3" y="3" width="18" height="18" rx="3" fill="#E36F22" />
+        <path d="M12 7l4 5-4 5-4-5z" fill="#fff" />
+      </svg>
+    );
+  }
+  return null;
+}
+
 // Same visibility rules as Knowledge Packs:
 //   Org Admin      — sees every doc; inline Share org-wide toggle on each row
 //   Internal User  — own docs + all org-wide docs
@@ -2226,6 +2266,52 @@ function DocumentVaultPanel({
   const [openMenuFor, setOpenMenuFor] = useState(null); // doc id
   const [expandedSet, setExpandedSet] = useState(() => new Set());
   const [selectedDocId, setSelectedDocId] = useState(null); // inspect panel
+
+  // ─── External-source import (frames-only) ────────────────────────────
+  // Three external connectors — Google Drive / iManage / OneDrive. No
+  // real auth or sync wired; click → 3-second simulated progress → success
+  // state. Replace simulateImport() with real OAuth + API calls per source
+  // when the backend lands.
+  const [isImportOpen, setIsImportOpen] = useState(false);
+  const [importStep, setImportStep] = useState(null); // null | 'progress' | 'done'
+  const [importSource, setImportSource] = useState(null); // {id, name, color, count}
+  const [importPct, setImportPct] = useState(0);
+  const importTimerRef = useRef(null);
+  const IMPORT_SOURCES = [
+    { id: 'google_drive', name: 'Google Drive',  desc: 'Sync from your firm\'s Drive folders',     color: '#4285F4', count: 12 },
+    { id: 'imanage',      name: 'iManage',       desc: 'Sync matter workspaces from iManage Work', color: '#E36F22', count: 24 },
+    { id: 'onedrive',     name: 'OneDrive',      desc: 'Sync from SharePoint and OneDrive',        color: '#0078D4', count:  9 },
+  ];
+  const startImport = (src) => {
+    setIsImportOpen(false);
+    setImportSource(src);
+    setImportStep('progress');
+    setImportPct(0);
+    // Walk the bar to ~95% over ~3 s, then flip to 100% + done state.
+    let pct = 0;
+    if (importTimerRef.current) clearInterval(importTimerRef.current);
+    importTimerRef.current = setInterval(() => {
+      pct = Math.min(95, pct + (Math.random() * 9 + 3));
+      setImportPct(Math.round(pct));
+      if (pct >= 95) {
+        clearInterval(importTimerRef.current);
+        importTimerRef.current = null;
+        setTimeout(() => {
+          setImportPct(100);
+          setImportStep('done');
+          // Auto-close after 2 s on done so the user sees success without
+          // having to dismiss.
+          setTimeout(() => {
+            setImportStep(null);
+            setImportSource(null);
+            setImportPct(0);
+          }, 2000);
+        }, 300);
+      }
+    }, 220);
+  };
+  // Cleanup on unmount — don't leak the interval.
+  useEffect(() => () => { if (importTimerRef.current) clearInterval(importTimerRef.current); }, []);
 
   // ─── Find / search filters (P8 v1) ───
   // Filter chips operate on the same scoped doc set as the table; they
@@ -2670,6 +2756,60 @@ Rules:
         onChange={(e) => { handleFolderUpload(e.target.files); e.target.value = ''; }}
       />
 
+      {/* ── Connector sync progress / success modal ── */}
+      {importStep && importSource && (
+        <>
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.45)', backdropFilter: 'blur(3px)', zIndex: 200 }} />
+          <div role="dialog" aria-live="polite" style={{
+            position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)',
+            zIndex: 201, width: 380, background: '#fff', borderRadius: 14,
+            boxShadow: '0 24px 64px rgba(15,23,42,0.22)', padding: '28px 28px 24px',
+            textAlign: 'center',
+          }}>
+            <div style={{
+              width: 56, height: 56, margin: '0 auto 14px',
+              borderRadius: 14, background: `${importSource.color}14`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <BrandLogo source={importSource.id} size={32} />
+            </div>
+            {importStep === 'progress' ? (
+              <>
+                <div style={{ fontFamily: "'Fraunces', serif", fontSize: 18, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 4 }}>
+                  Syncing documents from {importSource.name}…
+                </div>
+                <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 18 }}>
+                  Securely fetching matter folders. This usually takes a few seconds.
+                </div>
+                <div style={{ height: 6, background: '#EEF0F4', borderRadius: 999, overflow: 'hidden', marginBottom: 8 }}>
+                  <div style={{ height: '100%', width: `${importPct}%`, background: importSource.color, transition: 'width 220ms ease-out', borderRadius: 999 }} />
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}>
+                  {importPct}%
+                </div>
+              </>
+            ) : (
+              <>
+                <div style={{
+                  width: 28, height: 28, margin: '-44px auto 12px',
+                  borderRadius: '50%', background: '#22a06b',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  border: '3px solid #fff',
+                }}>
+                  <Check size={16} style={{ color: '#fff' }} strokeWidth={3} />
+                </div>
+                <div style={{ fontFamily: "'Fraunces', serif", fontSize: 18, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 4 }}>
+                  Synced from {importSource.name}
+                </div>
+                <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+                  {importSource.count} documents imported into YourVault.
+                </div>
+              </>
+            )}
+          </div>
+        </>
+      )}
+
       {/* Page chrome — Back to chat + breadcrumb-eyebrow */}
       <div style={{ padding: '12px 28px', borderBottom: '1px solid var(--border)', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
         <button
@@ -2869,8 +3009,21 @@ Rules:
                     </div>
                   )}
                 </div>
-                {/* Hero action buttons — Upload (outline) + New Document (navy) */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                {/* Hero action buttons — 3 connector buttons + Upload + New Document */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, flexWrap: 'wrap' }}>
+                  {IMPORT_SOURCES.map((src) => (
+                    <button
+                      key={src.id}
+                      onClick={() => startImport(src)}
+                      title={src.desc}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '8px 12px', borderRadius: 10, background: '#fff', color: 'var(--text-primary)', border: '1px solid var(--border)', fontSize: 13, fontWeight: 500, cursor: 'pointer', transition: 'border-color 120ms, box-shadow 120ms' }}
+                      onMouseEnter={(e) => { e.currentTarget.style.borderColor = src.color; e.currentTarget.style.boxShadow = `0 1px 3px ${src.color}22`; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.boxShadow = 'none'; }}
+                    >
+                      <BrandLogo source={src.id} size={16} />
+                      {src.name}
+                    </button>
+                  ))}
                   <button
                     onClick={() => folderUploadRef.current?.click()}
                     title="Upload a folder — subfolder structure is preserved"

@@ -537,31 +537,38 @@ export default function PlatformBilling() {
       </Modal>
 
       {/* ═══ Override History Modal ═══ */}
-      <Modal open={!!historyTenant} onClose={() => setHistoryTenant(null)} title={historyTenant ? `Plan override history — ${historyTenant.name}` : 'Plan override history'}>
+      <Modal open={!!historyTenant} onClose={() => setHistoryTenant(null)} maxWidth={880} title={historyTenant ? `Plan override history — ${historyTenant.name}` : 'Plan override history'}>
         {historyTenant && (() => {
           const rows = overrideHistoryFor(historyTenant);
           return (
-            <div className="space-y-2">
+            <div className="space-y-3">
               {rows.length === 0 ? (
                 <p className="text-sm" style={{ color: 'var(--text-muted)' }}>No plan overrides recorded for this tenant.</p>
               ) : (
                 <div className="rounded-lg overflow-hidden" style={{ border: '1px solid var(--border)' }}>
-                  <table className="w-full">
+                  <table className="w-full" style={{ tableLayout: 'fixed' }}>
+                    <colgroup>
+                      <col style={{ width: 130 }} />
+                      <col style={{ width: 170 }} />
+                      <col style={{ width: 130 }} />
+                      <col style={{ width: 130 }} />
+                      <col />
+                    </colgroup>
                     <thead>
                       <tr style={{ background: 'var(--ice-warm)', borderBottom: '1px solid var(--border)' }}>
                         {['Date', 'Changed by', 'From', 'To', 'Reason'].map((h) => (
-                          <th key={h} className="px-3 py-2 text-left text-xs uppercase tracking-wider" style={{ color: 'var(--text-muted)', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}>{h}</th>
+                          <th key={h} className="px-4 py-3 text-left text-xs uppercase tracking-wider" style={{ color: 'var(--text-muted)', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', whiteSpace: 'nowrap' }}>{h}</th>
                         ))}
                       </tr>
                     </thead>
                     <tbody>
                       {rows.map((r, idx) => (
                         <tr key={r.id} style={{ borderBottom: idx === rows.length - 1 ? 'none' : '1px solid var(--border)' }}>
-                          <td className="px-3 py-2 text-sm" style={{ color: 'var(--text-muted)' }}>{r.date}</td>
-                          <td className="px-3 py-2 text-sm" style={{ color: 'var(--text-primary)' }}>{r.by}</td>
-                          <td className="px-3 py-2"><Badge variant={r.from}>{r.from}</Badge></td>
-                          <td className="px-3 py-2"><Badge variant={r.to}>{r.to}</Badge></td>
-                          <td className="px-3 py-2 text-sm" style={{ color: 'var(--text-secondary)' }}>{r.reason}</td>
+                          <td className="px-4 py-3 text-sm" style={{ color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{r.date}</td>
+                          <td className="px-4 py-3 text-sm" style={{ color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>{r.by}</td>
+                          <td className="px-4 py-3"><Badge variant={r.from}>{r.from}</Badge></td>
+                          <td className="px-4 py-3"><Badge variant={r.to}>{r.to}</Badge></td>
+                          <td className="px-4 py-3 text-sm" style={{ color: 'var(--text-secondary)' }}>{r.reason}</td>
                         </tr>
                       ))}
                     </tbody>

@@ -1,7 +1,7 @@
 import React from 'react';
 import { X } from 'lucide-react';
 
-export default function Modal({ open, onClose, title, children }) {
+export default function Modal({ open, onClose, title, children, maxWidth = 480 }) {
   if (!open) return null;
 
   return (
@@ -13,7 +13,9 @@ export default function Modal({ open, onClose, title, children }) {
       <div
         className="bg-white w-full"
         style={{
-          maxWidth: 480,
+          maxWidth,
+          maxHeight: '90vh',
+          overflowY: 'auto',
           borderRadius: '16px',
           padding: '28px',
           boxShadow: '0 20px 60px rgba(0,0,0,0.15)',
