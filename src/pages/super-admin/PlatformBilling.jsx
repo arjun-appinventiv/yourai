@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { DollarSign, Building2, TrendingUp, AlertCircle, FileText, Mail, Plus, Eye, Download, Trash2, CreditCard, Pencil, X, Check, ChevronDown, AlertTriangle, CheckCircle, Info, Clock, RotateCcw } from 'lucide-react';
+import { DollarSign, Building2, TrendingUp, AlertCircle, FileText, Mail, Plus, Eye, Download, Trash2, CreditCard, Pencil, X, ChevronDown, AlertTriangle, Info, Clock, RotateCcw } from 'lucide-react';
 import { tenants as initialTenants, subscriptionPlans, auditLog as initialAuditLog } from '../../data/mockData';
 import PageHeader from '../../components/PageHeader';
 import StatCard from '../../components/StatCard';
@@ -23,7 +23,6 @@ const transactions = [
 ];
 
 const PLAN_ORDER = ['Free', 'Professional', 'Team', 'Enterprise'];
-const OVERRIDE_REASONS = ['Sales agreement', 'Trial extension', 'Support exception', 'Billing adjustment', 'Partner deal', 'Other'];
 
 export default function PlatformBilling() {
   const [activeTab, setActiveTab] = useState('subscriptions');
@@ -46,13 +45,6 @@ export default function PlatformBilling() {
   const [historyTenant, setHistoryTenant] = useState(null);
   // Invoice viewer (Subscriptions row → FileText button).
   const [invoiceTenant, setInvoiceTenant] = useState(null);
-  const [overrideOrg, setOverrideOrg] = useState(null);
-  const [overrideSelectedPlan, setOverrideSelectedPlan] = useState(null);
-  const [overrideReason, setOverrideReason] = useState('');
-  const [overrideCustomReason, setOverrideCustomReason] = useState('');
-  const [overrideNotes, setOverrideNotes] = useState('');
-  const [overrideEffective, setOverrideEffective] = useState('immediately');
-  const [overrideError, setOverrideError] = useState('');
   const [auditLog, setAuditLog] = useState(initialAuditLog);
   const showToast = useToast();
 
@@ -201,36 +193,6 @@ export default function PlatformBilling() {
     showToast(`${editPlanForm.name} plan updated successfully`);
   };
 
-  const openPlanOverride = (org) => {
-    setOverrideOrg(org);
-    setOverrideSelectedPlan(null);
-    setOverrideReason('');
-    setOverrideCustomReason('');
-    setOverrideNotes('');
-    setOverrideEffective('immediately');
-    setOverrideError('');
-  };
-
-  const handleApplyPlanChange = () => {
-    if (!overrideSelectedPlan || !overrideReason) return;
-    if (overrideReason === 'Other' && !overrideCustomReason.trim()) {
-      setOverrideError('Please describe the reason');
-      return;
-    }
-    const newPlan = overrideSelectedPlan;
-    const planData = subscriptionPlans.find((p) => p.name === newPlan);
-    const newMrr = (planData?.price || 0) * overrideOrg.users;
-    const oldPlan = overrideOrg.plan;
-    setTenants((prev) => prev.map((t) => t.id === overrideOrg.id ? { ...t, plan: newPlan, mrr: newMrr, planPrice: planData?.price || 0 } : t));
-    // Add audit log entry
-    setAuditLog((prev) => [
-      { id: prev.length + 1, operator: 'Arjun P', action: `Changed plan ${oldPlan} → ${newPlan}`, target: overrideOrg.name, time: 'Just now' },
-      ...prev,
-    ]);
-    showToast(`Plan updated to ${newPlan} for ${overrideOrg.name}`);
-    setOverrideOrg(null);
-  };
-
   const inputStyle = { border: '1px solid var(--border)', borderRadius: '8px', height: 36, padding: '0 12px', fontFamily: "'DM Sans', sans-serif", fontSize: '13px', color: 'var(--text-primary)', outline: 'none' };
 
   const tabStyle = (tab) => ({
@@ -244,11 +206,6 @@ export default function PlatformBilling() {
     border: 'none',
     borderBottom: `2px solid ${activeTab === tab ? 'var(--navy)' : 'transparent'}`,
   });
-
-  const currentPlanIdx = overrideOrg ? PLAN_ORDER.indexOf(overrideOrg.plan) : -1;
-  const selectedPlanIdx = overrideSelectedPlan ? PLAN_ORDER.indexOf(overrideSelectedPlan) : -1;
-  const isDowngrade = selectedPlanIdx >= 0 && selectedPlanIdx < currentPlanIdx;
-  const isUpgrade = selectedPlanIdx >= 0 && selectedPlanIdx > currentPlanIdx;
 
   return (
     <div className="space-y-6">
@@ -302,7 +259,6 @@ export default function PlatformBilling() {
                   <td className="px-4 py-3"><Badge variant={t.paymentStatus}>{t.paymentStatus}</Badge></td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1">
-                      <button onClick={() => openPlanOverride(t)} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors" title="Change Plan"><Pencil size={15} style={{ color: 'var(--slate)' }} /></button>
                       <button onClick={() => setHistoryTenant(t)} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors" title="Override History"><Clock size={15} style={{ color: 'var(--slate)' }} /></button>
                       <button onClick={() => setInvoiceTenant(t)} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors" title="View Invoice"><FileText size={15} style={{ color: 'var(--slate)' }} /></button>
                       <button onClick={() => contactAdmin(t)} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors" title="Contact Admin"><Mail size={15} style={{ color: 'var(--slate)' }} /></button>
@@ -524,176 +480,6 @@ export default function PlatformBilling() {
               </div>
             )}
           </Modal>
-        </>
-      )}
-
-      {/* ═══ Plan Override Modal ═══ */}
-      {overrideOrg && (
-        <>
-          <div onClick={() => setOverrideOrg(null)} style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)', zIndex: 60, backdropFilter: 'blur(4px)' }} />
-          <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 520, maxHeight: '90vh', overflowY: 'auto', backgroundColor: 'white', borderRadius: 16, boxShadow: '0 20px 60px rgba(0,0,0,0.2)', zIndex: 61, padding: 0 }}>
-            {/* Header */}
-            <div className="flex items-center justify-between px-6 py-5" style={{ borderBottom: '1px solid var(--border)' }}>
-              <h3 style={{ fontFamily: "'DM Serif Display', serif", fontSize: '18px', color: 'var(--text-primary)' }}>Change Plan — {overrideOrg.name}</h3>
-              <button onClick={() => setOverrideOrg(null)} className="p-1.5 rounded-lg hover:bg-gray-100"><X size={18} style={{ color: 'var(--text-muted)' }} /></button>
-            </div>
-
-            <div className="px-6 py-5 space-y-5">
-              {/* Section 1: Current Plan */}
-              <div className="p-4 rounded-lg" style={{ backgroundColor: 'var(--ice-warm)', border: '1px solid var(--border)' }}>
-                <div className="text-xs font-semibold uppercase mb-2" style={{ color: 'var(--text-muted)' }}>Current Plan</div>
-                <div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
-                  {overrideOrg.plan} · ${subscriptionPlans.find(p => p.name === overrideOrg.plan)?.price || 0}/user/month
-                </div>
-                <div className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
-                  Seats: {overrideOrg.users} users · ${overrideOrg.mrr.toLocaleString()}/month total
-                </div>
-                <div className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
-                  Active since: {overrideOrg.billedSince || overrideOrg.created} · Next renewal: {overrideOrg.nextRenewal || '—'}
-                </div>
-              </div>
-
-              {/* Section 2: Plan Cards */}
-              <div>
-                <label className="block text-sm font-medium mb-3" style={{ color: 'var(--text-primary)' }}>Select New Plan</label>
-                <div className="grid grid-cols-2 gap-3">
-                  {subscriptionPlans.map((p) => {
-                    const isCurrent = p.name === overrideOrg.plan;
-                    const isSelected = p.name === overrideSelectedPlan;
-                    return (
-                      <div
-                        key={p.id}
-                        onClick={() => !isCurrent && setOverrideSelectedPlan(p.name)}
-                        className="rounded-lg p-4 transition-all"
-                        style={{
-                          border: isSelected ? `2px solid var(--navy)` : '1px solid var(--border)',
-                          backgroundColor: isCurrent ? '#F8F4ED' : isSelected ? '#F0F3F6' : 'white',
-                          cursor: isCurrent ? 'not-allowed' : 'pointer',
-                          opacity: isCurrent ? 0.7 : 1,
-                          borderLeft: `3px solid ${p.colour}`,
-                          position: 'relative',
-                        }}
-                      >
-                        {isCurrent && (
-                          <span className="absolute top-2 right-2 text-xs px-1.5 py-0.5 rounded-full" style={{ backgroundColor: '#F3F4F6', color: '#9CA3AF', fontSize: '10px' }}>Current</span>
-                        )}
-                        {isSelected && (
-                          <span className="absolute top-2 right-2 w-5 h-5 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--navy)' }}>
-                            <Check size={12} color="white" />
-                          </span>
-                        )}
-                        <div style={{ fontFamily: "'DM Serif Display', serif", fontSize: '15px', color: 'var(--navy)' }}>{p.name}</div>
-                        <div className="text-sm font-medium mt-1" style={{ color: 'var(--text-primary)' }}>
-                          {p.price === 0 ? 'Free' : `$${p.price}/user/mo`}
-                        </div>
-                        <div className="mt-2 space-y-0.5">
-                          <div className="text-xs" style={{ color: 'var(--text-muted)' }}>• {p.docsPerMonth === null ? 'Unlimited' : p.docsPerMonth.toLocaleString()} docs/mo</div>
-                          <div className="text-xs" style={{ color: 'var(--text-muted)' }}>• {p.workflowRuns === null ? 'Unlimited' : p.workflowRuns} workflows/mo</div>
-                          <div className="text-xs" style={{ color: 'var(--text-muted)' }}>• {p.aiModels}</div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* Upgrade/Downgrade callouts */}
-                {isDowngrade && (
-                  <div className="flex items-start gap-2.5 p-3 mt-3 rounded-lg" style={{ backgroundColor: '#FBEED5', borderLeft: '3px solid #E8A33D' }}>
-                    <AlertTriangle size={15} style={{ color: '#E8A33D', flexShrink: 0, marginTop: 1 }} />
-                    <p className="text-xs" style={{ color: '#E8A33D' }}>
-                      Downgrading takes effect at next billing cycle ({overrideOrg.nextRenewal || 'May 1, 2026'}). Current features remain active until then.
-                    </p>
-                  </div>
-                )}
-                {isUpgrade && (
-                  <div className="flex items-start gap-2.5 p-3 mt-3 rounded-lg" style={{ backgroundColor: '#E7F3E9', borderLeft: '3px solid #5CA868' }}>
-                    <CheckCircle size={15} style={{ color: '#5CA868', flexShrink: 0, marginTop: 1 }} />
-                    <p className="text-xs" style={{ color: '#5CA868' }}>
-                      Upgrading takes effect immediately. The org will be charged a prorated amount.
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              {/* Section 3: Override Reason */}
-              <div>
-                <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-primary)' }}>Reason for manual plan change *</label>
-                <select value={overrideReason} onChange={(e) => { setOverrideReason(e.target.value); setOverrideError(''); }} style={{ ...inputStyle, width: '100%', height: 40, cursor: 'pointer', appearance: 'auto' }}>
-                  <option value="">Select a reason...</option>
-                  {OVERRIDE_REASONS.map((r) => <option key={r} value={r}>{r}</option>)}
-                </select>
-                {overrideReason === 'Other' && (
-                  <div className="mt-2">
-                    <input
-                      type="text"
-                      value={overrideCustomReason}
-                      onChange={(e) => { setOverrideCustomReason(e.target.value); setOverrideError(''); }}
-                      placeholder="Describe the reason..."
-                      style={{ ...inputStyle, width: '100%' }}
-                    />
-                    {overrideError && <p className="text-xs mt-1" style={{ color: '#C65454' }}>{overrideError}</p>}
-                  </div>
-                )}
-              </div>
-
-              {/* Section 4: Notes */}
-              <div>
-                <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-primary)' }}>Internal notes</label>
-                <textarea
-                  rows={3}
-                  value={overrideNotes}
-                  onChange={(e) => setOverrideNotes(e.target.value)}
-                  placeholder="Add any notes visible only to Super Admins..."
-                  style={{ ...inputStyle, width: '100%', height: 'auto', padding: '10px 12px', resize: 'none' }}
-                />
-              </div>
-
-              {/* Section 5: Effective Date */}
-              <div>
-                <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-primary)' }}>When should this take effect?</label>
-                <div className="grid grid-cols-2 gap-3">
-                  {[
-                    { value: 'immediately', label: 'Immediately', desc: 'Takes effect now' },
-                    { value: 'next_cycle', label: 'Next billing cycle', desc: overrideOrg.nextRenewal || 'May 1, 2026' },
-                  ].map((opt) => (
-                    <div
-                      key={opt.value}
-                      onClick={() => setOverrideEffective(opt.value)}
-                      className="rounded-lg p-3 cursor-pointer transition-all"
-                      style={{
-                        border: overrideEffective === opt.value ? '2px solid var(--navy)' : '1px solid var(--border)',
-                        backgroundColor: overrideEffective === opt.value ? '#F0F3F6' : 'white',
-                      }}
-                    >
-                      <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 rounded-full flex items-center justify-center" style={{ border: `2px solid ${overrideEffective === opt.value ? 'var(--navy)' : 'var(--border)'}` }}>
-                          {overrideEffective === opt.value && <div className="w-2 h-2 rounded-full" style={{ backgroundColor: 'var(--navy)' }} />}
-                        </div>
-                        <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{opt.label}</span>
-                      </div>
-                      <p className="text-xs mt-1 ml-6" style={{ color: 'var(--text-muted)' }}>{opt.desc}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div className="flex justify-end gap-3 px-6 py-4" style={{ borderTop: '1px solid var(--border)' }}>
-              <button onClick={() => setOverrideOrg(null)} className="px-4 py-2.5 rounded-lg text-sm font-medium" style={{ border: '1px solid var(--border)', color: 'var(--slate)', backgroundColor: 'white' }}>Cancel</button>
-              <button
-                onClick={handleApplyPlanChange}
-                disabled={!overrideSelectedPlan || !overrideReason}
-                className="px-5 py-2.5 rounded-lg text-sm font-medium text-white"
-                style={{
-                  backgroundColor: (!overrideSelectedPlan || !overrideReason) ? '#9CA3AF' : 'var(--navy)',
-                  cursor: (!overrideSelectedPlan || !overrideReason) ? 'not-allowed' : 'pointer',
-                }}
-              >
-                Apply Plan Change
-              </button>
-            </div>
-          </div>
         </>
       )}
 
