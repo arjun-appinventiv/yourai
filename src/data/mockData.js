@@ -251,6 +251,29 @@ export const billingData = {
   users: 5,
   mrr: 1495,
   nextRenewal: "May 1, 2026",
+  // Account-level payment state. 'ok' | 'past_due' | 'failed' — drives the
+  // payment-failure banner at the top of BillingPanel.
+  paymentStatus: "ok",
+  paymentFailedAt: null,         // e.g. "Apr 1, 2026"
+  paymentFailedReason: null,     // e.g. "Card declined — insufficient funds"
+  paymentMethod: {
+    brand: "Visa",
+    last4: "4242",
+    expMonth: 12,
+    expYear: 2027,
+    addedAt: "Jan 14, 2026",
+  },
+  billingAddress: {
+    company: "Hartwell & Associates",
+    line1: "742 K Street",
+    line2: "Suite 1200",
+    city: "Anchorage",
+    region: "AK",
+    postalCode: "99501",
+    country: "United States",
+  },
+  taxId: { kind: "EIN", value: "47-8392104" },
+  ccEmails: ["billing@hartwell-law.example", "operations@hartwell-law.example"],
   usage: {
     docs: { used: 46, limit: 2000 },
     workflows: { used: 12, limit: 500 },

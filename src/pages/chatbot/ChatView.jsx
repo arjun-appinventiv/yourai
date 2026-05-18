@@ -3917,6 +3917,16 @@ function OrgDashboardPanel({ onBack, displayName, orgName, workspaceCount, membe
 /* ─────────────────── Billing Panel (Org Admin) ─────────────────── */
 function BillingPanel({ onBack }) {
   const [showPlanModal, setShowPlanModalLocal] = useState(false);
+  // Local mock-state so the user can mutate payment method / status from
+  // the modals (no backend yet — billingData is the seed; this state
+  // overrides per-session). Replace with API state when Stripe lands.
+  const [billing, setBilling] = useState(billingData);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [showEditAddressModal, setShowEditAddressModal] = useState(false);
+  // Sandbox toggles below — let QA/PM force the failure-banner state
+  // without changing the seed. Removed once a backend exists.
+  const isPaymentFailed = billing.paymentStatus !== 'ok';
   const plans = [
     { name: 'Free',         price:   0, features: ['1 user', '50 documents', '10 workflows', '1 knowledge pack'] },
     { name: 'Professional', price: 149, features: ['Up to 3 users', '500 documents', '100 workflows', '5 knowledge packs'] },
@@ -3948,6 +3958,48 @@ function BillingPanel({ onBack }) {
 
       {/* Scrollable content */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '28px 36px' }}>
+        {/* Payment-failure banner — only when paymentStatus !== 'ok'. Sits
+            above the page title so it's the first thing the user sees
+            when they land on Billing after a failed charge. */}
+        {isPaymentFailed && (
+          <div style={{
+            display: 'flex', alignItems: 'flex-start', gap: 12,
+            padding: '14px 18px', borderRadius: 10, marginBottom: 22,
+            background: '#FBE9E7', border: '1px solid #F4B6AC',
+          }}>
+            <AlertTriangle size={18} style={{ color: '#9A3412', flexShrink: 0, marginTop: 2 }} />
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 13.5, fontWeight: 600, color: '#7B1D0D', marginBottom: 3 }}>
+                Your last payment didn't go through{billing.paymentFailedAt ? ` on ${billing.paymentFailedAt}` : ''}.
+              </div>
+              <div style={{ fontSize: 12.5, color: '#7B1D0D', lineHeight: 1.55, marginBottom: 10 }}>
+                {billing.paymentFailedReason || 'Card was declined.'} Update your payment method to keep your account active — your next attempt is scheduled in 3 days.
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  onClick={() => setShowPaymentModal(true)}
+                  style={{ padding: '7px 14px', borderRadius: 7, fontSize: 12.5, fontWeight: 600, background: '#9A3412', color: '#fff', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}
+                >
+                  Update payment method
+                </button>
+                <button
+                  onClick={() => setBilling({ ...billing, paymentStatus: 'ok', paymentFailedAt: null, paymentFailedReason: null })}
+                  style={{ padding: '7px 14px', borderRadius: 7, fontSize: 12.5, fontWeight: 500, background: '#fff', color: '#9A3412', border: '1px solid #F4B6AC', cursor: 'pointer', fontFamily: 'inherit' }}
+                >
+                  Retry charge now
+                </button>
+              </div>
+            </div>
+            <button
+              onClick={() => setBilling({ ...billing, paymentStatus: 'ok' })}
+              aria-label="Dismiss banner"
+              style={{ background: 'transparent', border: 'none', color: '#7B1D0D', cursor: 'pointer', padding: 4, opacity: 0.6 }}
+            >
+              <X size={16} />
+            </button>
+          </div>
+        )}
+
         {/* Page title */}
         <div style={{ marginBottom: 22 }}>
           <h1 style={{ fontFamily: "'Fraunces', serif", fontSize: 24, fontWeight: 400, color: 'var(--text-primary)', margin: 0 }}>
@@ -3956,6 +4008,18 @@ function BillingPanel({ onBack }) {
           <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4, marginBottom: 0 }}>
             Manage your subscription and view billing history.
           </p>
+          {/* Sandbox-only: lets PM/QA toggle the failure banner without
+              backend. Remove once Stripe is wired and payment_failed
+              webhooks flip paymentStatus naturally. */}
+          {!isPaymentFailed && (
+            <button
+              onClick={() => setBilling({ ...billing, paymentStatus: 'failed', paymentFailedAt: 'May 1, 2026', paymentFailedReason: 'Card declined — insufficient funds' })}
+              style={{ position: 'absolute', right: 36, top: 86, fontSize: 11, color: 'var(--text-muted)', background: 'transparent', border: '1px dashed var(--border)', borderRadius: 4, padding: '3px 7px', cursor: 'pointer', fontFamily: 'inherit' }}
+              title="Sandbox-only — preview the failed-payment banner state"
+            >
+              Simulate failed payment
+            </button>
+          )}
           <div style={{ height: 1, background: 'var(--border)', marginTop: 16 }} />
         </div>
 
@@ -3982,6 +4046,81 @@ function BillingPanel({ onBack }) {
             <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)', marginTop: 4, marginBottom: 0 }}>
               Next renewal: {billingData.nextRenewal}
             </p>
+          </div>
+        </div>
+
+        {/* Payment method + Billing details — paired 2-col row */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 28 }}>
+          {/* Payment method on file */}
+          <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 12, padding: '18px 22px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+              <h3 style={{ fontFamily: "'Fraunces', serif", fontSize: 16, color: 'var(--text-primary)', margin: 0, fontWeight: 400 }}>
+                Payment Method
+              </h3>
+              <button
+                onClick={() => setShowPaymentModal(true)}
+                style={{ fontSize: 12, color: 'var(--navy)', background: 'transparent', border: 'none', cursor: 'pointer', textDecoration: 'underline', fontWeight: 500, fontFamily: 'inherit', padding: 0 }}
+              >
+                Update
+              </button>
+            </div>
+            {billing.paymentMethod ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                <div style={{ width: 44, height: 30, borderRadius: 5, background: 'var(--navy)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <CreditCard size={16} style={{ color: 'var(--gold)' }} />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 14, color: 'var(--text-primary)', fontWeight: 500 }}>
+                    {billing.paymentMethod.brand} ending in {billing.paymentMethod.last4}
+                  </div>
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
+                    Expires {String(billing.paymentMethod.expMonth).padStart(2, '0')}/{String(billing.paymentMethod.expYear).slice(-2)} · Added {billing.paymentMethod.addedAt}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
+                No payment method on file. <button onClick={() => setShowPaymentModal(true)} style={{ color: 'var(--navy)', background: 'transparent', border: 'none', cursor: 'pointer', textDecoration: 'underline', padding: 0, fontFamily: 'inherit', fontSize: 13 }}>Add one</button> to keep your subscription active.
+              </div>
+            )}
+          </div>
+
+          {/* Billing details */}
+          <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 12, padding: '18px 22px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+              <h3 style={{ fontFamily: "'Fraunces', serif", fontSize: 16, color: 'var(--text-primary)', margin: 0, fontWeight: 400 }}>
+                Billing Details
+              </h3>
+              <button
+                onClick={() => setShowEditAddressModal(true)}
+                style={{ fontSize: 12, color: 'var(--navy)', background: 'transparent', border: 'none', cursor: 'pointer', textDecoration: 'underline', fontWeight: 500, fontFamily: 'inherit', padding: 0 }}
+              >
+                Edit
+              </button>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
+              <MapPin size={16} style={{ color: 'var(--text-muted)', flexShrink: 0, marginTop: 2 }} />
+              <div style={{ flex: 1, fontSize: 12.5, color: 'var(--text-secondary)', lineHeight: 1.55 }}>
+                <div style={{ color: 'var(--text-primary)', fontWeight: 500, fontSize: 13.5, marginBottom: 2 }}>
+                  {billing.billingAddress.company}
+                </div>
+                <div>{billing.billingAddress.line1}{billing.billingAddress.line2 ? `, ${billing.billingAddress.line2}` : ''}</div>
+                <div>{billing.billingAddress.city}, {billing.billingAddress.region} {billing.billingAddress.postalCode}</div>
+                <div>{billing.billingAddress.country}</div>
+                {billing.taxId && (
+                  <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px dashed var(--border)', display: 'flex', gap: 12 }}>
+                    <span style={{ color: 'var(--text-muted)' }}>{billing.taxId.kind}:</span>
+                    <span style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', color: 'var(--text-primary)' }}>{billing.taxId.value}</span>
+                  </div>
+                )}
+                {billing.ccEmails && billing.ccEmails.length > 0 && (
+                  <div style={{ marginTop: 6, fontSize: 11.5 }}>
+                    <span style={{ color: 'var(--text-muted)' }}>Receipts CC:</span>{' '}
+                    <span style={{ color: 'var(--text-primary)' }}>{billing.ccEmails.join(', ')}</span>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </div>
 
@@ -4104,7 +4243,177 @@ function BillingPanel({ onBack }) {
             </table>
           </div>
         </div>
+
+        {/* Danger zone — cancel subscription */}
+        <div style={{ marginTop: 36, paddingTop: 24, borderTop: '1px solid var(--border)' }}>
+          <h3 style={{ fontFamily: "'Fraunces', serif", fontSize: 16, color: 'var(--text-primary)', margin: '0 0 6px', fontWeight: 400 }}>
+            Cancel subscription
+          </h3>
+          <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: '0 0 12px', lineHeight: 1.55 }}>
+            You'll keep access until the end of your current billing period.
+            Your documents and chats remain in your account for 90 days, after
+            which they're permanently deleted.
+          </p>
+          <button
+            onClick={() => setShowCancelModal(true)}
+            style={{ padding: '7px 14px', borderRadius: 7, fontSize: 12.5, fontWeight: 500, background: '#fff', color: '#9A3412', border: '1px solid #F4B6AC', cursor: 'pointer', fontFamily: 'inherit' }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = '#FBE9E7'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; }}
+          >
+            Cancel subscription…
+          </button>
+        </div>
       </div>
+
+      {/* ─── Payment-method modal ──────────────────────────────────────── */}
+      {showPaymentModal && (
+        <div onClick={() => setShowPaymentModal(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(11,29,58,0.4)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ background: '#fff', borderRadius: 14, width: '90%', maxWidth: 460, padding: 24, boxShadow: '0 20px 60px rgba(0,0,0,0.25)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+              <h3 style={{ fontFamily: "'Fraunces', serif", fontSize: 20, color: 'var(--text-primary)', margin: 0, fontWeight: 500 }}>
+                Update payment method
+              </h3>
+              <button onClick={() => setShowPaymentModal(false)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }}><X size={18} /></button>
+            </div>
+            <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '0 0 18px', lineHeight: 1.55 }}>
+              Card details are processed by our payment provider. Your card never touches our servers.
+            </p>
+            {/* Sandbox form — real Stripe Element drops in here once integration lands. */}
+            <div style={{ display: 'grid', gap: 12, marginBottom: 18 }}>
+              <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)' }}>
+                Card number
+                <input type="text" placeholder="4242 4242 4242 4242" defaultValue="4242 4242 4242 4242" style={{ display: 'block', width: '100%', marginTop: 4, padding: '10px 12px', border: '1px solid var(--border)', borderRadius: 8, fontSize: 14, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }} />
+              </label>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)' }}>
+                  Expiry
+                  <input type="text" placeholder="MM / YY" defaultValue="12 / 27" style={{ display: 'block', width: '100%', marginTop: 4, padding: '10px 12px', border: '1px solid var(--border)', borderRadius: 8, fontSize: 14, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }} />
+                </label>
+                <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)' }}>
+                  CVC
+                  <input type="text" placeholder="•••" style={{ display: 'block', width: '100%', marginTop: 4, padding: '10px 12px', border: '1px solid var(--border)', borderRadius: 8, fontSize: 14, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }} />
+                </label>
+              </div>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+              <button onClick={() => setShowPaymentModal(false)} style={{ padding: '8px 16px', borderRadius: 8, fontSize: 13, background: '#fff', color: 'var(--text-secondary)', border: '1px solid var(--border)', cursor: 'pointer', fontFamily: 'inherit' }}>Cancel</button>
+              <button
+                onClick={() => {
+                  setBilling({ ...billing, paymentMethod: { brand: 'Visa', last4: '4242', expMonth: 12, expYear: 2027, addedAt: 'Just now' }, paymentStatus: 'ok', paymentFailedAt: null, paymentFailedReason: null });
+                  setShowPaymentModal(false);
+                }}
+                style={{ padding: '8px 16px', borderRadius: 8, fontSize: 13, fontWeight: 500, background: 'var(--navy)', color: '#fff', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}
+              >
+                Save card
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── Billing address modal ─────────────────────────────────────── */}
+      {showEditAddressModal && (
+        <div onClick={() => setShowEditAddressModal(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(11,29,58,0.4)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ background: '#fff', borderRadius: 14, width: '90%', maxWidth: 520, padding: 24, boxShadow: '0 20px 60px rgba(0,0,0,0.25)', maxHeight: '90vh', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+              <h3 style={{ fontFamily: "'Fraunces', serif", fontSize: 20, color: 'var(--text-primary)', margin: 0, fontWeight: 500 }}>
+                Billing details
+              </h3>
+              <button onClick={() => setShowEditAddressModal(false)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }}><X size={18} /></button>
+            </div>
+            <div style={{ display: 'grid', gap: 12, marginBottom: 18 }}>
+              <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)' }}>
+                Company name
+                <input type="text" defaultValue={billing.billingAddress.company} style={{ display: 'block', width: '100%', marginTop: 4, padding: '10px 12px', border: '1px solid var(--border)', borderRadius: 8, fontSize: 14 }} />
+              </label>
+              <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)' }}>
+                Address line 1
+                <input type="text" defaultValue={billing.billingAddress.line1} style={{ display: 'block', width: '100%', marginTop: 4, padding: '10px 12px', border: '1px solid var(--border)', borderRadius: 8, fontSize: 14 }} />
+              </label>
+              <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)' }}>
+                Address line 2 <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>(optional)</span>
+                <input type="text" defaultValue={billing.billingAddress.line2} style={{ display: 'block', width: '100%', marginTop: 4, padding: '10px 12px', border: '1px solid var(--border)', borderRadius: 8, fontSize: 14 }} />
+              </label>
+              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: 12 }}>
+                <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)' }}>
+                  City
+                  <input type="text" defaultValue={billing.billingAddress.city} style={{ display: 'block', width: '100%', marginTop: 4, padding: '10px 12px', border: '1px solid var(--border)', borderRadius: 8, fontSize: 14 }} />
+                </label>
+                <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)' }}>
+                  State
+                  <input type="text" defaultValue={billing.billingAddress.region} style={{ display: 'block', width: '100%', marginTop: 4, padding: '10px 12px', border: '1px solid var(--border)', borderRadius: 8, fontSize: 14 }} />
+                </label>
+                <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)' }}>
+                  ZIP
+                  <input type="text" defaultValue={billing.billingAddress.postalCode} style={{ display: 'block', width: '100%', marginTop: 4, padding: '10px 12px', border: '1px solid var(--border)', borderRadius: 8, fontSize: 14 }} />
+                </label>
+              </div>
+              <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)' }}>
+                Tax ID (EIN / VAT)
+                <input type="text" defaultValue={billing.taxId?.value || ''} style={{ display: 'block', width: '100%', marginTop: 4, padding: '10px 12px', border: '1px solid var(--border)', borderRadius: 8, fontSize: 14, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }} />
+              </label>
+              <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)' }}>
+                Receipt CC emails <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>(comma-separated)</span>
+                <input type="text" defaultValue={(billing.ccEmails || []).join(', ')} placeholder="finance@firm.com, ops@firm.com" style={{ display: 'block', width: '100%', marginTop: 4, padding: '10px 12px', border: '1px solid var(--border)', borderRadius: 8, fontSize: 14 }} />
+              </label>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+              <button onClick={() => setShowEditAddressModal(false)} style={{ padding: '8px 16px', borderRadius: 8, fontSize: 13, background: '#fff', color: 'var(--text-secondary)', border: '1px solid var(--border)', cursor: 'pointer', fontFamily: 'inherit' }}>Cancel</button>
+              <button
+                onClick={() => setShowEditAddressModal(false)}
+                style={{ padding: '8px 16px', borderRadius: 8, fontSize: 13, fontWeight: 500, background: 'var(--navy)', color: '#fff', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}
+              >
+                Save changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── Cancel subscription confirmation modal ───────────────────── */}
+      {showCancelModal && (
+        <div onClick={() => setShowCancelModal(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(11,29,58,0.4)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ background: '#fff', borderRadius: 14, width: '90%', maxWidth: 500, padding: 26, boxShadow: '0 20px 60px rgba(0,0,0,0.25)' }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, marginBottom: 16 }}>
+              <div style={{ width: 40, height: 40, borderRadius: 8, background: '#FBE9E7', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <AlertTriangle size={20} style={{ color: '#9A3412' }} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <h3 style={{ fontFamily: "'Fraunces', serif", fontSize: 20, color: 'var(--text-primary)', margin: 0, fontWeight: 500 }}>
+                  Cancel {billing.plan} subscription?
+                </h3>
+                <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '6px 0 0', lineHeight: 1.55 }}>
+                  You'll keep access until <strong>{billing.nextRenewal}</strong>. After that, your account moves to the Free plan and your team can no longer run workflows or share documents.
+                </p>
+              </div>
+            </div>
+            <ul style={{ margin: '0 0 18px', padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {[
+                'Your documents and chats remain available for 90 days, then are permanently deleted',
+                'External clients lose access at the end of the billing period',
+                'You can resubscribe within 90 days to restore everything',
+                'You won\'t be charged again after the current period ends',
+              ].map((item, i) => (
+                <li key={i} style={{ fontSize: 12.5, color: 'var(--text-secondary)', display: 'flex', gap: 8, alignItems: 'flex-start', lineHeight: 1.5 }}>
+                  <Check size={13} style={{ color: '#5CA868', flexShrink: 0, marginTop: 3 }} />
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+              <button onClick={() => setShowCancelModal(false)} style={{ padding: '8px 16px', borderRadius: 8, fontSize: 13, fontWeight: 500, background: 'var(--navy)', color: '#fff', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
+                Keep my subscription
+              </button>
+              <button
+                onClick={() => { setShowCancelModal(false); /* TODO: backend cancel call lands here */ }}
+                style={{ padding: '8px 16px', borderRadius: 8, fontSize: 13, fontWeight: 500, background: '#fff', color: '#9A3412', border: '1px solid #F4B6AC', cursor: 'pointer', fontFamily: 'inherit' }}
+              >
+                Cancel subscription
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

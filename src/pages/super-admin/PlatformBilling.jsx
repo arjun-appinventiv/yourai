@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { DollarSign, Building2, TrendingUp, AlertCircle, Receipt, Mail, Plus, Eye, Download, Edit3, Trash2, CreditCard, Pencil, X, Check, ChevronDown, AlertTriangle, CheckCircle, Info } from 'lucide-react';
+import { DollarSign, Building2, TrendingUp, AlertCircle, Receipt, Mail, Plus, Eye, Download, Edit3, Trash2, CreditCard, Pencil, X, Check, ChevronDown, AlertTriangle, CheckCircle, Info, Clock, RotateCcw } from 'lucide-react';
 import { tenants as initialTenants, subscriptionPlans, auditLog as initialAuditLog } from '../../data/mockData';
 import PageHeader from '../../components/PageHeader';
 import StatCard from '../../components/StatCard';
@@ -35,6 +35,15 @@ export default function PlatformBilling() {
   const [txnSearch, setTxnSearch] = useState('');
   const [txnStatus, setTxnStatus] = useState('All');
   const [selectedTxn, setSelectedTxn] = useState(null);
+  // Refund modal state. The transactions list itself is the const above;
+  // a refund append-onlys to txnList (state) so the action shows up
+  // immediately in the table.
+  const [txnList, setTxnList] = useState(transactions);
+  const [refundTxn, setRefundTxn] = useState(null);
+  const [refundReason, setRefundReason] = useState('');
+  const [refundAmount, setRefundAmount] = useState('');
+  // Per-tenant override history viewer.
+  const [historyTenant, setHistoryTenant] = useState(null);
   const [overrideOrg, setOverrideOrg] = useState(null);
   const [overrideSelectedPlan, setOverrideSelectedPlan] = useState(null);
   const [overrideReason, setOverrideReason] = useState('');
@@ -51,11 +60,74 @@ export default function PlatformBilling() {
   const failedCount = tenants.filter((t) => t.paymentStatus === 'Failed').length;
   const planCounts = tenants.reduce((acc, t) => { acc[t.plan] = (acc[t.plan] || 0) + 1; return acc; }, {});
 
-  const filteredTxns = transactions.filter((t) => {
+  const filteredTxns = txnList.filter((t) => {
     if (txnSearch && !t.org.toLowerCase().includes(txnSearch.toLowerCase())) return false;
     if (txnStatus !== 'All' && t.status !== txnStatus) return false;
     return true;
   });
+  const failedTxnCount = txnList.filter((t) => t.status === 'Failed').length;
+
+  const REFUND_REASONS = ['Customer request', 'Duplicate charge', 'Service downtime', 'Disputed charge', 'Goodwill / retention', 'Other'];
+
+  const openRefund = (t) => {
+    setRefundTxn(t);
+    setRefundReason('');
+    setRefundAmount(String(t.amount));
+  };
+  const handleConfirmRefund = () => {
+    if (!refundTxn || !refundReason) return;
+    const amt = Math.min(parseFloat(refundAmount) || 0, refundTxn.amount);
+    if (amt <= 0) return;
+    // Append a Refund row to the txn list — original Paid row is unaffected
+    // so the audit trail stays whole.
+    const refundRow = {
+      id: `REF-${String(Date.now()).slice(-6)}`,
+      org: refundTxn.org,
+      plan: refundTxn.plan,
+      amount: -amt,
+      date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+      mode: refundTxn.mode,
+      status: amt === refundTxn.amount ? 'Refunded' : 'Partial Refund',
+      remarks: `Refund of ${refundTxn.id} — ${refundReason}`,
+    };
+    setTxnList((prev) => [refundRow, ...prev]);
+    showToast(`Refunded $${amt.toLocaleString()} on ${refundTxn.id}`);
+    setRefundTxn(null);
+  };
+
+  // Per-tenant override history — pulled from auditLog when it carries a
+  // 'plan_override' entry. Real audit log doesn't yet have these; we
+  // synthesise a couple of plausible recent entries below for SAs to see
+  // the surface shape, and any override applied this session will be
+  // captured by the existing logAuditAction path so it'll show up here
+  // too. Until backend, mock the historical entries.
+  const overrideHistoryFor = (tenant) => {
+    if (!tenant) return [];
+    const synthetic = (initialAuditLog || [])
+      .filter((e) => e && e.action && e.action.toLowerCase().includes('plan'))
+      .filter((e) => !e.target || e.target === tenant.name || e.target === tenant.id)
+      .map((e) => ({
+        id: e.id,
+        date: e.timestamp || e.date || '—',
+        by: e.actor || e.user || 'Appinventiv Ops',
+        from: e.from || '—',
+        to: e.to || e.plan || tenant.plan,
+        reason: e.reason || e.notes || 'Migration',
+      }));
+    // If audit log has nothing for this tenant, show a single seed row
+    // so the surface isn't empty in the demo.
+    if (synthetic.length === 0) {
+      return [{
+        id: `OVR-${tenant.id || '000'}-01`,
+        date: 'Feb 12, 2026',
+        by: 'Appinventiv Ops',
+        from: 'Professional',
+        to: tenant.plan,
+        reason: 'Sales agreement — annual upgrade',
+      }];
+    }
+    return synthetic;
+  };
 
   const handleExportTxnCSV = () => {
     const header = 'Transaction ID,Organisation,Plan,Amount,Date,Mode,Status';
@@ -199,6 +271,7 @@ export default function PlatformBilling() {
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1">
                       <button onClick={() => openPlanOverride(t)} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors" title="Change Plan"><Pencil size={15} style={{ color: 'var(--slate)' }} /></button>
+                      <button onClick={() => setHistoryTenant(t)} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors" title="Override History"><Clock size={15} style={{ color: 'var(--slate)' }} /></button>
                       <button className="p-1.5 rounded-lg hover:bg-gray-100" title="View Invoice"><Receipt size={16} style={{ color: 'var(--slate)' }} /></button>
                       <button className="p-1.5 rounded-lg hover:bg-gray-100" title="Contact Admin"><Mail size={16} style={{ color: 'var(--slate)' }} /></button>
                     </div>
@@ -350,6 +423,28 @@ export default function PlatformBilling() {
       {/* ═══ Transactions Tab ═══ */}
       {activeTab === 'transactions' && (
         <>
+          {/* Failed-payments quick filter — surfaces the count that was
+              previously only visible as a small computed text. Click to
+              filter the table to Failed-only; click again to clear. */}
+          {failedTxnCount > 0 && (
+            <button
+              onClick={() => setTxnStatus(txnStatus === 'Failed' ? 'All' : 'Failed')}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 8,
+                padding: '8px 14px', borderRadius: 999, fontSize: 13, fontWeight: 500,
+                background: txnStatus === 'Failed' ? '#FBE9E7' : '#fff',
+                color: '#9A3412',
+                border: `1px solid ${txnStatus === 'Failed' ? '#9A3412' : '#F4B6AC'}`,
+                cursor: 'pointer', fontFamily: 'inherit',
+                alignSelf: 'flex-start',
+              }}
+              title={txnStatus === 'Failed' ? 'Click to clear filter' : 'Filter to failed payments only'}
+            >
+              <AlertTriangle size={14} />
+              <span>{failedTxnCount} failed payment{failedTxnCount === 1 ? '' : 's'}</span>
+              {txnStatus === 'Failed' && <X size={13} style={{ marginLeft: 4 }} />}
+            </button>
+          )}
           <div className="flex items-center gap-4">
             <input type="text" placeholder="Search by organisation..." value={txnSearch} onChange={(e) => setTxnSearch(e.target.value)} className="flex-1" style={inputStyle} onFocus={(e) => (e.target.style.borderColor = 'var(--navy)')} onBlur={(e) => (e.target.style.borderColor = 'var(--border)')} />
             <input type="date" style={inputStyle} />
@@ -372,7 +467,12 @@ export default function PlatformBilling() {
                 <td className="px-4 py-3 text-sm">{t.mode}</td>
                 <td className="px-4 py-3"><Badge variant={t.status}>{t.status}</Badge></td>
                 <td className="px-4 py-3">
-                  <button onClick={() => setSelectedTxn(t)} className="p-1.5 rounded-lg hover:bg-gray-100" title="View Detail"><Eye size={16} style={{ color: 'var(--slate)' }} /></button>
+                  <div className="flex items-center gap-1">
+                    <button onClick={() => setSelectedTxn(t)} className="p-1.5 rounded-lg hover:bg-gray-100" title="View Detail"><Eye size={16} style={{ color: 'var(--slate)' }} /></button>
+                    {t.status === 'Paid' && t.amount > 0 && (
+                      <button onClick={() => openRefund(t)} className="p-1.5 rounded-lg hover:bg-gray-100" title="Refund"><RotateCcw size={15} style={{ color: 'var(--slate)' }} /></button>
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}
@@ -564,6 +664,99 @@ export default function PlatformBilling() {
           </div>
         </>
       )}
+
+      {/* ═══ Refund Modal ═══ */}
+      <Modal open={!!refundTxn} onClose={() => setRefundTxn(null)} title="Issue refund">
+        {refundTxn && (
+          <div className="space-y-4">
+            <div className="rounded-lg p-3 text-sm" style={{ background: 'var(--ice-warm)', border: '1px solid var(--border)' }}>
+              <div className="flex justify-between mb-1">
+                <span style={{ color: 'var(--text-muted)' }}>Transaction</span>
+                <span style={{ color: 'var(--text-primary)', fontFamily: 'monospace' }}>{refundTxn.id}</span>
+              </div>
+              <div className="flex justify-between mb-1">
+                <span style={{ color: 'var(--text-muted)' }}>Organisation</span>
+                <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{refundTxn.org}</span>
+              </div>
+              <div className="flex justify-between">
+                <span style={{ color: 'var(--text-muted)' }}>Original amount</span>
+                <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>${refundTxn.amount.toLocaleString()}</span>
+              </div>
+            </div>
+            <label className="block text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+              Refund reason <span style={{ color: '#C65454' }}>*</span>
+              <select value={refundReason} onChange={(e) => setRefundReason(e.target.value)} style={{ ...inputStyle, marginTop: 4, width: '100%' }}>
+                <option value="">Pick a reason…</option>
+                {REFUND_REASONS.map((r) => (<option key={r} value={r}>{r}</option>))}
+              </select>
+            </label>
+            <label className="block text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+              Amount to refund (USD)
+              <input
+                type="number" min="0" step="0.01" max={refundTxn.amount}
+                value={refundAmount} onChange={(e) => setRefundAmount(e.target.value)}
+                style={{ ...inputStyle, marginTop: 4, width: '100%' }}
+              />
+              <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Maximum: ${refundTxn.amount.toLocaleString()}. Partial refunds are allowed.</span>
+            </label>
+            <div className="flex justify-end gap-2 pt-2">
+              <button onClick={() => setRefundTxn(null)} className="px-4 py-2 rounded-lg text-sm font-medium" style={{ border: '1px solid var(--border)', color: 'var(--slate)' }}>Cancel</button>
+              <button
+                onClick={handleConfirmRefund}
+                disabled={!refundReason || !refundAmount || parseFloat(refundAmount) <= 0}
+                className="px-4 py-2 rounded-lg text-sm font-medium"
+                style={{
+                  background: (!refundReason || !refundAmount || parseFloat(refundAmount) <= 0) ? '#cbd5d8' : 'var(--navy)',
+                  color: '#fff',
+                  cursor: (!refundReason || !refundAmount || parseFloat(refundAmount) <= 0) ? 'not-allowed' : 'pointer',
+                }}
+              >
+                Issue refund
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* ═══ Override History Modal ═══ */}
+      <Modal open={!!historyTenant} onClose={() => setHistoryTenant(null)} title={historyTenant ? `Plan override history — ${historyTenant.name}` : 'Plan override history'}>
+        {historyTenant && (() => {
+          const rows = overrideHistoryFor(historyTenant);
+          return (
+            <div className="space-y-2">
+              {rows.length === 0 ? (
+                <p className="text-sm" style={{ color: 'var(--text-muted)' }}>No plan overrides recorded for this tenant.</p>
+              ) : (
+                <div className="rounded-lg overflow-hidden" style={{ border: '1px solid var(--border)' }}>
+                  <table className="w-full">
+                    <thead>
+                      <tr style={{ background: 'var(--ice-warm)', borderBottom: '1px solid var(--border)' }}>
+                        {['Date', 'Changed by', 'From', 'To', 'Reason'].map((h) => (
+                          <th key={h} className="px-3 py-2 text-left text-xs uppercase tracking-wider" style={{ color: 'var(--text-muted)', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {rows.map((r, idx) => (
+                        <tr key={r.id} style={{ borderBottom: idx === rows.length - 1 ? 'none' : '1px solid var(--border)' }}>
+                          <td className="px-3 py-2 text-sm" style={{ color: 'var(--text-muted)' }}>{r.date}</td>
+                          <td className="px-3 py-2 text-sm" style={{ color: 'var(--text-primary)' }}>{r.by}</td>
+                          <td className="px-3 py-2"><Badge variant={r.from}>{r.from}</Badge></td>
+                          <td className="px-3 py-2"><Badge variant={r.to}>{r.to}</Badge></td>
+                          <td className="px-3 py-2 text-sm" style={{ color: 'var(--text-secondary)' }}>{r.reason}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+              <div className="flex justify-end pt-2">
+                <button onClick={() => setHistoryTenant(null)} className="px-4 py-2 rounded-lg text-sm font-medium" style={{ border: '1px solid var(--border)', color: 'var(--slate)' }}>Close</button>
+              </div>
+            </div>
+          );
+        })()}
+      </Modal>
     </div>
   );
 }
