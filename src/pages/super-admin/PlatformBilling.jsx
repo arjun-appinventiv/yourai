@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { DollarSign, Building2, TrendingUp, AlertCircle, Receipt, Mail, Plus, Eye, Download, Edit3, Trash2, CreditCard, Pencil, X, Check, ChevronDown, AlertTriangle, CheckCircle, Info, Clock, RotateCcw } from 'lucide-react';
+import { DollarSign, Building2, TrendingUp, AlertCircle, FileText, Mail, Plus, Eye, Download, Trash2, CreditCard, Pencil, X, Check, ChevronDown, AlertTriangle, CheckCircle, Info, Clock, RotateCcw } from 'lucide-react';
 import { tenants as initialTenants, subscriptionPlans, auditLog as initialAuditLog } from '../../data/mockData';
 import PageHeader from '../../components/PageHeader';
 import StatCard from '../../components/StatCard';
@@ -44,6 +44,8 @@ export default function PlatformBilling() {
   const [refundAmount, setRefundAmount] = useState('');
   // Per-tenant override history viewer.
   const [historyTenant, setHistoryTenant] = useState(null);
+  // Invoice viewer (Subscriptions row → FileText button).
+  const [invoiceTenant, setInvoiceTenant] = useState(null);
   const [overrideOrg, setOverrideOrg] = useState(null);
   const [overrideSelectedPlan, setOverrideSelectedPlan] = useState(null);
   const [overrideReason, setOverrideReason] = useState('');
@@ -127,6 +129,36 @@ export default function PlatformBilling() {
       }];
     }
     return synthetic;
+  };
+
+  const contactAdmin = (tenant) => {
+    const slug = tenant.name.toLowerCase().replace(/[^a-z0-9]+/g, '').slice(0, 24) || 'admin';
+    const email = `admin@${slug}.com`;
+    const subject = encodeURIComponent(`YourAI — billing for ${tenant.name}`);
+    const body = encodeURIComponent(`Hi,\n\nFollowing up on your ${tenant.plan} plan${tenant.paymentStatus === 'Failed' ? ' — we noticed a failed payment on your last invoice.' : '.'}\n\n— Appinventiv Ops`);
+    window.location.href = `mailto:${email}?subject=${subject}&body=${body}`;
+    showToast(`Opened mail to ${email}`);
+  };
+
+  const handleDeletePlan = (plan) => {
+    if (!window.confirm(`Delete the "${plan.name}" plan? This cannot be undone.`)) return;
+    setPlans((prev) => prev.filter((p) => p.id !== plan.id));
+    showToast(`${plan.name} plan deleted`);
+  };
+
+  const invoiceForTenant = (tenant) => {
+    if (!tenant) return null;
+    const latest = txnList.find((tx) => tx.org === tenant.name && tx.amount > 0);
+    return latest || {
+      id: `INV-${tenant.id}-${String(Date.now()).slice(-4)}`,
+      org: tenant.name,
+      plan: tenant.plan,
+      amount: tenant.mrr,
+      date: tenant.nextRenewal || '—',
+      mode: '—',
+      status: tenant.paymentStatus,
+      remarks: tenant.mrr > 0 ? 'Monthly recurring' : 'Free plan',
+    };
   };
 
   const handleExportTxnCSV = () => {
@@ -272,8 +304,8 @@ export default function PlatformBilling() {
                     <div className="flex items-center gap-1">
                       <button onClick={() => openPlanOverride(t)} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors" title="Change Plan"><Pencil size={15} style={{ color: 'var(--slate)' }} /></button>
                       <button onClick={() => setHistoryTenant(t)} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors" title="Override History"><Clock size={15} style={{ color: 'var(--slate)' }} /></button>
-                      <button className="p-1.5 rounded-lg hover:bg-gray-100" title="View Invoice"><Receipt size={16} style={{ color: 'var(--slate)' }} /></button>
-                      <button className="p-1.5 rounded-lg hover:bg-gray-100" title="Contact Admin"><Mail size={16} style={{ color: 'var(--slate)' }} /></button>
+                      <button onClick={() => setInvoiceTenant(t)} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors" title="View Invoice"><FileText size={15} style={{ color: 'var(--slate)' }} /></button>
+                      <button onClick={() => contactAdmin(t)} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors" title="Contact Admin"><Mail size={15} style={{ color: 'var(--slate)' }} /></button>
                     </div>
                   </td>
                 </tr>
@@ -309,8 +341,8 @@ export default function PlatformBilling() {
                 <td className="px-4 py-3"><Badge variant={p.status}>{p.status}</Badge></td>
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-1">
-                    <button onClick={() => openEditPlan(p)} className="p-1.5 rounded-lg hover:bg-gray-100" title="Edit"><Edit3 size={16} style={{ color: 'var(--slate)' }} /></button>
-                    <button className="p-1.5 rounded-lg hover:bg-red-50" title="Delete"><Trash2 size={16} style={{ color: '#C65454' }} /></button>
+                    <button onClick={() => openEditPlan(p)} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors" title="Edit"><Pencil size={15} style={{ color: 'var(--slate)' }} /></button>
+                    <button onClick={() => handleDeletePlan(p)} className="p-1.5 rounded-lg hover:bg-red-50 transition-colors" title="Delete"><Trash2 size={15} style={{ color: '#C65454' }} /></button>
                   </div>
                 </td>
               </tr>
@@ -468,9 +500,9 @@ export default function PlatformBilling() {
                 <td className="px-4 py-3"><Badge variant={t.status}>{t.status}</Badge></td>
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-1">
-                    <button onClick={() => setSelectedTxn(t)} className="p-1.5 rounded-lg hover:bg-gray-100" title="View Detail"><Eye size={16} style={{ color: 'var(--slate)' }} /></button>
+                    <button onClick={() => setSelectedTxn(t)} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors" title="View Detail"><Eye size={15} style={{ color: 'var(--slate)' }} /></button>
                     {t.status === 'Paid' && t.amount > 0 && (
-                      <button onClick={() => openRefund(t)} className="p-1.5 rounded-lg hover:bg-gray-100" title="Refund"><RotateCcw size={15} style={{ color: 'var(--slate)' }} /></button>
+                      <button onClick={() => openRefund(t)} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors" title="Refund"><RotateCcw size={15} style={{ color: 'var(--slate)' }} /></button>
                     )}
                   </div>
                 </td>
@@ -517,7 +549,7 @@ export default function PlatformBilling() {
                   Seats: {overrideOrg.users} users · ${overrideOrg.mrr.toLocaleString()}/month total
                 </div>
                 <div className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
-                  Active since: {overrideOrg.billedSince || overrideOrg.created} · Next renewal: {billingMeta[overrideOrg.id]?.nextRenewal || '—'}
+                  Active since: {overrideOrg.billedSince || overrideOrg.created} · Next renewal: {overrideOrg.nextRenewal || '—'}
                 </div>
               </div>
 
@@ -752,6 +784,38 @@ export default function PlatformBilling() {
               )}
               <div className="flex justify-end pt-2">
                 <button onClick={() => setHistoryTenant(null)} className="px-4 py-2 rounded-lg text-sm font-medium" style={{ border: '1px solid var(--border)', color: 'var(--slate)' }}>Close</button>
+              </div>
+            </div>
+          );
+        })()}
+      </Modal>
+
+      {/* ═══ Invoice Modal ═══ */}
+      <Modal open={!!invoiceTenant} onClose={() => setInvoiceTenant(null)} title={invoiceTenant ? `Latest invoice — ${invoiceTenant.name}` : 'Invoice'}>
+        {invoiceTenant && (() => {
+          const inv = invoiceForTenant(invoiceTenant);
+          return (
+            <div className="space-y-3">
+              {[
+                ['Invoice / Txn ID', inv.id],
+                ['Organisation', inv.org],
+                ['Plan', inv.plan],
+                ['Amount', inv.amount > 0 ? `$${inv.amount.toLocaleString()}` : '$0'],
+                ['Date', inv.date],
+                ['Payment Mode', inv.mode],
+                ['Status', inv.status],
+                ['Remarks', inv.remarks],
+              ].map(([l, v]) => (
+                <div key={l} className="flex justify-between py-2" style={{ borderBottom: '1px solid var(--border)' }}>
+                  <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{l}</span>
+                  <span className="text-sm" style={{ color: 'var(--text-muted)' }}>{v}</span>
+                </div>
+              ))}
+              <div className="flex justify-end gap-3 pt-2">
+                <button onClick={() => { showToast('Invoice PDF downloaded'); }} className="px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2" style={{ border: '1px solid var(--border)', color: 'var(--slate)' }}>
+                  <Download size={14} /> Download PDF
+                </button>
+                <button onClick={() => setInvoiceTenant(null)} className="px-4 py-2 rounded-lg text-sm font-medium text-white" style={{ backgroundColor: 'var(--navy)' }}>Close</button>
               </div>
             </div>
           );
