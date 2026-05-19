@@ -30,6 +30,7 @@ const allNavSections = [
     label: 'SYSTEM',
     items: [
       { label: 'Reminders',     icon: Clock,     path: '/app/reminders',  roles: ['Admin','Manager','Team'] },
+      { label: 'Time & Billing', icon: Clock,    path: '/app/time-billing', roles: ['Admin','Manager'], limited: ['Manager'] },
       { label: 'Audit Logs',    icon: Shield,    path: '/app/audit-logs', roles: ['Admin','Manager'], limited: ['Manager'] },
       { label: 'Usage & Costs', icon: BarChart3,  path: '/app/usage',      roles: ['Admin','Manager'], limited: ['Manager'] },
     ],

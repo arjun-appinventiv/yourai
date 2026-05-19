@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { Settings, Save, Shield, Plug } from 'lucide-react';
+import { Settings, Save, Shield, Plug, Clock } from 'lucide-react';
 import PageHeader from '../../components/PageHeader';
 import Badge from '../../components/Badge';
 import { useToast } from '../../components/Toast';
 import { currentUser } from '../../data/mockData';
 import PermissionGate from '../../components/org-admin/PermissionGate';
+import { loadSettings, saveSettings } from '../../lib/aiTimeStore';
 
 const inputStyle = {
   border: '1px solid var(--border)', borderRadius: '8px', height: 36,
@@ -35,6 +36,14 @@ export default function OrgSettingsPage() {
     ipWhitelist: false,
     sessionTimeout: '8',
   });
+
+  const [billingCfg, setBillingCfg] = useState(() => loadSettings());
+  const persistBillingCfg = (patch) => {
+    const next = { ...billingCfg, ...patch };
+    setBillingCfg(next);
+    saveSettings(next);
+    showToast('Billing settings saved');
+  };
 
   return (
     <PermissionGate allowedRoles={['Admin']}>
@@ -110,6 +119,65 @@ export default function OrgSettingsPage() {
               >
                 <Save size={14} /> Save Changes
               </button>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'general' && (
+          <div className="bg-white p-6 rounded-xl mt-4" style={{ border: '1px solid var(--border)', maxWidth: 600 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+              <Clock size={15} style={{ color: 'var(--navy)' }} />
+              <h4 style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)', margin: 0 }}>Time & Billing</h4>
+            </div>
+            <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '4px 0 16px' }}>
+              Controls how the AI-time meter rounds duration and which activity codes attorneys see when logging time.
+            </p>
+
+            {/* E-Billing Mode */}
+            <div className="flex items-center justify-between py-3" style={{ borderBottom: '1px solid var(--border)' }}>
+              <div style={{ paddingRight: 16 }}>
+                <span style={{ fontSize: '13px', color: 'var(--text-primary)', fontWeight: 500 }}>E-Billing Mode (UTBMS)</span>
+                <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: 2, lineHeight: 1.4 }}>
+                  When ON, attorneys pick from UTBMS task &amp; activity codes (L120-A104, etc.) required by insurance and corporate-counsel e-billing portals. When OFF, they pick from plain-English firm categories (Research, Drafting, Review…).
+                </p>
+              </div>
+              <button
+                onClick={() => persistBillingCfg({ eBillingMode: !billingCfg.eBillingMode })}
+                style={{
+                  width: 40, height: 22, borderRadius: 11, position: 'relative',
+                  backgroundColor: billingCfg.eBillingMode ? 'var(--navy)' : 'var(--border)',
+                  border: 'none', cursor: 'pointer', flexShrink: 0,
+                  transition: 'background-color 200ms',
+                }}
+              >
+                <div
+                  className="absolute rounded-full bg-white"
+                  style={{
+                    width: 16, height: 16, top: 3,
+                    left: billingCfg.eBillingMode ? 21 : 3,
+                    transition: 'left 200ms',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                  }}
+                />
+              </button>
+            </div>
+
+            {/* Rate increment */}
+            <div className="flex items-center justify-between py-4">
+              <div style={{ paddingRight: 16 }}>
+                <span style={{ fontSize: '13px', color: 'var(--text-primary)', fontWeight: 500 }}>Rate Increment</span>
+                <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: 2, lineHeight: 1.4 }}>
+                  Round measured time UP to the nearest increment when logging billable events. 0.1 hr (6 min) is the US legal default; quarter-hour is used in some jurisdictions.
+                </p>
+              </div>
+              <select
+                value={billingCfg.rateIncrementMinutes}
+                onChange={(e) => persistBillingCfg({ rateIncrementMinutes: Number(e.target.value) })}
+                style={{ ...inputStyle, width: 180, cursor: 'pointer', backgroundColor: 'white', flexShrink: 0 }}
+              >
+                <option value={6}>0.1 hr (6 minutes)</option>
+                <option value={15}>0.25 hr (15 minutes)</option>
+              </select>
             </div>
           </div>
         )}

@@ -43,6 +43,7 @@ import ClientsPage from './pages/org-admin/ClientsPage';
 import MessagesPage from './pages/org-admin/MessagesPage';
 import OrgUserManagement from './pages/org-admin/OrgUserManagement';
 import OrgBilling from './pages/org-admin/OrgBilling';
+import BillingTimePage from './pages/org-admin/BillingTimePage';
 import AuditLogsPage from './pages/org-admin/AuditLogsPage';
 import UsageCostsPage from './pages/org-admin/UsageCostsPage';
 import ProfilePage from './pages/org-admin/ProfilePage';
@@ -129,6 +130,7 @@ export default function App() {
               <Route path="/app/messages" element={<MessagesPage />} />
               <Route path="/app/users" element={<OrgUserManagement />} />
               <Route path="/app/billing" element={<OrgBilling />} />
+              <Route path="/app/time-billing" element={<BillingTimePage />} />
               <Route path="/app/audit-logs" element={<AuditLogsPage />} />
               <Route path="/app/usage" element={<UsageCostsPage />} />
               <Route path="/app/profile" element={<ProfilePage />} />

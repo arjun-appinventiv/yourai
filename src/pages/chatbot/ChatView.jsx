@@ -31,6 +31,12 @@ import WorkflowRunPanel from '../../components/chat/WorkflowRunPanel';
 import IntentArtifactPanel from '../../components/chat/IntentArtifactPanel';
 import WorkflowProgressCard from '../../components/chat/WorkflowProgressCard';
 import WorkflowReportCard from '../../components/chat/WorkflowReportCard';
+import SessionTimerPill from '../../components/chat/SessionTimerPill';
+import BillingDraftModal from '../../components/chat/BillingDraftModal';
+import MyTimePanel from '../../components/chat/MyTimePanel';
+import { startOrResumeTimer, finalizeTimer, recordActivity as recordTimerActivity } from '../../lib/sessionTimer';
+import { seedEventsIfEmpty as seedBillingEventsIfEmpty } from '../../lib/aiTimeStore';
+import { buildDemoBillingEvents } from '../../data/demoBillingEvents';
 import {
   listTemplatesForUser, listFavouriteTemplatesForUser, seedTemplatesIfEmpty, duplicateTemplate as duplicateWorkflow,
   deleteTemplate as deleteWorkflow, getActiveRunId, getRun, listRuns,
@@ -416,7 +422,7 @@ const riskColors = {
    Layout structure confirmed by Arjun. Not signed off by Ryan.
    All existing nav items preserved — reorganised only. */
 
-function Sidebar({ activeKey, onOpenChat, onOpenOrgDashboard, onOpenPromptTemplates, onOpenClients, onOpenKnowledgePacks, onOpenDocumentVault, onOpenInviteTeam, onOpenAuditLogs, onOpenBilling, onOpenWorkspaces, onOpenWorkflows, promptCount, clientCount, packCount, vaultCount, memberCount, workspaceCount, workflowCount, isOpen, onClose, threads, activeThreadId, onSwitchThread, onNewThread, onDeleteThread, onRenameThread, threadSearch, onThreadSearchChange, onSignOut, runningWorkflow, onViewRunning }) {
+function Sidebar({ activeKey, onOpenChat, onOpenOrgDashboard, onOpenPromptTemplates, onOpenClients, onOpenKnowledgePacks, onOpenDocumentVault, onOpenInviteTeam, onOpenAuditLogs, onOpenBilling, onOpenMyTime, onOpenWorkspaces, onOpenWorkflows, promptCount, clientCount, packCount, vaultCount, memberCount, workspaceCount, workflowCount, isOpen, onClose, threads, activeThreadId, onSwitchThread, onNewThread, onDeleteThread, onRenameThread, threadSearch, onThreadSearchChange, onSignOut, runningWorkflow, onViewRunning }) {
   // Role + permission gating — every nav item decides visibility via hasPermission
   // rather than by comparing role strings directly. See src/lib/roles.ts.
   const { hasPermission, isOrgAdmin, isExternalUser } = useRole();
@@ -496,6 +502,9 @@ function Sidebar({ activeKey, onOpenChat, onOpenOrgDashboard, onOpenPromptTempla
   // Billing:    Org Admin always; Internal User only with access_billing.
   // External User never sees either.
   const adminItems = [
+    !isExternalUser && {
+      id: 'my-time', icon: Clock, label: 'My Time', onClick: onOpenMyTime,
+    },
     (isOrgAdmin || hasPermission(PERMISSIONS.VIEW_AUDIT_LOGS)) && !isExternalUser && {
       id: 'audit-logs', icon: Shield, label: 'Audit Logs', onClick: onOpenAuditLogs,
     },
@@ -4958,6 +4967,10 @@ function TopNav({ onOpenSidebar }) {
           </div>
         )}
       </div>
+
+      {/* Spacer pushes the AI-time pill to the right edge. */}
+      <div style={{ flex: 1 }} />
+      <SessionTimerPill />
     </div>
   );
 }
@@ -5924,6 +5937,9 @@ export default function ChatView({ initialView = 'chat' }) {
   const [showOrgDashboard, setShowOrgDashboard] = useState(isOrgAdmin && initialView !== 'workspaces');
   const [showBillingPanel, setShowBillingPanel] = useState(false);
   const [showAuditLogsPanel, setShowAuditLogsPanel] = useState(false);
+  // AI-time meter
+  const [showMyTimePanel, setShowMyTimePanel] = useState(false);
+  const [billingDraft, setBillingDraft] = useState(null); // { session, threadMessages } | null
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
@@ -5948,6 +5964,10 @@ export default function ChatView({ initialView = 'chat' }) {
   // load (idempotent: skips if a stored list already exists).
   const [knowledgePacks, setKnowledgePacks] = useState(() => {
     seedPacksIfEmpty(DEFAULT_KNOWLEDGE_PACKS);
+    // AI-time meter demo seed — populates ~22 realistic billing events
+    // across the firm's mock attorneys so a fresh demo browser lands on
+    // a populated My Time + Org Admin Time & Billing view. Idempotent.
+    seedBillingEventsIfEmpty(buildDemoBillingEvents());
     return loadPacks() || DEFAULT_KNOWLEDGE_PACKS;
   });
   useEffect(() => { savePacks(knowledgePacks); }, [knowledgePacks]);
@@ -6255,6 +6275,16 @@ export default function ChatView({ initialView = 'chat' }) {
 
   // ─── Chat Thread handlers ───
   const handleNewThread = useCallback(() => {
+    // AI-time meter: finalize the active session BEFORE we wipe the
+    // current thread state. The draft modal opens with a snapshot of
+    // this thread's messages for auto-summary.
+    const finalized = finalizeTimer();
+    if (finalized) {
+      setBillingDraft({
+        session: finalized,
+        threadMessages: [...messages],
+      });
+    }
     // Save current thread messages before switching
     threadMessagesRef.current[activeThreadId] = messages;
     // Snapshot current thread's attached context so switching back
@@ -6315,6 +6345,22 @@ export default function ChatView({ initialView = 'chat' }) {
     window.addEventListener('yourai:start-new-chat', handler);
     return () => window.removeEventListener('yourai:start-new-chat', handler);
   }, [handleNewThread]);
+
+  // SessionTimerPill's "End session & log time" menu item raises this
+  // event. We finalize the timer and surface the draft modal without
+  // wiping the current thread (unlike handleNewThread — the attorney
+  // is still in the middle of the conversation, they just want to bill
+  // up to this point).
+  useEffect(() => {
+    const handler = () => {
+      const finalized = finalizeTimer();
+      if (finalized) {
+        setBillingDraft({ session: finalized, threadMessages: [...messages] });
+      }
+    };
+    window.addEventListener('yourai:end-session', handler);
+    return () => window.removeEventListener('yourai:end-session', handler);
+  }, [messages]);
 
   // FileResultsCard ("find_document" intent) actions — same window-event
   // pattern as the upload-added note above so we don't thread callbacks
@@ -6491,6 +6537,12 @@ export default function ChatView({ initialView = 'chat' }) {
   const sendMessage = useCallback(async (text, opts) => {
     const trimmed = (text || '').trim();
     if ((!trimmed && pendingAttachments.length === 0) || isTyping) return;
+    // AI-time meter: every send marks activity; starts the session on
+    // the first message of a thread, resumes if it was idle-paused.
+    {
+      const activeThread = threads.find((t) => t.id === activeThreadId);
+      startOrResumeTimer(activeThreadId, activeThread?.title);
+    }
     const skipDocConfirmation = !!(opts && opts.skipDocConfirmation);
     const skipMultiIntentChoice = !!(opts && opts.skipMultiIntentChoice);
     // When the multi-intent gate's pick_intent re-fires sendMessage, the
@@ -8076,6 +8128,7 @@ INSTRUCTIONS:
     setShowOrgDashboard(false);
     setShowBillingPanel(false);
     setShowAuditLogsPanel(false);
+    setShowMyTimePanel(false);
     setEditingWorkflow(null);
   };
 
@@ -8083,6 +8136,7 @@ INSTRUCTIONS:
     if (showOrgDashboard) return 'org-dashboard';
     if (showBillingPanel) return 'billing';
     if (showAuditLogsPanel) return 'audit-logs';
+    if (showMyTimePanel) return 'my-time';
     if (showTeamPage) return 'invite-team';
     if (showWorkspacesPanel) return 'workspaces';
     if (showWorkflowsPanel || editingWorkflow) return 'workflows';
@@ -8107,6 +8161,7 @@ INSTRUCTIONS:
         onOpenInviteTeam={() => { closeAllPanels(); setShowTeamPage(true); setSidebarOpen(false); }}
         onOpenAuditLogs={() => { closeAllPanels(); setShowAuditLogsPanel(true); setSidebarOpen(false); }}
         onOpenBilling={() => { closeAllPanels(); setShowBillingPanel(true); setSidebarOpen(false); }}
+        onOpenMyTime={() => { closeAllPanels(); setShowMyTimePanel(true); setSidebarOpen(false); }}
         onOpenWorkspaces={() => { closeAllPanels(); navigate('/chat/workspaces'); setShowWorkspacesPanel(true); setSidebarOpen(false); }}
         onOpenWorkflows={() => { closeAllPanels(); setShowWorkflowsPanel(true); setSidebarOpen(false); }}
         workflowCount={workflowCount}
@@ -8146,7 +8201,7 @@ INSTRUCTIONS:
       {/* Chat main area — hidden when a full-page panel (Team / Workspaces /
           Workflows / Vault / Knowledge Packs / Workflow Builder) is active
           so the sidebar stays visible but the chat UI is replaced. */}
-      <div style={{ flex: 1, display: (showOrgDashboard || showBillingPanel || showAuditLogsPanel || showTeamPage || showWorkspacesPanel || showWorkflowsPanel || editingWorkflow || showDocumentVaultPanel || showKnowledgePacksPanel || showPromptPanel) ? 'none' : 'flex', flexDirection: 'column', minWidth: 0 }}>
+      <div style={{ flex: 1, display: (showOrgDashboard || showBillingPanel || showAuditLogsPanel || showMyTimePanel || showTeamPage || showWorkspacesPanel || showWorkflowsPanel || editingWorkflow || showDocumentVaultPanel || showKnowledgePacksPanel || showPromptPanel) ? 'none' : 'flex', flexDirection: 'column', minWidth: 0 }}>
         <TopNav plan={plan} usage={usage} onOpenSidebar={() => setSidebarOpen(true)} />
 
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: showEmptyState ? '#fbf8ef' : 'var(--cream)', minHeight: 0 }}>
@@ -9145,7 +9200,7 @@ INSTRUCTIONS:
           run starts and from the sidebar running-strip. Does not
           overlay — it shrinks the chat area so users can keep chatting
           while the workflow runs. ─── */}
-      {runPanelOpen && !showOrgDashboard && !showBillingPanel && !showAuditLogsPanel && !showTeamPage && !showWorkspacesPanel && !showWorkflowsPanel && !editingWorkflow && (
+      {runPanelOpen && !showOrgDashboard && !showBillingPanel && !showAuditLogsPanel && !showMyTimePanel && !showTeamPage && !showWorkspacesPanel && !showWorkflowsPanel && !editingWorkflow && (
         <WorkflowRunPanel
           userId={currentUserId}
           focusRunId={runPanelFocusId}
@@ -9443,6 +9498,25 @@ INSTRUCTIONS:
       {/* ─── Audit Logs Panel (Org Admin) ─── */}
       {showAuditLogsPanel && (
         <AuditLogsPanel onBack={() => setShowAuditLogsPanel(false)} />
+      )}
+
+      {/* ─── My Time Panel (any attorney) ─── */}
+      {showMyTimePanel && (
+        <MyTimePanel
+          onBack={() => setShowMyTimePanel(false)}
+          operator={operator || { id: currentUserId, name: ORG_CURRENT_USER?.name || 'You' }}
+        />
+      )}
+
+      {/* ─── Billing Draft Modal (end of AI-time session) ─── */}
+      {billingDraft && (
+        <BillingDraftModal
+          session={billingDraft.session}
+          threadMessages={billingDraft.threadMessages}
+          operator={operator || { id: currentUserId, name: ORG_CURRENT_USER?.name || 'You' }}
+          onClose={() => setBillingDraft(null)}
+          onSaved={() => { /* could show a toast; the My Time panel reflects on next open */ }}
+        />
       )}
 
       {/* Plan Comparison Modal */}
