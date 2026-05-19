@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { ArrowLeft, Clock, Search, Download, Edit2, Trash2, CheckCircle2, FileText } from 'lucide-react';
+import { ArrowLeft, Clock, Search, Download, Edit2, Trash2, CheckCircle2, X } from 'lucide-react';
 import {
   loadEvents, updateEvent, deleteEvent, formatBillable, formatDuration, getActivityCatalog, loadSettings,
 } from '../../lib/aiTimeStore';
@@ -17,10 +17,9 @@ const STATUS_BADGE = {
 };
 
 /**
- * MyTimePanel — attorney's own time-log view. Mounted as a sibling
- * panel in ChatView (same pattern as AuditLogsPanel / BillingPanel).
- * Scoped to the current operator.id; org-admin sees the broader view
- * at /app/billing-time.
+ * MyTimePanel — attorney's own time-log view. Same table shell as
+ * TeamTimePanel but scoped to the current operator and without the
+ * Attorney column.
  */
 export default function MyTimePanel({ onBack, operator }) {
   const [tab, setTab] = useState('all');
@@ -59,7 +58,6 @@ export default function MyTimePanel({ onBack, operator }) {
   }, [filtered]);
 
   const refresh = () => setRefreshTick((t) => t + 1);
-
   const handleApprove = (id) => { updateEvent(id, { status: 'approved' }); refresh(); };
   const handleRevert = (id) => { updateEvent(id, { status: 'draft' }); refresh(); };
   const handleDelete = (id) => {
@@ -79,82 +77,160 @@ export default function MyTimePanel({ onBack, operator }) {
         </button>
         <Clock size={17} style={{ color: 'var(--navy)' }} />
         <span style={{ fontFamily: "'Fraunces', serif", fontSize: 18, color: 'var(--navy)' }}>My Time</span>
-        <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>· billable events from AI-time meter</span>
+        <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>· billable events from the AI-time meter</span>
         <div style={{ flex: 1 }} />
         <button
           onClick={handleExportCSV}
           disabled={filtered.length === 0}
           style={{
-            display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 8,
-            border: '1px solid var(--border)', background: '#fff', cursor: filtered.length ? 'pointer' : 'not-allowed',
-            fontSize: 12, fontWeight: 500, color: 'var(--navy)', opacity: filtered.length ? 1 : 0.5,
+            display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 8,
+            border: 'none', background: filtered.length === 0 ? 'rgba(10,36,99,0.4)' : 'var(--navy)',
+            color: '#fff', fontSize: 12, fontWeight: 600,
+            cursor: filtered.length === 0 ? 'not-allowed' : 'pointer',
           }}
         >
           <Download size={13} /> Export CSV
         </button>
       </div>
 
-      {/* Tabs + search + totals */}
-      <div style={{ padding: '14px 28px 10px', display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap', background: '#fff', borderBottom: '1px solid var(--border)' }}>
-        <div style={{ display: 'flex', gap: 4 }}>
-          {STATUS_TABS.map((t) => {
-            const active = tab === t.id;
-            const count = t.id === 'all' ? myEvents.length : myEvents.filter((e) => e.status === t.id).length;
-            return (
-              <button
-                key={t.id}
-                onClick={() => setTab(t.id)}
-                style={{
-                  padding: '7px 14px', borderRadius: 8, border: 'none', cursor: 'pointer',
-                  background: active ? 'rgba(10,36,99,0.08)' : 'transparent',
-                  color: active ? 'var(--navy)' : 'var(--text-muted)',
-                  fontSize: 13, fontWeight: active ? 600 : 500,
-                  display: 'flex', alignItems: 'center', gap: 6,
-                }}
-              >
-                {t.label}
-                <span style={{ fontSize: 11, padding: '0 6px', borderRadius: 999, background: active ? 'var(--navy)' : 'var(--border)', color: active ? '#fff' : 'var(--text-muted)' }}>{count}</span>
-              </button>
-            );
-          })}
-        </div>
-        <div style={{ position: 'relative', flex: 1, maxWidth: 360 }}>
-          <Search size={13} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by matter, client, description…"
-            style={{ width: '100%', height: 34, borderRadius: 8, border: '1px solid var(--border)', paddingLeft: 32, paddingRight: 12, fontSize: 13, background: '#FBFAF7', outline: 'none', fontFamily: 'inherit' }}
-          />
-        </div>
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: 16, alignItems: 'center' }}>
-          <Stat label="Entries" value={totals.count} />
-          <Stat label="Billable" value={formatBillable(totals.billableMinutes)} accent />
+      {/* Body */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '16px 28px 24px' }}>
+        {/* KPIs */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 12, marginBottom: 18 }}>
+          <Kpi label="Entries (filtered)" value={String(totals.count)} />
+          <Kpi label="Billable time" value={formatBillable(totals.billableMinutes)} accent />
           {totals.nonBillableMinutes > 0 && (
-            <Stat label="Non-billable" value={formatBillable(totals.nonBillableMinutes)} />
+            <Kpi label="Non-billable" value={formatBillable(totals.nonBillableMinutes)} />
           )}
+          <Kpi label="Approved (filtered)" value={String(filtered.filter((e) => e.status === 'approved').length)} />
         </div>
-      </div>
 
-      {/* List */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '14px 28px 24px' }}>
+        {/* Toolbar */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 14 }}>
+          <div style={{ display: 'flex', gap: 4 }}>
+            {STATUS_TABS.map((t) => {
+              const active = tab === t.id;
+              const count = t.id === 'all' ? myEvents.length : myEvents.filter((e) => e.status === t.id).length;
+              return (
+                <button
+                  key={t.id}
+                  onClick={() => setTab(t.id)}
+                  style={{
+                    padding: '7px 14px', borderRadius: 8, border: 'none', cursor: 'pointer',
+                    background: active ? 'rgba(10,36,99,0.08)' : 'transparent',
+                    color: active ? 'var(--navy)' : 'var(--text-muted)',
+                    fontSize: 13, fontWeight: active ? 600 : 500,
+                    display: 'flex', alignItems: 'center', gap: 6,
+                  }}
+                >
+                  {t.label}
+                  <span style={{ fontSize: 11, padding: '0 6px', borderRadius: 999, background: active ? 'var(--navy)' : 'var(--border)', color: active ? '#fff' : 'var(--text-muted)' }}>{count}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          <div style={{ position: 'relative', flex: 1, minWidth: 220 }}>
+            <Search size={13} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search matter, client, description…"
+              style={{ width: '100%', height: 34, borderRadius: 8, border: '1px solid var(--border)', paddingLeft: 32, paddingRight: 12, fontSize: 13, background: '#FBFAF7', outline: 'none', fontFamily: 'inherit' }}
+            />
+          </div>
+        </div>
+
+        {/* Table */}
         {filtered.length === 0 ? (
-          <EmptyState search={search} tab={tab} />
+          <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 12, padding: '60px 20px', textAlign: 'center', color: 'var(--text-muted)' }}>
+            <Clock size={26} style={{ opacity: 0.4, marginBottom: 8 }} />
+            <div style={{ fontFamily: "'Fraunces', serif", fontSize: 17, color: 'var(--text-secondary)', marginBottom: 4 }}>
+              No {tab === 'all' ? '' : tab} entries{search ? ' match your search' : ' yet'}
+            </div>
+            <div style={{ fontSize: 13 }}>
+              {search ? 'Try a different search term, or clear the filter.' : 'Start a chat — the AI-time meter logs your work automatically.'}
+            </div>
+          </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {filtered.map((e) => (
-              <EventRow
-                key={e.id}
-                event={e}
-                isEditing={editingId === e.id}
-                onEdit={() => setEditingId(e.id)}
-                onCancelEdit={() => setEditingId(null)}
-                onSave={() => { setEditingId(null); refresh(); }}
-                onApprove={() => handleApprove(e.id)}
-                onRevert={() => handleRevert(e.id)}
-                onDelete={() => handleDelete(e.id)}
-              />
-            ))}
+          <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ background: '#FBFAF7', borderBottom: '1px solid var(--border)' }}>
+                  <Th>Date</Th>
+                  <Th>Matter</Th>
+                  <Th>Activity</Th>
+                  <Th>Description</Th>
+                  <Th align="right">Billable</Th>
+                  <Th>Status</Th>
+                  <Th align="right">Actions</Th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((e) => {
+                  if (editingId === e.id) {
+                    return (
+                      <tr key={e.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                        <td colSpan={7} style={{ padding: 0, background: 'rgba(10,36,99,0.03)' }}>
+                          <EditEventForm
+                            event={e}
+                            onCancel={() => setEditingId(null)}
+                            onSave={() => { setEditingId(null); refresh(); }}
+                          />
+                        </td>
+                      </tr>
+                    );
+                  }
+                  const badge = STATUS_BADGE[e.status] || STATUS_BADGE.draft;
+                  return (
+                    <tr key={e.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                      <Td>
+                        <div style={{ fontSize: 12 }}>{new Date(e.endedAt || e.createdAt).toLocaleDateString()}</div>
+                        <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>{new Date(e.endedAt || e.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                      </Td>
+                      <Td>
+                        <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>{e.matterName}</div>
+                        {e.clientName && (
+                          <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{e.clientName}</div>
+                        )}
+                      </Td>
+                      <Td><span style={{ fontSize: 12 }}>{e.activityLabel}</span></Td>
+                      <Td>
+                        <div style={{ fontSize: 12, color: 'var(--text-secondary)', maxWidth: 360, lineHeight: 1.4 }}>{e.description}</div>
+                      </Td>
+                      <Td align="right">
+                        <div style={{
+                          fontSize: 13, fontWeight: 700,
+                          color: e.billable === false ? 'var(--text-muted)' : 'var(--navy)',
+                          textDecoration: e.billable === false ? 'line-through' : 'none',
+                        }}>{formatBillable(e.billableMinutes)}</div>
+                        <div style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }} title="Raw measured">raw {formatDuration(e.durationSeconds)}</div>
+                      </Td>
+                      <Td>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 3, alignItems: 'flex-start' }}>
+                          <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 999, background: badge.bg, color: badge.color, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{badge.label}</span>
+                          {e.billable === false && (
+                            <span style={{ fontSize: 9, fontWeight: 600, padding: '2px 7px', borderRadius: 999, background: 'var(--ice-warm)', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Non-billable</span>
+                          )}
+                        </div>
+                      </Td>
+                      <Td align="right">
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 4 }}>
+                          {e.status === 'draft' && (
+                            <button title="Approve" onClick={() => handleApprove(e.id)} style={iconBtn}><CheckCircle2 size={14} style={{ color: '#5CA868' }} /></button>
+                          )}
+                          {e.status === 'approved' && (
+                            <button title="Move back to draft" onClick={() => handleRevert(e.id)} style={iconBtn}><X size={14} style={{ color: 'var(--text-muted)' }} /></button>
+                          )}
+                          <button title="Edit" onClick={() => setEditingId(e.id)} style={iconBtn}><Edit2 size={13} style={{ color: 'var(--text-muted)' }} /></button>
+                          <button title="Delete" onClick={() => handleDelete(e.id)} style={iconBtn}><Trash2 size={13} style={{ color: '#C65454' }} /></button>
+                        </div>
+                      </Td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         )}
       </div>
@@ -162,80 +238,26 @@ export default function MyTimePanel({ onBack, operator }) {
   );
 }
 
-function Stat({ label, value, accent }) {
-  return (
-    <div>
-      <div style={{ fontSize: 9, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600 }}>{label}</div>
-      <div style={{ fontSize: 14, fontWeight: 700, color: accent ? 'var(--navy)' : 'var(--text-primary)' }}>{value}</div>
-    </div>
-  );
-}
-
-function EmptyState({ search, tab }) {
-  return (
-    <div style={{ padding: '60px 20px', textAlign: 'center', color: 'var(--text-muted)' }}>
-      <FileText size={28} style={{ opacity: 0.4, marginBottom: 10 }} />
-      <div style={{ fontFamily: "'Fraunces', serif", fontSize: 17, color: 'var(--text-secondary)', marginBottom: 6 }}>
-        No {tab === 'all' ? '' : tab} entries{search ? ' match your search' : ' yet'}
-      </div>
-      <div style={{ fontSize: 13 }}>
-        {search
-          ? 'Try a different search term, or clear the filter.'
-          : 'Start a chat — the AI-time meter logs your work automatically.'}
-      </div>
-    </div>
-  );
-}
-
-function EventRow({ event, isEditing, onEdit, onCancelEdit, onSave, onApprove, onRevert, onDelete }) {
-  const badge = STATUS_BADGE[event.status] || STATUS_BADGE.draft;
-  const dateLabel = new Date(event.endedAt || event.createdAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
-
-  if (isEditing) {
-    return <EditEventForm event={event} onCancel={onCancelEdit} onSave={onSave} />;
-  }
-
-  const isNonBillable = event.billable === false;
+function Kpi({ label, value, accent }) {
   return (
     <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 12, padding: '14px 16px' }}>
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 4 }}>
-            <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{event.matterName}</span>
-            {event.clientName && <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>· {event.clientName}</span>}
-            <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 999, background: badge.bg, color: badge.color, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              {badge.label}
-            </span>
-            {isNonBillable && (
-              <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 999, background: 'var(--ice-warm)', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                Non-billable
-              </span>
-            )}
-          </div>
-          <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5, marginBottom: 6 }}>
-            {event.description}
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14, fontSize: 11, color: 'var(--text-muted)', flexWrap: 'wrap' }}>
-            <span><Clock size={11} style={{ display: 'inline', verticalAlign: '-1px', marginRight: 3 }} /> {dateLabel}</span>
-            <span>{event.activityLabel}</span>
-            <span style={{ color: isNonBillable ? 'var(--text-muted)' : 'var(--navy)', fontWeight: 600, textDecoration: isNonBillable ? 'line-through' : 'none' }}>{formatBillable(event.billableMinutes)}</span>
-            <span style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', fontSize: 10 }} title="Raw measured time">raw {formatDuration(event.durationSeconds)}</span>
-          </div>
-        </div>
-        <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
-          {event.status === 'draft' && (
-            <button onClick={onApprove} title="Approve" style={iconBtn}><CheckCircle2 size={15} style={{ color: '#5CA868' }} /></button>
-          )}
-          {event.status === 'approved' && (
-            <button onClick={onRevert} title="Move back to draft" style={iconBtn}><Edit2 size={14} style={{ color: 'var(--text-muted)' }} /></button>
-          )}
-          <button onClick={onEdit} title="Edit" style={iconBtn}><Edit2 size={14} style={{ color: 'var(--text-muted)' }} /></button>
-          <button onClick={onDelete} title="Delete" style={iconBtn}><Trash2 size={14} style={{ color: '#C65454' }} /></button>
-        </div>
-      </div>
+      <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600 }}>{label}</div>
+      <div style={{ fontSize: 22, fontWeight: 700, color: accent ? 'var(--navy)' : 'var(--text-primary)', marginTop: 4, fontFamily: "'Fraunces', serif" }}>{value}</div>
     </div>
   );
 }
+
+function Th({ children, align }) {
+  return <th style={{ textAlign: align || 'left', padding: '10px 14px', fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{children}</th>;
+}
+function Td({ children, align }) {
+  return <td style={{ textAlign: align || 'left', padding: '12px 14px', verticalAlign: 'top' }}>{children}</td>;
+}
+
+const iconBtn = {
+  background: 'none', border: 'none', cursor: 'pointer', padding: 5,
+  borderRadius: 6, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+};
 
 function EditEventForm({ event, onCancel, onSave }) {
   const settings = useMemo(() => loadSettings(), []);
@@ -262,7 +284,7 @@ function EditEventForm({ event, onCancel, onSave }) {
   };
 
   return (
-    <div style={{ background: '#fff', border: '1.5px solid var(--navy)', borderRadius: 12, padding: '14px 16px' }}>
+    <div style={{ padding: '14px 18px', borderTop: '2px solid var(--navy)' }}>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
         <Labeled label="Matter name">
           <input value={matterName} onChange={(e) => setMatterName(e.target.value)} style={editInput} />
@@ -307,10 +329,6 @@ function Labeled({ label, children }) {
   );
 }
 
-const iconBtn = {
-  background: 'none', border: 'none', cursor: 'pointer', padding: 6,
-  borderRadius: 6, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-};
 const editInput = {
   border: '1px solid var(--border)', borderRadius: 6, height: 32,
   padding: '0 10px', fontSize: 13, width: '100%', outline: 'none',
