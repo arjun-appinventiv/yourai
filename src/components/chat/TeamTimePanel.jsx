@@ -1,7 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Clock, Download, Search, ChevronDown, CheckCircle2, Trash2, Edit2 } from 'lucide-react';
-import PageHeader from '../../components/PageHeader';
-import PermissionGate from '../../components/org-admin/PermissionGate';
+import { ArrowLeft, Clock, Download, Search, ChevronDown, CheckCircle2, Trash2 } from 'lucide-react';
 import {
   loadEvents, updateEvent, deleteEvent, formatBillable, formatDuration,
 } from '../../lib/aiTimeStore';
@@ -11,13 +9,11 @@ const STATUS_TABS = [
   { id: 'all',      label: 'All'      },
   { id: 'draft',    label: 'Drafts'   },
   { id: 'approved', label: 'Approved' },
-  { id: 'exported', label: 'Exported' },
 ];
 
 const STATUS_BADGE = {
   draft:    { bg: '#FBEED5', color: '#9C7A1E', label: 'Draft'    },
   approved: { bg: '#E7F3E9', color: '#5CA868', label: 'Approved' },
-  exported: { bg: '#EEF1FA', color: '#5773C5', label: 'Exported' },
 };
 
 const DATE_RANGES = [
@@ -25,10 +21,17 @@ const DATE_RANGES = [
   { id: 'today',  label: 'Today',        days: 0    },
   { id: '7d',     label: 'Last 7 days',  days: 7    },
   { id: '30d',   label: 'Last 30 days', days: 30   },
-  { id: 'mtd',    label: 'Month to date', days: -1  },
+  { id: 'mtd',   label: 'Month to date', days: -1  },
 ];
 
-export default function BillingTimePage() {
+/**
+ * TeamTimePanel — Org Admin sibling panel mounted inside ChatView.
+ * Shows every billable event the firm's attorneys have logged via the
+ * AI-time meter, with status / attorney / date filters + CSV export.
+ *
+ * Sibling-panel pattern matches BillingPanel / AuditLogsPanel.
+ */
+export default function TeamTimePanel({ onBack }) {
   const [tab, setTab] = useState('all');
   const [attorneyFilter, setAttorneyFilter] = useState('all');
   const [dateFilter, setDateFilter] = useState('all');
@@ -79,19 +82,10 @@ export default function BillingTimePage() {
   }, [filtered]);
 
   const refresh = () => setRefreshTick((t) => t + 1);
-
   const handleApprove = (id) => { updateEvent(id, { status: 'approved' }); refresh(); };
   const handleDelete = (id) => {
     if (!confirm('Delete this time entry? This cannot be undone.')) return;
     deleteEvent(id); refresh();
-  };
-  const handleMarkApprovedExported = () => {
-    const ids = filtered.filter((e) => e.status === 'approved').map((e) => e.id);
-    if (ids.length === 0) return;
-    if (!confirm(`Mark ${ids.length} approved entr${ids.length === 1 ? 'y' : 'ies'} as exported?`)) return;
-    const now = new Date().toISOString();
-    ids.forEach((id) => updateEvent(id, { status: 'exported', exportedAt: now }));
-    refresh();
   };
   const handleExportCSV = () => {
     const label = attorneyFilter === 'all' ? 'all-attorneys' : attorneys.find((a) => a.id === attorneyFilter)?.name?.replace(/\W+/g, '-') || 'attorney';
@@ -102,16 +96,34 @@ export default function BillingTimePage() {
   const currentDateLabel = DATE_RANGES.find((d) => d.id === dateFilter)?.label || 'All time';
 
   return (
-    <PermissionGate allowedRoles={['Admin', 'Manager']}>
-      <div>
-        <PageHeader
-          icon={Clock}
-          title="Time & Billing"
-          subtitle="Every billable event your attorneys log via the AI-time meter, across the entire firm. Filter by attorney to drill into one person's time."
-        />
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, background: '#F8F7F4', overflow: 'hidden' }}>
+      {/* Panel header */}
+      <div style={{ height: 50, padding: '0 28px', borderBottom: '1px solid var(--border)', background: '#fff', display: 'flex', alignItems: 'center', gap: 14, flexShrink: 0 }}>
+        <button onClick={onBack} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 6, marginLeft: -6, color: 'var(--text-muted)', display: 'flex', alignItems: 'center' }}>
+          <ArrowLeft size={18} />
+        </button>
+        <Clock size={17} style={{ color: 'var(--navy)' }} />
+        <span style={{ fontFamily: "'Fraunces', serif", fontSize: 18, color: 'var(--navy)' }}>Team Time</span>
+        <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>· every attorney's billable events across the firm</span>
+        <div style={{ flex: 1 }} />
+        <button
+          onClick={handleExportCSV}
+          disabled={filtered.length === 0}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 8,
+            border: 'none', background: filtered.length === 0 ? 'rgba(10,36,99,0.4)' : 'var(--navy)',
+            color: '#fff', fontSize: 12, fontWeight: 600,
+            cursor: filtered.length === 0 ? 'not-allowed' : 'pointer',
+          }}
+        >
+          <Download size={13} /> Export CSV
+        </button>
+      </div>
 
-        {/* KPI strip */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, marginBottom: 20 }}>
+      {/* Body scroll */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '16px 28px 24px' }}>
+        {/* KPIs */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 12, marginBottom: 18 }}>
           <Kpi label="Entries (filtered)" value={String(totals.count)} />
           <Kpi label="Billable time" value={formatBillable(totals.billableMinutes)} accent />
           <Kpi label="Non-billable" value={formatBillable(totals.nonBillableMinutes)} />
@@ -172,31 +184,6 @@ export default function BillingTimePage() {
               style={{ width: '100%', height: 34, borderRadius: 8, border: '1px solid var(--border)', paddingLeft: 32, paddingRight: 12, fontSize: 13, background: '#FBFAF7', outline: 'none', fontFamily: 'inherit' }}
             />
           </div>
-
-          <button
-            onClick={handleMarkApprovedExported}
-            disabled={filtered.filter((e) => e.status === 'approved').length === 0}
-            style={{
-              padding: '7px 12px', borderRadius: 8, border: '1px solid var(--border)', background: '#fff',
-              fontSize: 12, fontWeight: 500, color: 'var(--navy)', cursor: 'pointer',
-              opacity: filtered.filter((e) => e.status === 'approved').length === 0 ? 0.5 : 1,
-            }}
-          >
-            Mark approved as exported
-          </button>
-          <button
-            onClick={handleExportCSV}
-            disabled={filtered.length === 0}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 6,
-              padding: '7px 14px', borderRadius: 8, border: 'none',
-              background: filtered.length === 0 ? 'rgba(10,36,99,0.4)' : 'var(--navy)',
-              color: '#fff', fontSize: 12, fontWeight: 600,
-              cursor: filtered.length === 0 ? 'not-allowed' : 'pointer',
-            }}
-          >
-            <Download size={13} /> Export CSV
-          </button>
         </div>
 
         {/* Table */}
@@ -273,7 +260,7 @@ export default function BillingTimePage() {
           </div>
         )}
       </div>
-    </PermissionGate>
+    </div>
   );
 }
 

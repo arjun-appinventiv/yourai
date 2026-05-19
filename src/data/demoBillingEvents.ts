@@ -21,7 +21,7 @@ interface DemoTemplate {
   description: string;
   durationMinutes: number;
   billable?: boolean;
-  status: 'draft' | 'approved' | 'exported';
+  status: 'draft' | 'approved';
   daysAgo: number;
   hourOfDay: number;
   notes?: string;
@@ -153,42 +153,42 @@ const TEMPLATES: DemoTemplate[] = [
     matterName: 'Acme Corp — Vendor Master Agreement', clientName: 'Acme Corp',
     activityCode: 'DRAFTING', activityLabel: 'Drafting',
     description: 'Drafted vendor MA covering SaaS, professional services, and data-processing addendum.',
-    durationMinutes: 156, status: 'exported', daysAgo: 12, hourOfDay: 14,
+    durationMinutes: 156, status: 'approved', daysAgo: 12, hourOfDay: 14,
   },
   {
     attorneyId: 'user-sarah', attorneyName: 'Sarah Chen', attorneyEmail: 'sarah@hartwell.com',
     matterName: 'Acme Corp — Vendor Master Agreement', clientName: 'Acme Corp',
     activityCode: 'REVIEW', activityLabel: 'Document Review',
     description: 'Reviewed vendor MA draft; suggested limitation-of-liability cap and mutual indemnity carve-outs.',
-    durationMinutes: 67, status: 'exported', daysAgo: 12, hourOfDay: 16,
+    durationMinutes: 67, status: 'approved', daysAgo: 12, hourOfDay: 16,
   },
   {
     attorneyId: 'user-james', attorneyName: 'James Wu', attorneyEmail: 'james@hartwell.com',
     matterName: 'Bradley v. Patel — Pleadings', clientName: 'Bradley',
     activityCode: 'DRAFTING', activityLabel: 'Drafting',
     description: 'Drafted Motion to Compel Discovery Responses and proposed order.',
-    durationMinutes: 88, status: 'exported', daysAgo: 14, hourOfDay: 10,
+    durationMinutes: 88, status: 'approved', daysAgo: 14, hourOfDay: 10,
   },
   {
     attorneyId: 'user-sarah', attorneyName: 'Sarah Chen', attorneyEmail: 'sarah@hartwell.com',
     matterName: 'Chen Family Trust Restatement', clientName: 'Chen Family',
     activityCode: 'MEETING', activityLabel: 'Meeting / Call',
     description: 'Trust restatement signing meeting with the Chen family; reviewed final dispositive provisions.',
-    durationMinutes: 73, status: 'exported', daysAgo: 16, hourOfDay: 15,
+    durationMinutes: 73, status: 'approved', daysAgo: 16, hourOfDay: 15,
   },
   {
     attorneyId: 'user-ryan', attorneyName: 'Ryan Melade', attorneyEmail: 'ryan@hartwell.com',
     matterName: 'Robertson Healthcare Compliance Audit', clientName: 'Robertson Healthcare',
     activityCode: 'COMM_CLI', activityLabel: 'Client Communication',
     description: 'Compliance officer briefing on HIPAA audit findings and 90-day remediation roadmap.',
-    durationMinutes: 54, status: 'exported', daysAgo: 18, hourOfDay: 11,
+    durationMinutes: 54, status: 'approved', daysAgo: 18, hourOfDay: 11,
   },
   {
     attorneyId: 'user-maria', attorneyName: 'Maria Torres', attorneyEmail: 'maria@hartwell.com',
     matterName: 'TechStart Q4 Due Diligence', clientName: 'TechStart Inc',
     activityCode: 'REVIEW', activityLabel: 'Document Review',
     description: 'Reviewed TechStart’s open-source license inventory; flagged GPLv3 dependency in core product.',
-    durationMinutes: 39, status: 'exported', daysAgo: 19, hourOfDay: 13,
+    durationMinutes: 39, status: 'approved', daysAgo: 19, hourOfDay: 13,
   },
 ];
 
@@ -229,7 +229,6 @@ export function buildDemoBillingEvents(): BillingEvent[] {
       startedAt: startedAt.toISOString(),
       endedAt: endedAt.toISOString(),
       createdAt: createdAt.toISOString(),
-      exportedAt: t.status === 'exported' ? createdAt.toISOString() : undefined,
       notes: t.notes,
     };
   });

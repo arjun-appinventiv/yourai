@@ -10,7 +10,7 @@
 // in jurisdictions requiring quarter-hour units flip the org setting
 // to 0.25 hr (15 min). This matches Clio / LeanLaw / CosmoLex defaults.
 
-export type BillingEventStatus = 'draft' | 'approved' | 'exported';
+export type BillingEventStatus = 'draft' | 'approved';
 
 export interface BillingEvent {
   id: string;
@@ -35,7 +35,6 @@ export interface BillingEvent {
   endedAt: string;                  // ISO
   createdAt: string;                // ISO
   updatedAt?: string;
-  exportedAt?: string;
   notes?: string;
 }
 

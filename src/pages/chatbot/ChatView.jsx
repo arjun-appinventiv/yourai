@@ -34,6 +34,7 @@ import WorkflowReportCard from '../../components/chat/WorkflowReportCard';
 import SessionTimerPill from '../../components/chat/SessionTimerPill';
 import BillingDraftModal from '../../components/chat/BillingDraftModal';
 import MyTimePanel from '../../components/chat/MyTimePanel';
+import TeamTimePanel from '../../components/chat/TeamTimePanel';
 import { startOrResumeTimer, finalizeTimer, recordActivity as recordTimerActivity } from '../../lib/sessionTimer';
 import { seedEventsIfEmpty as seedBillingEventsIfEmpty } from '../../lib/aiTimeStore';
 import { buildDemoBillingEvents } from '../../data/demoBillingEvents';
@@ -422,7 +423,7 @@ const riskColors = {
    Layout structure confirmed by Arjun. Not signed off by Ryan.
    All existing nav items preserved — reorganised only. */
 
-function Sidebar({ activeKey, onOpenChat, onOpenOrgDashboard, onOpenPromptTemplates, onOpenClients, onOpenKnowledgePacks, onOpenDocumentVault, onOpenInviteTeam, onOpenAuditLogs, onOpenBilling, onOpenMyTime, onOpenWorkspaces, onOpenWorkflows, promptCount, clientCount, packCount, vaultCount, memberCount, workspaceCount, workflowCount, isOpen, onClose, threads, activeThreadId, onSwitchThread, onNewThread, onDeleteThread, onRenameThread, threadSearch, onThreadSearchChange, onSignOut, runningWorkflow, onViewRunning }) {
+function Sidebar({ activeKey, onOpenChat, onOpenOrgDashboard, onOpenPromptTemplates, onOpenClients, onOpenKnowledgePacks, onOpenDocumentVault, onOpenInviteTeam, onOpenAuditLogs, onOpenBilling, onOpenMyTime, onOpenTeamTime, onOpenWorkspaces, onOpenWorkflows, promptCount, clientCount, packCount, vaultCount, memberCount, workspaceCount, workflowCount, isOpen, onClose, threads, activeThreadId, onSwitchThread, onNewThread, onDeleteThread, onRenameThread, threadSearch, onThreadSearchChange, onSignOut, runningWorkflow, onViewRunning }) {
   // Role + permission gating — every nav item decides visibility via hasPermission
   // rather than by comparing role strings directly. See src/lib/roles.ts.
   const { hasPermission, isOrgAdmin, isExternalUser } = useRole();
@@ -504,6 +505,9 @@ function Sidebar({ activeKey, onOpenChat, onOpenOrgDashboard, onOpenPromptTempla
   const adminItems = [
     !isExternalUser && {
       id: 'my-time', icon: Clock, label: 'My Time', onClick: onOpenMyTime,
+    },
+    (isOrgAdmin || hasPermission(PERMISSIONS.ACCESS_BILLING)) && !isExternalUser && {
+      id: 'team-time', icon: Users, label: 'Team Time', onClick: onOpenTeamTime,
     },
     (isOrgAdmin || hasPermission(PERMISSIONS.VIEW_AUDIT_LOGS)) && !isExternalUser && {
       id: 'audit-logs', icon: Shield, label: 'Audit Logs', onClick: onOpenAuditLogs,
@@ -5939,6 +5943,7 @@ export default function ChatView({ initialView = 'chat' }) {
   const [showAuditLogsPanel, setShowAuditLogsPanel] = useState(false);
   // AI-time meter
   const [showMyTimePanel, setShowMyTimePanel] = useState(false);
+  const [showTeamTimePanel, setShowTeamTimePanel] = useState(false);
   const [billingDraft, setBillingDraft] = useState(null); // { session, threadMessages } | null
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
@@ -8129,6 +8134,7 @@ INSTRUCTIONS:
     setShowBillingPanel(false);
     setShowAuditLogsPanel(false);
     setShowMyTimePanel(false);
+    setShowTeamTimePanel(false);
     setEditingWorkflow(null);
   };
 
@@ -8137,6 +8143,7 @@ INSTRUCTIONS:
     if (showBillingPanel) return 'billing';
     if (showAuditLogsPanel) return 'audit-logs';
     if (showMyTimePanel) return 'my-time';
+    if (showTeamTimePanel) return 'team-time';
     if (showTeamPage) return 'invite-team';
     if (showWorkspacesPanel) return 'workspaces';
     if (showWorkflowsPanel || editingWorkflow) return 'workflows';
@@ -8162,6 +8169,7 @@ INSTRUCTIONS:
         onOpenAuditLogs={() => { closeAllPanels(); setShowAuditLogsPanel(true); setSidebarOpen(false); }}
         onOpenBilling={() => { closeAllPanels(); setShowBillingPanel(true); setSidebarOpen(false); }}
         onOpenMyTime={() => { closeAllPanels(); setShowMyTimePanel(true); setSidebarOpen(false); }}
+        onOpenTeamTime={() => { closeAllPanels(); setShowTeamTimePanel(true); setSidebarOpen(false); }}
         onOpenWorkspaces={() => { closeAllPanels(); navigate('/chat/workspaces'); setShowWorkspacesPanel(true); setSidebarOpen(false); }}
         onOpenWorkflows={() => { closeAllPanels(); setShowWorkflowsPanel(true); setSidebarOpen(false); }}
         workflowCount={workflowCount}
@@ -8201,7 +8209,7 @@ INSTRUCTIONS:
       {/* Chat main area — hidden when a full-page panel (Team / Workspaces /
           Workflows / Vault / Knowledge Packs / Workflow Builder) is active
           so the sidebar stays visible but the chat UI is replaced. */}
-      <div style={{ flex: 1, display: (showOrgDashboard || showBillingPanel || showAuditLogsPanel || showMyTimePanel || showTeamPage || showWorkspacesPanel || showWorkflowsPanel || editingWorkflow || showDocumentVaultPanel || showKnowledgePacksPanel || showPromptPanel) ? 'none' : 'flex', flexDirection: 'column', minWidth: 0 }}>
+      <div style={{ flex: 1, display: (showOrgDashboard || showBillingPanel || showAuditLogsPanel || showMyTimePanel || showTeamTimePanel || showTeamPage || showWorkspacesPanel || showWorkflowsPanel || editingWorkflow || showDocumentVaultPanel || showKnowledgePacksPanel || showPromptPanel) ? 'none' : 'flex', flexDirection: 'column', minWidth: 0 }}>
         <TopNav plan={plan} usage={usage} onOpenSidebar={() => setSidebarOpen(true)} />
 
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: showEmptyState ? '#fbf8ef' : 'var(--cream)', minHeight: 0 }}>
@@ -9200,7 +9208,7 @@ INSTRUCTIONS:
           run starts and from the sidebar running-strip. Does not
           overlay — it shrinks the chat area so users can keep chatting
           while the workflow runs. ─── */}
-      {runPanelOpen && !showOrgDashboard && !showBillingPanel && !showAuditLogsPanel && !showMyTimePanel && !showTeamPage && !showWorkspacesPanel && !showWorkflowsPanel && !editingWorkflow && (
+      {runPanelOpen && !showOrgDashboard && !showBillingPanel && !showAuditLogsPanel && !showMyTimePanel && !showTeamTimePanel && !showTeamPage && !showWorkspacesPanel && !showWorkflowsPanel && !editingWorkflow && (
         <WorkflowRunPanel
           userId={currentUserId}
           focusRunId={runPanelFocusId}
@@ -9506,6 +9514,11 @@ INSTRUCTIONS:
           onBack={() => setShowMyTimePanel(false)}
           operator={operator || { id: currentUserId, name: ORG_CURRENT_USER?.name || 'You' }}
         />
+      )}
+
+      {/* ─── Team Time Panel (Org Admin) ─── */}
+      {showTeamTimePanel && (
+        <TeamTimePanel onBack={() => setShowTeamTimePanel(false)} />
       )}
 
       {/* ─── Billing Draft Modal (end of AI-time session) ─── */}

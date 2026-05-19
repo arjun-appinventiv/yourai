@@ -9,13 +9,11 @@ const STATUS_TABS = [
   { id: 'all',      label: 'All'      },
   { id: 'draft',    label: 'Drafts'   },
   { id: 'approved', label: 'Approved' },
-  { id: 'exported', label: 'Exported' },
 ];
 
 const STATUS_BADGE = {
   draft:    { bg: '#FBEED5', color: '#9C7A1E', label: 'Draft'    },
   approved: { bg: '#E7F3E9', color: '#5CA868', label: 'Approved' },
-  exported: { bg: '#EEF1FA', color: '#5773C5', label: 'Exported' },
 };
 
 /**
@@ -67,12 +65,6 @@ export default function MyTimePanel({ onBack, operator }) {
   const handleDelete = (id) => {
     if (!confirm('Delete this time entry? This cannot be undone.')) return;
     deleteEvent(id); refresh();
-  };
-  const handleMarkExported = () => {
-    const approvedIds = filtered.filter((e) => e.status === 'approved').map((e) => e.id);
-    const now = new Date().toISOString();
-    approvedIds.forEach((id) => updateEvent(id, { status: 'exported', exportedAt: now }));
-    refresh();
   };
   const handleExportCSV = () => {
     exportEventsToCsv(filtered, `my-time-${operator?.name?.replace(/\W+/g, '-') || 'attorney'}-${new Date().toISOString().slice(0, 10)}.csv`);
@@ -140,14 +132,6 @@ export default function MyTimePanel({ onBack, operator }) {
           <Stat label="Billable" value={formatBillable(totals.billableMinutes)} accent />
           {totals.nonBillableMinutes > 0 && (
             <Stat label="Non-billable" value={formatBillable(totals.nonBillableMinutes)} />
-          )}
-          {tab === 'approved' && totals.count > 0 && (
-            <button
-              onClick={handleMarkExported}
-              style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid var(--border)', background: '#fff', fontSize: 12, color: 'var(--navy)', fontWeight: 500, cursor: 'pointer' }}
-            >
-              Mark as exported
-            </button>
           )}
         </div>
       </div>
