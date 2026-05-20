@@ -320,6 +320,74 @@ These are anti-patterns. The dev team's regression suite should test that NONE o
 
 ---
 
+## Intent-by-intent grounding requirements
+
+The 13 intents YourAI ships do not behave uniformly under the routing policy. Some require a document to be present at all (the bot should refuse to proceed without one). Some require RAG retrieval against the attached doc and must not fall back to training. Some are pure general-knowledge / drafting calls where the grounding gate should be OFF entirely. The dev team's pipeline needs to read the intent before applying the gate, not run a one-size gate across all questions.
+
+### Grouping
+
+**Grounding REQUIRED** (RAG-gated; refuse to proceed without a document; never fall back to training silently):
+
+| Intent | Active when | Required source | If no doc attached | If doc doesn't cover the question |
+|---|---|---|---|---|
+| `contract_review` | Attorney is reviewing a contract | Attached doc | `NEED_DOC` | `MISS_DOC` (don't fall back to training) |
+| `clause_analysis` | Find / analyze clauses in a contract | Attached doc | `NEED_DOC` | `MISS_DOC` |
+| `clause_comparison` | Compare two contracts (or one to a KP standard) | 2 attached docs, OR 1 doc + active KP | `NEED_DOC` (with reason: need 2 sources) | `MISS_DOC` for the missing side |
+| `document_summarization` | Summarize a long document | Attached doc | `NEED_DOC` | Summarize what's there + flag missing sections |
+| `risk_assessment` | Flag risks in a document | Attached doc | `NEED_DOC` | Empty-state risk memo with upload prompt |
+| `case_brief` | Brief a court opinion | Attached case doc | `NEED_DOC` | Empty-state case brief |
+| `editorial` | Edit / redline a document | Attached doc OR pasted text | Ask for text | Edit what's there only |
+
+**Grounding OPTIONAL / NOT REQUIRED** (gate OFF; answer from GKB + training; doc is supplemental at most):
+
+| Intent | Active when | Required source | Behavior |
+|---|---|---|---|
+| `general_chat` | Default | GKB + training | Answer normally. Greetings / capability / generic legal Q. Gate OFF. |
+| `case_law_research` | Research case law / find precedents | GKB + training | Type B. Cite cases with `[verify]` tags. Gate OFF — refusing case-law research because no document is attached is the bug the dev team is currently shipping. |
+| `legal_research` | Research statutes / doctrines | GKB + training | Type B. Same as above. Gate OFF. |
+| `draft_clause` | Generate a contract clause | Training + KP optional | Draft from instruction. Can pull templates from KP if active. Gate OFF for the drafting itself. |
+| `draft_email` | Generate a legal email | Training | Draft from instruction. Gate OFF. |
+
+**Special — vault retrieval, not RAG against docs:**
+
+| Intent | Required source | Behavior |
+|---|---|---|
+| `find_document` | YourVault (document metadata + content index) | Search the vault by name + description + content. Empty-vault and no-match states are different from `MISS_DOC` — see the existing FileResultsCard pattern. The grounding gate does not apply; this is a search query, not a generative answer. |
+
+### Why this split matters
+
+The dev team's current build returns `"The knowledge base does not have sufficient coverage on this topic."` on most prompts because the grounding gate (~0.55 low-overlap threshold) fires regardless of intent. That's correct behavior for **the 7 grounding-required intents** when there's truly no document. It's a bug for **the 5 grounding-optional intents** — there's no document overlap because the question wasn't supposed to overlap with a document.
+
+In particular:
+
+- `case_law_research` fails today: attorney asks "find me a case on workplace harassment under Title VII" with no doc attached → gate fires → canned refusal. Right answer: pull from GKB / training with `[verify]` tag, return 3-5 representative cases.
+- `legal_research` fails the same way: "what's California's statute of limitations on breach of contract?" → gate fires → canned refusal. Right answer: cite Cal. Code Civ. Proc. § 337 from GKB.
+- `draft_email` and `draft_clause` fail: "draft me a non-compete clause for an Alaska employment agreement" → gate fires → canned refusal. Right answer: draft the clause referencing Alaska Stat. § 23.10.140. Drafting does not require a document.
+- `general_chat` greetings fail: "hi" / "how are you" → gate fires → canned refusal. Right answer: friendly response, no retrieval.
+
+### Pipeline-level recommendation
+
+The classifier should run BEFORE the grounding gate:
+
+```
+1. Detect intent from user message (use the existing intent classifier
+   or the active intent the UI passes through).
+2. If intent is in GROUNDING_REQUIRED set:
+     - run RAG retrieval against attached doc
+     - if low-overlap, return MISS_DOC anchor
+     - never fall back to training
+3. If intent is in GROUNDING_OPTIONAL set:
+     - bypass the low-overlap gate entirely
+     - run GKB retrieval (broad)
+     - call the LLM with retrieval results + training as fallback
+     - apply normal hallucination guards on citations
+4. If intent is find_document:
+     - run vault search, not RAG
+     - return FileResultsCard payload, not generative answer
+```
+
+Card intents (`contract_review`, `clause_analysis`, `clause_comparison`, `document_summarization`, `risk_assessment`, `case_brief`) additionally force `response_format: json_object` against the relevant card schema. The empty-state pattern in CLAUDE.md applies: when the LLM returns a schema-shaped envelope with empty fields (which it will for a Type A miss), the frontend renders an empty-state card with an upload prompt instead of a grid of `—` dashes.
+
 ## Implementation guidance
 
 For the dev team — pragmatic notes on rolling this out against the existing Nova Lite pipeline.
