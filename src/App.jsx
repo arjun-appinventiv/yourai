@@ -109,6 +109,10 @@ export default function App() {
             <Route path="/chat/home" element={<Navigate to="/chat" replace />} />
             <Route path="/chat/workspaces" element={<ChatRoleProvider><ChatView initialView="workspaces" /></ChatRoleProvider>} />
             <Route path="/chat/workspaces/:id" element={<RouteErrorBoundary><ChatRoleProvider><WorkspaceChatView /></ChatRoleProvider></RouteErrorBoundary>} />
+            {/* Sidebar sections — single catch-all reuses ChatView and lets it
+                drive the right panel from useParams().section. Each sidebar
+                onOpen handler also navigates so URLs stay shareable. */}
+            <Route path="/chat/:section" element={<ChatRoleProvider><ChatView /></ChatRoleProvider>} />
             <Route path="/mock/restructure" element={<RestructureMock />} />
 
             {/* Org Admin routes */}

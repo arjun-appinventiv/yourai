@@ -6050,13 +6050,25 @@ export default function ChatView({ initialView = 'chat' }) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isExternalUser, initialView]);
-  // Org Admin sees the org dashboard on first load; internal/external users skip it
-  const [showOrgDashboard, setShowOrgDashboard] = useState(isOrgAdmin && initialView !== 'workspaces');
-  const [showBillingPanel, setShowBillingPanel] = useState(false);
-  const [showAuditLogsPanel, setShowAuditLogsPanel] = useState(false);
+  // URL → panel sync. Sidebar onOpen handlers navigate to /chat/{section};
+  // this derivation tells the initial useState declarations + a back/forward
+  // useEffect (further down) which panel to open. Empty string = no
+  // section, defer to the existing default (Org Admin dashboard / chat
+  // empty state). Slugs match what the onOpen handlers push.
+  const pathSection = location.pathname.replace(/^\/chat\/?/, '').split('/')[0] || '';
+  // Org Admin sees the org dashboard on first load; internal/external users skip it.
+  // URL section 'dashboard' explicitly opens it; anything else (workspaces,
+  // team, vault, etc.) suppresses it so the URL-driven panel wins.
+  const [showOrgDashboard, setShowOrgDashboard] = useState(() => {
+    if (pathSection === 'dashboard') return true;
+    if (pathSection === '') return isOrgAdmin && initialView !== 'workspaces';
+    return false;
+  });
+  const [showBillingPanel, setShowBillingPanel] = useState(pathSection === 'settings');
+  const [showAuditLogsPanel, setShowAuditLogsPanel] = useState(pathSection === 'audit');
   // AI-time meter
-  const [showMyTimePanel, setShowMyTimePanel] = useState(false);
-  const [showTeamTimePanel, setShowTeamTimePanel] = useState(false);
+  const [showMyTimePanel, setShowMyTimePanel] = useState(pathSection === 'my-time');
+  const [showTeamTimePanel, setShowTeamTimePanel] = useState(pathSection === 'team-time');
   const [billingDraft, setBillingDraft] = useState(null); // { session, threadMessages } | null
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
@@ -6089,7 +6101,7 @@ export default function ChatView({ initialView = 'chat' }) {
     return loadPacks() || DEFAULT_KNOWLEDGE_PACKS;
   });
   useEffect(() => { savePacks(knowledgePacks); }, [knowledgePacks]);
-  const [showKnowledgePacksPanel, setShowKnowledgePacksPanel] = useState(false);
+  const [showKnowledgePacksPanel, setShowKnowledgePacksPanel] = useState(pathSection === 'packs');
   const [editingPack, setEditingPack] = useState(null);
   // When the user hits the chat-attach overflow banner and clicks
   // "Create a Knowledge Pack", we preserve the File objects here so
@@ -6113,7 +6125,7 @@ export default function ChatView({ initialView = 'chat' }) {
     return loadFolders() || DEFAULT_DOCUMENT_VAULT_FOLDERS;
   });
   useEffect(() => { saveFolders(vaultFolders); }, [vaultFolders]);
-  const [showDocumentVaultPanel, setShowDocumentVaultPanel] = useState(false);
+  const [showDocumentVaultPanel, setShowDocumentVaultPanel] = useState(pathSection === 'vault');
   // When the panel is opened from the AttachMenu's "Folder from Vault"
   // entry, this flag toggles folder rows into selectable mode (extra
   // "Use" button on each folder tile). Reset to false on panel close.
@@ -6135,11 +6147,11 @@ export default function ChatView({ initialView = 'chat' }) {
   const [activeVaultFolder, setActiveVaultFolder] = useState(null);
   const [docLimitBannerDismissed, setDocLimitBannerDismissed] = useState(false);
   const [promptTemplates, setPromptTemplates] = useState(DEFAULT_PROMPT_TEMPLATES);
-  const [showPromptPanel, setShowPromptPanel] = useState(false);
+  const [showPromptPanel, setShowPromptPanel] = useState(pathSection === 'prompts');
   const [showCreatePrompt, setShowCreatePrompt] = useState(false);
   const [clients, setClients] = useState(DEFAULT_CLIENTS);
-  const [showClientsPanel, setShowClientsPanel] = useState(false);
-  const [showTeamPage, setShowTeamPage] = useState(false);
+  const [showClientsPanel, setShowClientsPanel] = useState(pathSection === 'clients');
+  const [showTeamPage, setShowTeamPage] = useState(pathSection === 'team');
   const [teamMemberCount, setTeamMemberCount] = useState(null);
   // Sidebar's Workspaces item toggles this; clicking '< Back to chat' inside
   // the page sets it back to false. The /chat/workspaces route sets it via
@@ -6154,7 +6166,48 @@ export default function ChatView({ initialView = 'chat' }) {
    *  runningWorkflow      live snapshot of the currently-running run (for
    *                        the background indicator — Part 8)
    */
-  const [showWorkflowsPanel, setShowWorkflowsPanel] = useState(false);
+  const [showWorkflowsPanel, setShowWorkflowsPanel] = useState(pathSection === 'workflows');
+
+  // On first mount, if Org Admin lands at /chat (no section) with the
+  // dashboard auto-opened, push /chat/dashboard so the URL reflects the
+  // visible panel. Same idea for any other initial-section default the
+  // useState seeds set true. Runs once.
+  useEffect(() => {
+    if (pathSection !== '') return;
+    if (showOrgDashboard) navigate('/chat/dashboard', { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // URL → panel sync on browser back/forward (and any future programmatic
+  // navigate that doesn't go through a sidebar handler). Inline the close
+  // logic instead of calling closeAllPanels() — that const isn't defined
+  // yet at this position in the function body. Sets just the target panel
+  // and clears the others; setters are stable + idempotent so no-op
+  // updates from the matching panel-open path are fine.
+  useEffect(() => {
+    const section = location.pathname.replace(/^\/chat\/?/, '').split('/')[0] || '';
+    // Empty section = /chat root. The existing showOrgDashboard default
+    // already handled this on first mount; if the user hits Back to /chat
+    // we explicitly clear all panels so the chat empty state takes over
+    // (Org Admins still see the dashboard via the route /chat/dashboard).
+    setShowOrgDashboard(section === 'dashboard');
+    setShowBillingPanel(section === 'settings');
+    setShowAuditLogsPanel(section === 'audit');
+    setShowMyTimePanel(section === 'my-time');
+    setShowTeamTimePanel(section === 'team-time');
+    setShowKnowledgePacksPanel(section === 'packs');
+    setShowDocumentVaultPanel(section === 'vault');
+    setShowPromptPanel(section === 'prompts');
+    setShowClientsPanel(section === 'clients');
+    setShowTeamPage(section === 'team');
+    setShowWorkflowsPanel(section === 'workflows');
+    // Workspaces stays on its dedicated route; section === '' for Org
+    // Admin reopens the dashboard since that's their home surface.
+    if (section === '' && isOrgAdmin && initialView !== 'workspaces') {
+      setShowOrgDashboard(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname]);
   const [editingWorkflow, setEditingWorkflow] = useState(null);
   const [runningPrep, setRunningPrep] = useState(null);
   // Run Panel — docked to the right of the chat. Shows all active and
@@ -8278,19 +8331,19 @@ INSTRUCTIONS:
       {idleWarning}
       <Sidebar
         activeKey={sidebarActiveKey}
-        onOpenOrgDashboard={() => { closeAllPanels(); setShowOrgDashboard(true); setSidebarOpen(false); }}
+        onOpenOrgDashboard={() => { closeAllPanels(); setShowOrgDashboard(true); setSidebarOpen(false); navigate('/chat/dashboard', { replace: true }); }}
         onOpenChat={() => { closeAllPanels(); setSidebarOpen(false); navigate('/chat'); }}
-        onOpenPromptTemplates={() => { closeAllPanels(); setShowPromptPanel(true); setSidebarOpen(false); }}
-        onOpenClients={() => { closeAllPanels(); setShowClientsPanel(true); setSidebarOpen(false); }}
-        onOpenKnowledgePacks={() => { closeAllPanels(); setShowKnowledgePacksPanel(true); setSidebarOpen(false); }}
-        onOpenDocumentVault={() => { closeAllPanels(); setShowDocumentVaultPanel(true); setSidebarOpen(false); }}
-        onOpenInviteTeam={() => { closeAllPanels(); setShowTeamPage(true); setSidebarOpen(false); }}
-        onOpenAuditLogs={() => { closeAllPanels(); setShowAuditLogsPanel(true); setSidebarOpen(false); }}
-        onOpenBilling={() => { closeAllPanels(); setShowBillingPanel(true); setSidebarOpen(false); }}
-        onOpenMyTime={() => { closeAllPanels(); setShowMyTimePanel(true); setSidebarOpen(false); }}
-        onOpenTeamTime={() => { closeAllPanels(); setShowTeamTimePanel(true); setSidebarOpen(false); }}
+        onOpenPromptTemplates={() => { closeAllPanels(); setShowPromptPanel(true); setSidebarOpen(false); navigate('/chat/prompts', { replace: true }); }}
+        onOpenClients={() => { closeAllPanels(); setShowClientsPanel(true); setSidebarOpen(false); navigate('/chat/clients', { replace: true }); }}
+        onOpenKnowledgePacks={() => { closeAllPanels(); setShowKnowledgePacksPanel(true); setSidebarOpen(false); navigate('/chat/packs', { replace: true }); }}
+        onOpenDocumentVault={() => { closeAllPanels(); setShowDocumentVaultPanel(true); setSidebarOpen(false); navigate('/chat/vault', { replace: true }); }}
+        onOpenInviteTeam={() => { closeAllPanels(); setShowTeamPage(true); setSidebarOpen(false); navigate('/chat/team', { replace: true }); }}
+        onOpenAuditLogs={() => { closeAllPanels(); setShowAuditLogsPanel(true); setSidebarOpen(false); navigate('/chat/audit', { replace: true }); }}
+        onOpenBilling={() => { closeAllPanels(); setShowBillingPanel(true); setSidebarOpen(false); navigate('/chat/settings', { replace: true }); }}
+        onOpenMyTime={() => { closeAllPanels(); setShowMyTimePanel(true); setSidebarOpen(false); navigate('/chat/my-time', { replace: true }); }}
+        onOpenTeamTime={() => { closeAllPanels(); setShowTeamTimePanel(true); setSidebarOpen(false); navigate('/chat/team-time', { replace: true }); }}
         onOpenWorkspaces={() => { closeAllPanels(); navigate('/chat/workspaces'); setShowWorkspacesPanel(true); setSidebarOpen(false); }}
-        onOpenWorkflows={() => { closeAllPanels(); setShowWorkflowsPanel(true); setSidebarOpen(false); }}
+        onOpenWorkflows={() => { closeAllPanels(); setShowWorkflowsPanel(true); setSidebarOpen(false); navigate('/chat/workflows', { replace: true }); }}
         workflowCount={workflowCount}
         runningWorkflow={runningWorkflow}
         onViewRunning={() => {
