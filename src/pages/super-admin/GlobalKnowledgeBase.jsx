@@ -2013,9 +2013,10 @@ export default function GlobalKnowledgeBase() {
                           </div>
                           <div className="flex items-center gap-2" style={{ flexShrink: 0 }}>
                             {/* Surface-visibility toggles — Unified Intents Phase 2 follow-up.
-                               Chat / Workflow are independent: SA can hide an intent from
-                               the chat dropdown but keep it as a Workflow Builder op, or
-                               vice versa. Click to flip. */}
+                               iOS-style switches: clearly ON (green track, knob right)
+                               or OFF (gray track, knob left). SA can hide an intent
+                               from the chat dropdown but keep it as a Workflow Builder
+                               op, or vice versa. Click anywhere on the cluster to flip. */}
                             {(() => {
                               const HEURISTIC_WF_LABELS = new Set([
                                 'Contract Review', 'Clause Analysis', 'Clause Comparison',
@@ -2026,27 +2027,49 @@ export default function GlobalKnowledgeBase() {
                               const wfOn = op.workflowVisible !== undefined
                                 ? op.workflowVisible
                                 : HEURISTIC_WF_LABELS.has(op.label || '');
-                              const pill = (label, on, onClick) => (
+                              const toggle = (label, on, onClick) => (
                                 <button
                                   onClick={(e) => { e.stopPropagation(); onClick(); }}
                                   title={`${label}: ${on ? 'visible' : 'hidden'} — click to flip`}
                                   style={{
-                                    display: 'inline-flex', alignItems: 'center', gap: 4,
-                                    padding: '3px 8px', borderRadius: 999,
-                                    border: '1px solid ' + (on ? '#5CA868' : 'var(--border)'),
-                                    background: on ? '#E7F3E9' : '#fff',
-                                    color: on ? '#3F7A4D' : 'var(--text-muted)',
-                                    fontSize: 10.5, fontWeight: 500, cursor: 'pointer',
+                                    display: 'inline-flex', alignItems: 'center', gap: 8,
+                                    padding: '4px 10px 4px 8px',
+                                    borderRadius: 999,
+                                    border: '1px solid var(--border)',
+                                    background: '#fff',
+                                    cursor: 'pointer',
+                                    transition: 'border-color 120ms',
                                   }}
+                                  onMouseEnter={(e) => { e.currentTarget.style.borderColor = on ? '#5CA868' : 'var(--text-muted)'; }}
+                                  onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border)'; }}
                                 >
-                                  <span style={{ width: 5, height: 5, borderRadius: '50%', background: on ? '#5CA868' : 'var(--text-muted)' }} />
-                                  {label}
+                                  {/* Switch track + knob */}
+                                  <span style={{
+                                    position: 'relative',
+                                    width: 26, height: 14, borderRadius: 999, flexShrink: 0,
+                                    background: on ? '#5CA868' : '#D1D5DB',
+                                    transition: 'background 150ms',
+                                  }}>
+                                    <span style={{
+                                      position: 'absolute', top: 2,
+                                      left: on ? 14 : 2,
+                                      width: 10, height: 10, borderRadius: '50%',
+                                      background: '#fff',
+                                      boxShadow: '0 1px 2px rgba(0,0,0,0.18)',
+                                      transition: 'left 150ms',
+                                    }} />
+                                  </span>
+                                  <span style={{
+                                    fontSize: 11, fontWeight: 500,
+                                    color: on ? 'var(--text-primary)' : 'var(--text-muted)',
+                                    letterSpacing: '0.01em',
+                                  }}>{label}</span>
                                 </button>
                               );
                               return (
                                 <>
-                                  {pill('Chat', chatOn, () => toggleOpChatVisible(op.id))}
-                                  {pill('Workflow', wfOn, () => toggleOpWorkflowVisible(op.id))}
+                                  {toggle('Chat', chatOn, () => toggleOpChatVisible(op.id))}
+                                  {toggle('Workflow', wfOn, () => toggleOpWorkflowVisible(op.id))}
                                 </>
                               );
                             })()}
