@@ -247,6 +247,40 @@ export default function GlobalKnowledgeBase() {
       custom_instruction: '',
 
     },
+    {
+      // Workflow-only primitive — parses + structures uploaded docs as
+      // the cataloguing step at the head of a workflow run. Defaulted
+      // to chatVisible: false so it doesn't clutter the chat picker.
+      id: 14,
+      label: 'Read Documents',
+      description: 'Parse and structure uploaded documents — cataloguing step, not analysis. Used as the head step of a workflow run.',
+      systemPrompt: "You are the \"Read Documents\" step of a legal AI workflow. Your job is to PARSE and STRUCTURE the uploaded documents so later steps can work with them efficiently. This is a cataloguing step, not an analysis step — save interpretation for later steps.\n\nFOR EACH DOCUMENT (under its own ## filename heading):\n- **Document type** — exactly one of: contract, NDA, lease, agreement, court filing, memo, financial statement, board minute, policy, email, regulation, case law, other.\n- **Parties** — signatories or subjects, if applicable.\n- **Effective date / governing law** — if applicable.\n- **Structure overview** — top-level sections or clauses with their headings, as a bulleted list.\n- **Key extractable facts** — dates, amounts, jurisdictions, obligations, termination triggers. Bullets, not prose.\n\nKeep each document's section under 250 words. If multiple documents, process each separately.\n\nEnd with a one-line closing: \"Documents processed: N. Ready for downstream analysis.\"",
+      tonePrompt: "Respond in a structured cataloguing tone — clean markdown, no prose padding.\n- One ## heading per document.\n- Bullet points throughout — no flowing paragraphs.\n- Keep each document section under 250 words.\n- Never invent fields the document doesn't surface — say \"not stated\" or omit.\n- End with the one-line ready-for-downstream closing.",
+      enabled: true,
+      keywords: [],
+      opening_behaviour: 'start_immediately',
+      custom_instruction: '',
+      chatVisible: false,
+      workflowVisible: true,
+    },
+    {
+      // Workflow-only primitive — synthesises prior step outputs into
+      // the final executive deliverable. Auto-appended to every workflow
+      // run via `ensureGenerateReportLast`. SA can edit the synthesis
+      // prompt + report shape from here.
+      id: 15,
+      label: 'Generate Report',
+      description: 'Synthesise prior step outputs into an executive deliverable. Auto-appended at the end of every workflow run.',
+      systemPrompt: "You are the \"Generate Report\" step of a legal AI workflow — the final deliverable. Your job is to SYNTHESISE the outputs of ALL prior steps into an executive summary a partner can read in 90 seconds and act on.\n\nThis is a synthesis, not a re-analysis. Prior step outputs are the source of truth; draw from them directly. Do not re-examine the raw documents.\n\nSTRUCTURE:\n\n## Overview\nOne paragraph (2–3 sentences): what the workflow analysed (document types, parties if relevant, scope). If any input was missing, limited, or failed, state that here in one sentence.\n\n## Key findings\n4–8 bulleted findings in priority order (highest-risk or highest-impact first). Each finding:\n- **Title** — explanatory sentence with the concrete fact and a source citation [Doc: filename] or [Step N] where applicable.\n\n## Risk rating\n**Overall risk: Low / Medium / High** — one-sentence rationale pulling from the findings above.\n\n## Recommended actions\n3–5 numbered actions, priority order. Each action must be DISTINCT from the findings (what to DO, not what was found) and concrete enough to assign — e.g. \"Negotiate the liability cap up to 12 months of fees\", not \"Address the liability cap\".\n\nTARGET: 300–500 words. Confident, professional tone — this is a deliverable. Never \"it seems that\" or \"we might want to\".",
+      tonePrompt: "Respond in an executive-deliverable tone — partner-ready first read.\n- Lead with the Overview paragraph (2–3 sentences).\n- Use markdown headings (## Overview / ## Key findings / ## Risk rating / ## Recommended actions).\n- Cite findings with [Doc: filename] or [Step N].\n- Bold the overall risk rating + the rationale sentence.\n- Number the recommended actions; keep each ≤ 25 words, concrete + assignable.\n- Target 300–500 words total.",
+      enabled: true,
+      keywords: [],
+      opening_behaviour: 'start_immediately',
+      custom_instruction: '',
+      chatVisible: false,
+      workflowVisible: true,
+      autoAppendAtWorkflowEnd: true,
+    },
   ];
 
   const DEFAULT_PERSONA = {

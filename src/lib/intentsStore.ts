@@ -599,6 +599,9 @@ export interface LegacyPersonaOp {
   // label is in WORKFLOW_VISIBLE_BY_DEFAULT; chat-visible always true).
   chatVisible?: boolean;
   workflowVisible?: boolean;
+  // Persisted on workflow-only primitives (generate_report) — true means
+  // the workflow runner appends this intent to the end of every run.
+  autoAppendAtWorkflowEnd?: boolean;
 }
 
 /** Label → canonical string id mapping. Keeps the SA editor's labels in
@@ -654,6 +657,7 @@ export function intentFromPersonaOp(
     openingBehaviour: op.opening_behaviour || 'start_immediately',
     sortOrder: op.id * 10,
     enabled: op.enabled !== false,
+    autoAppendAtWorkflowEnd: op.autoAppendAtWorkflowEnd,
     ...overrides,
   };
 }
