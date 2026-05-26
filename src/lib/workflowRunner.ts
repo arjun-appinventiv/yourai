@@ -14,7 +14,7 @@
 import {
   type WorkflowRun, type WorkflowRunStep, type WorkflowTemplate,
   type UploadedDoc, type StepSource, type WorkflowReport, type WorkflowReportStep,
-  upsertRun, getRun, setActiveRunId,
+  upsertRun, getRun, setActiveRunId, ensureGenerateReportLast,
 } from './workflow';
 import { executeWorkflowStep } from './workflowExecutor';
 
@@ -54,7 +54,15 @@ export function cancelRun(runId: string): void {
 
 export function startRun(opts: RunOptions): WorkflowRun {
   const now = () => new Date().toISOString();
-  const { template, uploadedDocs, userId, workspaceId, workspaceName } = opts;
+  // Belt-and-suspenders: the runner ALWAYS sees a template ending in
+  // generate_report, even if a stale stored template somehow bypassed
+  // the save-time normalisation. Mutates a local copy only — does not
+  // write back to storage.
+  const normalisedSteps = ensureGenerateReportLast(opts.template.steps);
+  const template: WorkflowTemplate = normalisedSteps === opts.template.steps
+    ? opts.template
+    : { ...opts.template, steps: normalisedSteps };
+  const { uploadedDocs, userId, workspaceId, workspaceName } = opts;
 
   const runSteps: WorkflowRunStep[] = template.steps.map((s) => ({
     stepId: s.id,

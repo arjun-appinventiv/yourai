@@ -250,8 +250,48 @@ function writeStore(key: string, value: unknown): void {
 
 /* Templates ─────────────────────────────────────────────────────────── */
 
+/**
+ * System invariant (PM 2026-05-20): every workflow ends with a
+ * `generate_report` step. If the author didn't add one, the system
+ * appends one with a sensible default instruction. Guarantees that the
+ * Run Panel, Generated Artifacts card, Findings summary, and final
+ * report all have a known synthesis to render — no special-casing for
+ * "what if the last step isn't Generate Report."
+ *
+ * Returns the same array reference when the input already ends with
+ * generate_report (cheap no-op for the common case).
+ */
+export function ensureGenerateReportLast(steps: WorkflowStep[]): WorkflowStep[] {
+  if (steps.length === 0) return steps;
+  const last = steps[steps.length - 1];
+  if (last.operation === 'generate_report') return steps;
+  const autoStep: WorkflowStep = {
+    id: `st-auto-report-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    name: OPERATION_CONFIG.generate_report.label,
+    operation: 'generate_report',
+    instruction:
+      'Synthesise the prior steps into an executive report. Include an overview, key findings in priority order with citations, an overall risk rating, and a numbered list of recommended actions.',
+    referenceDoc: null,
+    estimatedSeconds: 4,
+  };
+  return [...steps, autoStep];
+}
+
 export function listTemplates(): WorkflowTemplate[] {
-  return readStore<WorkflowTemplate[]>(TEMPLATES_KEY, []);
+  // Normalise on read: any pre-invariant templates (saved before the
+  // ensureGenerateReportLast rule landed) get their steps repaired and
+  // written back. Idempotent — if nothing changes, no write.
+  const raw = readStore<WorkflowTemplate[]>(TEMPLATES_KEY, []);
+  let mutated = false;
+  const normalised = raw.map((t) => {
+    const fixedSteps = ensureGenerateReportLast(t.steps);
+    if (fixedSteps === t.steps) return t;
+    mutated = true;
+    const estimatedTotalSeconds = fixedSteps.reduce((a, s) => a + (s.estimatedSeconds || 0), 0);
+    return { ...t, steps: fixedSteps, estimatedTotalSeconds };
+  });
+  if (mutated) writeStore(TEMPLATES_KEY, normalised);
+  return normalised;
 }
 
 export function saveTemplates(list: WorkflowTemplate[]): void {
@@ -308,13 +348,14 @@ export interface NewTemplateInput {
 /** POST /api/workflows */
 export function createTemplate(input: NewTemplateInput): WorkflowTemplate {
   const now = new Date().toISOString();
-  const estimatedTotalSeconds = input.steps.reduce((a, s) => a + (s.estimatedSeconds || 0), 0);
+  const steps = ensureGenerateReportLast(input.steps);
+  const estimatedTotalSeconds = steps.reduce((a, s) => a + (s.estimatedSeconds || 0), 0);
   const t: WorkflowTemplate = {
     id: `wf-${Date.now()}`,
     name: input.name.trim(),
     description: (input.description || '').trim(),
     practiceArea: input.practiceArea,
-    steps: input.steps,
+    steps,
     status: input.status || 'active',
     visibility: input.visibility,
     createdBy: input.createdBy,
@@ -333,7 +374,7 @@ export function updateTemplate(id: string, patch: Partial<WorkflowTemplate>): Wo
   const all = listTemplates();
   const idx = all.findIndex((t) => t.id === id);
   if (idx === -1) return null;
-  const steps = patch.steps || all[idx].steps;
+  const steps = ensureGenerateReportLast(patch.steps || all[idx].steps);
   const estimatedTotalSeconds = steps.reduce((a, s) => a + (s.estimatedSeconds || 0), 0);
   const next = { ...all[idx], ...patch, steps, estimatedTotalSeconds, updatedAt: new Date().toISOString() };
   all[idx] = next;
