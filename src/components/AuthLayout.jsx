@@ -10,7 +10,7 @@ export default function AuthLayout({ children }) {
         <div>
           <div className="text-xl mb-1">
             <span style={{ fontFamily: "'DM Serif Display', serif", color: 'white' }}>Your</span>
-            <span style={{ fontFamily: "'DM Serif Display', serif", color: '#C9A84C' }}>AI</span>
+            <span style={{ fontFamily: "'DM Serif Display', serif", color: 'white' }}>AI</span>
           </div>
           <div style={{ color: 'rgba(255,255,255,0.45)', fontSize: '12px' }}>Internal Operations Portal</div>
         </div>

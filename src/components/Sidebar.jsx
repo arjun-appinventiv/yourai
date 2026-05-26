@@ -66,7 +66,7 @@ export default function Sidebar() {
           <div>
             <div style={{ fontSize: '17px', letterSpacing: '-0.02em', lineHeight: 1.2 }}>
               <span style={{ fontFamily: "'DM Serif Display', serif", color: 'white', fontWeight: 700 }}>Your</span>
-              <span style={{ fontFamily: "'DM Serif Display', serif", color: '#C9A84C', fontWeight: 700 }}>AI</span>
+              <span style={{ fontFamily: "'DM Serif Display', serif", color: 'white', fontWeight: 700 }}>AI</span>
             </div>
             <span
               className="inline-block px-2 py-px rounded text-white"

@@ -80,8 +80,8 @@ export default function ChatAuthLayout({ children }) {
             {/* Logo */}
             <div style={{ textAlign: 'center' }}>
               <span style={{ fontFamily: "'DM Serif Display', serif", fontSize: 32, fontWeight: 700 }}>
-                <span style={{ color: 'var(--navy)' }}>Your</span>
-                <span style={{ color: '#C9A84C' }}>AI</span>
+                <span style={{ color: '#000' }}>Your</span>
+                <span style={{ color: '#000' }}>AI</span>
               </span>
             </div>
 
