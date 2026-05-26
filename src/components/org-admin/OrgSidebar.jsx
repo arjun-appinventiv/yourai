@@ -78,7 +78,7 @@ export default function OrgSidebar() {
              so the dark strokes flip to light against the dark plate. */}
           <div className="flex-shrink-0 rounded-lg flex items-center justify-center" style={{ width: 36, height: 36, backgroundColor: '#0A2463' }}>
             <img
-              src="/yourai-mark.svg"
+              src="/yourai-mark.png"
               alt=""
               aria-hidden="true"
               style={{ width: 28, height: 28, objectFit: 'contain', filter: 'invert(1)' }}

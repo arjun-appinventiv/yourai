@@ -429,7 +429,7 @@ export default function Login() {
         {/* Brand mark — thin-line fingerprint above the Welcome heading,
            rendered directly so the multi-tonal strokes survive. */}
         <img
-          src="/yourai-mark.svg"
+          src="/yourai-mark.png"
           alt=""
           aria-hidden="true"
           style={{ width: 56, height: 56, margin: '0 auto 10px', display: 'block', objectFit: 'contain' }}

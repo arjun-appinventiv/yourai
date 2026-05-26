@@ -57,7 +57,7 @@ export default function Sidebar() {
              sidebar we invert to flip the dark strokes to light. */}
           <div className="flex-shrink-0 rounded-lg flex items-center justify-center" style={{ width: 36, height: 36, backgroundColor: 'rgba(201,168,76,0.15)', border: '1px solid rgba(201,168,76,0.3)' }}>
             <img
-              src="/yourai-mark.svg"
+              src="/yourai-mark.png"
               alt=""
               aria-hidden="true"
               style={{ width: 28, height: 28, objectFit: 'contain', filter: 'invert(1)' }}

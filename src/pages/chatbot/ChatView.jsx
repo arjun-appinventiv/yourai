@@ -602,7 +602,7 @@ function Sidebar({ activeKey, onOpenChat, onOpenOrgDashboard, onOpenPromptTempla
              to a solid silhouette). Cream sidebar bg → default dark
              strokes read fine, no filter needed. */}
           <img
-            src="/yourai-mark.svg"
+            src="/yourai-mark.png"
             alt=""
             aria-hidden="true"
             style={{ width: 28, height: 28, objectFit: 'contain', flexShrink: 0 }}
@@ -5018,7 +5018,7 @@ function TopNav({ onOpenSidebar }) {
              the prior gold Sparkles glyph; the YourAI wordmark stays
              alongside. At 18px the thin-line detail is fine on white. */}
           <img
-            src="/yourai-mark.svg"
+            src="/yourai-mark.png"
             alt=""
             aria-hidden="true"
             style={{ width: 18, height: 18, objectFit: 'contain', flexShrink: 0 }}
@@ -5986,7 +5986,7 @@ function EmptyState() {
              afternoon, Priya" on the same line). */}
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 16 }}>
             <img
-              src="/yourai-mark.svg"
+              src="/yourai-mark.png"
               alt=""
               aria-hidden="true"
               style={{ width: 56, height: 56, objectFit: 'contain', flexShrink: 0 }}

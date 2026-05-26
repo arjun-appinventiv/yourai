@@ -915,7 +915,7 @@ export default function Onboarding() {
       <div style={styles.header}>
         <div style={styles.logo}>
           <img
-            src="/yourai-mark.svg"
+            src="/yourai-mark.png"
             alt=""
             aria-hidden="true"
             style={{ width: 28, height: 28, marginRight: 8, alignSelf: 'center', objectFit: 'contain', flexShrink: 0 }}
