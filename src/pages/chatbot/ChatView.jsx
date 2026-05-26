@@ -8979,7 +8979,7 @@ INSTRUCTIONS:
                     transition: 'background 150ms, border-color 150ms',
                   }}
                 >
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10, color: 'var(--text-primary)', fontSize: 15 }}>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10, color: 'var(--text-primary)', fontSize: 15, fontWeight: 600 }}>
                     <Upload size={16} />
                     Drop your files here
                   </span>
@@ -9418,7 +9418,7 @@ INSTRUCTIONS:
                     e.target.value = '';
                   }}
                 />
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, color: 'var(--text-primary)', fontSize: 13.5 }}>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, color: 'var(--text-primary)', fontSize: 13.5, fontWeight: 600 }}>
                   <Upload size={14} />
                   {labelText}
                 </span>
