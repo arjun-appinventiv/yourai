@@ -594,6 +594,11 @@ export interface LegacyPersonaOp {
   keywords?: string[];
   opening_behaviour?: 'start_immediately' | 'ask_for_document' | 'ask_clarifying_question';
   custom_instruction?: string;
+  // Per-surface visibility toggles set in the SA Bot Persona editor.
+  // When undefined we fall back to a heuristic (workflow-visible if the
+  // label is in WORKFLOW_VISIBLE_BY_DEFAULT; chat-visible always true).
+  chatVisible?: boolean;
+  workflowVisible?: boolean;
 }
 
 /** Label → canonical string id mapping. Keeps the SA editor's labels in
@@ -640,8 +645,12 @@ export function intentFromPersonaOp(
     systemPrompt: op.systemPrompt || '',
     tonePrompt: op.tonePrompt,
     keywords: op.keywords || [],
-    chatVisible: true,
-    workflowVisible: WORKFLOW_VISIBLE_BY_DEFAULT.has(id),
+    // SA explicit value wins; otherwise default to true (chat) and the
+    // workflow-visibility heuristic by canonical id.
+    chatVisible: op.chatVisible !== undefined ? op.chatVisible : true,
+    workflowVisible: op.workflowVisible !== undefined
+      ? op.workflowVisible
+      : WORKFLOW_VISIBLE_BY_DEFAULT.has(id),
     openingBehaviour: op.opening_behaviour || 'start_immediately',
     sortOrder: op.id * 10,
     enabled: op.enabled !== false,

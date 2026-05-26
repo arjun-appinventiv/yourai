@@ -430,6 +430,29 @@ export default function GlobalKnowledgeBase() {
     updateIntent(opId, 'enabled', !persona.operations.find(o => o.id === opId)?.enabled);
   };
 
+  // Unified-intents Phase 2 follow-up: per-surface visibility toggles.
+  // SA admins flip these to show / hide an intent in the chat dropdown
+  // and the Workflow Builder operation picker independently. Default to
+  // the shape `intentFromPersonaOp` infers when undefined.
+  const toggleOpChatVisible = (opId) => {
+    const op = persona.operations.find(o => o.id === opId);
+    const current = op?.chatVisible !== false;
+    updateIntent(opId, 'chatVisible', !current);
+  };
+  const toggleOpWorkflowVisible = (opId) => {
+    const op = persona.operations.find(o => o.id === opId);
+    // Default-by-heuristic for legacy ops without the field set yet.
+    const HEURISTIC_WF_LABELS = new Set([
+      'Contract Review', 'Clause Analysis', 'Clause Comparison',
+      'Risk Assessment', 'Document Summarisation', 'Case Law Analysis',
+      'Legal Research', 'Compliance Check', 'Due Diligence',
+    ]);
+    const current = op?.workflowVisible !== undefined
+      ? op.workflowVisible
+      : HEURISTIC_WF_LABELS.has(op?.label || '');
+    updateIntent(opId, 'workflowVisible', !current);
+  };
+
   const deleteIntent = (opId) => {
     setPersona(prev => ({
       ...prev,
@@ -1955,6 +1978,44 @@ export default function GlobalKnowledgeBase() {
                             <p className="text-xs truncate" style={{ color: 'var(--text-muted)', marginTop: 2 }}>{op.description}</p>
                           </div>
                           <div className="flex items-center gap-2" style={{ flexShrink: 0 }}>
+                            {/* Surface-visibility toggles — Unified Intents Phase 2 follow-up.
+                               Chat / Workflow are independent: SA can hide an intent from
+                               the chat dropdown but keep it as a Workflow Builder op, or
+                               vice versa. Click to flip. */}
+                            {(() => {
+                              const HEURISTIC_WF_LABELS = new Set([
+                                'Contract Review', 'Clause Analysis', 'Clause Comparison',
+                                'Risk Assessment', 'Document Summarisation', 'Case Law Analysis',
+                                'Legal Research', 'Compliance Check', 'Due Diligence',
+                              ]);
+                              const chatOn = op.chatVisible !== false; // default true
+                              const wfOn = op.workflowVisible !== undefined
+                                ? op.workflowVisible
+                                : HEURISTIC_WF_LABELS.has(op.label || '');
+                              const pill = (label, on, onClick) => (
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); onClick(); }}
+                                  title={`${label}: ${on ? 'visible' : 'hidden'} — click to flip`}
+                                  style={{
+                                    display: 'inline-flex', alignItems: 'center', gap: 4,
+                                    padding: '3px 8px', borderRadius: 999,
+                                    border: '1px solid ' + (on ? '#5CA868' : 'var(--border)'),
+                                    background: on ? '#E7F3E9' : '#fff',
+                                    color: on ? '#3F7A4D' : 'var(--text-muted)',
+                                    fontSize: 10.5, fontWeight: 500, cursor: 'pointer',
+                                  }}
+                                >
+                                  <span style={{ width: 5, height: 5, borderRadius: '50%', background: on ? '#5CA868' : 'var(--text-muted)' }} />
+                                  {label}
+                                </button>
+                              );
+                              return (
+                                <>
+                                  {pill('Chat', chatOn, () => toggleOpChatVisible(op.id))}
+                                  {pill('Workflow', wfOn, () => toggleOpWorkflowVisible(op.id))}
+                                </>
+                              );
+                            })()}
                             <button
                               onClick={(e) => { e.stopPropagation(); toggleOpEnabled(op.id); }}
                               className="px-2.5 py-1 rounded text-xs font-medium"
