@@ -8693,8 +8693,8 @@ INSTRUCTIONS:
                     background: isFileDropHover ? '#f8fafc' : '#fff',
                     border: isFileDropHover ? '2px dashed var(--navy)' : '1.5px solid #6b7280',
                     borderRadius: 24,
-                    padding: isFileDropHover ? 21 : 22,
-                    display: 'flex', flexDirection: 'column', gap: 16,
+                    padding: isFileDropHover ? 17 : 18,
+                    display: 'flex', flexDirection: 'column', gap: 12,
                     transition: 'background 150ms, border-color 150ms',
                   }}
                 >
@@ -8780,7 +8780,7 @@ INSTRUCTIONS:
                   </div>
 
                   {/* White textarea card */}
-                  <div style={{ background: '#fff', borderRadius: 20, padding: '22px 26px' }}>
+                  <div style={{ background: '#fff', borderRadius: 18, padding: '10px 18px' }}>
                     <textarea
                       ref={inputRef}
                       className="no-focus-ring"
@@ -8805,11 +8805,11 @@ INSTRUCTIONS:
                       rows={1}
                       style={{
                         width: '100%', border: 'none', outline: 'none', resize: 'none',
-                        fontFamily: 'inherit', fontSize: 17, fontStyle: input ? 'normal' : 'italic',
+                        fontFamily: 'inherit', fontSize: 16, fontStyle: input ? 'normal' : 'italic',
                         color: input ? 'var(--text-primary)' : 'var(--text-secondary)',
-                        background: 'transparent', lineHeight: 1.55, minHeight: 56, maxHeight: 280, overflowY: 'auto',
+                        background: 'transparent', lineHeight: 1.5, minHeight: 32, maxHeight: 220, overflowY: 'auto',
                       }}
-                      onInput={(e) => { e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 280) + 'px'; }}
+                      onInput={(e) => { e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 220) + 'px'; }}
                     />
                   </div>
 
