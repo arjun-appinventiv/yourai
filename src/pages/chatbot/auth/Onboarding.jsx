@@ -914,6 +914,24 @@ export default function Onboarding() {
       {/* Header */}
       <div style={styles.header}>
         <div style={styles.logo}>
+          <div
+            aria-hidden="true"
+            style={{
+              width: 22, height: 22,
+              marginRight: 8,
+              alignSelf: 'center',
+              background: 'var(--navy)',
+              WebkitMaskImage: 'url(/yourai-mark.png)',
+              WebkitMaskSize: 'contain',
+              WebkitMaskRepeat: 'no-repeat',
+              WebkitMaskPosition: 'center',
+              maskImage: 'url(/yourai-mark.png)',
+              maskSize: 'contain',
+              maskRepeat: 'no-repeat',
+              maskPosition: 'center',
+              flexShrink: 0,
+            }}
+          />
           <span style={{ color: 'var(--navy)', fontFamily: "'DM Serif Display', serif", fontSize: 22, fontWeight: 400 }}>
             Your
           </span>

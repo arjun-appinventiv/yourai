@@ -426,6 +426,23 @@ export default function Login() {
   return (
     <ChatAuthLayout>
       <div className="text-center">
+        {/* Brand mark — fingerprint above the Welcome heading */}
+        <div
+          aria-hidden="true"
+          style={{
+            width: 40, height: 40,
+            margin: '0 auto 10px',
+            background: 'var(--navy)',
+            WebkitMaskImage: 'url(/yourai-mark.png)',
+            WebkitMaskSize: 'contain',
+            WebkitMaskRepeat: 'no-repeat',
+            WebkitMaskPosition: 'center',
+            maskImage: 'url(/yourai-mark.png)',
+            maskSize: 'contain',
+            maskRepeat: 'no-repeat',
+            maskPosition: 'center',
+          }}
+        />
         <span className="inline-flex items-center" style={{ color: 'var(--text-muted)', fontSize: '10px', fontWeight: 500, letterSpacing: '0.06em' }}>
           Law Firm Portal
         </span>

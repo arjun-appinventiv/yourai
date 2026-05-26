@@ -51,9 +51,23 @@ export default function Sidebar() {
       {/* Logo — prominent brand */}
       <div style={{ padding: '18px 18px 14px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
         <div className="flex items-center gap-3">
-          {/* Logo mark */}
+          {/* Logo mark — fingerprint, gold tint via CSS mask so it inherits the brand colour */}
           <div className="flex-shrink-0 rounded-lg flex items-center justify-center" style={{ width: 36, height: 36, backgroundColor: 'rgba(201,168,76,0.15)', border: '1px solid rgba(201,168,76,0.3)' }}>
-            <span style={{ fontFamily: "'DM Serif Display', serif", color: '#C9A84C', fontSize: '18px', fontWeight: 700 }}>Y</span>
+            <div
+              aria-hidden="true"
+              style={{
+                width: 22, height: 22,
+                background: '#C9A84C',
+                WebkitMaskImage: 'url(/yourai-mark.png)',
+                WebkitMaskSize: 'contain',
+                WebkitMaskRepeat: 'no-repeat',
+                WebkitMaskPosition: 'center',
+                maskImage: 'url(/yourai-mark.png)',
+                maskSize: 'contain',
+                maskRepeat: 'no-repeat',
+                maskPosition: 'center',
+              }}
+            />
           </div>
           <div>
             <div style={{ fontSize: '17px', letterSpacing: '-0.02em', lineHeight: 1.2 }}>

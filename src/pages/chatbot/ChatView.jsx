@@ -590,9 +590,28 @@ function Sidebar({ activeKey, onOpenChat, onOpenOrgDashboard, onOpenPromptTempla
     >
       {/* ═══ ZONE 1 — Header ═══ */}
       <div style={{ padding: '16px 14px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <span style={{ fontFamily: "'Fraunces', serif", fontSize: 24, fontWeight: 600, letterSpacing: '-0.5px' }}>
-          <span style={{ color: 'var(--navy)' }}>Your</span><span style={{ color: 'var(--gold)' }}>AI</span>
-        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {/* Brand mark — fingerprint, navy-tinted via CSS mask */}
+          <div
+            aria-hidden="true"
+            style={{
+              width: 24, height: 24,
+              background: 'var(--navy)',
+              WebkitMaskImage: 'url(/yourai-mark.png)',
+              WebkitMaskSize: 'contain',
+              WebkitMaskRepeat: 'no-repeat',
+              WebkitMaskPosition: 'center',
+              maskImage: 'url(/yourai-mark.png)',
+              maskSize: 'contain',
+              maskRepeat: 'no-repeat',
+              maskPosition: 'center',
+              flexShrink: 0,
+            }}
+          />
+          <span style={{ fontFamily: "'Fraunces', serif", fontSize: 24, fontWeight: 600, letterSpacing: '-0.5px' }}>
+            <span style={{ color: 'var(--navy)' }}>Your</span><span style={{ color: 'var(--gold)' }}>AI</span>
+          </span>
+        </div>
         {/* Close button — mobile only */}
         <button
           onClick={onClose}
@@ -4922,7 +4941,24 @@ function TopNav({ onOpenSidebar }) {
           onMouseEnter={(e) => { if (!modelOpen) { e.currentTarget.style.borderColor = '#b8bcc8'; e.currentTarget.style.background = '#f7f8fb'; } }}
           onMouseLeave={(e) => { if (!modelOpen) { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.background = '#fff'; } }}
         >
-          <Sparkles size={13} style={{ color: 'var(--gold)', flexShrink: 0 }} />
+          {/* Brand mark — fingerprint, navy-tinted via CSS mask. Replaces the
+             prior gold Sparkles glyph; the YourAI wordmark stays alongside. */}
+          <div
+            aria-hidden="true"
+            style={{
+              width: 15, height: 15,
+              background: 'var(--navy)',
+              WebkitMaskImage: 'url(/yourai-mark.png)',
+              WebkitMaskSize: 'contain',
+              WebkitMaskRepeat: 'no-repeat',
+              WebkitMaskPosition: 'center',
+              maskImage: 'url(/yourai-mark.png)',
+              maskSize: 'contain',
+              maskRepeat: 'no-repeat',
+              maskPosition: 'center',
+              flexShrink: 0,
+            }}
+          />
           <span style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--navy)', letterSpacing: '-0.01em' }}>YourAI</span>
           <span style={{ fontSize: 13, color: '#c4c8d0', fontWeight: 400 }}>·</span>
           <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-secondary)' }}>{selectedModel}</span>
