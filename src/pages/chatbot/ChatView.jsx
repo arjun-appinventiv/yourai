@@ -6236,6 +6236,12 @@ export default function ChatView({ initialView = 'chat' }) {
   const [isPackPickerModalOpen, setIsPackPickerModalOpen] = useState(false);
   const [packPickerQuery, setPackPickerQuery] = useState('');
   const [isFileDropHover, setIsFileDropHover] = useState(false);
+  // Separate dragover state for the dedicated "Drop your files here" bar
+  // below the composer — composer + bar both accept drops; keeping the
+  // states separate prevents both surfaces lighting up simultaneously
+  // when the user hovers one (onDragLeave fires unreliably between
+  // adjacent elements).
+  const [isUploadBarDropHover, setIsUploadBarDropHover] = useState(false);
   // Workspace association — kept for the AttachMenu / vault-doc "Use" path
   // and for downstream label-only metadata.
   const [activeWorkspaceForChat, setActiveWorkspaceForChat] = useState(null);
@@ -8855,10 +8861,50 @@ INSTRUCTIONS:
                 );
                 })()}
 
-                {/* Upload bar retired 2026-05-20 — files now drop directly
-                   onto the composer above. Placeholder text in the textarea
-                   ("Ask anything... or drop in a file") surfaces the action;
-                   dashed border + light tint render on dragover. */}
+                {/* ─── Drop-your-files-here bar (restored 2026-05-20 PM ask).
+                   The composer above also accepts drops — this bar is a
+                   secondary, persistent affordance. Click opens the file
+                   picker; drop attaches. Own dragover state so it doesn't
+                   light up when the composer is being hovered. */}
+                <div
+                  onClick={() => dropFileInputRef.current?.click()}
+                  onDragOver={(e) => { e.preventDefault(); if (!isUploadBarDropHover) setIsUploadBarDropHover(true); }}
+                  onDragLeave={(e) => { e.preventDefault(); setIsUploadBarDropHover(false); }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setIsUploadBarDropHover(false);
+                    const files = Array.from(e.dataTransfer?.files || []);
+                    const looksLikeFolder = files.length === 0 && Array.from(e.dataTransfer?.items || []).some((it) => it.kind === 'file');
+                    if (looksLikeFolder) {
+                      setMessages((prev) => [...prev, {
+                        id: Date.now(),
+                        sender: 'bot',
+                        content: '**Folders aren\'t supported in chat attach.** Drop individual files here, or upload the folder to **YourVault** first (the vault preserves folder structure) and then attach a doc or the whole folder from there.',
+                        timestamp: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
+                      }]);
+                      return;
+                    }
+                    if (files.length) handleAttachFiles(files, 'doc');
+                  }}
+                  style={{
+                    marginTop: 12, width: '100%',
+                    background: isUploadBarDropHover ? '#f8fafc' : '#fff',
+                    border: isUploadBarDropHover ? '2px dashed var(--navy)' : '1.5px solid #b8bcc4',
+                    borderRadius: 14,
+                    padding: isUploadBarDropHover ? '13px 21px' : '14px 22px',
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    cursor: 'pointer',
+                    transition: 'background 150ms, border-color 150ms',
+                  }}
+                >
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, color: 'var(--text-primary)', fontSize: 13.5 }}>
+                    <Upload size={14} />
+                    Drop your files here
+                  </span>
+                  <span style={{ color: 'var(--text-muted)', fontSize: 12.5, letterSpacing: '0.3px' }}>
+                    PDF · DOCX · TXT · max 25MB
+                  </span>
+                </div>
 
                 {/* ─── Quick chips — 4 pills, each dot colored by its
                    intent's bucket (DEFAULT=green / ASK=blue / ANALYZE=amber
@@ -8966,12 +9012,116 @@ INSTRUCTIONS:
                   );
                 })()}
 
-                {/* Input box — flex column (textarea on top, controls row on bottom). */}
-                <div style={{
-                  display: 'flex', flexDirection: 'column', gap: 10,
-                  border: '1px solid #d9dbe1', borderRadius: 14, background: '#fff',
-                  padding: '12px 14px',
-                }}>
+                {/* COMPOSER — mirrors the empty-state composer (PM 2026-05-20:
+                   "chat box should maintain the same format as the new chat box").
+                   White bg, 1.5px border, intent pill top, textarea middle,
+                   3 same-size pills + send in the bottom row. Drag/drop on
+                   the composer itself attaches files. */}
+                {(() => {
+                  const activeBucket = getBucketForIntent(activeIntent);
+                  const bucketColor = (activeBucket && BUCKET_COLORS[activeBucket]) || BUCKET_COLORS.DEFAULT;
+                  return (
+                <div
+                  onDragOver={(e) => { e.preventDefault(); if (!isFileDropHover) setIsFileDropHover(true); }}
+                  onDragLeave={(e) => { e.preventDefault(); setIsFileDropHover(false); }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setIsFileDropHover(false);
+                    const files = Array.from(e.dataTransfer?.files || []);
+                    const looksLikeFolder = files.length === 0 && Array.from(e.dataTransfer?.items || []).some((it) => it.kind === 'file');
+                    if (looksLikeFolder) {
+                      setMessages((prev) => [...prev, {
+                        id: Date.now(),
+                        sender: 'bot',
+                        content: '**Folders aren\'t supported in chat attach.** Drop individual files here, or upload the folder to **YourVault** first (the vault preserves folder structure) and then attach a doc or the whole folder from there.',
+                        timestamp: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
+                      }]);
+                      return;
+                    }
+                    if (files.length) handleAttachFiles(files, 'doc');
+                  }}
+                  style={{
+                    width: '100%',
+                    background: isFileDropHover ? '#f8fafc' : '#fff',
+                    border: isFileDropHover ? '2px dashed var(--navy)' : '1.5px solid #b8bcc4',
+                    borderRadius: 20,
+                    padding: isFileDropHover ? 15 : 16,
+                    display: 'flex', flexDirection: 'column', gap: 12,
+                    transition: 'background 150ms, border-color 150ms',
+                  }}
+                >
+                  {/* Intent pill TOP (160w, bucket-coloured, opens DOWNWARD) */}
+                  <div style={{ position: 'relative', width: 160 }} ref={intentDropdownRef}>
+                    <button
+                      onClick={() => setIsIntentDropdownOpen(v => !v)}
+                      style={{
+                        width: '100%', height: 40,
+                        display: 'inline-flex', alignItems: 'center', gap: 8,
+                        padding: '0 14px', borderRadius: 999,
+                        background: `${bucketColor}1a`,
+                        border: `1.5px solid ${bucketColor}99`,
+                        color: bucketColor, fontSize: 13, fontWeight: 500,
+                        fontFamily: 'inherit', cursor: 'pointer', lineHeight: 1,
+                      }}
+                    >
+                      <span style={{ width: 8, height: 8, borderRadius: '50%', background: bucketColor, flexShrink: 0 }} />
+                      <span style={{ flex: 1, textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {getIntentLabel(activeIntent)}
+                      </span>
+                      <ChevronDown size={12} style={{ color: bucketColor, flexShrink: 0, transform: isIntentDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 150ms' }} />
+                    </button>
+                    {isIntentDropdownOpen && (
+                      <>
+                        <div onClick={() => setIsIntentDropdownOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 50 }} />
+                        <div style={{
+                          position: 'absolute', top: 'calc(100% + 8px)', left: 0,
+                          width: 280, backgroundColor: '#fff', borderRadius: 12,
+                          border: '1px solid #e6e7ec',
+                          boxShadow: '0 12px 32px rgba(15,28,63,0.10)',
+                          padding: 8, zIndex: 51, maxHeight: 380, overflowY: 'auto',
+                        }}>
+                          {groupIntentsByBucket(INTENTS.map((i) => i.id)).map((bucket) => {
+                            const dotColor = BUCKET_COLORS[bucket.label] || 'var(--text-muted)';
+                            return (
+                              <div key={bucket.label}>
+                                <div style={{
+                                  display: 'flex', alignItems: 'center', gap: 8,
+                                  padding: '8px 12px 4px',
+                                  fontSize: 10.5, color: 'var(--text-muted)',
+                                  fontWeight: 600, letterSpacing: '1.2px', textTransform: 'uppercase',
+                                }}>
+                                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: dotColor, flexShrink: 0 }} />
+                                  {bucket.label}
+                                </div>
+                                {bucket.intents.map((intent) => {
+                                  const isCurrent = activeIntent === intent.id;
+                                  return (
+                                    <div key={intent.id}
+                                      onClick={() => { setActiveIntent(intent.id); setHasManualIntentPick(true); setIsIntentDropdownOpen(false); }}
+                                      style={{
+                                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                        padding: '8px 12px', borderRadius: 8, cursor: 'pointer',
+                                        fontSize: 14, color: 'var(--text-primary)',
+                                        fontWeight: isCurrent ? 500 : 400,
+                                        background: isCurrent ? 'var(--gold-bg)' : 'transparent',
+                                      }}
+                                      onMouseEnter={(e) => { if (!isCurrent) e.currentTarget.style.backgroundColor = '#fafafa'; }}
+                                      onMouseLeave={(e) => { if (!isCurrent) e.currentTarget.style.backgroundColor = 'transparent'; }}
+                                    >
+                                      <span>{intent.label}</span>
+                                      {isCurrent && <Check size={14} style={{ color: 'var(--gold)', flexShrink: 0 }} />}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Textarea */}
                   <textarea
                     ref={inputRef}
                     className="no-focus-ring"
@@ -8980,11 +9130,7 @@ INSTRUCTIONS:
                       const val = e.target.value;
                       setInput(val);
                       clearTimeout(suggestionTimer.current);
-                      if (val.trim().length < 10) {
-                        setSuggestedIntent(null);
-                        setSuggestedIntents([]);
-                        return;
-                      }
+                      if (val.trim().length < 10) { setSuggestedIntent(null); setSuggestedIntents([]); return; }
                       suggestionTimer.current = setTimeout(() => {
                         const allMatches = detectAllIntents(val);
                         const relevant = allMatches.filter(m => m.intentId !== activeIntent && m.intentId !== dismissedSuggestion);
@@ -8992,170 +9138,139 @@ INSTRUCTIONS:
                         if (relevant.length >= 2 && relevant[0].matchCount === relevant[1].matchCount) {
                           const tied = relevant.filter(m => m.matchCount === relevant[0].matchCount);
                           setSuggestedIntents(tied); setSuggestedIntent(null);
-                        } else {
-                          setSuggestedIntent(relevant[0].intentId); setSuggestedIntents([]);
-                        }
+                        } else { setSuggestedIntent(relevant[0].intentId); setSuggestedIntents([]); }
                       }, 600);
                     }}
                     onKeyDown={handleKeyDown}
-                    placeholder={inputPlaceholder}
+                    placeholder="Ask anything... or drop in a file"
                     rows={1}
-                    style={{ width: '100%', border: 'none', outline: 'none', fontSize: 14, color: 'var(--text-primary)', background: 'transparent', resize: 'none', maxHeight: 140, overflowY: 'auto', lineHeight: '1.5', fontFamily: 'inherit', padding: '4px 4px' }}
-                    onInput={(e) => { e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 140) + 'px'; }}
+                    style={{
+                      width: '100%', border: 'none', outline: 'none', resize: 'none',
+                      fontFamily: 'inherit', fontSize: 15, color: 'var(--text-primary)',
+                      background: 'transparent', lineHeight: 1.5,
+                      minHeight: 28, maxHeight: 200, overflowY: 'auto',
+                      padding: '4px 4px',
+                    }}
+                    onInput={(e) => { e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 200) + 'px'; }}
                   />
 
-                  {/* Bottom controls row: + attach + scope pill on left, pack + intent + send on right. */}
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  {/* Actions row — File Search (160w) left · KP (160w) + send right */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                    {/* LEFT: File Search scope pill */}
+                    <div style={{ position: 'relative', width: 160 }} ref={scopeInputRef}>
                       <button
-                        onClick={() => dropFileInputRef.current?.click()}
-                        title="Upload a file from your computer"
+                        onClick={() => setIsScopeOpenInput(v => !v)}
                         style={{
-                          display: 'inline-flex', alignItems: 'center', gap: 6,
-                          padding: '6px 10px', borderRadius: 999,
-                          fontSize: 12, fontWeight: 500,
-                          border: activeVaultDocument ? '1.5px solid var(--navy)' : '1px solid var(--border)',
-                          background: activeVaultDocument ? 'rgba(15, 28, 63, 0.05)' : '#fff',
-                          color: 'var(--navy)', cursor: 'pointer', whiteSpace: 'nowrap',
+                          width: '100%', height: 40,
+                          display: 'inline-flex', alignItems: 'center', gap: 8,
+                          padding: '0 14px', borderRadius: 999,
+                          border: '1.5px solid #b8bcc4', background: '#fff',
+                          fontFamily: 'inherit', fontSize: 13.5, color: 'var(--text-primary)',
+                          cursor: 'pointer', lineHeight: 1,
                         }}
                       >
-                        <Plus size={13} />
-                        {activeVaultDocument && <span>Attached</span>}
+                        {(() => {
+                          const Icon = getScopeOption(searchScope).icon;
+                          return <Icon size={14} style={{ flexShrink: 0 }} />;
+                        })()}
+                        <span style={{ flex: 1, textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {getScopeOption(searchScope).label}
+                        </span>
+                        <ChevronDown size={12} style={{ flexShrink: 0, transform: isScopeOpenInput ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 150ms' }} />
                       </button>
-                      <SearchScopePill
-                        scope={searchScope}
-                        isOpen={isScopeOpenInput}
-                        setIsOpen={setIsScopeOpenInput}
-                        setScope={setSearchScope}
-                        scopeRef={scopeInputRef}
-                        openUpward={true}
-                        onPickVault={() => setIsVaultPickerModalOpen(true)}
-                        onPickPack={() => setIsPackPickerModalOpen(true)}
-                      />
+                      {isScopeOpenInput && (
+                        <>
+                          <div onClick={() => setIsScopeOpenInput(false)} style={{ position: 'fixed', inset: 0, zIndex: 50 }} />
+                          <div style={{
+                            position: 'absolute', bottom: 'calc(100% + 8px)', left: 0,
+                            width: 280, backgroundColor: '#fff', borderRadius: 12,
+                            border: '1px solid #e6e7ec',
+                            boxShadow: '0 12px 32px rgba(15,28,63,0.10)',
+                            padding: 8, zIndex: 51,
+                          }}>
+                            <div style={{
+                              padding: '8px 12px 4px',
+                              fontSize: 10.5, color: 'var(--text-muted)',
+                              fontWeight: 600, letterSpacing: '1.2px', textTransform: 'uppercase',
+                            }}>Search within</div>
+                            {SCOPE_OPTIONS.map((opt) => {
+                              const isCurrent = opt.id === searchScope;
+                              const Icon = opt.icon;
+                              return (
+                                <div key={opt.id}
+                                  onClick={() => {
+                                    setIsScopeOpenInput(false);
+                                    if (opt.id === 'vault') { setIsVaultPickerModalOpen(true); return; }
+                                    if (opt.id === 'packs') { setIsPackPickerModalOpen(true); return; }
+                                    setSearchScope(opt.id);
+                                  }}
+                                  style={{
+                                    display: 'flex', alignItems: 'flex-start', gap: 12,
+                                    padding: '11px 12px', borderRadius: 8, cursor: 'pointer',
+                                    background: isCurrent ? 'var(--gold-bg)' : 'transparent',
+                                  }}
+                                  onMouseEnter={(e) => { if (!isCurrent) e.currentTarget.style.backgroundColor = '#fafafa'; }}
+                                  onMouseLeave={(e) => { if (!isCurrent) e.currentTarget.style.backgroundColor = 'transparent'; }}
+                                >
+                                  <div style={{ width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-primary)', flexShrink: 0 }}>
+                                    <Icon size={18} />
+                                  </div>
+                                  <div style={{ flex: 1, minWidth: 0 }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, fontSize: 14, fontWeight: 500, color: 'var(--text-primary)' }}>
+                                      <span>{opt.label}</span>
+                                      {isCurrent && <Check size={14} style={{ color: 'var(--gold)', flexShrink: 0 }} />}
+                                    </div>
+                                    <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 3, lineHeight: 1.4 }}>{opt.sub}</div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </>
+                      )}
                     </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      {/* Anchor pill (knowledge pack) — gold tint, visible only when active. */}
-                      {activeKnowledgePack && (
-                        <button
-                          onClick={() => setIsPackPickerModalOpen(true)}
-                          title={activeKnowledgePack.name}
-                          style={{
-                            display: 'inline-flex', alignItems: 'center', gap: 7,
-                            padding: '7px 12px', borderRadius: 999,
-                            fontSize: 13, fontWeight: 500,
-                            border: '1px solid var(--gold-border)', background: 'var(--gold-bg)',
-                            color: 'var(--text-primary)', cursor: 'pointer', whiteSpace: 'nowrap',
-                            maxWidth: 180,
-                          }}
-                        >
-                          <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--gold)', flexShrink: 0 }} />
-                          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {activeKnowledgePack.name.length > 14 ? `${activeKnowledgePack.name.slice(0, 14)}…` : activeKnowledgePack.name}
-                          </span>
-                          <ChevronDown size={11} style={{ flexShrink: 0 }} />
-                        </button>
-                      )}
-
-                      {/* Mode pill — colored bucket border + dot. */}
-                      <div style={{ position: 'relative' }} ref={intentDropdownRef}>
-                        {(() => {
-                          const bucket = getBucketForIntent(activeIntent);
-                          const bucketColor = bucket ? BUCKET_COLORS[bucket] : '#8a8f9c';
-                          return (
-                            <button
-                              onClick={() => setIsIntentDropdownOpen(v => !v)}
-                              style={{
-                                display: 'inline-flex', alignItems: 'center', gap: 7,
-                                padding: '6px 12px', borderRadius: 999,
-                                fontSize: 12.5, fontWeight: 500,
-                                border: `1.5px solid ${bucketColor}`,
-                                backgroundColor: 'white', color: 'var(--text-primary)',
-                                cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
-                              }}
-                            >
-                              <span style={{ width: 7, height: 7, borderRadius: '50%', background: bucketColor, flexShrink: 0 }} />
-                              {getIntentLabel(activeIntent)}
-                              <ChevronDown size={11} style={{ transform: isIntentDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 150ms' }} />
-                            </button>
-                          );
-                        })()}
-                        {isIntentDropdownOpen && (
-                          <>
-                            <div onClick={() => setIsIntentDropdownOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 50 }} />
-                            <div style={{
-                              position: 'absolute', bottom: '100%', right: 0, marginBottom: 6, width: 280,
-                              backgroundColor: 'white', borderRadius: 12, border: '1px solid var(--border)',
-                              boxShadow: '0 12px 32px rgba(0,0,0,0.14)', zIndex: 51,
-                              maxHeight: 420, overflowY: 'auto',
-                            }}>
-                              {groupIntentsByBucket(INTENTS.map(i => i.id)).map((bucket, bucketIdx) => {
-                                const dotColor = BUCKET_COLORS[bucket.label] || 'var(--text-muted)';
-                                return (
-                                  <div key={bucket.label}>
-                                    <div style={{
-                                      display: 'flex', alignItems: 'center', gap: 8,
-                                      padding: '12px 14px 6px',
-                                      fontSize: 11, color: 'var(--text-primary)', fontWeight: 700,
-                                      fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
-                                      letterSpacing: '0.14em', textTransform: 'uppercase',
-                                      borderTop: bucketIdx === 0 ? 'none' : '1px solid var(--border)',
-                                      background: bucketIdx === 0 ? 'transparent' : 'rgba(10, 36, 99, 0.02)',
-                                    }}>
-                                      <span style={{ width: 7, height: 7, borderRadius: '50%', background: dotColor, flexShrink: 0 }} />
-                                      {bucket.label}
-                                    </div>
-                                    {bucket.intents.map((intent) => {
-                                      const isCurrent = activeIntent === intent.id;
-                                      return (
-                                        <div
-                                          key={intent.id}
-                                          onClick={() => { setActiveIntent(intent.id); setHasManualIntentPick(true); setIsIntentDropdownOpen(false); }}
-                                          style={{
-                                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                                            padding: '8px 14px', cursor: 'pointer', fontSize: 13,
-                                            color: isCurrent ? 'var(--text-primary)' : 'var(--text-secondary)',
-                                            fontWeight: isCurrent ? 500 : 400,
-                                            backgroundColor: isCurrent ? 'rgba(10, 36, 99, 0.04)' : 'transparent',
-                                            transition: 'background 100ms',
-                                          }}
-                                          onMouseEnter={(e) => { if (!isCurrent) e.currentTarget.style.backgroundColor = 'var(--ice-warm)'; }}
-                                          onMouseLeave={(e) => { if (!isCurrent) e.currentTarget.style.backgroundColor = 'transparent'; }}
-                                        >
-                                          <span>{intent.label}</span>
-                                          {isCurrent && <CheckCircle size={14} style={{ color: 'var(--navy)', flexShrink: 0 }} />}
-                                        </div>
-                                      );
-                                    })}
-                                  </div>
-                                );
-                              })}
-                              {/* Selected mode subtitle — designer note: "Selected mode must explain how it changes the prompt." */}
-                              {INTENT_DESCRIPTIONS[activeIntent] && (
-                                <div style={{
-                                  padding: '10px 14px', borderTop: '1px solid var(--border)',
-                                  background: 'var(--ice-warm)',
-                                  fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.5,
-                                }}>
-                                  <Info size={11} style={{ display: 'inline', marginRight: 6, color: 'var(--text-muted)', verticalAlign: 'middle' }} />
-                                  {INTENT_DESCRIPTIONS[activeIntent]}
-                                </div>
-                              )}
-                            </div>
-                          </>
-                        )}
-                      </div>
-
-                      {/* Send button. */}
+                    {/* RIGHT: KP pill (160w) + send button */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <button
+                        onClick={() => setIsPackPickerModalOpen(true)}
+                        style={{
+                          width: 160, height: 40,
+                          display: 'inline-flex', alignItems: 'center', gap: 8,
+                          padding: '0 14px', borderRadius: 999,
+                          border: '1.5px solid #b8bcc4', background: '#fff',
+                          fontFamily: 'inherit', fontSize: 13.5, color: 'var(--text-primary)',
+                          cursor: 'pointer', lineHeight: 1,
+                        }}
+                      >
+                        <span style={{ fontSize: 14, color: 'var(--text-primary)', lineHeight: 1, flexShrink: 0 }}>⌘</span>
+                        <span style={{ flex: 1, textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {activeKnowledgePack ? activeKnowledgePack.name : 'Knowledge pack'}
+                        </span>
+                        <ChevronDown size={12} style={{ flexShrink: 0 }} />
+                      </button>
                       {(() => {
                         const canSend = (input.trim() || pendingAttachments.length > 0) && !isTyping;
                         return (
-                          <div onClick={() => canSend && sendMessage(input)} style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--navy)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: canSend ? 'pointer' : 'default', flexShrink: 0, opacity: canSend ? 1 : 0.45, transition: 'opacity 150ms' }}><ArrowUp size={16} color="#fff" /></div>
+                          <button
+                            onClick={() => canSend && sendMessage(input)}
+                            style={{
+                              height: 40, width: 40, flexShrink: 0, borderRadius: '50%',
+                              background: 'var(--navy)', color: '#fff', border: 'none',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              cursor: canSend ? 'pointer' : 'default',
+                              opacity: canSend ? 1 : 0.45, transition: 'opacity 150ms',
+                            }}
+                          >
+                            <ArrowUp size={16} color="#fff" />
+                          </button>
                         );
                       })()}
                     </div>
                   </div>
                 </div>
+                );
+                })()}
               </>
             )}
 
@@ -9171,16 +9286,16 @@ INSTRUCTIONS:
                 "Upload files" affordance lives in the Optional box. */}
             {!showEmptyState && (() => {
               const labelText = pendingAttachments.length > 0
-                ? `Add another file (${pendingAttachments.length} attached)`
-                : 'Drop files or click to upload';
+                ? `Drop your files here (${pendingAttachments.length} attached)`
+                : 'Drop your files here';
               return (
               <div
                 onClick={() => dropFileInputRef.current?.click()}
-                onDragOver={(e) => { e.preventDefault(); if (!isFileDropHover) setIsFileDropHover(true); }}
-                onDragLeave={(e) => { e.preventDefault(); setIsFileDropHover(false); }}
+                onDragOver={(e) => { e.preventDefault(); if (!isUploadBarDropHover) setIsUploadBarDropHover(true); }}
+                onDragLeave={(e) => { e.preventDefault(); setIsUploadBarDropHover(false); }}
                 onDrop={(e) => {
                   e.preventDefault();
-                  setIsFileDropHover(false);
+                  setIsUploadBarDropHover(false);
                   const files = Array.from(e.dataTransfer?.files || []);
                   // Folder drops produce items in dataTransfer.items (kind="file"
                   // and webkitGetAsEntry().isDirectory) but yield nothing in .files.
@@ -9199,17 +9314,14 @@ INSTRUCTIONS:
                   if (files.length) handleAttachFiles(files, 'doc');
                 }}
                 style={{
-                  marginTop: 8,
-                  border: `1px dashed ${isFileDropHover ? 'var(--navy)' : 'var(--border)'}`,
-                  borderRadius: 10,
-                  background: isFileDropHover ? 'rgba(10, 36, 99, 0.04)' : 'transparent',
-                  padding: '6px 12px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 10,
+                  marginTop: 10, width: '100%',
+                  background: isUploadBarDropHover ? '#f8fafc' : '#fff',
+                  border: isUploadBarDropHover ? '2px dashed var(--navy)' : '1.5px solid #b8bcc4',
+                  borderRadius: 14,
+                  padding: isUploadBarDropHover ? '13px 21px' : '14px 22px',
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                   cursor: 'pointer',
-                  transition: 'border-color 150ms, background 150ms',
+                  transition: 'background 150ms, border-color 150ms',
                 }}
               >
                 <input
@@ -9224,9 +9336,12 @@ INSTRUCTIONS:
                     e.target.value = '';
                   }}
                 />
-                <Upload size={13} style={{ color: 'var(--text-muted)' }} />
-                <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', fontFamily: "inherit" }}>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, color: 'var(--text-primary)', fontSize: 13.5 }}>
+                  <Upload size={14} />
                   {labelText}
+                </span>
+                <span style={{ color: 'var(--text-muted)', fontSize: 12.5, letterSpacing: '0.3px' }}>
+                  PDF · DOCX · TXT · max 25MB
                 </span>
               </div>
               );
