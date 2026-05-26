@@ -19,7 +19,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import {
   Briefcase, Database, Check, X, Loader, AlertCircle,
-  ChevronDown, RefreshCw, Minus, CircleDashed,
+  ChevronDown, Minus, CircleDashed,
   FileText as FileTextIcon, Search as SearchIcon, GitCompare,
   FileOutput, BookOpen, ShieldCheck,
 } from 'lucide-react';
@@ -28,7 +28,7 @@ import {
   type WorkflowOperation,
   getRun, getTemplate,
 } from '../../lib/workflow';
-import { subscribeRun, cancelRun, retryStep } from '../../lib/workflowRunner';
+import { subscribeRun, cancelRun } from '../../lib/workflowRunner';
 
 const OP_ICON: Record<WorkflowOperation, React.ComponentType<{ size?: number }>> = {
   read_documents: FileTextIcon,
@@ -238,7 +238,6 @@ export default function WorkflowProgressCard({ runId, workspaceName, onComplete,
               if (next.has(step.stepId)) next.delete(step.stepId); else next.add(step.stepId);
               return next;
             })}
-            onRetry={() => retryStepFromCard(runId, i, template, run, workspaceName)}
           />
         ))}
       </div>
@@ -274,11 +273,10 @@ interface StepRowProps {
   elapsed: number | null;
   expanded: boolean;
   onToggle: () => void;
-  onRetry: () => void;
   panelMode: boolean;
 }
 
-function StepRow({ step, index, elapsed, expanded, onToggle, onRetry, panelMode }: StepRowProps) {
+function StepRow({ step, index, elapsed, expanded, onToggle, panelMode }: StepRowProps) {
   const IconComp = OP_ICON[step.operation];
 
   const indicator = (() => {
@@ -367,12 +365,6 @@ function StepRow({ step, index, elapsed, expanded, onToggle, onRetry, panelMode 
               {step.error || 'This step did not complete.'}
             </div>
           </div>
-          <button
-            onClick={onRetry}
-            style={{ marginTop: 8, display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 6, border: 'none', background: 'var(--navy)', color: '#fff', fontSize: 11, fontWeight: 500, cursor: 'pointer' }}
-          >
-            <RefreshCw size={11} /> Retry step
-          </button>
         </div>
       )}
 
@@ -401,15 +393,3 @@ function formatTime(iso: string): string {
   return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 }
 
-/* ─── Retry helper — needs to rebuild RunOptions for the runner ─── */
-
-function retryStepFromCard(runId: string, stepIndex: number, template: WorkflowTemplate, run: WorkflowRun, workspaceName?: string | null): void {
-  retryStep(runId, stepIndex, {
-    template,
-    uploadedDocs: run.uploadedDocs,
-    userId: run.userId,
-    userName: '', // not used inside executeStep
-    workspaceId: run.workspaceId,
-    workspaceName: workspaceName ?? null,
-  });
-}

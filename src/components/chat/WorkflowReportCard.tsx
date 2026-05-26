@@ -14,7 +14,7 @@ import React, { useMemo, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import {
   Briefcase, Database, FileText, ChevronDown, AlertTriangle,
-  X as XIcon, Download, RefreshCw, History, Check,
+  X as XIcon, Download, History, Check,
   FileText as FileTextIcon, Search as SearchIcon, GitCompare,
   FileOutput, BookOpen, ShieldCheck,
 } from 'lucide-react';
@@ -61,11 +61,9 @@ function relativeFrom(iso: string): string {
 export interface WorkflowReportCardProps {
   report: WorkflowReport;
   userName?: string;
-  /** Retry handler if a step failed — parent wires this to workflowRunner.retryStep. */
-  onRetryStep?: (stepIndex: number) => void;
 }
 
-export default function WorkflowReportCard({ report, userName, onRetryStep }: WorkflowReportCardProps) {
+export default function WorkflowReportCard({ report, userName }: WorkflowReportCardProps) {
   const [auditOpen, setAuditOpen] = useState(false);
 
   // Split the final generate_report step out as the hero summary; the rest
@@ -205,7 +203,6 @@ export default function WorkflowReportCard({ report, userName, onRetryStep }: Wo
         <AuditLogModal
           report={report}
           onClose={() => setAuditOpen(false)}
-          onRetryStep={onRetryStep}
         />
       )}
     </>
@@ -214,10 +211,9 @@ export default function WorkflowReportCard({ report, userName, onRetryStep }: Wo
 
 /* ─── Audit log modal ─────────────────────────────────────────────── */
 
-function AuditLogModal({ report, onClose, onRetryStep }: {
+function AuditLogModal({ report, onClose }: {
   report: WorkflowReport;
   onClose: () => void;
-  onRetryStep?: (stepIndex: number) => void;
 }) {
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
   const toggle = (i: number) => setExpanded((prev) => {
@@ -297,7 +293,6 @@ function AuditLogModal({ report, onClose, onRetryStep }: {
                 index={i}
                 expanded={expanded.has(i)}
                 onToggle={() => toggle(i)}
-                onRetry={onRetryStep ? () => { onRetryStep(i); onClose(); } : undefined}
               />
             ))}
           </div>
@@ -309,12 +304,11 @@ function AuditLogModal({ report, onClose, onRetryStep }: {
 
 /* ─── Per-step collapsible row (inside the audit modal) ─── */
 
-function AuditStepRow({ step, index, expanded, onToggle, onRetry }: {
+function AuditStepRow({ step, index, expanded, onToggle }: {
   step: WorkflowReportStep;
   index: number;
   expanded: boolean;
   onToggle: () => void;
-  onRetry?: () => void;
 }) {
   const cfg = OPERATION_CONFIG[step.operation];
   const Icon = OP_ICON[step.operation];
@@ -371,14 +365,6 @@ function AuditStepRow({ step, index, expanded, onToggle, onRetry }: {
             </ReactMarkdown>
           ) : (
             <div style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>No output for this step.</div>
-          )}
-          {isFailed && onRetry && (
-            <button
-              onClick={onRetry}
-              style={{ marginTop: 10, display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 6, border: 'none', background: 'var(--navy)', color: '#fff', fontSize: 11, fontWeight: 500, cursor: 'pointer' }}
-            >
-              <RefreshCw size={11} /> Retry step
-            </button>
           )}
         </div>
       )}

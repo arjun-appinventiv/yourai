@@ -23,27 +23,22 @@ export default function WorkflowStepItem({
   isLast,
   templateStep,
   elapsed,
-  onRetryStep,
 }: {
   step: WorkflowRunStep;
   stepNumber: number;
   isLast?: boolean;
   templateStep?: WorkflowStep;
   elapsed: number | null;
-  onRetryStep: (nextInstruction?: string) => void;
 }) {
+  // PM 2026-05-20: action row trimmed to "Copy output" only — Retry step,
+  // Edit input, and View details were all dropped. So no editor state and
+  // no expand-on-click handlers besides the row's own collapse toggle.
   const [expanded, setExpanded] = useState(step.status === 'running' || step.status === 'failed');
-  const [editing, setEditing] = useState(false);
-  const [draftInstruction, setDraftInstruction] = useState(templateStep?.instruction || '');
   const [logsOpen, setLogsOpen] = useState(false);
 
   useEffect(() => {
     if (step.status === 'running' || step.status === 'failed') setExpanded(true);
   }, [step.status]);
-
-  useEffect(() => {
-    setDraftInstruction(templateStep?.instruction || '');
-  }, [templateStep?.instruction, step.stepId]);
 
   const state = getStepState(step);
   const operationMeta = OPERATION_CONFIG[step.operation];
@@ -55,7 +50,7 @@ export default function WorkflowStepItem({
       return [
         `Step ${String(stepNumber).padStart(2, '0')} is currently generating output.`,
         '',
-        `Current focus: ${draftInstruction || templateStep?.instruction || 'Using the saved workflow instruction for this step.'}`,
+        `Current focus: ${templateStep?.instruction || 'Using the saved workflow instruction for this step.'}`,
         '',
         `${elapsed ?? 0}s elapsed. Partial output will appear here as the run progresses.`,
       ].join('\n');
@@ -63,7 +58,7 @@ export default function WorkflowStepItem({
     if (step.status === 'pending') return 'This step is queued and will run when the previous step completes.';
     if (step.status === 'failed') return step.error || 'This step failed before an output preview could be generated.';
     return sanitizedOutput || 'Demo result generated. Connect an LLM backend to return live analysis for this step.';
-  }, [draftInstruction, elapsed, sanitizedOutput, step.error, step.status, stepNumber, templateStep?.instruction]);
+  }, [elapsed, sanitizedOutput, step.error, step.status, stepNumber, templateStep?.instruction]);
 
   return (
     <div style={{ position: 'relative', paddingLeft: 34 }}>
@@ -191,23 +186,9 @@ export default function WorkflowStepItem({
           <DetailBlock
             label="Context"
             content={
-              editing ? (
-                <div>
-                  <textarea
-                    value={draftInstruction}
-                    onChange={(e) => setDraftInstruction(e.target.value)}
-                    style={textareaStyle}
-                    placeholder="Edit this step prompt before re-running"
-                  />
-                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 8 }}>
-                    <button onClick={() => setEditing(false)} style={secondaryButtonStyle}>Done</button>
-                  </div>
-                </div>
-              ) : (
-                <div style={bodyTextStyle}>
-                  {draftInstruction || templateStep?.instruction || 'No custom input was provided for this step.'}
-                </div>
-              )
+              <div style={bodyTextStyle}>
+                {templateStep?.instruction || 'No custom input was provided for this step.'}
+              </div>
             }
           />
 
@@ -275,25 +256,9 @@ export default function WorkflowStepItem({
 
           <div style={{ height: 1, background: 'var(--border-default)' }} />
 
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
-              gap: 8,
-              paddingTop: 2,
-            }}
-          >
-            <button onClick={() => onRetryStep(draftInstruction)} style={actionTilePrimaryStyle}>
-              Retry step
-            </button>
-            <button onClick={() => setEditing((prev) => !prev)} style={actionTileStyle}>
-              {editing ? 'Close editor' : 'Edit input'}
-            </button>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: 2 }}>
             <button onClick={() => copyText(sanitizedOutput || livePreview)} style={actionTileStyle}>
               <Copy size={12} /> Copy output
-            </button>
-            <button onClick={() => setExpanded(true)} style={actionTileStyle}>
-              <Eye size={12} /> View details
             </button>
           </div>
         </div>
@@ -518,43 +483,13 @@ const bodyTextStyle: React.CSSProperties = {
   lineHeight: 1.7,
 };
 
-const primaryButtonStyle: React.CSSProperties = {
-  display: 'inline-flex',
-  alignItems: 'center',
-  gap: 6,
-  padding: '7px 12px',
-  borderRadius: 10,
-  border: '1px solid var(--brand-navy)',
-  background: 'var(--brand-navy)',
-  color: '#FFFFFF',
-  fontSize: 12,
-  fontWeight: 600,
-  cursor: 'pointer',
-};
-
-const actionTilePrimaryStyle: React.CSSProperties = {
-  display: 'inline-flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  gap: 6,
-  minHeight: 40,
-  padding: '10px 12px',
-  borderRadius: 10,
-  border: '1px solid var(--brand-navy)',
-  background: 'var(--brand-navy)',
-  color: '#FFFFFF',
-  fontSize: 12,
-  fontWeight: 600,
-  cursor: 'pointer',
-};
-
 const actionTileStyle: React.CSSProperties = {
   display: 'inline-flex',
   alignItems: 'center',
   justifyContent: 'center',
   gap: 6,
-  minHeight: 40,
-  padding: '10px 12px',
+  minHeight: 36,
+  padding: '8px 16px',
   borderRadius: 10,
   border: '1px solid var(--border-default)',
   background: 'var(--bg-surface-alt)',
@@ -562,32 +497,4 @@ const actionTileStyle: React.CSSProperties = {
   fontSize: 12,
   fontWeight: 500,
   cursor: 'pointer',
-};
-
-const secondaryButtonStyle: React.CSSProperties = {
-  display: 'inline-flex',
-  alignItems: 'center',
-  gap: 6,
-  padding: '7px 12px',
-  borderRadius: 10,
-  border: '1px solid var(--border-default)',
-  background: '#FFFFFF',
-  color: 'var(--text-primary)',
-  fontSize: 12,
-  fontWeight: 500,
-  cursor: 'pointer',
-};
-
-const textareaStyle: React.CSSProperties = {
-  width: '100%',
-  minHeight: 88,
-  resize: 'vertical',
-  border: '1px solid var(--border-default)',
-  borderRadius: 10,
-  padding: 10,
-  fontSize: 12.5,
-  color: 'var(--text-primary)',
-  background: '#FFFFFF',
-  outline: 'none',
-  fontFamily: 'inherit',
 };
