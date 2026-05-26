@@ -886,6 +886,29 @@ function OperationDropdown({ value, onChange }: { value: WorkflowOperation; onCh
   const cfg = OPERATION_CONFIG[value];
   const Icon = OP_ICON[value];
 
+  // Unified-intents Phase 4: filter the dropdown options by what the
+  // unified store says is workflow-visible. SA admins toggle this on
+  // a per-intent basis in /super-admin/global-knowledge-base. Renamed
+  // ops are resolved via OPERATION_MIGRATION so the old WorkflowOperation
+  // ids (analyse_clauses, compare_against_standard, research_precedents)
+  // still match their unified intent id (clause_analysis, etc.).
+  const visibleOps = useMemo<WorkflowOperation[]>(() => {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const { loadIntents, SEED_INTENTS, OPERATION_MIGRATION } = require('../../lib/intentsStore');
+      const stored = loadIntents() || SEED_INTENTS;
+      return OPERATIONS_IN_ORDER.filter((op) => {
+        if (op === value) return true; // never hide the currently-selected op
+        const mappedId = (OPERATION_MIGRATION as Record<string, string>)[op] || op;
+        const intent = stored.find((i: { id: string }) => i.id === mappedId);
+        if (!intent) return true; // unknown ops fall through unfiltered
+        return intent.enabled !== false && intent.workflowVisible !== false;
+      });
+    } catch {
+      return OPERATIONS_IN_ORDER;
+    }
+  }, [value]);
+
   useEffect(() => {
     const onDown = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
@@ -936,7 +959,7 @@ function OperationDropdown({ value, onChange }: { value: WorkflowOperation; onCh
                 scrollBehavior: 'smooth',
               }}
             >
-          {OPERATIONS_IN_ORDER.map((op) => {
+          {visibleOps.map((op) => {
             const c = OPERATION_CONFIG[op];
             const I = OP_ICON[op];
             const isCurrent = op === value;
