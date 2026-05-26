@@ -23,6 +23,25 @@ import {
   canAccessWorkspace, softDeleteWorkspace,
 } from '../../lib/workspaceAccess';
 
+/**
+ * Category → theme map. The top border + category badge use these colors
+ * so a workspace's practice area is visible at a glance from the list.
+ * PM 2026-05-20 client feedback: "add the color highlighting to the top
+ * of the boxes."
+ */
+const CATEGORY_THEME = {
+  LITIGATION:   { color: '#8B5CF6', label: 'Litigation' },
+  TRUST_ESTATE: { color: '#3FB56B', label: 'Trust & Estate' },
+  CORPORATE:    { color: '#3B82F6', label: 'Corporate' },
+  EMPLOYMENT:   { color: '#EC4899', label: 'Employment' },
+  EXTERNAL:     { color: '#D97706', label: 'Client Portal' },
+  GENERAL:      { color: '#6B7280', label: 'General' },
+};
+
+function getCategoryTheme(category) {
+  return CATEGORY_THEME[category] || CATEGORY_THEME.GENERAL;
+}
+
 export default function WorkspacesPanel({ onClose, onToast }) {
   const { currentRole, hasPermission, isOrgAdmin } = useRole();
   const { operator } = useAuth();
@@ -207,47 +226,64 @@ function EmptyState({ isInternalOrExternal, hasSearch, canCreate, onCreate }) {
 /* ─────────────── Workspace card ─────────────── */
 function WorkspaceCard({ workspace, isOwner, canDelete, onOpen, onDelete }) {
   const memberCount = workspace.members.length;
+  const theme = getCategoryTheme(workspace.category);
   return (
     <div
       onClick={onOpen}
-      style={{ padding: '14px 16px', borderRadius: 10, border: '1px solid var(--border)', marginTop: 8, cursor: 'pointer', transition: 'all 0.15s' }}
-      onMouseEnter={(e) => { e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.06)'; e.currentTarget.style.borderColor = 'var(--navy)'; }}
-      onMouseLeave={(e) => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.borderColor = 'var(--border)'; }}
+      style={{
+        padding: 0,
+        borderRadius: 12,
+        border: '1px solid var(--border)',
+        borderTop: `3px solid ${theme.color}`,
+        marginTop: 8,
+        cursor: 'pointer',
+        transition: 'all 0.15s',
+        overflow: 'hidden',
+        background: '#fff',
+      }}
+      onMouseEnter={(e) => { e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)'; }}
+      onMouseLeave={(e) => { e.currentTarget.style.boxShadow = 'none'; }}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-start gap-3 min-w-0" style={{ flex: 1 }}>
-          <div style={{ width: 38, height: 38, borderRadius: 10, backgroundColor: 'var(--ice-warm)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            <Briefcase size={18} style={{ color: 'var(--navy)' }} />
-          </div>
-          <div style={{ minWidth: 0, flex: 1 }}>
-            <div className="flex items-center gap-2 flex-wrap">
-              <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{workspace.name}</span>
-              {isOwner && (
-                <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 999, backgroundColor: '#F0F3F6', color: '#1E3A8A', fontWeight: 500 }}>Owner</span>
+      <div style={{ padding: '14px 16px' }}>
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-start gap-3 min-w-0" style={{ flex: 1 }}>
+            <div style={{ width: 38, height: 38, borderRadius: 10, backgroundColor: `${theme.color}1a`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <Briefcase size={18} style={{ color: theme.color }} />
+            </div>
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{workspace.name}</span>
+                {isOwner && (
+                  <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 999, backgroundColor: '#F0F3F6', color: '#1E3A8A', fontWeight: 500 }}>Owner</span>
+                )}
+                <span style={{
+                  fontSize: 10, padding: '2px 8px', borderRadius: 999,
+                  backgroundColor: `${theme.color}1a`, color: theme.color, fontWeight: 600,
+                  letterSpacing: '0.04em', textTransform: 'uppercase',
+                }}>
+                  {theme.label}
+                </span>
+              </div>
+              {workspace.description && (
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4, lineHeight: 1.5 }}>{workspace.description}</div>
               )}
-              <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 999, backgroundColor: '#E7F3E9', color: '#5CA868', fontWeight: 500 }}>
-                {workspace.status || 'Active'}
-              </span>
-            </div>
-            {workspace.description && (
-              <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4, lineHeight: 1.5 }}>{workspace.description}</div>
-            )}
-            <div className="flex items-center gap-4" style={{ marginTop: 8, fontSize: 11, color: 'var(--text-muted)' }}>
-              <span className="flex items-center gap-1"><UserCheck size={12} /> {memberCount} member{memberCount !== 1 ? 's' : ''}</span>
-              <span className="flex items-center gap-1"><FileText size={12} /> {workspace.documentCount || 0} docs</span>
-              <span>Created {workspace.createdAt || '—'}</span>
+              <div className="flex items-center gap-4" style={{ marginTop: 8, fontSize: 11, color: 'var(--text-muted)' }}>
+                <span className="flex items-center gap-1"><UserCheck size={12} /> {memberCount} member{memberCount !== 1 ? 's' : ''}</span>
+                <span className="flex items-center gap-1"><FileText size={12} /> {workspace.documentCount || 0} docs</span>
+                <span>Created {workspace.createdAt || '—'}</span>
+              </div>
             </div>
           </div>
+          {canDelete && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onDelete(); }}
+              title="Archive workspace"
+              style={{ padding: 6, borderRadius: 6, background: 'none', border: '1px solid var(--border)', cursor: 'pointer', display: 'flex' }}
+            >
+              <Trash2 size={13} style={{ color: '#C65454' }} />
+            </button>
+          )}
         </div>
-        {canDelete && (
-          <button
-            onClick={(e) => { e.stopPropagation(); onDelete(); }}
-            title="Archive workspace"
-            style={{ padding: 6, borderRadius: 6, background: 'none', border: '1px solid var(--border)', cursor: 'pointer', display: 'flex' }}
-          >
-            <Trash2 size={13} style={{ color: '#C65454' }} />
-          </button>
-        )}
       </div>
     </div>
   );

@@ -36,7 +36,7 @@ import {
 import { MOCK_WORKSPACES } from '../../lib/mockWorkspaces';
 import { extractFileText } from '../../lib/file-parser';
 import { addVaultDoc } from '../../lib/documentVaultStore';
-import { INTENTS, DEFAULT_INTENT, getIntentLabel } from '../../lib/intents';
+import { INTENTS, DEFAULT_INTENT, getIntentLabel, BUCKET_COLORS, getBucketForIntent, groupIntentsByBucket } from '../../lib/intents';
 import { detectAllIntents } from '../../lib/intentDetector';
 import { teamMembersForPicker } from './workspaceTeamSeed';
 
@@ -792,42 +792,94 @@ export default function WorkspaceChatView() {
               onChange={(e) => { if (e.target.files) handleChatFilesPicked(e.target.files); e.target.value = ''; }}
             />
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, border: '1.5px solid var(--border)', borderRadius: 24, background: '#fff', minHeight: 48, padding: '8px 8px 8px 12px' }}>
-              {/* Attach button — tooltip differs for externals */}
-              <button
-                onClick={handleChatAttachClick}
-                title={isExternalUser ? 'Attach a file just for this chat' : 'Attach a file'}
-                style={{ width: 28, height: 28, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: ephemeralAttachment ? 'var(--navy)' : 'var(--text-muted)', background: ephemeralAttachment ? 'rgba(10,36,99,0.08)' : 'transparent', border: 'none', flexShrink: 0 }}
-              >
-                <Plus size={20} />
-              </button>
-
-              {/* Intent selector (collapsed pill when chat has content; expanded pills on empty state is handled below) */}
-              <div ref={intentDropdownRef} style={{ position: 'relative' }}>
+            {/* COMPOSER — mirrors the main ChatView composer (PM 2026-05-20
+               "all chat views in the app should be uniform"). White bg,
+               1.5px #b8bcc4 border, intent pill top (bucket-coloured 160w),
+               textarea middle, attach + send in the bottom row. */}
+            {(() => {
+              const activeBucket = getBucketForIntent(activeIntent);
+              const bucketColor = (activeBucket && BUCKET_COLORS[activeBucket]) || BUCKET_COLORS.DEFAULT;
+              return (
+            <div style={{
+              width: '100%',
+              background: '#fff',
+              border: '1.5px solid #b8bcc4',
+              borderRadius: 20,
+              padding: 16,
+              display: 'flex', flexDirection: 'column', gap: 12,
+            }}>
+              {/* Intent pill TOP (160w, bucket-coloured) */}
+              <div ref={intentDropdownRef} style={{ position: 'relative', width: 160 }}>
                 <button
                   onClick={() => setIsIntentOpen((v) => !v)}
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 10px', borderRadius: 999, fontSize: 12, fontWeight: 500, border: '1.5px solid var(--text-primary)', background: '#fff', color: 'var(--text-primary)', cursor: 'pointer', whiteSpace: 'nowrap' }}
-                  title="Workspace context — this chat is scoped to the current case"
+                  style={{
+                    width: '100%', height: 40,
+                    display: 'inline-flex', alignItems: 'center', gap: 8,
+                    padding: '0 14px', borderRadius: 999,
+                    background: `${bucketColor}1a`,
+                    border: `1.5px solid ${bucketColor}99`,
+                    color: bucketColor, fontSize: 13, fontWeight: 500,
+                    fontFamily: 'inherit', cursor: 'pointer', lineHeight: 1,
+                  }}
                 >
-                  <Briefcase size={11} style={{ color: 'var(--navy)' }} />
-                  {getIntentLabel(activeIntent)}
-                  <ChevronDown size={12} style={{ transform: isIntentOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 150ms' }} />
+                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: bucketColor, flexShrink: 0 }} />
+                  <span style={{ flex: 1, textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {getIntentLabel(activeIntent)}
+                  </span>
+                  <ChevronDown size={12} style={{ color: bucketColor, flexShrink: 0, transform: isIntentOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 150ms' }} />
                 </button>
                 {isIntentOpen && (
-                  <div style={{ position: 'absolute', bottom: '100%', left: 0, marginBottom: 6, width: 260, background: '#fff', borderRadius: 12, border: '1px solid var(--border)', boxShadow: '0 8px 24px rgba(0,0,0,0.12)', zIndex: 51, maxHeight: 320, overflowY: 'auto' }}>
-                    {INTENTS.map((intent: any) => {
-                      const isCurrent = intent.id === activeIntent;
-                      return (
-                        <div key={intent.id} onClick={() => { setActiveIntent(intent.id); setIsIntentOpen(false); }} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 14px', cursor: 'pointer', fontSize: 13, color: isCurrent ? 'var(--text-primary)' : 'var(--text-secondary)', fontWeight: isCurrent ? 500 : 400 }}>
-                          <span>{intent.label}</span>
-                          {isCurrent && <Check size={14} style={{ color: 'var(--navy)' }} />}
-                        </div>
-                      );
-                    })}
-                  </div>
+                  <>
+                    <div onClick={() => setIsIntentOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 50 }} />
+                    <div style={{
+                      position: 'absolute', top: 'calc(100% + 8px)', left: 0,
+                      width: 280, background: '#fff', borderRadius: 12,
+                      border: '1px solid #e6e7ec',
+                      boxShadow: '0 12px 32px rgba(15,28,63,0.10)',
+                      padding: 8, zIndex: 51, maxHeight: 380, overflowY: 'auto',
+                    }}>
+                      {groupIntentsByBucket(INTENTS.map((i: any) => i.id)).map((bucket: any) => {
+                        const dotColor = BUCKET_COLORS[bucket.label] || 'var(--text-muted)';
+                        return (
+                          <div key={bucket.label}>
+                            <div style={{
+                              display: 'flex', alignItems: 'center', gap: 8,
+                              padding: '8px 12px 4px',
+                              fontSize: 10.5, color: 'var(--text-muted)',
+                              fontWeight: 600, letterSpacing: '1.2px', textTransform: 'uppercase',
+                            }}>
+                              <span style={{ width: 6, height: 6, borderRadius: '50%', background: dotColor, flexShrink: 0 }} />
+                              {bucket.label}
+                            </div>
+                            {bucket.intents.map((intent: any) => {
+                              const isCurrent = activeIntent === intent.id;
+                              return (
+                                <div key={intent.id}
+                                  onClick={() => { setActiveIntent(intent.id); setIsIntentOpen(false); }}
+                                  style={{
+                                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                    padding: '8px 12px', borderRadius: 8, cursor: 'pointer',
+                                    fontSize: 14, color: 'var(--text-primary)',
+                                    fontWeight: isCurrent ? 500 : 400,
+                                    background: isCurrent ? 'var(--gold-bg)' : 'transparent',
+                                  }}
+                                  onMouseEnter={(e) => { if (!isCurrent) (e.currentTarget as HTMLDivElement).style.backgroundColor = '#fafafa'; }}
+                                  onMouseLeave={(e) => { if (!isCurrent) (e.currentTarget as HTMLDivElement).style.backgroundColor = 'transparent'; }}
+                                >
+                                  <span>{intent.label}</span>
+                                  {isCurrent && <Check size={14} style={{ color: 'var(--gold)', flexShrink: 0 }} />}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </>
                 )}
               </div>
 
+              {/* Textarea */}
               <textarea
                 ref={inputRef}
                 className="no-focus-ring"
@@ -836,18 +888,55 @@ export default function WorkspaceChatView() {
                 onKeyDown={handleKeyDown}
                 placeholder={`Ask anything about ${workspace.name}…`}
                 rows={1}
-                style={{ flex: 1, border: 'none', outline: 'none', boxShadow: 'none', fontSize: 14, color: 'var(--text-primary)', background: 'transparent', resize: 'none', maxHeight: 120, overflowY: 'auto', lineHeight: '1.5', fontFamily: 'inherit' }}
+                style={{
+                  width: '100%', border: 'none', outline: 'none', resize: 'none',
+                  fontFamily: 'inherit', fontSize: 15, color: 'var(--text-primary)',
+                  background: 'transparent', lineHeight: 1.5,
+                  minHeight: 28, maxHeight: 200, overflowY: 'auto',
+                  padding: '4px 4px',
+                }}
+                onInput={(e) => { (e.target as HTMLTextAreaElement).style.height = 'auto'; (e.target as HTMLTextAreaElement).style.height = Math.min((e.target as HTMLTextAreaElement).scrollHeight, 200) + 'px'; }}
               />
 
-              {(() => {
-                const canSend = input.trim().length > 0 && !isTyping;
-                return (
-                  <div onClick={() => canSend && sendMessage(input)} style={{ width: 32, height: 32, borderRadius: '50%', background: canSend ? 'var(--navy)' : '#9CA3AF', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: canSend ? 'pointer' : 'not-allowed', flexShrink: 0, opacity: canSend ? 1 : 0.6 }}>
-                    <ArrowUp size={16} color="#fff" />
-                  </div>
-                );
-              })()}
+              {/* Actions row — attach (left) · send (right) */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                <button
+                  onClick={handleChatAttachClick}
+                  title={isExternalUser ? 'Attach a file just for this chat' : 'Attach a file'}
+                  style={{
+                    height: 40, display: 'inline-flex', alignItems: 'center', gap: 8,
+                    padding: '0 16px', borderRadius: 999,
+                    border: '1.5px solid #b8bcc4',
+                    background: ephemeralAttachment ? `${BUCKET_COLORS.DEFAULT}1a` : '#fff',
+                    color: 'var(--text-primary)',
+                    fontSize: 13.5, fontWeight: 500,
+                    fontFamily: 'inherit', cursor: 'pointer', lineHeight: 1,
+                  }}
+                >
+                  <Plus size={14} style={{ flexShrink: 0 }} />
+                  {ephemeralAttachment ? 'Attached' : 'Attach file'}
+                </button>
+                {(() => {
+                  const canSend = input.trim().length > 0 && !isTyping;
+                  return (
+                    <button
+                      onClick={() => canSend && sendMessage(input)}
+                      style={{
+                        height: 40, width: 40, flexShrink: 0, borderRadius: '50%',
+                        background: 'var(--navy)', color: '#fff', border: 'none',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        cursor: canSend ? 'pointer' : 'default',
+                        opacity: canSend ? 1 : 0.45, transition: 'opacity 150ms',
+                      }}
+                    >
+                      <ArrowUp size={16} color="#fff" />
+                    </button>
+                  );
+                })()}
+              </div>
             </div>
+            );
+            })()}
             <div style={{ textAlign: 'center', fontSize: 11, color: 'var(--text-muted)', marginTop: 8 }}>
               Workspace chat is private to you. Documents are shared with all members.
             </div>
@@ -1262,13 +1351,17 @@ function MessageBubble({ msg, streaming = false }: { msg: any; streaming?: boole
   const isUser = msg.sender === 'user';
   return (
     <div style={{ display: 'flex', justifyContent: isUser ? 'flex-end' : 'flex-start', marginBottom: 14 }}>
-      <div style={{ maxWidth: '85%', display: 'flex', flexDirection: 'column', gap: 4 }}>
+      <div style={{ maxWidth: '85%', display: 'flex', flexDirection: 'column', gap: 4, alignItems: isUser ? 'flex-end' : 'flex-start' }}>
+        {/* PM 2026-05-20: user messages in soft bubble; bot messages flat
+           text on background (matches main ChatView pattern). */}
         <div style={{
-          padding: '10px 14px', borderRadius: 14,
-          background: isUser ? 'var(--navy)' : '#fff',
-          color: isUser ? '#fff' : 'var(--text-primary)',
-          border: isUser ? 'none' : '1px solid var(--border)',
-          fontSize: 13, lineHeight: 1.6,
+          fontSize: 14, lineHeight: 1.6, color: 'var(--text-primary)', wordBreak: 'break-word',
+          ...(isUser ? {
+            padding: '10px 14px',
+            borderRadius: 14,
+            background: 'var(--ice-warm)',
+            border: '1px solid var(--border)',
+          } : {}),
         }}>
           {isUser ? msg.content : <ReactMarkdown>{msg.content}</ReactMarkdown>}
           {streaming && <span style={{ display: 'inline-block', width: 6, height: 14, marginLeft: 2, background: 'var(--navy)', verticalAlign: 'middle', animation: 'blink 1s step-end infinite' }} />}
