@@ -51,22 +51,16 @@ export default function Sidebar() {
       {/* Logo — prominent brand */}
       <div style={{ padding: '18px 18px 14px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
         <div className="flex items-center gap-3">
-          {/* Logo mark — fingerprint, gold tint via CSS mask so it inherits the brand colour */}
+          {/* Logo mark — thin-line fingerprint SVG. Multi-tonal so we render
+             it directly (not via CSS mask, which would collapse the
+             thin-line detail into a solid silhouette). On the navy SA
+             sidebar we invert to flip the dark strokes to light. */}
           <div className="flex-shrink-0 rounded-lg flex items-center justify-center" style={{ width: 36, height: 36, backgroundColor: 'rgba(201,168,76,0.15)', border: '1px solid rgba(201,168,76,0.3)' }}>
-            <div
+            <img
+              src="/yourai-mark.svg"
+              alt=""
               aria-hidden="true"
-              style={{
-                width: 22, height: 22,
-                background: '#C9A84C',
-                WebkitMaskImage: 'url(/yourai-mark.png)',
-                WebkitMaskSize: 'contain',
-                WebkitMaskRepeat: 'no-repeat',
-                WebkitMaskPosition: 'center',
-                maskImage: 'url(/yourai-mark.png)',
-                maskSize: 'contain',
-                maskRepeat: 'no-repeat',
-                maskPosition: 'center',
-              }}
+              style={{ width: 28, height: 28, objectFit: 'contain', filter: 'invert(1)' }}
             />
           </div>
           <div>

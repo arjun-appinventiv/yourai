@@ -74,22 +74,14 @@ export default function OrgSidebar() {
       {/* Logo — prominent company name */}
       <div style={{ padding: '18px 18px 14px', borderBottom: '1px solid #F0F3F6' }}>
         <div className="flex items-center gap-3">
-          {/* Logo mark — navy square with the gold fingerprint */}
+          {/* Logo mark — thin-line fingerprint on a navy plate. Inverted
+             so the dark strokes flip to light against the dark plate. */}
           <div className="flex-shrink-0 rounded-lg flex items-center justify-center" style={{ width: 36, height: 36, backgroundColor: '#0A2463' }}>
-            <div
+            <img
+              src="/yourai-mark.svg"
+              alt=""
               aria-hidden="true"
-              style={{
-                width: 22, height: 22,
-                background: '#C9A84C',
-                WebkitMaskImage: 'url(/yourai-mark.png)',
-                WebkitMaskSize: 'contain',
-                WebkitMaskRepeat: 'no-repeat',
-                WebkitMaskPosition: 'center',
-                maskImage: 'url(/yourai-mark.png)',
-                maskSize: 'contain',
-                maskRepeat: 'no-repeat',
-                maskPosition: 'center',
-              }}
+              style={{ width: 28, height: 28, objectFit: 'contain', filter: 'invert(1)' }}
             />
           </div>
           <div>
