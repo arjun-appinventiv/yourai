@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import ReactMarkdown from 'react-markdown';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -859,6 +860,8 @@ function WorkflowCard({
   const requiredDocs = template.requiredDocs?.length ? template.requiredDocs : ['1 document'];
   const [bodyHovered, setBodyHovered] = useState(false);
   const [starHovered, setStarHovered] = useState(false);
+  const [sampleOpen, setSampleOpen] = useState(false);
+  const hasSample = !!(template.sampleOutput && template.sampleOutput.trim());
 
   return (
     <div
@@ -1160,12 +1163,40 @@ function WorkflowCard({
             overflow: 'hidden',
             textOverflow: 'ellipsis',
             minHeight: 62,
-            paddingBottom: 16,
+            paddingBottom: hasSample ? 6 : 16,
           }}
         >
           {template.description}
         </p>
+        {hasSample && (
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); setSampleOpen(true); }}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              padding: 0,
+              margin: '0 20px 16px',
+              fontSize: 12,
+              color: 'var(--navy)',
+              cursor: 'pointer',
+              fontWeight: 500,
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.textDecoration = 'underline'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.textDecoration = 'none'; }}
+          >
+            See sample output →
+          </button>
+        )}
       </div>
+
+      {sampleOpen && (
+        <SampleOutputModal
+          templateName={template.name}
+          sampleOutput={template.sampleOutput || ''}
+          onClose={() => setSampleOpen(false)}
+        />
+      )}
 
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 10, padding: '16px 20px 18px', borderTop: '1px solid var(--ice)', marginTop: 'auto' }}>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 4 }}>
@@ -1526,3 +1557,74 @@ function MenuItem({
     </div>
   );
 }
+
+/* ─── Sample output modal — surfaced by the picker card "See sample output →"
+ * link when a workflow author has filled the optional sampleOutput field.
+ * Renders the author-supplied markdown so teammates can preview the shape
+ * of the report before running. */
+function SampleOutputModal({
+  templateName,
+  sampleOutput,
+  onClose,
+}: {
+  templateName: string;
+  sampleOutput: string;
+  onClose: () => void;
+}) {
+  return (
+    <>
+      <div
+        onClick={onClose}
+        style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 80, backdropFilter: 'blur(4px)' }}
+      />
+      <div
+        style={{
+          position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)',
+          width: 'min(720px, 92vw)', maxHeight: '86vh', background: '#fff',
+          borderRadius: 16, boxShadow: '0 20px 60px rgba(0,0,0,0.25)',
+          zIndex: 81, display: 'flex', flexDirection: 'column', overflow: 'hidden',
+        }}
+      >
+        <div style={{ padding: '18px 24px 14px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#9CA3AF', marginBottom: 4 }}>
+              Sample output
+            </div>
+            <div style={{ fontFamily: "'DM Serif Display', serif", fontSize: 20, color: '#0B1D3A', fontWeight: 400, lineHeight: 1.3 }}>
+              {templateName}
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            aria-label="Close"
+            style={{ padding: 6, borderRadius: 6, background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', flexShrink: 0 }}
+          >
+            <X size={18} />
+          </button>
+        </div>
+        <div style={{ flex: 1, overflowY: 'auto', padding: '20px 28px 26px', fontSize: 13.5, color: '#1F2937', lineHeight: 1.7 }}>
+          <ReactMarkdown
+            components={{
+              h1: ({ children }) => <h2 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 22, fontWeight: 400, margin: '18px 0 10px', color: 'var(--navy)' }}>{children}</h2>,
+              h2: ({ children }) => <h3 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 17, fontWeight: 400, margin: '18px 0 8px', color: 'var(--navy)' }}>{children}</h3>,
+              h3: ({ children }) => <h4 style={{ fontSize: 13.5, fontWeight: 600, margin: '14px 0 6px', color: 'var(--navy)' }}>{children}</h4>,
+              p: ({ children }) => <p style={{ margin: '0 0 10px' }}>{children}</p>,
+              ul: ({ children }) => <ul style={{ paddingLeft: 20, margin: '6px 0 12px' }}>{children}</ul>,
+              ol: ({ children }) => <ol style={{ paddingLeft: 20, margin: '6px 0 12px' }}>{children}</ol>,
+              li: ({ children }) => <li style={{ marginBottom: 4 }}>{children}</li>,
+              strong: ({ children }) => <strong style={{ color: 'var(--navy)' }}>{children}</strong>,
+              blockquote: ({ children }) => <blockquote style={{ borderLeft: '3px solid var(--gold)', margin: '10px 0', padding: '4px 0 4px 14px', color: 'var(--text-secondary)' }}>{children}</blockquote>,
+              code: ({ children }) => <code style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', fontSize: 12.5, background: 'var(--ice-warm)', padding: '1px 5px', borderRadius: 4 }}>{children}</code>,
+            }}
+          >
+            {sampleOutput}
+          </ReactMarkdown>
+          <div style={{ marginTop: 24, paddingTop: 14, borderTop: '1px solid var(--ice)', fontSize: 11, color: 'var(--text-muted)', fontStyle: 'italic' }}>
+            Sample provided by the workflow author. Actual output will vary based on the documents you upload.
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+

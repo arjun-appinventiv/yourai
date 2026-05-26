@@ -40,6 +40,7 @@ import { loadVault } from '../../lib/documentVaultStore';
 const MAX_STEPS = 8;
 const MAX_NAME = 80;
 const MAX_DESCRIPTION = 300;
+const MAX_SAMPLE_OUTPUT = 8000;
 const MAX_STEP_NAME = 40;
 const MAX_INSTRUCTION = 500;
 
@@ -93,6 +94,7 @@ export default function WorkflowBuilder({ template, knowledgePacks = [], onBack,
   /* ─── Form state ─── */
   const [name, setName] = useState(template?.name || '');
   const [description, setDescription] = useState(template?.description || '');
+  const [sampleOutput, setSampleOutput] = useState(template?.sampleOutput || '');
   const [practiceArea, setPracticeArea] = useState(template?.practiceArea || 'Legal');
   const [visibility, setVisibility] = useState<WorkflowVisibility>(template?.visibility || 'personal');
   const [status, setStatus] = useState<'active' | 'draft'>(template?.status || 'active');
@@ -231,6 +233,7 @@ export default function WorkflowBuilder({ template, knowledgePacks = [], onBack,
         visibility,
         status,
         steps,
+        sampleOutput: sampleOutput.trim() || undefined,
       });
       if (updated) {
         onToast?.('Workflow saved');
@@ -247,6 +250,7 @@ export default function WorkflowBuilder({ template, knowledgePacks = [], onBack,
         steps,
         createdBy: currentUserId,
         createdByName: currentUserName,
+        sampleOutput: sampleOutput.trim() || undefined,
       });
       onToast?.('Workflow saved');
       setShowPipelineSoftWarnings(false);
@@ -440,6 +444,19 @@ export default function WorkflowBuilder({ template, knowledgePacks = [], onBack,
                 rows={3}
                 placeholder="e.g. A risk memo highlighting non-standard clauses and recommended redlines."
                 style={{ ...inputStyle(false), height: 'auto', padding: '10px 12px', resize: 'vertical', lineHeight: 1.5 }}
+              />
+            </Field>
+
+            <Field
+              label={<><span>Sample output ({sampleOutput.length}/{MAX_SAMPLE_OUTPUT})</span> <span style={optionalMarkStyle}>(optional)</span></>}
+              helper="Paste a sample of what this workflow's report will look like. Surfaced as 'See sample output →' on the picker card so teammates can preview before running. Markdown formatting is rendered."
+            >
+              <textarea
+                value={sampleOutput}
+                onChange={(e) => setSampleOutput(e.target.value.slice(0, MAX_SAMPLE_OUTPUT))}
+                rows={6}
+                placeholder={'## Overview\nOne-paragraph summary of what the workflow produced.\n\n## Key findings\n- **HIGH** — finding 1\n- **MEDIUM** — finding 2\n\n## Recommended actions\n1. Action one\n2. Action two'}
+                style={{ ...inputStyle(false), height: 'auto', padding: '10px 12px', resize: 'vertical', lineHeight: 1.55, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', fontSize: 12.5 }}
               />
             </Field>
 

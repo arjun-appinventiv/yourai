@@ -116,6 +116,13 @@ export interface WorkflowTemplate {
   createdByName: string;
   updatedAt: string;           // ISO
   estimatedTotalSeconds: number;
+  /**
+   * Optional sample report output authored by the workflow creator.
+   * Markdown. Surfaced on the picker card as a "See sample output →" link
+   * so a user can preview what this workflow's output will look like
+   * before running it. Empty / undefined hides the affordance.
+   */
+  sampleOutput?: string;
 }
 
 /* Per-user favourites — stored separately so favouriting a shared
@@ -295,6 +302,7 @@ export interface NewTemplateInput {
   visibility: WorkflowVisibility;
   createdBy: string;
   createdByName: string;
+  sampleOutput?: string;
 }
 
 /** POST /api/workflows */
@@ -313,6 +321,7 @@ export function createTemplate(input: NewTemplateInput): WorkflowTemplate {
     createdByName: input.createdByName,
     updatedAt: now,
     estimatedTotalSeconds,
+    sampleOutput: (input.sampleOutput || '').trim() || undefined,
   };
   const all = listTemplates();
   saveTemplates([t, ...all]);
