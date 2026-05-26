@@ -11,7 +11,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  X, Plus, Briefcase, Database, FileText, Clock,
+  X, Plus, FileText, Clock,
   UploadCloud, Loader, AlertTriangle, CheckCircle, Trash2,
   FileText as FileTextIcon, Search as SearchIcon, GitCompare,
   FileOutput, BookOpen, ShieldCheck, ArrowRight, RefreshCw,
@@ -19,7 +19,7 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import {
   type WorkflowTemplate, type UploadedDoc, type WorkflowOperation,
-  OPERATION_CONFIG, listRuns,
+  OPERATION_CONFIG,
 } from '../../lib/workflow';
 import { startRun } from '../../lib/workflowRunner';
 import { extractFileText } from '../../lib/file-parser';
@@ -55,7 +55,6 @@ export default function PreRunModal({ template, workspaceId, workspaceName, work
   const [uploads, setUploads] = useState<UploadedDoc[]>([]);
   const [dragActive, setDragActive] = useState(false);
   const [expandedStepId, setExpandedStepId] = useState<string | null>(template.steps[0]?.id || null);
-  const [showLogic, setShowLogic] = useState(false);
   const [runAttempted, setRunAttempted] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   // Keyed by upload name — stable across re-renders, tolerates id churn.
@@ -68,9 +67,6 @@ export default function PreRunModal({ template, workspaceId, workspaceName, work
   const anyProcessing = uploads.some((d) => d.status === 'processing');
   const anyReady = uploads.some((d) => d.status === 'ready');
   const canRun = !anyProcessing && uploads.length > 0;
-  const existingRuns = useMemo(() => listRuns().filter((run) => run.templateId === template.id), [template.id]);
-  const lastRun = existingRuns[0] || null;
-  const sampleOutput = template.outputLabel || `${template.practiceArea} report`;
 
   const requestClose = () => {
     if (uploads.length > 0) {
@@ -192,14 +188,9 @@ export default function PreRunModal({ template, workspaceId, workspaceName, work
             >
               ← Back to Workflows
             </button>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-              <button onClick={() => onToast?.('Editing is available from the Workflows builder.')} style={headerLinkStyle}>
-                Edit workflow
-              </button>
-              <button onClick={() => setShowLogic((prev) => !prev)} style={headerLinkStyle}>
-                View logic
-              </button>
-            </div>
+            <button onClick={() => onToast?.('Editing is available from the Workflows builder.')} style={headerLinkStyle}>
+              Edit workflow
+            </button>
           </div>
           <div className="flex items-start justify-between gap-3">
             <div style={{ minWidth: 0 }}>
@@ -226,30 +217,6 @@ export default function PreRunModal({ template, workspaceId, workspaceName, work
 
         {/* Body — scrollable */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '18px 24px 10px' }}>
-          {/* Knowledge source */}
-          <div style={{
-            padding: '12px 14px', borderRadius: 10, marginBottom: workspaceHasNoDocs ? 8 : 16,
-            display: 'flex', alignItems: 'flex-start', gap: 10,
-            ...(inWorkspace
-              ? { background: '#EFF6FF', border: '1px solid #BFDBFE' }
-              : { background: '#F3F4F6', border: '1px solid #E5E7EB' }),
-          }}>
-            {inWorkspace
-              ? <Briefcase size={14} style={{ color: '#1D4ED8', flexShrink: 0, marginTop: 2 }} />
-              : <Database size={14} style={{ color: '#6B7280', flexShrink: 0, marginTop: 2 }} />
-            }
-            <div style={{ fontSize: 12, lineHeight: 1.55, color: inWorkspace ? '#1E3A8A' : 'var(--text-secondary)' }}>
-              {inWorkspace ? (
-                <>
-                  <strong>{workspaceName}</strong> — workspace documents are the primary knowledge source, supplemented by the YourAI global knowledge base.
-                </>
-              ) : (
-                <>
-                  Running from main chat — uses the <strong>YourAI global knowledge base</strong>. For case-specific results, run this workflow from inside a workspace.
-                </>
-              )}
-            </div>
-          </div>
           {/* Sibling warning (no nested banner) */}
           {workspaceHasNoDocs && (
             <div style={{ marginBottom: 16, padding: '10px 14px', borderRadius: 8, background: '#FEF3C7', border: '1px solid #FDE68A', color: '#6B4E1F', fontSize: 12, display: 'flex', alignItems: 'center', gap: 8, lineHeight: 1.45 }}>
@@ -318,7 +285,7 @@ export default function PreRunModal({ template, workspaceId, workspaceName, work
                       </div>
                       {expanded && (
                         <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--border)', fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.65 }}>
-                          {showLogic ? s.instruction : cfg.description}
+                          {cfg.description}
                         </div>
                       )}
                     </div>
@@ -326,36 +293,6 @@ export default function PreRunModal({ template, workspaceId, workspaceName, work
                   </button>
                 );
               })}
-            </div>
-          </div>
-
-          {/* Sample output + Last run info cards */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20 }}>
-            <div style={infoCardStyle}>
-              <div style={sectionLabelStyle}>Sample output</div>
-              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>
-                {sampleOutput}
-              </div>
-              <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.65 }}>
-                Review a structured summary of risks, priority findings, and the next actions this workflow recommends.
-              </div>
-            </div>
-            <div style={infoCardStyle}>
-              <div style={sectionLabelStyle}>Last run</div>
-              {lastRun ? (
-                <>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>
-                    {lastRun.status === 'complete' ? 'Completed successfully' : lastRun.status === 'running' ? 'Currently running' : 'Recently started'}
-                  </div>
-                  <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.65 }}>
-                    {formatRunDate(lastRun.startedAt)} · {lastRun.steps.filter((step) => step.status === 'complete').length} of {lastRun.steps.length} steps complete
-                  </div>
-                </>
-              ) : (
-                <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.65 }}>
-                  No previous run yet. Once you run this workflow, the latest summary will appear here.
-                </div>
-              )}
             </div>
           </div>
 
@@ -533,14 +470,6 @@ function getStepOutcomeLabel(operation: WorkflowOperation): string {
   }
 }
 
-function formatRunDate(iso: string): string {
-  try {
-    return new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }).format(new Date(iso));
-  } catch {
-    return 'Recently';
-  }
-}
-
 const headerLinkStyle: React.CSSProperties = {
   background: 'none',
   border: 'none',
@@ -549,20 +478,4 @@ const headerLinkStyle: React.CSSProperties = {
   fontSize: 12,
   fontWeight: 500,
   cursor: 'pointer',
-};
-
-const infoCardStyle: React.CSSProperties = {
-  border: '1px solid var(--border)',
-  borderRadius: 12,
-  background: '#FFFFFF',
-  padding: 14,
-};
-
-const sectionLabelStyle: React.CSSProperties = {
-  fontSize: 10,
-  fontWeight: 600,
-  color: 'var(--text-muted)',
-  textTransform: 'uppercase',
-  letterSpacing: '0.05em',
-  marginBottom: 6,
 };

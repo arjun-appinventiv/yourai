@@ -41,7 +41,6 @@ const MAX_STEPS = 8;
 const MAX_NAME = 80;
 const MAX_DESCRIPTION = 300;
 const MAX_SAMPLE_OUTPUT = 8000;
-const MAX_STEP_NAME = 40;
 const MAX_INSTRUCTION = 500;
 
 const PRACTICE_AREAS = ['Legal', 'Compliance & Audit', 'Healthcare', 'Corporate', 'Real Estate', 'Employment', 'Other'];
@@ -99,7 +98,17 @@ export default function WorkflowBuilder({ template, knowledgePacks = [], onBack,
   const [visibility, setVisibility] = useState<WorkflowVisibility>(template?.visibility || 'personal');
   const [status, setStatus] = useState<'active' | 'draft'>(template?.status || 'active');
 
-  const [steps, setSteps] = useState<WorkflowStep[]>(() => template?.steps ? JSON.parse(JSON.stringify(template.steps)) : [makeNewStep()]);
+  // Steps from an existing template have their `name` overwritten by the
+  // operation label — PM 2026-05-20: "Step name should be removed, just
+  // use the operation name as step name." This keeps the saved record's
+  // shape unchanged but guarantees the displayed name is the operation
+  // label everywhere.
+  const [steps, setSteps] = useState<WorkflowStep[]>(() => {
+    if (template?.steps) {
+      return template.steps.map((s) => ({ ...s, name: OPERATION_CONFIG[s.operation].label }));
+    }
+    return [makeNewStep()];
+  });
 
   const [errors, setErrors] = useState<{ name?: string; practiceArea?: string; steps?: string }>({});
 
@@ -154,7 +163,7 @@ export default function WorkflowBuilder({ template, knowledgePacks = [], onBack,
     return warnings;
   }, [steps]);
   const hasSoftWarnings = useMemo(
-    () => steps.some((step) => !step.name.trim() || !step.instruction.trim()) || duplicateOperationWarnings.length > 0,
+    () => steps.some((step) => !step.instruction.trim()) || duplicateOperationWarnings.length > 0,
     [duplicateOperationWarnings.length, steps],
   );
 
@@ -725,7 +734,9 @@ function StepCard(props: StepCardProps) {
   const cfg = OPERATION_CONFIG[step.operation];
 
   const handleOperationChange = (op: WorkflowOperation) => {
-    onChange({ operation: op, estimatedSeconds: DEFAULT_SECONDS[op] });
+    // Step name follows the operation label (PM 2026-05-20: no separate
+    // step-name field; the operation IS the name).
+    onChange({ operation: op, estimatedSeconds: DEFAULT_SECONDS[op], name: OPERATION_CONFIG[op].label });
   };
 
   return (
@@ -773,36 +784,6 @@ function StepCard(props: StepCardProps) {
           </span>
           <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>·</span>
           <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{cfg.description}</span>
-        </div>
-
-        <div>
-          <label style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)', display: 'block', marginBottom: 6 }}>
-            Step name
-            <span style={{ color: 'var(--text-tertiary)', fontWeight: 400, fontSize: 12, marginLeft: 4 }}>(optional)</span>
-          </label>
-          <input
-            value={step.name}
-            onChange={(e) => onChange({ name: e.target.value.slice(0, MAX_STEP_NAME) })}
-            placeholder="e.g. Read NDA and all amendments"
-            style={{
-              width: '100%',
-              height: 44,
-              border: `1px solid ${showSoftWarnings && !step.name.trim() ? 'var(--status-warning, #D97706)' : 'var(--border-default, var(--ice))'}`,
-              borderRadius: 10,
-              padding: '0 12px',
-              fontSize: 14,
-              outline: 'none',
-              boxSizing: 'border-box',
-              fontFamily: "'DM Sans', sans-serif",
-              color: 'var(--text-primary)',
-              boxShadow: '0 1px 3px rgba(11,29,58,0.04)',
-            }}
-          />
-          <p style={{ fontSize: 12, color: showSoftWarnings && !step.name.trim() ? 'var(--status-warning, #D97706)' : 'var(--text-tertiary)', marginTop: 4, lineHeight: 1.5 }}>
-            {showSoftWarnings && !step.name.trim()
-              ? 'Adding a name makes this step easier to identify in the report.'
-              : 'Appears in the report to identify this step.'}
-          </p>
         </div>
 
         <div>
@@ -1296,7 +1277,7 @@ function refTypeLabel(t: ReferenceDoc['type']): string {
 function makeNewStep(): WorkflowStep {
   return {
     id: `st-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-    name: '',
+    name: OPERATION_CONFIG.analyse_clauses.label,
     operation: 'analyse_clauses',
     instruction: '',
     referenceDoc: null,
