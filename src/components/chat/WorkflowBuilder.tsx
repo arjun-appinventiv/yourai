@@ -1270,13 +1270,19 @@ function refTypeLabel(t: ReferenceDoc['type']): string {
   return 'from Knowledge Pack';
 }
 
+// Default operation for a new step is Analyse Clauses — the most common
+// first analysis op. Earlier the default was read_documents, which silently
+// nudged every workflow into starting with a parse step; client (Wendy)
+// flagged that Read Documents is not always wanted as step 1. Users can
+// still pick any operation via the step card's operation dropdown, and the
+// runner / executor never required read_documents to be first.
 function makeNewStep(): WorkflowStep {
   return {
     id: `st-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
     name: '',
-    operation: 'read_documents',
+    operation: 'analyse_clauses',
     instruction: '',
     referenceDoc: null,
-    estimatedSeconds: DEFAULT_SECONDS.read_documents,
+    estimatedSeconds: DEFAULT_SECONDS.analyse_clauses,
   };
 }

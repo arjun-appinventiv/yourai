@@ -106,6 +106,38 @@ export const MOCK_WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
   },
 
   {
+    id: 'wf-clause-quick-scan',
+    name: 'Clause Quick Scan',
+    description:
+      'Lightweight two-step scan that goes straight to clause analysis and a short summary — no parse step. Useful when the uploaded doc is short or you just want a quick risk read.',
+    practiceArea: 'Legal',
+    status: 'active',
+    visibility: 'platform',
+    createdBy: 'user-sa-root',
+    createdByName: 'YourAI Platform Team',
+    updatedAt: today,
+    estimatedTotalSeconds: 7,
+    steps: [
+      {
+        id: 'st-cqs-1',
+        name: 'Analyse Clauses',
+        operation: 'analyse_clauses',
+        instruction: 'Identify the material clauses in the uploaded document, flag anything non-standard or one-sided, and rate each finding low / medium / high risk. Skip boilerplate.',
+        referenceDoc: null,
+        estimatedSeconds: 4,
+      },
+      {
+        id: 'st-cqs-2',
+        name: 'Generate Report',
+        operation: 'generate_report',
+        instruction: 'Produce a short summary: (1) overall verdict in one sentence, (2) top 3 findings with severity, (3) one recommended next step.',
+        referenceDoc: null,
+        estimatedSeconds: 3,
+      },
+    ],
+  },
+
+  {
     id: 'wf-my-nda-checker',
     name: 'My NDA Checker',
     description: 'Priya\u2019s personal quick-review workflow for inbound NDAs — parse, flag, and summarise in under 10 seconds.',

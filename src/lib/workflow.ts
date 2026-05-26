@@ -221,7 +221,11 @@ export interface WorkflowReport {
 
 /* ─── Storage + helpers ──────────────────────────────────────────────── */
 
-const TEMPLATES_KEY = 'yourai_workflow_templates_v1';
+// Bumped v1 → v2 (2026-05-20) to force re-seed: added the "Clause Quick
+// Scan" template that demonstrates a workflow without a Read Documents
+// step 1. Existing run records reference template IDs that are still
+// present in v2, so no orphans on the runs side.
+const TEMPLATES_KEY = 'yourai_workflow_templates_v2';
 const RUNS_KEY      = 'yourai_workflow_runs_v1';
 const ACTIVE_RUN_KEY = 'yourai_workflow_active_run_v1';
 
