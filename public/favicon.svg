@@ -5,5 +5,5 @@
       <image href="/yourai-mark.png" x="10" y="10" width="44" height="44"/>
     </mask>
   </defs>
-  <rect x="10" y="10" width="44" height="44" fill="#C9A84C" mask="url(#m)"/>
+  <rect x="10" y="10" width="44" height="44" fill="#FFFFFF" mask="url(#m)"/>
 </svg>
