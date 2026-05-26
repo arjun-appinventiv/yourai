@@ -50,7 +50,7 @@ Same shape across all 3 surfaces:
   style={{
     width: '100%',
     background: isFileDropHover ? '#f8fafc' : '#fff',
-    border: isFileDropHover ? '2px dashed var(--navy)' : '1.5px solid #b8bcc4',
+    border: isFileDropHover ? '2px dashed var(--navy)' : '1.5px solid #9ca3af',
     borderRadius: 20,
     padding: isFileDropHover ? 15 : 16,
     display: 'flex', flexDirection: 'column', gap: 12,
@@ -63,7 +63,7 @@ Same shape across all 3 surfaces:
 </div>
 ```
 
-- Default border `1.5px solid #b8bcc4` (NOT `var(--border)` — that's
+- Default border `1.5px solid #9ca3af` (NOT `var(--border)` — that's
   `#e6e6ea` and reads as too faint against the white composer).
 - Dragover state replaces the border with `2px dashed var(--navy)` and
   the bg with `#f8fafc`; padding shifts to 15 so total dimensions stay
@@ -140,7 +140,7 @@ Three same-size pills + send button. All three use the same chrome:
   width: '100%', height: 40,
   display: 'inline-flex', alignItems: 'center', gap: 8,
   padding: '0 14px', borderRadius: 999,
-  border: '1.5px solid #b8bcc4',
+  border: '1.5px solid #9ca3af',
   background: '#fff',
   fontFamily: 'inherit', fontSize: 13.5, color: 'var(--text-primary)',
   cursor: 'pointer', lineHeight: 1,
@@ -219,7 +219,7 @@ dropdown on "Always show scrollbars" preference.
   style={{
     marginTop: 12, width: '100%',
     background: isUploadBarDropHover ? '#f8fafc' : '#fff',
-    border: isUploadBarDropHover ? '2px dashed var(--navy)' : '1.5px solid #b8bcc4',
+    border: isUploadBarDropHover ? '2px dashed var(--navy)' : '1.5px solid #9ca3af',
     borderRadius: 14,
     padding: isUploadBarDropHover ? '13px 21px' : '14px 22px',
     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -382,7 +382,7 @@ You generally shouldn't. The three composers (empty / populated / workspace)
 are deliberately identical now — if you find yourself adding a 4th chat
 input surface, mirror the same shape. If you need a different chrome for
 some reason (e.g. a mini composer in a popover), reuse the bucket-color
-system + the 1.5px `#b8bcc4` border treatment at minimum so it reads as
+system + the 1.5px `#9ca3af` border treatment at minimum so it reads as
 part of the same family.
 
 For non-composer surfaces (settings, file pickers, etc.), use the

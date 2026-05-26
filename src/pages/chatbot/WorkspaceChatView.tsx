@@ -794,7 +794,7 @@ export default function WorkspaceChatView() {
 
             {/* COMPOSER — mirrors the main ChatView composer (PM 2026-05-20
                "all chat views in the app should be uniform"). White bg,
-               1.5px #b8bcc4 border, intent pill top (bucket-coloured 160w),
+               1.5px #9ca3af border, intent pill top (bucket-coloured 160w),
                textarea middle, attach + send in the bottom row. */}
             {(() => {
               const activeBucket = getBucketForIntent(activeIntent);
@@ -803,7 +803,7 @@ export default function WorkspaceChatView() {
             <div style={{
               width: '100%',
               background: '#fff',
-              border: '1.5px solid #b8bcc4',
+              border: '1.5px solid #9ca3af',
               borderRadius: 20,
               padding: 16,
               display: 'flex', flexDirection: 'column', gap: 12,
@@ -906,7 +906,7 @@ export default function WorkspaceChatView() {
                   style={{
                     height: 40, display: 'inline-flex', alignItems: 'center', gap: 8,
                     padding: '0 16px', borderRadius: 999,
-                    border: '1.5px solid #b8bcc4',
+                    border: '1.5px solid #9ca3af',
                     background: ephemeralAttachment ? `${BUCKET_COLORS.DEFAULT}1a` : '#fff',
                     color: 'var(--text-primary)',
                     fontSize: 13.5, fontWeight: 500,

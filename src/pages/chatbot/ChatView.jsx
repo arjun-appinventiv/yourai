@@ -8825,7 +8825,7 @@ INSTRUCTIONS:
                           width: '100%', height: 40,
                           display: 'inline-flex', alignItems: 'center', gap: 8,
                           padding: '0 14px', borderRadius: 999,
-                          border: '1.5px solid #b8bcc4', background: '#fff',
+                          border: '1.5px solid #9ca3af', background: '#fff',
                           fontFamily: 'inherit', fontSize: 13.5, color: 'var(--text-primary)',
                           cursor: 'pointer', lineHeight: 1,
                         }}
@@ -8906,7 +8906,7 @@ INSTRUCTIONS:
                           width: 160, height: 40,
                           display: 'inline-flex', alignItems: 'center', gap: 8,
                           padding: '0 14px', borderRadius: 999,
-                          border: '1.5px solid #b8bcc4', background: '#fff',
+                          border: '1.5px solid #9ca3af', background: '#fff',
                           fontFamily: 'inherit', fontSize: 13.5, color: 'var(--text-primary)',
                           cursor: 'pointer', lineHeight: 1,
                         }}
@@ -8967,8 +8967,8 @@ INSTRUCTIONS:
                   }}
                   style={{
                     marginTop: 12, width: '100%',
-                    background: isUploadBarDropHover ? '#f8fafc' : '#fff',
-                    border: isUploadBarDropHover ? '2px dashed var(--navy)' : '1.5px solid #b8bcc4',
+                    background: isUploadBarDropHover ? '#f8fafc' : '#efe9d8',
+                    border: isUploadBarDropHover ? '2px dashed var(--navy)' : '1.5px solid #9ca3af',
                     borderRadius: 14,
                     padding: isUploadBarDropHover ? '13px 21px' : '14px 22px',
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -9122,7 +9122,7 @@ INSTRUCTIONS:
                   style={{
                     width: '100%',
                     background: isFileDropHover ? '#f8fafc' : '#fff',
-                    border: isFileDropHover ? '2px dashed var(--navy)' : '1.5px solid #b8bcc4',
+                    border: isFileDropHover ? '2px dashed var(--navy)' : '1.5px solid #9ca3af',
                     borderRadius: 20,
                     padding: isFileDropHover ? 15 : 16,
                     display: 'flex', flexDirection: 'column', gap: 12,
@@ -9243,7 +9243,7 @@ INSTRUCTIONS:
                           width: '100%', height: 40,
                           display: 'inline-flex', alignItems: 'center', gap: 8,
                           padding: '0 14px', borderRadius: 999,
-                          border: '1.5px solid #b8bcc4', background: '#fff',
+                          border: '1.5px solid #9ca3af', background: '#fff',
                           fontFamily: 'inherit', fontSize: 13.5, color: 'var(--text-primary)',
                           cursor: 'pointer', lineHeight: 1,
                         }}
@@ -9317,7 +9317,7 @@ INSTRUCTIONS:
                           width: 160, height: 40,
                           display: 'inline-flex', alignItems: 'center', gap: 8,
                           padding: '0 14px', borderRadius: 999,
-                          border: '1.5px solid #b8bcc4', background: '#fff',
+                          border: '1.5px solid #9ca3af', background: '#fff',
                           fontFamily: 'inherit', fontSize: 13.5, color: 'var(--text-primary)',
                           cursor: 'pointer', lineHeight: 1,
                         }}
@@ -9394,8 +9394,8 @@ INSTRUCTIONS:
                 }}
                 style={{
                   marginTop: 10, width: '100%',
-                  background: isUploadBarDropHover ? '#f8fafc' : '#fff',
-                  border: isUploadBarDropHover ? '2px dashed var(--navy)' : '1.5px solid #b8bcc4',
+                  background: isUploadBarDropHover ? '#f8fafc' : '#efe9d8',
+                  border: isUploadBarDropHover ? '2px dashed var(--navy)' : '1.5px solid #9ca3af',
                   borderRadius: 14,
                   padding: isUploadBarDropHover ? '13px 21px' : '14px 22px',
                   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
