@@ -8610,7 +8610,7 @@ INSTRUCTIONS:
                         display: 'inline-flex', alignItems: 'center', gap: 8,
                         padding: '0 14px', borderRadius: 999,
                         background: `${bucketColor}1a`,
-                        border: `1px solid ${bucketColor}55`,
+                        border: `1.5px solid ${bucketColor}99`,
                         color: bucketColor, fontSize: 13, fontWeight: 500,
                         fontFamily: 'inherit', cursor: 'pointer', lineHeight: 1,
                       }}
@@ -8725,7 +8725,7 @@ INSTRUCTIONS:
                           width: '100%', height: 40,
                           display: 'inline-flex', alignItems: 'center', gap: 8,
                           padding: '0 14px', borderRadius: 999,
-                          border: '1px solid var(--border)', background: '#fff',
+                          border: '1.5px solid #b8bcc4', background: '#fff',
                           fontFamily: 'inherit', fontSize: 13.5, color: 'var(--text-primary)',
                           cursor: 'pointer', lineHeight: 1,
                         }}
@@ -8806,7 +8806,7 @@ INSTRUCTIONS:
                           width: 160, height: 40,
                           display: 'inline-flex', alignItems: 'center', gap: 8,
                           padding: '0 14px', borderRadius: 999,
-                          border: '1px solid var(--border)', background: '#fff',
+                          border: '1.5px solid #b8bcc4', background: '#fff',
                           fontFamily: 'inherit', fontSize: 13.5, color: 'var(--text-primary)',
                           cursor: 'pointer', lineHeight: 1,
                         }}
