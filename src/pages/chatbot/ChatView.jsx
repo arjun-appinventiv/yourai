@@ -5978,34 +5978,34 @@ function EmptyState() {
   // prop-drilling.
   return (
     <div className="px-4 sm:px-6" style={{ paddingTop: '10vh', paddingBottom: 0 }}>
-      <div style={{ maxWidth: 820, width: '100%', margin: '0 auto' }}>
+      <div style={{ maxWidth: 960, width: '100%', margin: '0 auto' }}>
         <div style={{ textAlign: 'center' }}>
           {/* Greeting row — fingerprint brand mark left-aligned inline with the
              greeting text (PM 2026-05-20 client feedback: kill the gold
              sparkle ring above; put the fingerprint logo next to "Good
              afternoon, Priya" on the same line). */}
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 14 }}>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 16 }}>
             <img
               src="/yourai-mark.svg"
               alt=""
               aria-hidden="true"
-              style={{ width: 48, height: 48, objectFit: 'contain', flexShrink: 0 }}
+              style={{ width: 56, height: 56, objectFit: 'contain', flexShrink: 0 }}
             />
             <h2
               style={{
                 fontFamily: "'Fraunces', serif",
                 fontWeight: 500,
-                fontSize: 44,
+                fontSize: 56,
                 color: 'var(--text-primary)',
                 margin: 0,
                 lineHeight: 1.1,
-                letterSpacing: '-1.2px',
+                letterSpacing: '-1.4px',
               }}
             >
               {getGreeting()}, {currentUserName}
             </h2>
           </div>
-          <p style={{ textAlign: 'center', color: 'var(--text-secondary)', fontSize: 14.5, margin: '12px 0 28px', lineHeight: 1.5 }}>
+          <p style={{ textAlign: 'center', color: 'var(--text-secondary)', fontSize: 16, margin: '16px 0 40px', lineHeight: 1.5 }}>
             Your AI assistant is ready — ask anything about your documents or Alaska law.
           </p>
         </div>
@@ -8539,7 +8539,7 @@ INSTRUCTIONS:
           )}
 
           {/* Chat input area */}
-          <div className="px-4 sm:px-6" style={{ background: 'transparent', paddingTop: showEmptyState ? 0 : 12, paddingBottom: 12, maxWidth: showEmptyState ? 820 : 880, width: '100%', marginLeft: 'auto', marginRight: 'auto', boxSizing: 'border-box' }}>
+          <div className="px-4 sm:px-6" style={{ background: 'transparent', paddingTop: showEmptyState ? 0 : 12, paddingBottom: 12, maxWidth: showEmptyState ? 960 : 880, width: '100%', marginLeft: 'auto', marginRight: 'auto', boxSizing: 'border-box' }}>
             {/* Active Knowledge Pack / Vault Document / Vault Folder chips */}
             {(activeKnowledgePack || activeVaultDocument || activeVaultFolder) && (() => {
               const folderDocCount = activeVaultFolder
@@ -8691,10 +8691,10 @@ INSTRUCTIONS:
                   style={{
                     width: '100%',
                     background: isFileDropHover ? '#f8fafc' : '#fff',
-                    border: isFileDropHover ? '2px dashed var(--navy)' : '1px solid var(--border)',
-                    borderRadius: 20,
-                    padding: isFileDropHover ? 15 : 16,
-                    display: 'flex', flexDirection: 'column', gap: 12,
+                    border: isFileDropHover ? '2px dashed var(--navy)' : '1.5px solid #6b7280',
+                    borderRadius: 24,
+                    padding: isFileDropHover ? 21 : 22,
+                    display: 'flex', flexDirection: 'column', gap: 16,
                     transition: 'background 150ms, border-color 150ms',
                   }}
                 >
@@ -8780,7 +8780,7 @@ INSTRUCTIONS:
                   </div>
 
                   {/* White textarea card */}
-                  <div style={{ background: '#fff', borderRadius: 16, padding: '16px 20px' }}>
+                  <div style={{ background: '#fff', borderRadius: 20, padding: '22px 26px' }}>
                     <textarea
                       ref={inputRef}
                       className="no-focus-ring"
@@ -8805,11 +8805,11 @@ INSTRUCTIONS:
                       rows={1}
                       style={{
                         width: '100%', border: 'none', outline: 'none', resize: 'none',
-                        fontFamily: 'inherit', fontSize: 15.5, fontStyle: input ? 'normal' : 'italic',
+                        fontFamily: 'inherit', fontSize: 17, fontStyle: input ? 'normal' : 'italic',
                         color: input ? 'var(--text-primary)' : 'var(--text-secondary)',
-                        background: 'transparent', lineHeight: 1.4, minHeight: 28, maxHeight: 200, overflowY: 'auto',
+                        background: 'transparent', lineHeight: 1.55, minHeight: 56, maxHeight: 280, overflowY: 'auto',
                       }}
-                      onInput={(e) => { e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 200) + 'px'; }}
+                      onInput={(e) => { e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 280) + 'px'; }}
                     />
                   </div>
 
@@ -8966,21 +8966,21 @@ INSTRUCTIONS:
                     if (files.length) handleAttachFiles(files, 'doc');
                   }}
                   style={{
-                    marginTop: 12, width: '100%',
+                    marginTop: 16, width: '100%',
                     background: isUploadBarDropHover ? '#f8fafc' : '#efe9d8',
                     border: isUploadBarDropHover ? '2px dashed var(--navy)' : '1.5px solid #6b7280',
-                    borderRadius: 14,
-                    padding: isUploadBarDropHover ? '13px 21px' : '14px 22px',
+                    borderRadius: 16,
+                    padding: isUploadBarDropHover ? '19px 27px' : '20px 28px',
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                     cursor: 'pointer',
                     transition: 'background 150ms, border-color 150ms',
                   }}
                 >
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, color: 'var(--text-primary)', fontSize: 13.5 }}>
-                    <Upload size={14} />
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10, color: 'var(--text-primary)', fontSize: 15 }}>
+                    <Upload size={16} />
                     Drop your files here
                   </span>
-                  <span style={{ color: 'var(--text-muted)', fontSize: 12.5, letterSpacing: '0.3px' }}>
+                  <span style={{ color: 'var(--text-muted)', fontSize: 13.5, letterSpacing: '0.3px' }}>
                     PDF · DOCX · TXT · max 25MB
                   </span>
                 </div>
