@@ -8815,8 +8815,11 @@ INSTRUCTIONS:
 
                   {/* Actions row: scope (left) · pack + send (right). The
                      scope + pack pills are 160px each to match the intent
-                     pill above — three same-size dropdowns per PM ask. */}
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                     pill above — three same-size dropdowns per PM ask.
+                     Divider above + slight horizontal inset per PM mockup
+                     2026-05-26 (pills sit tucked in, not flush to composer
+                     edges). */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, paddingTop: 12, paddingLeft: 6, paddingRight: 6, borderTop: '1px solid var(--border)' }}>
                     {/* LEFT: File Search scope pill — 160px wide, 40px tall */}
                     <div style={{ position: 'relative', width: 160 }} ref={scopeInputRef}>
                       <button
