@@ -47,7 +47,7 @@ export default function SummaryCard({ data }: { data: SummaryCardData }) {
             It looks like you asked for a summary but didn't attach a document. Upload a contract, memo, or filing using the <strong>+</strong> button next to the input, then ask again and I'll produce the full summary card.
           </Body>
           <div style={{ fontSize: 13, color: COLORS.muted, lineHeight: 1.6 }}>
-            If you meant to ask a general question rather than analyse a document, switch the intent pill above the input to <em>General chat</em> or <em>Legal Q&amp;A</em>.
+            If you meant to ask a general question rather than analyse a document, switch the skill pill above the input to <em>General chat</em> or <em>Legal Q&amp;A</em>.
           </div>
         </div>
         <EditorialFooter footerText="—" />

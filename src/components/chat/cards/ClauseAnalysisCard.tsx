@@ -72,7 +72,7 @@ export default function ClauseAnalysisCard({ data }: { data: ClauseAnalysisCardD
             Upload a contract, NDA, lease, or agreement using the <strong>+</strong> button next to the input, then ask again and I'll break it down clause-by-clause with risk level, quote, interpretation, and recommended negotiating moves.
           </Body>
           <div style={{ fontSize: 13, color: COLORS.muted, lineHeight: 1.6 }}>
-            Want a narrative memo instead of a clause list? Switch the intent pill above the input to <em>Risk Memo</em>.
+            Want a narrative memo instead of a clause list? Switch the skill pill above the input to <em>Risk Memo</em>.
           </div>
         </div>
         <EditorialFooter footerText={data?.generatedLabel || '—'} />

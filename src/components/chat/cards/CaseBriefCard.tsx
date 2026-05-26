@@ -52,7 +52,7 @@ export default function CaseBriefCard({ data }: { data: CaseBriefCardData }) {
             Upload a court filing, opinion PDF, or case memo using the <strong>+</strong> button next to the input, then ask again and I'll brief the case with holding, facts, procedural posture, and application to your matter.
           </Body>
           <div style={{ fontSize: 13, color: COLORS.muted, lineHeight: 1.6 }}>
-            Looking up a case by name or citation without uploading? Switch the intent pill to <em>Legal Research</em>.
+            Looking up a case by name or citation without uploading? Switch the skill pill to <em>Legal Research</em>.
           </div>
         </div>
         <EditorialFooter footerText="—" />

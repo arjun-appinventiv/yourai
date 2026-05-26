@@ -55,7 +55,7 @@ export default function ComparisonCard({ data }: { data: ComparisonCardData }) {
             Upload the two contracts (or memos, or policies) you want to compare using the <strong>+</strong> button next to the input, then ask again and I'll produce the clause-by-clause comparison.
           </Body>
           <div style={{ fontSize: 13, color: COLORS.muted, lineHeight: 1.6 }}>
-            If you meant a general question, switch the intent pill above the input to <em>General chat</em> or <em>Legal Q&amp;A</em>.
+            If you meant a general question, switch the skill pill above the input to <em>General chat</em> or <em>Legal Q&amp;A</em>.
           </div>
         </div>
         <EditorialFooter footerText="—" />

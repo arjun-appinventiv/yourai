@@ -95,7 +95,7 @@ export default function GlobalKnowledgeBase() {
       id: 1,
       label: 'General Chat',
       description: 'Default persona for greetings, help questions, conversational follow-ups, and any message that does not match another intent.',
-      systemPrompt: "You are Alex, a legal AI assistant built for US law firms. You help attorneys, paralegals, and legal-operations staff analyse documents, research legal questions, and draft outputs.\n\nRouting rule: this intent is the default. If the user's message is a greeting (\"hi\", \"hello\"), a meta-question about you (\"what can you do\", \"who are you\"), small talk, or a follow-up to a previous turn that does not introduce a new task, answer here in prose. Do NOT trigger the multi-intent gate for greetings or help questions.\n\nWhen the message clearly belongs to a specialised intent (contract review, drafting, research, etc.), the upstream classifier will route it. If the classifier sends it to you anyway, answer directly — never reply with \"I cannot help with that\" when a sensible answer exists.\n\nCONFIDENCE DISCIPLINE — never invent. If a fact, statute, or citation is not in the supplied context, say so. Tag any claim drawn from your training data with [model knowledge — verify]. Tag citations from the vault as [vault: filename §section].\n\nNEVER produce: privileged advice presented as a definitive ruling on the client's specific matter, unverifiable verbatim quotes, or citations of cases you cannot name.",
+      systemPrompt: "You are Alex, a legal AI assistant built for US law firms. You help attorneys, paralegals, and legal-operations staff analyse documents, research legal questions, and draft outputs.\n\nRouting rule: this skill is the default. If the user's message is a greeting (\"hi\", \"hello\"), a meta-question about you (\"what can you do\", \"who are you\"), small talk, or a follow-up to a previous turn that does not introduce a new task, answer here in prose. Do NOT trigger the multi-intent gate for greetings or help questions.\n\nWhen the message clearly belongs to a specialised intent (contract review, drafting, research, etc.), the upstream classifier will route it. If the classifier sends it to you anyway, answer directly — never reply with \"I cannot help with that\" when a sensible answer exists.\n\nCONFIDENCE DISCIPLINE — never invent. If a fact, statute, or citation is not in the supplied context, say so. Tag any claim drawn from your training data with [model knowledge — verify]. Tag citations from the vault as [vault: filename §section].\n\nNEVER produce: privileged advice presented as a definitive ruling on the client's specific matter, unverifiable verbatim quotes, or citations of cases you cannot name.",
       tonePrompt: "Respond in a warm, professional tone — like a senior associate explaining something to a colleague.\n- Lead with the answer, not the caveat.\n- Use bullet points for lists of 3 or more items; prose for 1–2.\n- Cite sources as [vault: filename §section] for vault content, [model knowledge — verify] for general legal knowledge.\n- Keep greetings to 1–2 sentences.\n- Never start a reply with \"I cannot\" or \"The knowledge base does not have sufficient coverage\" — if you can answer from general knowledge, do so and tag it.",
       enabled: true,
       keywords: ['hi', 'hello', 'hey', 'good morning', 'good afternoon', 'good evening', 'thanks', 'thank you', 'what can you do', 'who are you', 'help', 'how does this work', 'what is this', 'tell me more', 'continue', 'go on', 'never mind'],
@@ -239,8 +239,8 @@ export default function GlobalKnowledgeBase() {
       id: 13,
       label: 'Find Document',
       description: 'Locate a document in the user\'s personal vault by filename, folder, or content keyword. Handled client-side — no LLM call.',
-      systemPrompt: "Find Document is handled CLIENT-SIDE. The chat surface intercepts this intent before any model call and runs a substring search across the user's vault (filename + folder breadcrumb + tag + content keyword), then renders a FileResultsCard with the matches.\n\nIF this prompt ever reaches the model (it shouldn't), the model should respond: \"Use the YourVault search bar to find documents directly — it's faster and more accurate than asking me.\"\n\nNO LLM REASONING NEEDED. The intent is purely a structured lookup.",
-      tonePrompt: "Not applicable — this intent renders a FileResultsCard via client-side substring search. No LLM prose generated.",
+      systemPrompt: "Find Document is handled CLIENT-SIDE. The chat surface intercepts this skill before any model call and runs a substring search across the user's vault (filename + folder breadcrumb + tag + content keyword), then renders a FileResultsCard with the matches.\n\nIF this prompt ever reaches the model (it shouldn't), the model should respond: \"Use the YourVault search bar to find documents directly — it's faster and more accurate than asking me.\"\n\nNO LLM REASONING NEEDED. The intent is purely a structured lookup.",
+      tonePrompt: "Not applicable — this skill renders a FileResultsCard via client-side substring search. No LLM prose generated.",
       enabled: true,
       keywords: ['find file', 'find a file', 'find document', 'find documents', 'find the doc', 'search for file', 'search for document', "where's the file", "where's my doc", "where is the contract", "where is the NDA", 'do I have any document', 'do I have a contract', 'show me my files', 'list my documents', 'list my files', 'what files', 'what documents', 'pull up the', 'pull up my', 'show me the', 'open the file', 'open my file', 'has the file been uploaded', 'is the contract in the vault'],
       opening_behaviour: 'start_immediately',
@@ -499,7 +499,7 @@ export default function GlobalKnowledgeBase() {
   const addIntent = (data) => {
     const newOp = {
       id: Date.now(),
-      label: data.label || 'New Intent',
+      label: data.label || 'New Skill',
       description: data.description || '',
       systemPrompt: data.systemPrompt || '',
       tonePrompt: data.tonePrompt || 'Respond in a formal, professional tone suitable for legal correspondence.\n- Always cite the source document and page number.',
@@ -730,7 +730,7 @@ export default function GlobalKnowledgeBase() {
     setCreateIntentFrom(null);
     setNewIntentLabel('');
     setNewIntentDesc('');
-    showToast('New intent template created');
+    showToast('New skill template created');
   };
   */
 
@@ -1445,22 +1445,22 @@ export default function GlobalKnowledgeBase() {
       {/* ============================== TAB 2: Alex Response Templates — DISABLED (not in scope, kept for future use) ============================== */}
       {false && activeTab === 'alex' && (
         <>
-          {/* Sub-section A: Intent Routing Flow Diagram */}
+          {/* Sub-section A: Skill Routing Flow Diagram */}
           <div>
             <div className="flex items-center gap-2 mb-4">
               <h2 style={{ fontFamily: "'DM Serif Display', serif", color: 'var(--text-primary)', fontSize: '16px' }}>
-                Intent Routing Flow
+                Skill Routing Flow
               </h2>
-              <InfoButton title="About Intent Routing">
-                <InfoSection title="What is Intent Routing?">
-                  <InfoText>Alex (the dashboard assistant) classifies every incoming user message into one of 7 intent categories. This classification happens in under 50ms using a lightweight model — no expensive LLM call needed.</InfoText>
+              <InfoButton title="About Skill Routing">
+                <InfoSection title="What is Skill Routing?">
+                  <InfoText>Alex (the dashboard assistant) classifies every incoming user message into one of 7 skill categories. This classification happens in under 50ms using a lightweight model — no expensive LLM call needed.</InfoText>
                 </InfoSection>
                 <InfoSection title="Why templates instead of full LLM?">
                   <InfoText>80% of user questions fall into predictable categories — feature questions, how-to requests, billing queries. For these, Alex retrieves a pre-written template and uses a lightweight LLM to personalise it. This is 10x faster and 50x cheaper than a full LLM invocation.</InfoText>
                   <InfoExample label="Cost comparison">Full LLM call: ~$0.02, ~2 seconds. Template + light rewrite: ~$0.0004, ~200ms.</InfoExample>
                 </InfoSection>
                 <InfoSection title="The flow">
-                  <InfoList items={["1. User sends message to Alex", "2. Intent classifier identifies the category (< 50ms)", "3. If known intent → retrieve template → light LLM rewrite → apply filters → stream response", "4. If unknown intent → full LLM + system prompt → apply filters → stream response", "5. Unknown queries are logged for operator review"]} />
+                  <InfoList items={["1. User sends message to Alex", "2. Skill classifier identifies the category (< 50ms)", "3. If known skill → retrieve template → light LLM rewrite → apply filters → stream response", "4. If unknown skill → full LLM + system prompt → apply filters → stream response", "5. Unknown queries are logged for operator review"]} />
                 </InfoSection>
               </InfoButton>
             </div>
@@ -1469,9 +1469,9 @@ export default function GlobalKnowledgeBase() {
                 {[
                   { label: 'User Message', bg: '#EDE9FE', color: '#5B21B6' },
                   null,
-                  { label: 'Intent Classifier', bg: '#F0F3F6', color: '#0F2E59' },
+                  { label: 'Skill Classifier', bg: '#F0F3F6', color: '#0F2E59' },
                   null,
-                  { label: 'Known Intent (80%)', bg: '#E7F3E9', color: '#5CA868' },
+                  { label: 'Known Skill (80%)', bg: '#E7F3E9', color: '#5CA868' },
                   null,
                   { label: 'Response Filters', bg: '#FBEED5', color: '#E8A33D' },
                   null,
@@ -1505,7 +1505,7 @@ export default function GlobalKnowledgeBase() {
                     className="flex items-center justify-center px-4 py-2.5 rounded-lg text-xs font-medium"
                     style={{ backgroundColor: '#F9E7E7', color: '#C65454', whiteSpace: 'nowrap' }}
                   >
-                    Unknown Intent
+                    Unknown Skill
                   </div>
                   <div style={{ width: 1, height: 16, backgroundColor: 'var(--border)' }} />
                   <div className="text-xs" style={{ color: 'var(--text-muted)' }}>Logged for review</div>
@@ -1514,13 +1514,13 @@ export default function GlobalKnowledgeBase() {
             </div>
           </div>
 
-          {/* Sub-section B: Intent Templates */}
+          {/* Sub-section B: Skill Templates */}
           <div>
             <div className="flex items-center gap-2 mb-4">
               <h2 style={{ fontFamily: "'DM Serif Display', serif", color: 'var(--text-primary)', fontSize: '16px' }}>
-                Intent Templates
+                Skill Templates
               </h2>
-              <InfoButton title="About Intent Templates">
+              <InfoButton title="About Skill Templates">
                 <InfoSection title="What is a template?">
                   <InfoText>Each template is a response skeleton with {'{variable}'} placeholders. When Alex matches an intent, it retrieves the template and passes it to a lightweight LLM that fills in the variables with context-appropriate content.</InfoText>
                   <InfoExample label="Template">YourAI's {'{feature_name}'} works like {'{analogy}'}. {'{one_sentence_explanation}'}.</InfoExample>
@@ -1647,9 +1647,9 @@ export default function GlobalKnowledgeBase() {
 
                 {/* Body */}
                 <div className="flex-1 p-6 space-y-5" style={{ overflowY: 'auto' }}>
-                  {/* Read-only: Intent ID */}
+                  {/* Read-only: Skill ID */}
                   <div>
-                    <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>Intent ID</label>
+                    <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>Skill ID</label>
                     <div className="px-3 py-2 rounded-lg text-sm" style={{ backgroundColor: '#F8F4ED', color: 'var(--text-primary)', fontFamily: 'monospace', fontSize: '12px' }}>
                       {editingTemplate.intent}
                     </div>
@@ -1792,7 +1792,7 @@ export default function GlobalKnowledgeBase() {
                   <InfoList items={["Jargon Detector — replaces words like 'RAG', 'pgvector', 'JWT' with plain English", "Legal Advice Block — catches patterns like 'you should sue' or 'this constitutes breach' and redirects to an attorney", "Competitor Block — prevents mention of Clio, Relativity, Harvey AI, etc.", "Hallucination Check — compares mentioned features against the approved feature list", "Length Enforcer — flags responses over 150 words for review", "Confidence Gate — routes low-confidence responses to the operator escalation log"]} />
                 </InfoSection>
                 <InfoSection title="Disabling a filter">
-                  <InfoText>Disabling a filter removes it from the processing pipeline for ALL intents. Use with caution — for example, disabling the Legal Advice Block means Alex could potentially give legal advice to end users.</InfoText>
+                  <InfoText>Disabling a filter removes it from the processing pipeline for ALL skills. Use with caution — for example, disabling the Legal Advice Block means Alex could potentially give legal advice to end users.</InfoText>
                 </InfoSection>
               </InfoButton>
             </div>
@@ -1832,7 +1832,7 @@ export default function GlobalKnowledgeBase() {
                             {t.label}
                           </span>
                         )) : (
-                          <span className="text-xs" style={{ color: 'var(--text-muted)' }}>No intents</span>
+                          <span className="text-xs" style={{ color: 'var(--text-muted)' }}>No skills</span>
                         )}
                       </div>
                       <span className="text-xs font-medium" style={{ color: '#5CA868' }}>&lt; 15ms</span>
@@ -1851,11 +1851,11 @@ export default function GlobalKnowledgeBase() {
               </h2>
               <InfoButton title="About Unknown Queries">
                 <InfoSection title="What is the unknown queries log?">
-                  <InfoText>When Alex can't match a user's question to any of the 7 intent categories, it uses the full LLM with a system prompt as fallback. These queries are logged here so you can review them and identify patterns.</InfoText>
+                  <InfoText>When Alex can't match a user's question to any of the 7 skill categories, it uses the full LLM with a system prompt as fallback. These queries are logged here so you can review them and identify patterns.</InfoText>
                 </InfoSection>
                 <InfoSection title="Why review these?">
-                  <InfoText>If you see the same type of question appearing repeatedly, it might warrant creating a new intent template. This is how the intent system grows over time — new patterns emerge from real user behaviour.</InfoText>
-                  <InfoExample label="Example">If 5 users ask 'Does this integrate with NetDocuments?' → That's a pattern → Create a new 'integrations' intent → Write a template → Future users get instant answers</InfoExample>
+                  <InfoText>If you see the same type of question appearing repeatedly, it might warrant creating a new skill template. This is how the skill system grows over time — new patterns emerge from real user behaviour.</InfoText>
+                  <InfoExample label="Example">If 5 users ask 'Does this integrate with NetDocuments?' → That's a pattern → Create a new 'integrations' skill → Write a template → Future users get instant answers</InfoExample>
                 </InfoSection>
                 <InfoSection title="Escalated vs Logged">
                   <InfoList items={["Escalated — the Confidence Gate filter flagged this response as low-confidence. An operator should review the response that was sent.", "Logged — the query was handled by the full LLM and the response passed all filters. No action needed unless you spot a pattern."]} />
@@ -1914,13 +1914,13 @@ export default function GlobalKnowledgeBase() {
                 <InfoSection title="What does this control?">
                   <InfoText>This screen configures Alex, the AI assistant that all tenants interact with. Every setting here is global — no tenant can override it. Only Super Admins can change these values.</InfoText>
                 </InfoSection>
-                <InfoSection title="Intents = Multiple System Prompts">
-                  <InfoText>Instead of one static system prompt, you configure multiple "intents" — each tailored to a specific task. The AI's intent classifier selects the right intent based on what the user is doing (e.g., uploading a contract triggers "Contract Review" mode).</InfoText>
+                <InfoSection title="Skills = Multiple System Prompts">
+                  <InfoText>Instead of one static system prompt, you configure multiple "skills" — each tailored to a specific task. The AI's skill classifier selects the right skill based on what the user is doing (e.g., uploading a contract triggers "Contract Review" mode).</InfoText>
                   <InfoExample label="Example">User uploads a contract → AI automatically uses the "Contract Review" system prompt, which emphasises clause analysis and risk scoring — not the generic chat prompt.</InfoExample>
                 </InfoSection>
                 <InfoSection title="What is the fallback chain?">
                   <InfoList items={[
-                    "1. User sends a message → intent classifier picks the intent",
+                    "1. User sends a message → skill classifier picks the intent",
                     "2. AI searches the user's attached document or knowledge pack first",
                     "3. If no answer found → searches Global Knowledge Documents (uploaded here)",
                     "4. If still no answer → shows the Fallback Message you set below",
@@ -1957,16 +1957,16 @@ export default function GlobalKnowledgeBase() {
               <div className="p-5 rounded-xl" style={{ backgroundColor: 'white', border: '1px solid var(--border)' }}>
                 <div className="flex items-center justify-between mb-1">
                   <div className="flex items-center gap-2">
-                    <label className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Intents</label>
-                    <InfoButton title="Intents — Multiple AI Modes">
-                      <InfoSection title="What are Intents?">
-                        <InfoText>Each intent is a separate AI personality. When a user sends a message, the intent classifier determines which intent to activate. Each intent has its own system prompt, tone, and formatting rules.</InfoText>
+                    <label className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Skills</label>
+                    <InfoButton title="Skills — Multiple AI Modes">
+                      <InfoSection title="What are Skills?">
+                        <InfoText>Each skill is a separate AI personality. When a user sends a message, the skill classifier determines which intent to activate. Each skill has its own system prompt, tone, and formatting rules.</InfoText>
                       </InfoSection>
                       <InfoSection title="How does it work?">
                         <InfoList items={[
-                          "Each intent has an enable/disable toggle",
+                          "Each skill has an enable/disable toggle",
                           "Only enabled intents are available to the AI",
-                          "The intent classifier picks the best match based on context",
+                          "The skill classifier picks the best match based on context",
                           "If no specific intent matches, 'General Chat' is used as the default",
                           "You can add custom intents for specialised workflows",
                         ]} />
@@ -1982,7 +1982,7 @@ export default function GlobalKnowledgeBase() {
                     {/* SA cannot add new intents — managed by engineering */}
                   </div>
                 </div>
-                <p className="text-xs mb-4" style={{ color: 'var(--text-muted)' }}>Each intent defines a separate AI mode with its own system prompt, tone, and formatting. The intent classifier picks the right one automatically.</p>
+                <p className="text-xs mb-4" style={{ color: 'var(--text-muted)' }}>Each skill defines a separate AI mode with its own system prompt, tone, and formatting. The skill classifier picks the right one automatically.</p>
 
                 {/* Intent cards — expandable read-only view with enable/disable */}
                 <div className="space-y-3">
@@ -2107,7 +2107,7 @@ export default function GlobalKnowledgeBase() {
                                 <label className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>Tone Prompt</label>
                                 <span className="text-xs" style={{ color: 'var(--text-muted)' }}>({(op.tonePrompt || '').length}/800)</span>
                               </div>
-                              <p className="text-xs mb-2" style={{ color: 'var(--text-muted)' }}>Define how the AI should respond — tone, formatting rules, and style preferences. This is injected into every response for this intent.</p>
+                              <p className="text-xs mb-2" style={{ color: 'var(--text-muted)' }}>Define how the AI should respond — tone, formatting rules, and style preferences. This is injected into every response for this skill.</p>
                               <textarea
                                 value={op.tonePrompt || ''}
                                 onChange={(e) => { if (e.target.value.length <= 800) updateIntent(op.id, 'tonePrompt', e.target.value); }}
@@ -2127,7 +2127,7 @@ export default function GlobalKnowledgeBase() {
                                 <label className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>Trigger Keywords</label>
                                 <span className="text-xs" style={{ color: 'var(--text-muted)' }}>({(op.keywords || []).length}/20)</span>
                               </div>
-                              <p className="text-xs mb-2" style={{ color: 'var(--text-muted)' }}>User phrases that trigger a suggestion to switch to this intent.</p>
+                              <p className="text-xs mb-2" style={{ color: 'var(--text-muted)' }}>User phrases that trigger a suggestion to switch to this skill.</p>
                               <div className="flex flex-wrap gap-1.5 mb-2">
                                 {(op.keywords || []).map((kw, ki) => (
                                   <span key={ki} className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs" style={{ backgroundColor: 'var(--ice-warm)', color: 'var(--navy)', border: '1px solid rgba(10,36,99,0.15)' }}>
@@ -2161,7 +2161,7 @@ export default function GlobalKnowledgeBase() {
                               <div className="flex items-center gap-1.5 mb-1.5">
                                 <label className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>Opening Behaviour</label>
                               </div>
-                              <p className="text-xs mb-2" style={{ color: 'var(--text-muted)' }}>How the bot responds when this intent is first activated. Only one can be enabled.</p>
+                              <p className="text-xs mb-2" style={{ color: 'var(--text-muted)' }}>How the bot responds when this skill is first activated. Only one can be enabled.</p>
                               <div className="space-y-2">
                                 {[
                                   { id: 'start_immediately', label: 'Start Immediately', desc: 'Bot waits for user message — no opening prompt' },
@@ -2208,7 +2208,7 @@ export default function GlobalKnowledgeBase() {
                                 <label className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>Custom Instruction</label>
                                 <span className="text-xs" style={{ color: 'var(--text-muted)' }}>({(op.custom_instruction || '').length}/500)</span>
                               </div>
-                              <p className="text-xs mb-2" style={{ color: 'var(--text-muted)' }}>Firm-specific rules injected into the system prompt for this intent only.</p>
+                              <p className="text-xs mb-2" style={{ color: 'var(--text-muted)' }}>Firm-specific rules injected into the system prompt for this skill only.</p>
                               <textarea
                                 value={op.custom_instruction || ''}
                                 onChange={(e) => { if (e.target.value.length <= 500) updateIntent(op.id, 'custom_instruction', e.target.value); }}

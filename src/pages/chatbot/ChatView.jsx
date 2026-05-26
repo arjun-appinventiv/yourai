@@ -5386,7 +5386,7 @@ function MessageBubble({ msg, onOpenArtifact, isActiveArtifact, onConfirmAction 
             );
           })()}
           {isBot && !msg.confirmation && (
-            // Intent cards: if this bot message carries a known intent and
+            // Intent cards: if this bot message carries a known skill and
             // either pre-parsed cardData or JSON-parseable content, render
             // the dedicated card. Any parse or shape failure falls through
             // to the existing ReactMarkdown renderer — never crash.
@@ -5524,7 +5524,7 @@ function MessageBubble({ msg, onOpenArtifact, isActiveArtifact, onConfirmAction 
             <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--navy)' }}>Using: {msg.vaultDocument}</span>
           </div>
         )}
-        {/* Source badge — CONFIDENCE: 3/10. Intent classifier not confirmed. Visual wireframe for Ryan. */}
+        {/* Source badge — CONFIDENCE: 3/10. Skill classifier not confirmed. Visual wireframe for Ryan. */}
         {isBot && msg.sourceBadge && (() => {
           const isDoc = msg.sourceBadge.includes('your document');
           const isAI = msg.sourceBadge.includes('AI-generated');
@@ -6773,7 +6773,7 @@ export default function ChatView({ initialView = 'chat' }) {
       || !!(sessionDocContext?.docNames || []).length;
     const useChitChatOverride = isChitChat && isCardIntent(activeIntent) && !hasAnyDoc;
 
-    // ─── LLM intent classifier (2026-05-16) ─────────────────────────────
+    // ─── LLM skill classifier (2026-05-16) ─────────────────────────────
     // Replaces the brittle keyword detector for the primary routing
     // decision. Calls /api/chat with intent='classify' + a tight system
     // prompt; returns {primaryIntent, isMultiIntent, otherIntents,
@@ -7152,7 +7152,7 @@ export default function ChatView({ initialView = 'chat' }) {
       const fallbackNote = {
         id: Date.now() + 0.25,
         sender: 'bot',
-        content: 'Routing classifier unavailable — used keyword fallback. Intent accuracy may be reduced for this message.',
+        content: 'Routing classifier unavailable — used keyword fallback. Skill accuracy may be reduced for this message.',
         timestamp: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
         sourceBadge: null,
         isSystemNote: true,
@@ -8777,7 +8777,7 @@ INSTRUCTIONS:
                     {isIntentMenuOpen && (
                       <>
                         <div onClick={() => setIsIntentMenuOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 50 }} />
-                        {/* Dropdown opens DOWNWARD — the intent pill is at the
+                        {/* Dropdown opens DOWNWARD — the skill pill is at the
                             top of the composer, so opening upward would push the
                             tall menu (12 intents + 4 bucket headers ≈ 500 px)
                             past the viewport top. Opening downward briefly covers

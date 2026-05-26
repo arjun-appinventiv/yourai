@@ -66,7 +66,7 @@ export default function RiskMemoCard({ data }: { data: RiskMemoCardData }) {
             Upload the contract, NDA, lease, or agreement you want assessed using the <strong>+</strong> button next to the input, then ask again and I'll produce the risk memo with findings grouped by severity, locations, owners, and recommendations.
           </Body>
           <div style={{ fontSize: 13, color: COLORS.muted, lineHeight: 1.6 }}>
-            For a quicker read, switch the intent pill above the input to <em>Clause Analysis</em> — same input, shorter output.
+            For a quicker read, switch the skill pill above the input to <em>Clause Analysis</em> — same input, shorter output.
           </div>
         </div>
         <EditorialFooter footerText={data?.generatedLabel || '—'} />
