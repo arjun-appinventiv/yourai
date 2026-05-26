@@ -277,14 +277,11 @@ export default function PreRunModal({ template, workspaceId, workspaceName, work
                           <Icon size={10} /> {cfg.label}
                         </span>
                         <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>
-                          {s.name || cfg.label}
+                          {cfg.label}
                         </span>
                       </div>
-                      <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.55 }}>
-                        {getStepOutcomeLabel(s.operation)}
-                      </div>
                       {expanded && (
-                        <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--border)', fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.65 }}>
+                        <div style={{ marginTop: 6, fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.65 }}>
                           {cfg.description}
                         </div>
                       )}
@@ -458,17 +455,6 @@ function UploadRow({ upload, classification, onRemove, sizeStr }: {
   );
 }
 
-function getStepOutcomeLabel(operation: WorkflowOperation): string {
-  switch (operation) {
-    case 'read_documents':      return 'Outputs a structured reading of the uploaded documents for downstream analysis.';
-    case 'analyse_clauses':     return 'Highlights risky or non-standard clauses and groups them into findings.';
-    case 'compare_against_standard': return 'Benchmarks your document against the selected playbook or standard.';
-    case 'generate_report':     return 'Produces the final structured report with recommendations.';
-    case 'research_precedents': return 'Returns relevant precedents and supporting legal references.';
-    case 'compliance_check':    return 'Maps document content against controls, rules, or policy requirements.';
-    default:                    return 'Produces a structured output for the next workflow step.';
-  }
-}
 
 const headerLinkStyle: React.CSSProperties = {
   background: 'none',
