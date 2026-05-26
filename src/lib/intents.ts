@@ -39,13 +39,16 @@ export const INTENT_BUCKETS: IntentBucket[] = [
   { label: 'DRAFT',          intentIds: ['document_drafting', 'email_letter_drafting'] },
 ];
 
-// Bucket dot colors — used by the intent dropdown section header dots and
-// by the chip row below the input where each chip carries its bucket dot.
+// Bucket dot colors — used by the intent dropdown section header dots,
+// the quick-chip pill dots, AND the active intent pill's background tint
+// + border + text colour. Each bucket has a unique hue so the active
+// chat-input pill visually reflects the kind of work the AI is being
+// asked to do (PM 2026-05-20 client feedback).
 export const BUCKET_COLORS: Record<string, string> = {
-  'DEFAULT':        '#9CA3AF',
-  'ASK & RESEARCH': '#3B82F6',
-  'ANALYZE':        '#C9A84C',
-  'DRAFT':          '#5CA868',
+  'DEFAULT':        '#3FB56B',  // green   — chat / general
+  'ASK & RESEARCH': '#3B82F6',  // blue    — research / Q&A / find
+  'ANALYZE':        '#D97706',  // amber   — analysis / review / risk
+  'DRAFT':          '#8B5CF6',  // purple  — drafting
 };
 
 // One-line subtitle shown beneath the selected intent in the dropdown.

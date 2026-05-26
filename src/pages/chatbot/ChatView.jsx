@@ -5886,33 +5886,32 @@ function EmptyState() {
     <div className="px-4 sm:px-6" style={{ paddingTop: '10vh', paddingBottom: 0 }}>
       <div style={{ maxWidth: 820, width: '100%', margin: '0 auto' }}>
         <div style={{ textAlign: 'center' }}>
-          {/* Sparkle — 36px gold-bg ring with sparkle inside */}
-          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
-            <span style={{
-              display: 'inline-flex', width: 36, height: 36, borderRadius: '50%',
-              background: 'var(--gold-bg)', alignItems: 'center', justifyContent: 'center',
-              color: 'var(--gold)',
-            }}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 2l1.6 5.4L19 9l-5.4 1.6L12 16l-1.6-5.4L5 9l5.4-1.6z"/>
-              </svg>
-            </span>
+          {/* Greeting row — fingerprint brand mark left-aligned inline with the
+             greeting text (PM 2026-05-20 client feedback: kill the gold
+             sparkle ring above; put the fingerprint logo next to "Good
+             afternoon, Priya" on the same line). */}
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 14 }}>
+            <img
+              src="/yourai-mark.svg"
+              alt=""
+              aria-hidden="true"
+              style={{ width: 48, height: 48, objectFit: 'contain', flexShrink: 0 }}
+            />
+            <h2
+              style={{
+                fontFamily: "'Fraunces', serif",
+                fontWeight: 500,
+                fontSize: 44,
+                color: 'var(--text-primary)',
+                margin: 0,
+                lineHeight: 1.1,
+                letterSpacing: '-1.2px',
+              }}
+            >
+              {getGreeting()}, {currentUserName}
+            </h2>
           </div>
-          <h2
-            style={{
-              fontFamily: "'Fraunces', serif",
-              fontWeight: 500,
-              fontSize: 44,
-              color: 'var(--text-primary)',
-              margin: 0,
-              lineHeight: 1.1,
-              letterSpacing: '-1.2px',
-              textAlign: 'center',
-            }}
-          >
-            {getGreeting()}, {currentUserName}
-          </h2>
-          <p style={{ textAlign: 'center', color: 'var(--text-secondary)', fontSize: 14.5, margin: '8px 0 28px', lineHeight: 1.5 }}>
+          <p style={{ textAlign: 'center', color: 'var(--text-secondary)', fontSize: 14.5, margin: '12px 0 28px', lineHeight: 1.5 }}>
             Your AI assistant is ready — ask anything about your documents or Alaska law.
           </p>
         </div>
@@ -8232,7 +8231,7 @@ INSTRUCTIONS:
       <div style={{ flex: 1, display: (showOrgDashboard || showBillingPanel || showAuditLogsPanel || showMyTimePanel || showTeamTimePanel || showTeamPage || showWorkspacesPanel || showWorkflowsPanel || editingWorkflow || showDocumentVaultPanel || showKnowledgePacksPanel || showPromptPanel) ? 'none' : 'flex', flexDirection: 'column', minWidth: 0 }}>
         <TopNav plan={plan} usage={usage} onOpenSidebar={() => setSidebarOpen(true)} />
 
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: showEmptyState ? '#fbf8ef' : 'var(--cream)', minHeight: 0 }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: showEmptyState ? '#fff' : 'var(--cream)', minHeight: 0 }}>
           {/* Document limit banners */}
           {docPct >= 100 && (
             <div className="px-3 sm:px-6 md:px-10 py-2.5 flex items-center gap-2 sm:gap-3 flex-wrap" style={{ backgroundColor: '#F9E7E7', borderBottom: '1px solid #F9E7E7' }}>
@@ -8561,26 +8560,66 @@ INSTRUCTIONS:
                   Hidden legacy popovers (vaultAttachRef) are mounted at the end so
                   their refs stay alive without rendering. */
               <>
-                {/* ─── Composer block (beige #efe9d8, radius 20) ─── */}
-                <div style={{
-                  width: '100%', background: '#efe9d8', borderRadius: 20,
-                  padding: 16, display: 'flex', flexDirection: 'column', gap: 12,
-                }}>
-                  {/* Green "Legal Q&A" intent pill — opens verb-bucketed intent picker */}
-                  <div style={{ position: 'relative', width: 'fit-content' }} ref={intentMenuRef}>
+                {/* ─── Composer block (white, radius 20, drag/drop enabled) ───
+                   PM 2026-05-20 client feedback: no colored bg on the composer.
+                   Drag a file directly onto the composer to attach (the
+                   separate Upload bar that used to sit below is gone). Dashed
+                   border + light tint on dragover for visual feedback. */}
+                {(() => {
+                  const activeBucket = getBucketForIntent(activeIntent);
+                  const bucketColor = (activeBucket && BUCKET_COLORS[activeBucket]) || BUCKET_COLORS.DEFAULT;
+                  return (
+                <div
+                  onDragOver={(e) => { e.preventDefault(); if (!isFileDropHover) setIsFileDropHover(true); }}
+                  onDragLeave={(e) => { e.preventDefault(); setIsFileDropHover(false); }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setIsFileDropHover(false);
+                    const files = Array.from(e.dataTransfer?.files || []);
+                    const looksLikeFolder = files.length === 0 && Array.from(e.dataTransfer?.items || []).some((it) => it.kind === 'file');
+                    if (looksLikeFolder) {
+                      setMessages((prev) => [...prev, {
+                        id: Date.now(),
+                        sender: 'bot',
+                        content: '**Folders aren\'t supported in chat attach.** Drop individual files here, or upload the folder to **YourVault** first (the vault preserves folder structure) and then attach a doc or the whole folder from there.',
+                        timestamp: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
+                      }]);
+                      return;
+                    }
+                    if (files.length) handleAttachFiles(files, 'doc');
+                  }}
+                  style={{
+                    width: '100%',
+                    background: isFileDropHover ? '#f8fafc' : '#fff',
+                    border: isFileDropHover ? '2px dashed var(--navy)' : '1px solid var(--border)',
+                    borderRadius: 20,
+                    padding: isFileDropHover ? 15 : 16,
+                    display: 'flex', flexDirection: 'column', gap: 12,
+                    transition: 'background 150ms, border-color 150ms',
+                  }}
+                >
+                  {/* Active intent pill — background + dot tint inherit from the
+                     intent's bucket colour. Green for general chat / default,
+                     blue for ask-and-research, amber for analyze, purple for
+                     draft. */}
+                  <div style={{ position: 'relative', width: 160 }} ref={intentMenuRef}>
                     <button
                       onClick={() => setIsIntentMenuOpen(v => !v)}
                       style={{
+                        width: '100%', height: 40,
                         display: 'inline-flex', alignItems: 'center', gap: 8,
-                        padding: '6px 14px', borderRadius: 999,
-                        background: '#e2dcc6', border: '1px solid #c8c1a6',
-                        color: 'var(--green-text)', fontSize: 13, fontWeight: 500,
+                        padding: '0 14px', borderRadius: 999,
+                        background: `${bucketColor}1a`,
+                        border: `1px solid ${bucketColor}55`,
+                        color: bucketColor, fontSize: 13, fontWeight: 500,
                         fontFamily: 'inherit', cursor: 'pointer', lineHeight: 1,
                       }}
                     >
-                      <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--green)' }} />
-                      {getIntentLabel(activeIntent)}
-                      <ChevronDown size={12} style={{ color: 'var(--green-text)', transform: isIntentMenuOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 150ms' }} />
+                      <span style={{ width: 8, height: 8, borderRadius: '50%', background: bucketColor, flexShrink: 0 }} />
+                      <span style={{ flex: 1, textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {getIntentLabel(activeIntent)}
+                      </span>
+                      <ChevronDown size={12} style={{ color: bucketColor, flexShrink: 0, transform: isIntentMenuOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 150ms' }} />
                     </button>
                     {isIntentMenuOpen && (
                       <>
@@ -8662,7 +8701,7 @@ INSTRUCTIONS:
                         }, 600);
                       }}
                       onKeyDown={handleKeyDown}
-                      placeholder="Ask anything about your documents or Alaska law..."
+                      placeholder="Ask anything... or drop in a file"
                       rows={1}
                       style={{
                         width: '100%', border: 'none', outline: 'none', resize: 'none',
@@ -8674,16 +8713,19 @@ INSTRUCTIONS:
                     />
                   </div>
 
-                  {/* Actions row: scope (left) · pack + send (right) — all 40px tall */}
+                  {/* Actions row: scope (left) · pack + send (right). The
+                     scope + pack pills are 160px each to match the intent
+                     pill above — three same-size dropdowns per PM ask. */}
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-                    {/* LEFT: File Search scope pill */}
-                    <div style={{ position: 'relative' }} ref={scopeInputRef}>
+                    {/* LEFT: File Search scope pill — 160px wide, 40px tall */}
+                    <div style={{ position: 'relative', width: 160 }} ref={scopeInputRef}>
                       <button
                         onClick={() => setIsScopeOpenInput(v => !v)}
                         style={{
-                          height: 40, display: 'inline-flex', alignItems: 'center', gap: 8,
-                          padding: '0 16px', borderRadius: 999,
-                          border: '1px solid #cfc8b1', background: '#fff',
+                          width: '100%', height: 40,
+                          display: 'inline-flex', alignItems: 'center', gap: 8,
+                          padding: '0 14px', borderRadius: 999,
+                          border: '1px solid var(--border)', background: '#fff',
                           fontFamily: 'inherit', fontSize: 13.5, color: 'var(--text-primary)',
                           cursor: 'pointer', lineHeight: 1,
                         }}
@@ -8692,7 +8734,9 @@ INSTRUCTIONS:
                           const Icon = getScopeOption(searchScope).icon;
                           return <Icon size={14} style={{ flexShrink: 0 }} />;
                         })()}
-                        {getScopeOption(searchScope).label}
+                        <span style={{ flex: 1, textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {getScopeOption(searchScope).label}
+                        </span>
                         <ChevronDown size={12} style={{ flexShrink: 0, transform: isScopeOpenInput ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 150ms' }} />
                       </button>
                       {isScopeOpenInput && (
@@ -8754,20 +8798,21 @@ INSTRUCTIONS:
                       )}
                     </div>
 
-                    {/* RIGHT: KP pill + send button */}
+                    {/* RIGHT: KP pill (160px to match) + send button */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                       <button
                         onClick={() => setIsPackPickerModalOpen(true)}
                         style={{
-                          height: 40, display: 'inline-flex', alignItems: 'center', gap: 8,
-                          padding: '0 16px', borderRadius: 999,
-                          border: '1px solid #cfc8b1', background: '#fff',
+                          width: 160, height: 40,
+                          display: 'inline-flex', alignItems: 'center', gap: 8,
+                          padding: '0 14px', borderRadius: 999,
+                          border: '1px solid var(--border)', background: '#fff',
                           fontFamily: 'inherit', fontSize: 13.5, color: 'var(--text-primary)',
-                          cursor: 'pointer', lineHeight: 1, maxWidth: 260,
+                          cursor: 'pointer', lineHeight: 1,
                         }}
                       >
-                        <span style={{ fontSize: 14, color: 'var(--text-primary)', lineHeight: 1 }}>⌘</span>
-                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <span style={{ fontSize: 14, color: 'var(--text-primary)', lineHeight: 1, flexShrink: 0 }}>⌘</span>
+                        <span style={{ flex: 1, textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {activeKnowledgePack ? activeKnowledgePack.name : 'Knowledge pack'}
                         </span>
                         <ChevronDown size={12} style={{ flexShrink: 0 }} />
@@ -8792,77 +8837,50 @@ INSTRUCTIONS:
                     </div>
                   </div>
                 </div>
+                );
+                })()}
 
-                {/* ─── Upload bar (separate beige strip below composer) ─── */}
-                <div
-                  onClick={() => dropFileInputRef.current?.click()}
-                  onDragOver={(e) => { e.preventDefault(); if (!isFileDropHover) setIsFileDropHover(true); }}
-                  onDragLeave={(e) => { e.preventDefault(); setIsFileDropHover(false); }}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    setIsFileDropHover(false);
-                    const files = Array.from(e.dataTransfer?.files || []);
-                    const looksLikeFolder = files.length === 0 && Array.from(e.dataTransfer?.items || []).some((it) => it.kind === 'file');
-                    if (looksLikeFolder) {
-                      setMessages((prev) => [...prev, {
-                        id: Date.now(),
-                        sender: 'bot',
-                        content: '**Folders aren\'t supported in chat attach.** Drop individual files here, or upload the folder to **YourVault** first (the vault preserves folder structure) and then attach a doc or the whole folder from there.',
-                        timestamp: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
-                      }]);
-                      return;
-                    }
-                    if (files.length) handleAttachFiles(files, 'doc');
-                  }}
-                  style={{
-                    marginTop: 12, width: '100%',
-                    background: isFileDropHover ? '#e7e0cb' : '#efe9d8',
-                    borderRadius: 16,
-                    padding: '14px 22px',
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    cursor: 'pointer',
-                    transition: 'background 150ms',
-                  }}
-                >
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, color: 'var(--text-primary)', fontSize: 13.5 }}>
-                    <Upload size={14} />
-                    Upload new files
-                  </span>
-                  <span style={{ color: 'var(--text-muted)', fontSize: 12.5, letterSpacing: '0.3px' }}>
-                    PDF · DOCX · TXT · max 25MB
-                  </span>
-                </div>
+                {/* Upload bar retired 2026-05-20 — files now drop directly
+                   onto the composer above. Placeholder text in the textarea
+                   ("Ask anything... or drop in a file") surfaces the action;
+                   dashed border + light tint render on dragover. */}
 
-                {/* ─── Quick chips (4 white pills with green dots) ─── */}
+                {/* ─── Quick chips — 4 pills, each dot colored by its
+                   intent's bucket (DEFAULT=green / ASK=blue / ANALYZE=amber
+                   / DRAFT=purple) per PM 2026-05-20. ─── */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 20, flexWrap: 'wrap', justifyContent: 'center' }}>
                   {[
                     { label: 'General Chat', intent: 'general_chat', prefill: '' },
                     { label: 'Review a contract', intent: 'contract_review', prefill: 'Review this contract and flag any one-sided provisions, unusual liability caps, or missing standard protections I should push back on. Structure your response as: 1) high-risk issues, 2) medium-risk issues, 3) recommended redlines.' },
                     { label: 'Summarize a document', intent: 'document_summarisation', prefill: 'Summarise this document in three sections: (1) Key obligations and deadlines, (2) Risk areas and ambiguities, (3) Recommended next steps. Keep each section under 100 words.' },
                     { label: 'Draft an email', intent: 'email_letter_drafting', prefill: 'Draft a professional email to opposing counsel requesting a seven-day extension on the upcoming deadline. Keep the tone courteous but firm, under 120 words, and include a brief reason tied to document review workload.' },
-                  ].map((chip) => (
-                    <button
-                      key={chip.intent}
-                      onClick={() => {
-                        setActiveIntent(chip.intent);
-                        setHasManualIntentPick(true);
-                        if (chip.prefill) setInput(chip.prefill);
-                        if (inputRef.current) inputRef.current.focus();
-                      }}
-                      style={{
-                        display: 'inline-flex', alignItems: 'center', gap: 8,
-                        padding: '8px 16px', borderRadius: 999,
-                        border: '1px solid var(--chip-border)', background: '#fff',
-                        fontFamily: 'inherit', fontSize: 13, color: 'var(--text-primary)',
-                        cursor: 'pointer',
-                      }}
-                      onMouseEnter={(e) => { e.currentTarget.style.background = '#fafafa'; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; }}
-                    >
-                      <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--green)' }} />
-                      {chip.label}
-                    </button>
-                  ))}
+                  ].map((chip) => {
+                    const chipBucket = getBucketForIntent(chip.intent);
+                    const chipColor = (chipBucket && BUCKET_COLORS[chipBucket]) || BUCKET_COLORS.DEFAULT;
+                    return (
+                      <button
+                        key={chip.intent}
+                        onClick={() => {
+                          setActiveIntent(chip.intent);
+                          setHasManualIntentPick(true);
+                          if (chip.prefill) setInput(chip.prefill);
+                          if (inputRef.current) inputRef.current.focus();
+                        }}
+                        style={{
+                          display: 'inline-flex', alignItems: 'center', gap: 8,
+                          padding: '8px 16px', borderRadius: 999,
+                          border: '1px solid var(--chip-border)', background: '#fff',
+                          fontFamily: 'inherit', fontSize: 13, color: 'var(--text-primary)',
+                          cursor: 'pointer',
+                        }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = '#fafafa'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; }}
+                      >
+                        <span style={{ width: 6, height: 6, borderRadius: '50%', background: chipColor }} />
+                        {chip.label}
+                      </button>
+                    );
+                  })}
                 </div>
 
                 {/* ─── Footer note ─── */}
