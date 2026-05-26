@@ -608,7 +608,7 @@ function Sidebar({ activeKey, onOpenChat, onOpenOrgDashboard, onOpenPromptTempla
             style={{ width: 28, height: 28, objectFit: 'contain', flexShrink: 0 }}
           />
           <span style={{ fontFamily: "'Fraunces', serif", fontSize: 24, fontWeight: 600, letterSpacing: '-0.5px' }}>
-            <span style={{ color: 'var(--navy)' }}>Your</span><span style={{ color: 'var(--gold)' }}>AI</span>
+            <span style={{ color: '#000' }}>Your</span><span style={{ color: '#000' }}>AI</span>
           </span>
         </div>
         {/* Close button — mobile only */}
