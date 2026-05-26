@@ -346,7 +346,8 @@ export default function WorkspacesPage({ onBack, onOpenWorkspace, onToast }: Wor
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginLeft: 'auto' }}>
               {WORKSPACE_CATEGORIES.map((t) => {
-                const Icon = t.icon;
+                // PM 2026-05-20 item 15: replace icons with bucket-colored
+                // dots on the template chip strip.
                 return (
                   <button
                     key={t.id}
@@ -362,7 +363,7 @@ export default function WorkspacesPage({ onBack, onOpenWorkspace, onToast }: Wor
                     onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = '#fafafa'; }}
                     onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = '#fff'; }}
                   >
-                    <Icon size={14} style={{ color: t.accent }} />
+                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: t.accent, flexShrink: 0 }} />
                     {t.label}
                   </button>
                 );
@@ -492,19 +493,21 @@ function WorkspaceCard({ workspace, onClick }: { workspace: Workspace; onClick: 
       onClick={onClick}
       style={{
         padding: '20px 22px', borderRadius: 16,
-        border: '1px solid var(--border)', background: '#fff',
+        border: '1px solid var(--border)',
+        // PM 2026-05-20 item 14: colored top border per practice area so
+        // the workspace's category reads at a glance from across the list.
+        borderTop: `3px solid ${meta.color}`,
+        background: '#fff',
         cursor: 'pointer', transition: 'all 0.15s',
         display: 'flex', flexDirection: 'column', gap: 14,
       }}
       onMouseEnter={(e) => {
         const el = e.currentTarget as HTMLDivElement;
-        el.style.borderColor = 'var(--navy)';
         el.style.boxShadow = '0 6px 20px rgba(10,36,99,0.08)';
         el.style.transform = 'translateY(-1px)';
       }}
       onMouseLeave={(e) => {
         const el = e.currentTarget as HTMLDivElement;
-        el.style.borderColor = 'var(--border)';
         el.style.boxShadow = 'none';
         el.style.transform = 'translateY(0)';
       }}
