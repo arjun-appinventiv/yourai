@@ -547,6 +547,132 @@ Reverse chronological. Each entry: *decision — rationale — date*.
 
 ## Last updated
 
+**2026-05-26** — Long session. Client (Wendy + Ryan) sent a 25-item UI/UX feedback batch + raised the chat answer-routing question + asked about the architecture of workflow operations vs chat intents. Shipped ~20 commits over the day.
+
+### Brand mark — full migration from "Y" letterform to fingerprint
+
+PM-supplied 1024×1024 transparent fingerprint PNG, then mid-session swapped to a more detailed thin-line SVG illustration (442 KB, originally with a text label at the bottom — cropped via `viewBox="0 0 1500 1400"`, opaque white background path stripped so it works on any surface).
+
+**Lessons codified into CLAUDE.md as new gotchas:**
+- The thin-line SVG is multi-tonal (light + dark paths layered to create the line aesthetic). CSS `mask-image` only sees alpha, so masking collapses the detail into a uniform silhouette. Render directly via `<img>` instead and use `filter: invert(1)` for dark surfaces.
+- The fingerprint can't survive favicon sizes (~30 thin strokes, ~16-20 px tab render = sub-pixel strokes that alpha-average into the bg). After 4 iterations (gold-on-navy, white-on-navy with alpha dilation, drop 16x16 frame, letter "Y"), shipped a **simplified hand-drawn fingerprint** for the favicon — 3 concentric arcs + center curl + bottom smile + dot, all white on navy. SVG vector paths render crisp at any size. ICO is multi-size (32/48/64/128/256, dropped 16) hand-rendered with 4× supersampling.
+- In-app brand mark stays the full fingerprint SVG; favicon stays the simplified hand-drawn variant. **Same pattern brands like Stripe use** (simple monogram in tabs, fuller mark in-app).
+
+**Brand mark render sites updated:** ChatView Sidebar header (mark inline, left-aligned with Fraunces greeting), ChatView TopNav (replaced gold Sparkles glyph), SA Sidebar (replaced "Y" letter inside gold-ringed tile, `filter: invert(1)`), Org Admin Sidebar (replaced "Y" letter inside navy tile, `filter: invert(1)`), Login (40px mark above "Welcome to YourAI" heading), Onboarding (22px mark inline with the wordmark). `favicon.svg` + `favicon.ico` regenerated.
+
+### Workflows — Read Documents un-pinned + standardization rebuild Phases A & C
+
+Client said Read Documents shouldn't be required as step 1.
+
+- **Builder default operation `read_documents` → `analyse_clauses`** (`makeNewStep()`). Step name now auto-follows the operation label (no separate Step name input).
+- **New seed template "Clause Quick Scan"** demonstrates a 2-step workflow without Read Documents (`analyse_clauses → generate_report`).
+- **`TEMPLATES_KEY` bumped v1 → v2** to force re-seed.
+
+**Every workflow now ends with `generate_report` — enforced as a system invariant.** New `ensureGenerateReportLast(steps)` helper applied at 4 layers:
+1. `createTemplate` — auto-appends on save
+2. `updateTemplate` — auto-appends on save (so deleting the GR step + saving re-adds it)
+3. `listTemplates` — migrates pre-invariant templates on read, writes back if anything changed (idempotent)
+4. `startRun` in the runner — belt-and-suspenders for any stored template that bypassed the storage-layer normalization
+
+This unblocks Phase B+C+D of the standardization rebuild — every workflow has a known Generate-Report-shaped synthesis to render, so the Generated Artifacts card / Findings summary / Open report / Download PDF actions all consume one shape.
+
+**Workflow step action row collapsed to "Copy output" only** (per client). Dropped Retry step / Edit input / View details from 3 surfaces: `WorkflowStepItem` (4-button grid → single full-width Copy output), `WorkflowProgressCard` (failed-step body retry button), `WorkflowReportCard` audit log modal (retry on failed steps). `workflowRunner.retryStep` lib function stays (mirrors REST endpoint per mock-API convention), just no UI consumers.
+
+**Phase A — optional `sampleOutput` field on `WorkflowTemplate`**: Builder gets a "Sample output" textarea (8000 char cap), picker card surfaces a "See sample output →" link when non-empty. New `SampleOutputModal` renders the author-supplied markdown.
+
+**Pre-Run Modal trims:** View logic link, knowledge-source info box (blue "Running from main chat…" callout), and Sample output + Last run two-card grid all removed. Expanded step body now always shows `OPERATION_CONFIG.description` (was toggled by View logic). Step name normalizes to operation label at display time.
+
+**Live Execution panel:** dropped the "Mode" stat from the KNOWLEDGE/MODE/PROGRESS strip (now 2-col KNOWLEDGE/PROGRESS). Demo-mode callout banner below still surfaces when demo mode is on. Step expanded view's "Copy output" button widened to full-width matching "View logs" chrome.
+
+### Chat empty state — client UI/UX pass (items 3 – 9)
+
+PM 2026-05-20 + 2026-05-26 client feedback. Multiple iterations.
+
+- **Item 9 — Hero**: sparkle ring above greeting REMOVED. Fingerprint brand mark inline left-aligned with `{getGreeting()}, {currentUserName}` on the same line.
+- **Item 8 — Page bg**: `#fbf8ef` → `#fff` while `showEmptyState`. The cream lives in the page chrome around the surface, not under the composer.
+- **Item 5 + 11 — Composer**: white card, 1.5px `#b8bcc4` border, 20px radius, 16px padding. Drag/drop on the composer itself with dashed-navy border + `#f8fafc` tint on dragover. **Same composer shape in empty-state, populated-state, and WorkspaceChatView.**
+- **Item 3 — Intent pill colored by bucket**: pill background tints to `${bucketColor}1a`, border `${bucketColor}99` (1.5px), dot + text + chevron all the bucket color. Switches as the active intent changes.
+- **Item 7 — 3 same-size dropdowns**: intent pill, File Search pill, Knowledge pack pill all 160 px wide × 40 px tall. Labels ellipsize.
+- **Item 4 — Drop on composer + new placeholder**: "Ask anything... or drop in a file" (was "Ask anything about your documents or Alaska law…"). Drop-bar below renamed to "Drop your files here" (separate state variable `isUploadBarDropHover` so it doesn't double-light-up with the composer's own dragover).
+- **Bucket colors finalized** in `src/lib/intents.ts BUCKET_COLORS`:
+  - DEFAULT (general chat) → `#3FB56B` green
+  - ASK & RESEARCH → `#3B82F6` blue
+  - ANALYZE → `#D97706` amber
+  - DRAFT → `#8B5CF6` purple
+- **Quick chip pills below composer**: each chip's dot now uses the chip's intent bucket color (was uniform green).
+
+### Chat message alignment + bubble (items 10 + 12)
+
+- **User messages**: right-aligned, soft `var(--ice-warm)` bg + 1px border + 14 px radius bubble.
+- **Bot messages**: flat-left, no wrapper styling (matches the editorial-document aesthetic).
+- Outer `MessageBubble` row flips `flexDirection` to `row-reverse` for user; attachment chips align to the right edge for user. Same pattern in `WorkspaceChatView`.
+- **Item 10 citations chips below bot responses — DEFERRED.** MessageBubble has multiple render branches (card chip / confirmation / multi-intent picker / streaming / plain markdown); citation extraction needs careful placement that doesn't break artifact-panel chip + source-badge logic.
+
+### Workspaces page (items 14, 15, 23)
+
+- **Item 14 — colored top borders** on `WorkspacesPage.tsx WorkspaceCard`: 3px border in `PRACTICE_META[category].color`. Hover no longer overwrites it (was forcing navy on hover). Categories: LITIGATION purple, TRUST_ESTATE green, CORPORATE blue, EMPLOYMENT pink, EXTERNAL amber, GENERAL gray.
+- **Item 15 — template chip strip**: each chip's icon → an 8 px dot in the chip's accent color (`t.accent`). Matches the bucket-dot pattern used in the chat composer.
+- **Item 23 — sidebar rename "Workspaces" → "Matters"**: ChatView Sidebar item label + OrgSidebar item label. Code symbols + paths + storage keys unchanged (matches the YourVault rename convention).
+
+Note: my first attempt at #14 + #15 edited `src/components/chat/WorkspacesPanel.jsx` — turns out that file is **orphan** (no live imports). The live workspaces UI is `src/pages/chatbot/WorkspacesPage.tsx`. Worth a CLAUDE.md gotcha so future sessions don't waste the round-trip.
+
+### Workspace chat (item 13)
+
+- **`WorkspaceChatView.tsx` composer rewritten** to mirror the main ChatView composer (white bg, 1.5px border, intent pill top 160w with bucket color, textarea, attach + send in bottom row). Intent dropdown reads bucket-grouped via `groupIntentsByBucket`. **Pulled in `BUCKET_COLORS`, `getBucketForIntent`, `groupIntentsByBucket` imports** so the same bucket colour system applies.
+- **Message bubble in workspace chat**: user right-aligned with `--ice-warm` bubble + 1 px border + dark text (was white-on-navy); bot flat-left without a wrapper. Matches main ChatView.
+
+### Sidebar + Org Settings (items 21, 24, 25)
+
+- **Item 21 — Billing folded into Org Settings multi-tab panel.** New left-rail tab list inside the existing `BillingPanel` component (renamed user-facing to "Org Settings" via the sidebar entry; component name kept to avoid the 10+ `showBillingPanel` reference rename). Three grouped sections matching the client mockup:
+  - **ACCOUNT** → Billing (real) · Security (placeholder) · Compliance (placeholder)
+  - **CONNECTIONS** → Integrations (placeholder) · API & Webhooks (placeholder)
+  - **COMMUNICATION** → Notifications (placeholder)
+  
+  Active tab gets `--ice-warm` bg. Other 5 tabs render a centered placeholder body explaining what the dev team will wire (2FA / DLP / connectors / API keys / digest prefs).
+- **Item 24 — sidebar rename "Invite Team" → "Team"** (ChatView Sidebar item label only).
+- **Item 25 — TopNav model selector hidden** behind `{false && …}`. State + refs preserved so handlers compile. Restore by deleting the gate.
+
+### YourVault row density (item 16)
+
+Row padding `14×18` → `8×18`. File-type icon tile 36×44 → 32×36. Tags moved inline with the document name (was stacked beneath). Saves ~14 px per row — 20+ row pages now read more like a list, less like a card stack.
+
+### Architecture decision saved: unified-intents
+
+Long architecture discussion late in the session. **Decided to ship the "unified intents" restructure as the cleanest way to standardize.** Plan saved to `.claude-context/unified-intents-plan.md` with keyword `unified-intents`.
+
+Summary: collapse the 4 drifting sources of truth (`intents.ts` + `intentDetector.ts` + `GlobalKnowledgeBase.jsx DEFAULT_INTENTS` + `workflowPrompts.ts`) into ONE intents table edited from SA Bot Persona. Two visibility toggles per intent: `chatVisible` (shows in chat intent dropdown), `workflowVisible` (shows as a Workflow Builder operation). New workflow operations become a no-code admin toggle. Workflow executor becomes operation-agnostic. CLAUDE.md gotcha #6 (3-sources-of-truth drift) dies. ~5–7 days, deletes ~600–800 LOC, adds ~300.
+
+Six-phase ship plan in the file. Invoke by saying **`unified-intents`** in any future session.
+
+### Chat answer-routing cases authored (inline, not committed as a doc)
+
+Client raised the question of how the bot decides where to source answers (document vs KB vs model knowledge). Authored a deterministic routing-and-reply spec inline:
+- Classify question intent FIRST, then route to source lane (not blind universal cascade)
+- 2 fundamentally different question types: **instance** (document only — miss = "Not stated in the document", do NOT cascade) and **knowledge** (KB/model only — document irrelevant, never refuse, never say "not in your document")
+- 4 source lanes with attribution labels: document / knowledge pack / global KB / model knowledge (with `[verify]` tag)
+- 6 case categories with examples for the dev team
+- The 3 rules that kill the dev team's universal-RAG-refusal bug
+
+Not yet a durable doc — pending Arjun's confirmation that the full standardization rebuild lands first. Should fold into the dev-team handoff once `unified-intents` ships.
+
+### Conventions added to CLAUDE.md this session
+
+New entries in the Conventions section + Gotchas covering: bucket colors as single source for category accent, unified composer chrome (empty/populated/workspace-chat all match), brand mark direct `<img>` rendering (not CSS mask), favicon simplified fingerprint, workflow Generate Report invariant, workflow step name = operation label, Org Settings multi-tab panel, sidebar renames, user message bubble pattern, workspace card colored top borders.
+
+### Bundle progression
+
+`9f` (early read-docs trim) → `b2` (favicon swap 1) → `b3` (favicon swap 2) → `49` (favicon white-Y) → `8e` (simplified fingerprint favicon) → `BIeDIFoB` (thin-line SVG mark direct img) → `DZlhGnct` (sidebar logo swap) → `BMS63SEC` (workflow trim) → `Crkm5KL8` (sampleOutput Phase A) → `XSUTqr80` (Pre-Run trim) → `iWr7tlo8` (one-description step preview) → `Bwv_G68P` (Copy output widened) → `BMDV5LdE` (Generate Report invariant) → `IqWlSLDa` (empty-state composer redesign) → `DJKj-sCH` (darker pill borders) → `BKHS_jau` (sidebar renames + message bubble) → `qq9UsOeF` (Drop bar restored + populated input rewrite) → `ShGOz_Gs` (workspace card borders + workspace chat mirror) → `X_l4ZoAH` (workspace card borders LIVE file + template dots) → `CHCJE1dg` (Org Settings multi-tab). 20+ commits total to `yourai/main`.
+
+### Open / deferred / blockers
+
+- **Item 10 — Citation chips below bot responses** — deferred. Bigger render-block change in MessageBubble; needs its own focused commit.
+- **Phase B + D of workflow standardization** — Phase A shipped (sample output). Phase B (lock per-operation output shape in workflowPrompts.ts), Phase C (simplify WorkflowReportCard visual rules), Phase D (auto-synthesis for non-Generate-Report workflows) are now SUPERSEDED by the **`unified-intents` plan** — once that lands, the per-operation prompt + output schema lives on the intent record.
+- **Other items from the client batch not yet shipped**: numbered items 1, 2, 6, 17–20, 22 (we didn't see explicit screenshots for those; they may be in a follow-up batch). Items 11/13 partially shipped — composer + bubbles match, but downstream chat surfaces (artifact panel for card intents, etc.) haven't been audited for uniformity.
+- **Dev team still hasn't iterated** on the 14 P0/P1 bugs we shared 2026-05-19. No update since then.
+- **AI-time meter** four PM-level questions (rates / LEDES / mid-session matter switch / cross-device) still open from 2026-05-19 — unchanged.
+
+---
+
 **2026-05-20** — Client (Wendy) pushed back: *"Read Documents would never always be step 1. It is not possible in workflows."* Audited end-to-end and confirmed nothing actually requires it as step 1 — the constraint was a perception bug, not a code bug. Two-line fix:
 
 - **`WorkflowBuilder.makeNewStep` default operation `read_documents` → `analyse_clauses`.** Removes the silent nudge toward Read Documents on every new step. Users still pick any operation via the step card's operation dropdown.
