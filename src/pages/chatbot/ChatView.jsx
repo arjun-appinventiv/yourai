@@ -7,7 +7,7 @@ import {
   Search, Bell, ArrowUp, Shield, Sparkles, FileText, Building2, Scale,
   LayoutDashboard, Send, MapPin, FileSearch, Lock, X, AlertTriangle, Info, Zap,
   BookOpen, UserPlus, Trash2, Edit3, Copy, Phone, Mail, Briefcase, Hash, Menu,
-  Package, Link2, File, Upload, Paperclip, Database, GitBranch, Settings, LogOut,
+  Package, Link2, File, Upload, Paperclip, Database, GitBranch, Settings, Settings as SettingsIcon, LogOut,
   CreditCard, Folder, FolderPlus, ArrowLeft, User, MoreHorizontal, Check, Home,
   Bookmark, ArrowRight, ExternalLink, Layers, LogIn, Ban, AlertCircle,
   Cloud, HardDrive
@@ -512,8 +512,14 @@ function Sidebar({ activeKey, onOpenChat, onOpenOrgDashboard, onOpenPromptTempla
     (isOrgAdmin || hasPermission(PERMISSIONS.VIEW_AUDIT_LOGS)) && !isExternalUser && {
       id: 'audit-logs', icon: Shield, label: 'Audit Logs', onClick: onOpenAuditLogs,
     },
+    // PM 2026-05-20 item 21: Billing collapsed into Org Settings — a
+    // single sidebar entry opens a multi-tab settings panel where
+    // Billing is one tab alongside Security / Compliance / Integrations
+    // / API & Webhooks / Notifications. Reuses the existing
+    // showBillingPanel state + BillingPanel component (which now
+    // carries the tab nav internally).
     (isOrgAdmin || hasPermission(PERMISSIONS.ACCESS_BILLING)) && !isExternalUser && {
-      id: 'billing', icon: CreditCard, label: 'Billing', onClick: onOpenBilling,
+      id: 'billing', icon: SettingsIcon, label: 'Org Settings', onClick: onOpenBilling,
     },
   ].filter(Boolean).map((it) => ({ ...it, active: it.id === activeKey }));
 
@@ -4090,8 +4096,26 @@ function OrgDashboardPanel({ onBack, displayName, orgName, workspaceCount, membe
   );
 }
 
-/* ─────────────────── Billing Panel (Org Admin) ─────────────────── */
+/* ─────────────────── Org Settings Panel (Org Admin) ───────────────────
+ * PM 2026-05-20 item 21: Billing folded into a unified Org Settings
+ * panel with a left-rail tab nav. Other tabs (Security / Compliance /
+ * Integrations / API & Webhooks / Notifications) are placeholders for
+ * now — the dev team builds out the real content as those features
+ * land. The component is still called `BillingPanel` to minimise
+ * churn across the show-flag references; treat the wrapper as the
+ * shipping name "Org Settings" and Billing as the default tab. */
+
+const ORG_SETTINGS_TABS = [
+  { id: 'billing',       label: 'Billing',        group: 'ACCOUNT' },
+  { id: 'security',      label: 'Security',       group: 'ACCOUNT' },
+  { id: 'compliance',    label: 'Compliance',     group: 'ACCOUNT' },
+  { id: 'integrations',  label: 'Integrations',   group: 'CONNECTIONS' },
+  { id: 'api',           label: 'API & Webhooks', group: 'CONNECTIONS' },
+  { id: 'notifications', label: 'Notifications',  group: 'COMMUNICATION' },
+];
+
 function BillingPanel({ onBack }) {
+  const [activeTab, setActiveTab] = useState('billing');
   const [showPlanModal, setShowPlanModalLocal] = useState(false);
   // Local mock-state so the user can mutate payment method / status from
   // the modals (no backend yet — billingData is the seed; this state
@@ -4132,7 +4156,60 @@ function BillingPanel({ onBack }) {
         </button>
       </div>
 
-      {/* Scrollable content */}
+      {/* Two-column body: left-rail tabs · right scrollable content */}
+      <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
+        {/* Left rail — grouped tab list. Matches the client's mockup
+           (ACCOUNT · CONNECTIONS · COMMUNICATION sections). */}
+        <div style={{ width: 240, borderRight: '1px solid var(--border)', background: '#fff', padding: '20px 14px', overflowY: 'auto', flexShrink: 0 }}>
+          {['ACCOUNT', 'CONNECTIONS', 'COMMUNICATION'].map((group) => (
+            <div key={group} style={{ marginBottom: 18 }}>
+              <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', padding: '0 10px 8px' }}>
+                {group}
+              </div>
+              {ORG_SETTINGS_TABS.filter((t) => t.group === group).map((tab) => {
+                const isActive = activeTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    style={{
+                      width: '100%', textAlign: 'left',
+                      padding: '8px 10px', borderRadius: 7,
+                      border: 'none',
+                      background: isActive ? 'var(--ice-warm)' : 'transparent',
+                      color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
+                      fontSize: 13.5, fontWeight: isActive ? 500 : 400,
+                      cursor: 'pointer', fontFamily: 'inherit',
+                      marginBottom: 2,
+                    }}
+                    onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = 'rgba(15,28,63,0.03)'; }}
+                    onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
+                  >
+                    {tab.label}
+                  </button>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+
+        {/* Right content — switches by active tab */}
+        {activeTab !== 'billing' ? (
+          <div style={{ flex: 1, overflowY: 'auto', padding: '60px 36px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', textAlign: 'center' }}>
+            <div style={{ fontFamily: "'DM Serif Display', serif", fontSize: 22, color: 'var(--text-primary)', marginBottom: 8 }}>
+              {ORG_SETTINGS_TABS.find((t) => t.id === activeTab)?.label}
+            </div>
+            <div style={{ fontSize: 13, color: 'var(--text-muted)', maxWidth: 420, lineHeight: 1.6 }}>
+              This section is coming in a future sprint. The dev team is wiring real{' '}
+              {activeTab === 'security'      && '2FA, session policies, and password rules'}
+              {activeTab === 'compliance'    && 'data retention, audit export, and DLP rules'}
+              {activeTab === 'integrations'  && 'Google Drive, iManage, Outlook, and Westlaw connectors'}
+              {activeTab === 'api'           && 'API keys, webhook endpoints, and event subscriptions'}
+              {activeTab === 'notifications' && 'email, in-app, and digest preferences'}
+              {' '}— ping Arjun when this should ship.
+            </div>
+          </div>
+        ) : (
       <div style={{ flex: 1, overflowY: 'auto', padding: '28px 36px' }}>
         {/* Payment-failure banner — only when paymentStatus !== 'ok'. Sits
             above the page title so it's the first thing the user sees
@@ -4439,6 +4516,8 @@ function BillingPanel({ onBack }) {
             Cancel subscription…
           </button>
         </div>
+      </div>
+        )}
       </div>
 
       {/* ─── Payment-method modal ──────────────────────────────────────── */}
