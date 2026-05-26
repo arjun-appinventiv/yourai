@@ -8819,7 +8819,7 @@ INSTRUCTIONS:
                      Divider above + slight horizontal inset per PM mockup
                      2026-05-26 (pills sit tucked in, not flush to composer
                      edges). */}
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, paddingTop: 12, paddingLeft: 6, paddingRight: 6, borderTop: '1px solid var(--border)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, paddingTop: 12, paddingLeft: 6, paddingRight: 6, borderTop: '1px solid #9ca3af' }}>
                     {/* LEFT: File Search scope pill — 160px wide, 40px tall */}
                     <div style={{ position: 'relative', width: 160 }} ref={scopeInputRef}>
                       <button
