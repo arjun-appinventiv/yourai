@@ -547,6 +547,27 @@ Reverse chronological. Each entry: *decision — rationale — date*.
 
 ## Last updated
 
+**2026-05-20** — Client (Wendy) pushed back: *"Read Documents would never always be step 1. It is not possible in workflows."* Audited end-to-end and confirmed nothing actually requires it as step 1 — the constraint was a perception bug, not a code bug. Two-line fix:
+
+- **`WorkflowBuilder.makeNewStep` default operation `read_documents` → `analyse_clauses`.** Removes the silent nudge toward Read Documents on every new step. Users still pick any operation via the step card's operation dropdown.
+- **New seed template `Clause Quick Scan` in `mockWorkflows.ts`** — 2 steps (`analyse_clauses` → `generate_report`), no Read Documents, Platform visibility, Legal practice area. Visibly demonstrates the skip-Read-Documents pattern in the picker.
+- **Bumped `TEMPLATES_KEY` `yourai_workflow_templates_v1` → `_v2`** so existing testers' browsers re-seed and pick up the new template. Existing run records reference template IDs unchanged across the bump, so no orphans.
+
+What the audit found about the (non-existent) constraint:
+- `workflow.ts` data model: union type, no order constraint. `OPERATIONS_IN_ORDER` is UI-display sequencing only.
+- `workflowRunner.ts`: iterates `template.steps` in order; no `read_documents` special-case.
+- `workflowExecutor.ts`: every step independently sees the uploaded docs in its user message (8K-char cap each). Step 1 does NOT gatekeep document access for later steps. Source label is computed from data availability, not step position.
+- `workflowPrompts.ts`: BASE_RULES says "Prior step outputs **(if any)** are authoritative context." The `(if any)` is the contract — prior outputs are optional. No downstream operation prompt depends on a `read_documents` output existing.
+- `WorkflowBuilder.tsx` validation: only checks name + practice area + `steps.length >= 1`. **Nothing enforces first-step operation.** The only operation-related warning is `duplicateOperationWarnings` (flags the *same* op twice).
+- `PreRunModal.tsx`: only validates uploads are Ready.
+- The 3 pre-existing seed templates all started with Read Documents — **convention only**, not enforced anywhere.
+
+FRD update parked per PM: more changes coming, will regenerate the full FRD set fresh after they batch.
+
+Deploy: `tmp:main` → `94b6371`, prod bundle `index-BMwqJa9C.js`, verified live at `https://yourai-black.vercel.app/chat`.
+
+---
+
 **2026-05-19 (afternoon)** — Shipped the **AI-time meter** end-to-end inside `/chat`. Every chat conversation now auto-meters attorney time, surfaces a draft billable event at session-end with an AI-generated description, lets the attorney review-and-approve, and rolls up across the firm in a Team Time panel. Four deploys to `yourai/main`: `59d1f5b` (v1 ship) → `347b156` (v1.2 trim) → `6b04120` (proposal docx) → `4bb45ea` (My Time table).
 
 **Anchored on a competitor scan** (Clio Manage AI, LeanLaw, Bill4Time, CosmoLex) before any code landed. Universal patterns we adopted: header-anchored timer pill · default 0.1-hr round-up · one-timer-at-a-time (CosmoLex model — switching threads finalizes the previous) · activity dropdown not free text · matter captured only at draft-confirm (forcing it up-front is the #1 reason attorneys abandon timers) · Clio Manage AI's "AI drafts, attorney edits, attorney approves" flow · LeanLaw's draft → approved workflow · silent idle pause (no modal). Avoided: auto-post without review (Clio's 2 AM auto-cutoff is contentious) · concurrent timers · raw-seconds exposure in the saved entry. Full crosswalk in [`docs/extracted/AI_Time_Meter_Research.md`](docs/extracted/AI_Time_Meter_Research.md). Client-facing proposal at [`docs/extracted/AI_Time_Meter_Proposal.docx`](docs/extracted/AI_Time_Meter_Proposal.docx) (10 embedded screenshots: 6 ours + 4 competitor marketing pages).
