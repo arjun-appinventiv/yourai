@@ -483,8 +483,8 @@ function Sidebar({ activeKey, onOpenChat, onOpenOrgDashboard, onOpenPromptTempla
   const workspaceItems = [
     isOrgAdmin && { id: 'org-dashboard', icon: LayoutDashboard, label: 'Dashboard', onClick: onOpenOrgDashboard },
     { id: 'chat', icon: MessageSquare, label: 'Chat', onClick: onOpenChat },
-    { id: 'workspaces', icon: Briefcase, label: 'Workspaces', rightText: String(workspaceCount ?? 0), onClick: onOpenWorkspaces },
-    !isExternalUser && { id: 'invite-team', icon: UserPlus, label: 'Invite Team', rightText: memberCount != null ? String(memberCount) : undefined, onClick: onOpenInviteTeam },
+    { id: 'workspaces', icon: Briefcase, label: 'Matters', rightText: String(workspaceCount ?? 0), onClick: onOpenWorkspaces },
+    !isExternalUser && { id: 'invite-team', icon: UserPlus, label: 'Team', rightText: memberCount != null ? String(memberCount) : undefined, onClick: onOpenInviteTeam },
   ].filter(Boolean).map((it) => ({ ...it, active: it.id === activeKey }));
 
   // ─── Knowledge items ───
@@ -3376,7 +3376,7 @@ Rules:
                         key={d.id}
                         style={{
                           display: 'flex', alignItems: 'center', gap: 12,
-                          padding: '14px 18px',
+                          padding: '8px 18px',
                           borderBottom: idx < filteredDocs.length - 1 ? '1px solid #f3f3f5' : 'none',
                           background: isSelected ? '#fdf6e7' : '#fff',
                           cursor: 'pointer',
@@ -3386,23 +3386,21 @@ Rules:
                         onMouseLeave={(e) => { if (!isSelected) e.currentTarget.style.background = '#fff'; }}
                         onClick={() => setSelectedDocId(isSelected ? null : d.id)}
                       >
-                        {/* File type icon */}
-                        <div style={{ width: 36, height: 44, borderRadius: 6, background: badge.color, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        {/* File type icon — compact (PM 2026-05-20 row density) */}
+                        <div style={{ width: 32, height: 36, borderRadius: 6, background: badge.color, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                           <span style={{ fontSize: 9, fontWeight: 700, color: '#fff', fontFamily: "'IBM Plex Mono', monospace", letterSpacing: '0.5px', lineHeight: 1 }}>{badge.label}</span>
                         </div>
 
-                        {/* Main content */}
+                        {/* Main content — tags inline with name to save vertical space */}
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 6, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            {d.name}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 2 }}>
+                            <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' }}>
+                              {d.name}
+                            </span>
+                            {tags.map((t) => (
+                              <span key={t.label} style={{ display: 'inline-flex', alignItems: 'center', padding: '1px 8px', borderRadius: 999, background: t.bg, color: t.color, fontSize: 11, fontWeight: 500, flexShrink: 0 }}>{t.label}</span>
+                            ))}
                           </div>
-                          {tags.length > 0 && (
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 6 }}>
-                              {tags.map((t) => (
-                                <span key={t.label} style={{ display: 'inline-flex', alignItems: 'center', padding: '2px 8px', borderRadius: 999, background: t.bg, color: t.color, fontSize: 11, fontWeight: 500 }}>{t.label}</span>
-                              ))}
-                            </div>
-                          )}
                           <div style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'flex', flexWrap: 'wrap', gap: 4, alignItems: 'center' }}>
                             {d.fileSize && <span>{d.fileSize}</span>}
                             {d.fileSize && <span>·</span>}
@@ -4919,7 +4917,10 @@ function TopNav({ onOpenSidebar }) {
         <Menu size={20} />
       </button>
 
-      {/* Model selector */}
+      {/* Model selector — hidden per PM 2026-05-20 client feedback. State
+         and refs preserved so handlers continue to compile; the visible
+         UI is gated off with `false && …`. Restore by deleting the gate. */}
+      {false && (
       <div style={{ position: 'relative' }} ref={modelRef}>
         <button
           onClick={() => setModelOpen(v => !v)}
@@ -4991,6 +4992,7 @@ function TopNav({ onOpenSidebar }) {
           </div>
         )}
       </div>
+      )}
 
       {/* Spacer pushes the AI-time pill to the right edge. */}
       <div style={{ flex: 1 }} />
@@ -5174,19 +5176,23 @@ function MessageBubble({ msg, onOpenArtifact, isActiveArtifact, onConfirmAction 
   }
 
   return (
-    <div style={{ display: 'flex', gap: 12, marginBottom: 24 }}>
+    <div style={{ display: 'flex', gap: 12, marginBottom: 24, flexDirection: isBot ? 'row' : 'row-reverse', alignItems: 'flex-start' }}>
       {isBot ? (
         <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg, #C9A84C 0%, #E8D48B 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Sparkles size={16} color="#fff" /></div>
       ) : (
         <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--navy)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 600, flexShrink: 0 }}>R</div>
       )}
-      <div className="max-w-[85%] md:max-w-[70%]" style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+      {/* Body — bot stretches to fit content within the available column;
+         user is shrink-to-content so the bubble hugs its text instead of
+         spanning the whole row. PM 2026-05-20: user messages right-aligned
+         in a soft-bg bubble; bot stays flat-left as today. */}
+      <div className="max-w-[85%] md:max-w-[70%]" style={{ flex: isBot ? 1 : '0 1 auto', minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: isBot ? 'flex-start' : 'flex-end' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexDirection: isBot ? 'row' : 'row-reverse' }}>
           <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{isBot ? 'YourAI' : 'Ryan'}</span>
           <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>{msg.timestamp}</span>
         </div>
         {msg.attachments && msg.attachments.length > 0 && (
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8, justifyContent: isBot ? 'flex-start' : 'flex-end' }}>
             {msg.attachments.map(a => {
               const Icon = File;
               return (
@@ -5198,7 +5204,16 @@ function MessageBubble({ msg, onOpenArtifact, isActiveArtifact, onConfirmAction 
             })}
           </div>
         )}
-        <div style={{ fontSize: 14, lineHeight: 1.6, color: 'var(--text-primary)', wordBreak: 'break-word' }}>
+        <div style={{
+          fontSize: 14, lineHeight: 1.6, color: 'var(--text-primary)', wordBreak: 'break-word',
+          /* User messages render in a soft-bg bubble; bot stays flat. */
+          ...(isBot ? {} : {
+            padding: '10px 14px',
+            borderRadius: 14,
+            background: 'var(--ice-warm)',
+            border: '1px solid var(--border)',
+          }),
+        }}>
           {/* Confirmation message: doc-source picker (use attached vs upload new).
               Rendered as plain prose with two inline text-link actions —
               looks like part of the chat conversation, not a UI card. */}

@@ -13,7 +13,7 @@ const allNavSections = [
     label: 'MAIN',
     items: [
       { label: 'Dashboard',      icon: LayoutDashboard, path: '/app/dashboard',   roles: ['Admin','Manager','Team'] },
-      { label: 'Workspaces',     icon: Briefcase,       path: '/app/workspaces',  roles: ['Admin','Manager','Team'] },
+      { label: 'Matters',        icon: Briefcase,       path: '/app/workspaces',  roles: ['Admin','Manager','Team'] },
       { label: 'Clients',        icon: Users,           path: '/app/clients',     roles: ['Admin','Manager'] },
     ],
   },
