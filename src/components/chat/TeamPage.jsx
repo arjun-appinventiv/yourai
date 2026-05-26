@@ -12,6 +12,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import {
   ArrowLeft, UserPlus, Search, Edit3, Trash2, Users as UsersIcon,
   ShieldCheck, Mail, ChevronLeft, ChevronRight, Check, AlertTriangle, X,
+  KeyRound, AlertCircle, ChevronDown, Lock, CheckCircle, UserCog,
 } from 'lucide-react';
 import {
   PERMISSIONS, ROLE, ROLE_LABEL, INVITE_PERMISSION_GROUPS,
@@ -52,6 +53,188 @@ const PERM_PILL_LABELS = {
   [PERMISSIONS.ACCESS_BILLING]:     'Billing',
 };
 
+/* Workspace category accent tones (mirrors PRACTICE_META in WorkspacesPage). */
+const WORKSPACE_CATEGORY_COLORS = {
+  Transactional: { bg: '#E8EEF9', color: '#3754A8' },
+  Litigation:    { bg: '#F9E7E7', color: '#C65454' },
+  Compliance:    { bg: '#FBEED5', color: '#C8843E' },
+  Employment:    { bg: '#E0F2F2', color: '#3D8A8A' },
+  Corporate:     { bg: '#E7F3E9', color: '#5CA868' },
+};
+
+/* Per-role "Can do" lists shown in the right detail pane. INTERNAL_USER is
+   the catch-all (Manager + Team in the broader Hartwell taxonomy); the
+   user's actual `permissions[]` array is shown as a secondary "Granted"
+   list within the pane so the user sees exactly what extras they've been
+   granted on top of the base role. */
+const ROLE_BASE_PERMISSIONS = {
+  [ROLE.ORG_ADMIN]: [
+    'Manage tenant-wide settings',
+    'Create & manage workspaces',
+    'Invite & remove users',
+    'View Audit Logs',
+    'Manage billing & seats',
+  ],
+  [ROLE.INTERNAL_USER]: [
+    'Work in assigned workspaces',
+    'Upload & analyse documents',
+    'Run workflows',
+    'Log billable time',
+  ],
+  [ROLE.EXTERNAL_USER]: [
+    'View shared workspaces',
+    'Download released reports',
+    'Message the firm',
+  ],
+};
+
+/* Extra metadata (MFA / SSO / workspaces / logs) — would come from the
+   backend. Layered on by member id so the right pane has rich content. */
+const USER_META = {
+  'm-001': { // Ryan Melade — Org Admin
+    mfa: true, mfaMethod: 'Authenticator app', sso: true, ssoProvider: 'Okta SAML',
+    workspaceAccess: 'All 6',
+    workspaces: [
+      { name: 'Acme Corp · NDA Review', category: 'Transactional' },
+      { name: 'Meridian v. Apex', category: 'Litigation' },
+      { name: 'TechStart Inc · DD', category: 'Transactional' },
+      { name: 'Q2 Compliance Audit', category: 'Compliance' },
+      { name: 'Hartwell Internal · HR', category: 'Employment' },
+      { name: 'Pacific Holdings · M&A', category: 'Corporate' },
+    ],
+    logs: [
+      { text: 'Updated billing seats from 8 to 10', time: 'Today · 14:02' },
+      { text: 'Invited Kevin Marlowe as Internal user', time: '9 days ago · 09:14' },
+      { text: 'Approved time entries (Priya Shah · 8h)', time: '12 days ago · 16:30' },
+      { text: 'Created workspace "Pacific Holdings · M&A"', time: '3 weeks ago' },
+    ],
+  },
+  'm-002': { // Priya Shah — Internal User (Manager tier)
+    mfa: true, mfaMethod: 'Authenticator app', sso: true, ssoProvider: 'Okta SAML',
+    workspaceAccess: '4 of 6',
+    workspaces: [
+      { name: 'Acme Corp · NDA Review', category: 'Transactional' },
+      { name: 'Meridian v. Apex', category: 'Litigation' },
+      { name: 'TechStart Inc · DD', category: 'Transactional' },
+      { name: 'Q2 Compliance Audit', category: 'Compliance' },
+    ],
+    logs: [
+      { text: 'Shared Report to Acme client portal · NDA Review', time: '11:42 today' },
+      { text: 'Generated NDA Key Obligations report · NDA Review', time: '10:05 today' },
+      { text: 'Uploaded Compliance_Checklist.pdf', time: 'Yesterday · 11:30am' },
+      { text: 'Ran Contract Review workflow · NDA Review', time: '2 days ago' },
+      { text: 'Logged 4.5h billable · Meridian v. Apex', time: '3 days ago' },
+    ],
+  },
+  'm-003': { // Kevin Marlowe — Internal User (Invited)
+    mfa: false, mfaMethod: null, sso: false, ssoProvider: null,
+    workspaceAccess: '0 of 6',
+    workspaces: [],
+    logs: [
+      { text: 'Invitation sent', time: '9 days ago · 09:14' },
+    ],
+  },
+  'm-004': { // Acme Corp — External (Client)
+    mfa: true, mfaMethod: 'Authenticator app', sso: false, ssoProvider: null,
+    workspaceAccess: '1 of 6',
+    workspaces: [
+      { name: 'Acme Corp · NDA Review', category: 'Transactional' },
+    ],
+    logs: [
+      { text: 'Downloaded NDA Key Obligations report', time: 'Yesterday · 15:22' },
+      { text: 'Sent message to Priya Shah', time: '2 days ago' },
+      { text: 'Joined workspace "Acme Corp · NDA Review"', time: '3 weeks ago' },
+    ],
+  },
+};
+
+function getRoleDisplayColor(role) {
+  if (role === ROLE.ORG_ADMIN) return { bg: '#F9E7E7', color: '#C65454' };
+  if (role === ROLE.INTERNAL_USER) return { bg: '#E8EEF9', color: '#3754A8' };
+  if (role === ROLE.EXTERNAL_USER) return { bg: '#FBEED5', color: '#C8843E' };
+  return { bg: '#F0F3F6', color: '#6B7885' };
+}
+
+function RolePill({ role }) {
+  const c = getRoleDisplayColor(role);
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center',
+      padding: '2px 10px', borderRadius: 20, fontSize: 11, fontWeight: 500,
+      background: c.bg, color: c.color, lineHeight: 1.5,
+    }}>{ROLE_LABEL[role] || role}</span>
+  );
+}
+
+function WorkspaceCategoryTag({ category }) {
+  const c = WORKSPACE_CATEGORY_COLORS[category] || { bg: '#F0F3F6', color: '#6B7885' };
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center',
+      padding: '2px 8px', borderRadius: 4, fontSize: 10,
+      fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase',
+      background: c.bg, color: c.color, lineHeight: 1.4,
+    }}>{category}</span>
+  );
+}
+
+function StatTile({ label, value, sub, icon: Icon, tone = 'neutral' }) {
+  const tones = {
+    neutral: { iconBg: 'var(--ice-warm)', iconColor: 'var(--navy)' },
+    warning: { iconBg: '#FBEED5', iconColor: '#C8843E' },
+  };
+  const t = tones[tone] || tones.neutral;
+  return (
+    <div style={{
+      background: '#fff', border: '1px solid var(--border)', borderRadius: 12,
+      padding: '14px 16px', display: 'flex', alignItems: 'flex-start', gap: 12, minWidth: 0,
+    }}>
+      <div style={{
+        width: 32, height: 32, borderRadius: 8, background: t.iconBg,
+        color: t.iconColor, flexShrink: 0,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}>
+        <Icon size={16} />
+      </div>
+      <div style={{ minWidth: 0, flex: 1 }}>
+        <div style={{
+          fontSize: 10.5, fontWeight: 600, color: 'var(--text-muted)',
+          textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4,
+        }}>{label}</div>
+        <div style={{ fontFamily: "'Fraunces', serif", fontSize: 20, fontWeight: 500, color: 'var(--text-primary)', lineHeight: 1.15 }}>{value}</div>
+        {sub && <div style={{ fontSize: 11.5, color: 'var(--text-muted)', marginTop: 2 }}>{sub}</div>}
+      </div>
+    </div>
+  );
+}
+
+function FilterChip({ label, value }) {
+  return (
+    <button style={{
+      display: 'inline-flex', alignItems: 'center', gap: 6,
+      padding: '6px 12px', borderRadius: 999,
+      border: '1px solid var(--border)', background: '#fff',
+      fontSize: 12.5, color: 'var(--text-primary)', cursor: 'pointer',
+    }}>
+      <span style={{ color: 'var(--text-muted)' }}>{label}</span>
+      <span style={{ fontWeight: 500 }}>{value}</span>
+      <ChevronDown size={12} style={{ color: 'var(--text-muted)' }} />
+    </button>
+  );
+}
+
+function PaneSection({ title, children }) {
+  return (
+    <div style={{ marginBottom: 20 }}>
+      <div style={{
+        fontSize: 10.5, fontWeight: 600, color: 'var(--text-muted)',
+        textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10,
+      }}>{title}</div>
+      {children}
+    </div>
+  );
+}
+
 /* ─────────────── Page component ─────────────── */
 export default function TeamPage({ onBack, onCountChange, onToast }) {
   const [members, setMembers] = useState(loadMembers);
@@ -61,6 +244,14 @@ export default function TeamPage({ onBack, onCountChange, onToast }) {
   const [view, setView]             = useState('list'); // 'list' | 'invite'
   const [editing, setEditing]       = useState(null);
   const [removing, setRemoving]     = useState(null);
+  // Right-pane selection. Initialise to the first non-Org-Admin member so
+  // the pane shows a representative selection on first load (matches the
+  // PM mockup). Falls back to first member.
+  const initialMembers = loadMembers();
+  const [selectedMemberId, setSelectedMemberId] = useState(() => {
+    const first = initialMembers.find((m) => m.role !== ROLE.ORG_ADMIN);
+    return (first || initialMembers[0])?.id;
+  });
 
   useEffect(() => { saveMembers(members); onCountChange?.(members.length); }, [members, onCountChange]);
 
@@ -149,11 +340,21 @@ export default function TeamPage({ onBack, onCountChange, onToast }) {
     );
   }
 
+  /* Pending invite (first one — the banner only surfaces a single line). */
+  const pendingInvite = members.find((m) => m.status === 'Invited');
+  const activeMembers = members.filter((m) => m.status === 'Active');
+  const mfaEnrolled = activeMembers.filter((m) => USER_META[m.id]?.mfa).length;
+  const ssoConnected = members.some((m) => USER_META[m.id]?.sso);
+
+  /* Resolve currently-selected member (works even when the filter excludes it). */
+  const selectedMember = filtered.find((m) => m.id === selectedMemberId) || members.find((m) => m.id === selectedMemberId);
+  const selectedMeta = selectedMember ? USER_META[selectedMember.id] : null;
+
   return (
     <div style={{ flex: 1, minWidth: 0, height: '100vh', overflowY: 'auto', background: '#FBFAF7' }}>
       {/* ─── Page header ─── */}
       <div style={{ borderBottom: '1px solid var(--border)', background: '#fff' }}>
-        <div style={{ padding: '24px 32px 20px' }}>
+        <div style={{ padding: '20px 32px 16px' }}>
           <button
             onClick={onBack}
             style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 13px', borderRadius: 7, border: '1px solid var(--border)', background: '#fff', cursor: 'pointer', color: 'var(--text-secondary)', fontSize: 13, fontWeight: 400 }}
@@ -162,73 +363,344 @@ export default function TeamPage({ onBack, onCountChange, onToast }) {
           >
             <ArrowLeft size={13} /> Back to chat
           </button>
-          <div className="flex items-end justify-between gap-4 flex-wrap" style={{ marginTop: 10 }}>
-            <div style={{ minWidth: 0 }}>
-              <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 28, color: 'var(--text-primary)', margin: 0, lineHeight: 1.2 }}>
-                Team
-              </h1>
-              <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 6, lineHeight: 1.5, maxWidth: 560 }}>
-                Invite colleagues and clients, grant permissions, and keep track of who has access to your workspace.
-              </p>
+        </div>
+      </div>
+
+      {/* ─── Body ─── split-pane: list left, detail rail right */}
+      <div style={{ padding: '24px 32px 48px', display: 'flex', gap: 24, alignItems: 'flex-start' }}>
+        {/* LEFT — list */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          {/* Editorial title */}
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+              <UsersIcon size={14} style={{ color: '#C8843E' }} />
+              <span style={{
+                fontSize: 10.5, fontWeight: 600, color: '#C8843E',
+                textTransform: 'uppercase', letterSpacing: '0.12em',
+              }}>User Management</span>
+            </div>
+            <h1 style={{
+              fontFamily: "'Fraunces', serif", fontSize: 28, fontWeight: 500,
+              color: 'var(--text-primary)', margin: 0, lineHeight: 1.15, letterSpacing: '-0.4px',
+            }}>Who has access &amp; what they can do</h1>
+            <p style={{ marginTop: 8, fontSize: 13.5, color: 'var(--text-secondary)', lineHeight: 1.55, maxWidth: 720 }}>
+              Invite colleagues and clients, grant permissions, and keep track of who has access. Every action a user takes is recorded in <strong>Audit Logs</strong>.
+            </p>
+          </div>
+
+          {/* Stats row */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 20 }}>
+            <StatTile
+              icon={UsersIcon}
+              label="Active Users"
+              value={`${activeMembers.length} of 10 seats`}
+              sub={`Enterprise plan · ${10 - activeMembers.length} available`}
+            />
+            <StatTile
+              icon={ShieldCheck}
+              label="MFA Coverage"
+              value={`${mfaEnrolled} of ${activeMembers.length} enrolled`}
+              sub={activeMembers.length - mfaEnrolled > 0 ? `${activeMembers.length - mfaEnrolled} user · action required` : 'All set'}
+              tone={mfaEnrolled < activeMembers.length ? 'warning' : 'neutral'}
+            />
+            <StatTile
+              icon={KeyRound}
+              label="SSO"
+              value={ssoConnected ? 'Okta · Connected' : 'Not configured'}
+              sub={ssoConnected ? `SAML 2.0 · ${members.filter((m) => USER_META[m.id]?.sso).length} of ${members.length} using SSO` : '—'}
+            />
+            <StatTile
+              icon={AlertCircle}
+              label="Pending Invites"
+              value={pendingInvite ? `${counts.invited} outstanding` : 'None'}
+              sub={pendingInvite ? `${pendingInvite.name} · expires in 5d` : 'All accepted'}
+              tone={pendingInvite ? 'warning' : 'neutral'}
+            />
+          </div>
+
+          {/* Role tabs */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12, flexWrap: 'wrap' }}>
+            <span style={{ fontSize: 10.5, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginRight: 4 }}>Roles</span>
+            {[
+              { key: 'all', label: 'Total', count: counts.total },
+              { key: ROLE.ORG_ADMIN, label: 'Org Admins', count: counts.admins },
+              { key: ROLE.INTERNAL_USER, label: 'Internal', count: counts.internal },
+              { key: ROLE.EXTERNAL_USER, label: 'External', count: counts.external },
+            ].map((t) => {
+              const isActive = roleFilter === t.key;
+              return (
+                <button key={t.key}
+                  onClick={() => setRoleFilter(t.key)}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 6,
+                    padding: '5px 12px', borderRadius: 999,
+                    border: isActive ? '1.5px solid var(--navy)' : '1px solid var(--border)',
+                    background: isActive ? 'var(--navy)' : '#fff',
+                    fontSize: 12.5, fontWeight: 500,
+                    color: isActive ? '#fff' : 'var(--text-primary)',
+                    cursor: 'pointer',
+                  }}
+                >
+                  {t.label}
+                  <span style={{ color: isActive ? 'rgba(255,255,255,0.75)' : 'var(--text-muted)', fontWeight: 400 }}>{t.count}</span>
+                </button>
+              );
+            })}
+            <a href="#" onClick={(e) => e.preventDefault()} style={{ marginLeft: 12, fontSize: 12, color: 'var(--navy)', textDecoration: 'none' }}>View Permission Matrix →</a>
+          </div>
+
+          {/* Pending invite banner */}
+          {pendingInvite && (
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 12,
+              padding: '10px 14px', marginBottom: 14,
+              background: '#FBEED5', border: '1px solid #E8A33D33', borderRadius: 10,
+            }}>
+              <AlertCircle size={16} style={{ color: '#C8843E', flexShrink: 0 }} />
+              <div style={{ fontSize: 13, color: 'var(--text-primary)', flex: 1 }}>
+                <strong>{counts.invited} invitation{counts.invited !== 1 ? 's' : ''} outstanding.</strong> {pendingInvite.name} was invited {pendingInvite.invitedAt}. Invitation expires in 5 days.
+              </div>
+              <button
+                onClick={() => onToast?.('Invitation resent')}
+                style={{
+                  padding: '5px 12px', borderRadius: 6, fontSize: 12,
+                  border: '1px solid #E8A33D55', background: '#fff', color: '#C8843E',
+                  fontWeight: 500, cursor: 'pointer',
+                }}
+              >Resend →</button>
+            </div>
+          )}
+
+          {/* Toolbar */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 14, flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
+              <div style={{ position: 'relative', width: 260, flexShrink: 0 }}>
+                <Search size={14} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                <input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search by name, email, or role…"
+                  style={{ width: '100%', height: 36, borderRadius: 8, border: '1px solid var(--border)', paddingLeft: 34, paddingRight: 12, fontSize: 13, outline: 'none', boxSizing: 'border-box', fontFamily: "'DM Sans', sans-serif", background: '#fff' }}
+                />
+              </div>
+              <FilterChip label="Role:" value="All" />
+              <FilterChip label="Status:" value="All" />
+              <FilterChip label="MFA:" value="All" />
             </div>
             <button
               onClick={() => setView('invite')}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '10px 18px', borderRadius: 10, backgroundColor: 'var(--navy)', color: 'white', border: 'none', fontSize: 13, fontWeight: 500, cursor: 'pointer', boxShadow: '0 1px 2px rgba(10,36,99,0.15)' }}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                padding: '8px 14px', borderRadius: 8,
+                background: 'var(--navy)', color: '#fff', fontSize: 13, fontWeight: 500,
+                border: 'none', cursor: 'pointer',
+              }}
             >
               <UserPlus size={14} /> Invite Member
             </button>
           </div>
 
-          {/* Stat chips */}
-          <div className="flex flex-wrap gap-2" style={{ marginTop: 18 }}>
-            <StatChip label="Total"    value={counts.total}    active={roleFilter === 'all'}               onClick={() => setRoleFilter('all')} />
-            <StatChip label="Org Admins" value={counts.admins}    active={roleFilter === ROLE.ORG_ADMIN}       onClick={() => setRoleFilter(roleFilter === ROLE.ORG_ADMIN ? 'all' : ROLE.ORG_ADMIN)} />
-            <StatChip label="Internal" value={counts.internal} active={roleFilter === ROLE.INTERNAL_USER}    onClick={() => setRoleFilter(roleFilter === ROLE.INTERNAL_USER ? 'all' : ROLE.INTERNAL_USER)} />
-            <StatChip label="External" value={counts.external} active={roleFilter === ROLE.EXTERNAL_USER}    onClick={() => setRoleFilter(roleFilter === ROLE.EXTERNAL_USER ? 'all' : ROLE.EXTERNAL_USER)} />
-            {counts.invited > 0 && (
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 11px', borderRadius: 999, background: '#FBEED5', color: '#E8A33D', fontSize: 11, fontWeight: 500 }}>
-                {counts.invited} pending invite{counts.invited !== 1 ? 's' : ''}
-              </span>
-            )}
+          {/* Table */}
+          <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.04)', overflow: 'hidden' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ background: 'var(--ice-warm)', borderBottom: '1px solid var(--border)' }}>
+                  {['User', 'Role', 'Security', 'Workspaces', 'Last Active'].map((c) => (
+                    <th key={c} style={{
+                      textAlign: 'left', padding: '0 16px', height: 40,
+                      fontSize: 11, fontWeight: 600, textTransform: 'uppercase',
+                      letterSpacing: '0.06em', color: 'var(--text-muted)',
+                    }}>{c}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} style={{ padding: 40, textAlign: 'center' }}>
+                      <UsersIcon size={32} style={{ margin: '0 auto 10px', opacity: 0.4, color: 'var(--text-muted)' }} />
+                      <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)' }}>
+                        {search || roleFilter !== 'all' ? 'No matches' : 'No team members yet'}
+                      </div>
+                      <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
+                        {search || roleFilter !== 'all'
+                          ? 'Try a different search or clear the filter.'
+                          : 'Invite your first colleague to get started.'}
+                      </div>
+                    </td>
+                  </tr>
+                ) : filtered.map((m) => {
+                  const meta = USER_META[m.id];
+                  const isSelected = m.id === selectedMemberId;
+                  return (
+                    <tr key={m.id}
+                      onClick={() => setSelectedMemberId(m.id)}
+                      style={{
+                        borderBottom: '1px solid var(--border)',
+                        background: isSelected ? 'var(--ice-warm)' : 'transparent',
+                        cursor: 'pointer',
+                      }}
+                      onMouseEnter={(e) => { if (!isSelected) e.currentTarget.style.background = '#fafafa'; }}
+                      onMouseLeave={(e) => { if (!isSelected) e.currentTarget.style.background = 'transparent'; }}
+                    >
+                      <td style={{ padding: '12px 16px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                          <div style={{ width: 30, height: 30, borderRadius: '50%', background: 'var(--navy)', color: '#fff', fontSize: 11, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                            {initialsOf(m.name)}
+                          </div>
+                          <div style={{ minWidth: 0 }}>
+                            <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>{m.name}</div>
+                            <div style={{ fontSize: 11.5, color: 'var(--text-muted)' }}>{m.email}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td style={{ padding: '12px 16px' }}><RolePill role={m.role} /></td>
+                      <td style={{ padding: '12px 16px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          {meta?.mfa
+                            ? <ShieldCheck size={14} style={{ color: '#5CA868' }} aria-label="MFA enrolled" />
+                            : <ShieldCheck size={14} style={{ color: '#C65454' }} aria-label="MFA missing" />}
+                          {meta?.sso && <Lock size={13} style={{ color: 'var(--text-muted)' }} aria-label="SSO" />}
+                        </div>
+                      </td>
+                      <td style={{ padding: '12px 16px', fontSize: 12.5, color: 'var(--text-primary)' }}>
+                        {m.status === 'Invited'
+                          ? <span style={{ color: 'var(--text-muted)' }}>—</span>
+                          : meta?.workspaceAccess || '—'}
+                      </td>
+                      <td style={{ padding: '12px 16px', fontSize: 12, color: 'var(--text-muted)' }}>
+                        {m.status === 'Invited'
+                          ? <span style={{ color: '#C8843E' }}>Invited · expires in 5d</span>
+                          : 'Today'}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         </div>
-      </div>
 
-      {/* ─── List area ─── */}
-      <div style={{ padding: '24px 32px 48px' }}>
-        {/* Search bar */}
-        <div style={{ position: 'relative', marginBottom: 16 }}>
-          <Search size={14} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by name, email, or role..."
-            style={{ width: '100%', height: 40, borderRadius: 10, border: '1px solid var(--border)', paddingLeft: 36, fontSize: 13, outline: 'none', boxSizing: 'border-box', fontFamily: "'DM Sans', sans-serif", background: '#fff' }}
-          />
-        </div>
+        {/* RIGHT — detail pane */}
+        {selectedMember && (
+          <div style={{
+            width: 380, flexShrink: 0,
+            position: 'sticky', top: 24,
+            background: '#fff', border: '1px solid var(--border)', borderRadius: 12,
+            padding: 24, boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+            maxHeight: 'calc(100vh - 48px)', overflowY: 'auto',
+          }}>
+            {/* Header */}
+            <div style={{ textAlign: 'center', marginBottom: 20 }}>
+              <div style={{
+                width: 64, height: 64, borderRadius: '50%',
+                background: '#7A4FB5', color: '#fff',
+                fontSize: 22, fontWeight: 600,
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                marginBottom: 10,
+              }}>{initialsOf(selectedMember.name)}</div>
+              <div style={{ fontFamily: "'Fraunces', serif", fontSize: 20, fontWeight: 500, color: 'var(--text-primary)', lineHeight: 1.2 }}>{selectedMember.name}</div>
+              <div style={{ fontSize: 12.5, color: 'var(--text-muted)', marginTop: 4 }}>{selectedMember.email}</div>
+              <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 10 }}>
+                <RolePill role={selectedMember.role} />
+                {(() => {
+                  const s = STATUS_STYLE[selectedMember.status] || STATUS_STYLE.Active;
+                  return (
+                    <span style={{
+                      display: 'inline-flex', alignItems: 'center',
+                      padding: '2px 10px', borderRadius: 20, fontSize: 11, fontWeight: 500,
+                      background: s.bg, color: s.color, lineHeight: 1.5,
+                    }}>● {selectedMember.status}</span>
+                  );
+                })()}
+              </div>
+            </div>
 
-        {filtered.length === 0 ? (
-          <div style={{ padding: '60px 20px', textAlign: 'center', border: '1px dashed var(--border)', borderRadius: 14, background: '#fff' }}>
-            <UsersIcon size={36} style={{ margin: '0 auto 12px', opacity: 0.4, color: 'var(--text-muted)' }} />
-            <div style={{ fontSize: 15, fontWeight: 500, color: 'var(--text-primary)' }}>
-              {search || roleFilter !== 'all' ? 'No matches' : 'No team members yet'}
+            {/* Permissions — base list for the role + any user-specific extras */}
+            <PaneSection title={`${(ROLE_LABEL[selectedMember.role] || '').toUpperCase()} PERMISSIONS`}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 8 }}>Can do</div>
+              <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {(ROLE_BASE_PERMISSIONS[selectedMember.role] || []).map((p) => (
+                  <li key={p} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: 12.5, color: 'var(--text-primary)', lineHeight: 1.45 }}>
+                    <CheckCircle size={13} style={{ color: '#5CA868', flexShrink: 0, marginTop: 2 }} />
+                    <span>{p}</span>
+                  </li>
+                ))}
+                {(selectedMember.permissions || []).map((permId) => {
+                  const label = PERM_PILL_LABELS[permId];
+                  if (!label) return null;
+                  return (
+                    <li key={permId} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: 12.5, color: 'var(--text-primary)', lineHeight: 1.45 }}>
+                      <CheckCircle size={13} style={{ color: '#5CA868', flexShrink: 0, marginTop: 2 }} />
+                      <span>{label} <span style={{ fontSize: 10.5, color: 'var(--text-muted)', marginLeft: 4 }}>(granted)</span></span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </PaneSection>
+
+            {/* Workspace access */}
+            <PaneSection title={`WORKSPACE ACCESS · ${(selectedMeta?.workspaceAccess || '—').toUpperCase()}`}>
+              {(!selectedMeta || selectedMeta.workspaces.length === 0) ? (
+                <div style={{ fontSize: 12.5, color: 'var(--text-muted)' }}>No workspaces yet.</div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {selectedMeta.workspaces.map((w) => (
+                    <div key={w.name} style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
+                      padding: '8px 10px', borderRadius: 8, background: 'var(--ice-warm)',
+                    }}>
+                      <span style={{ fontSize: 12.5, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{w.name}</span>
+                      <WorkspaceCategoryTag category={w.category} />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </PaneSection>
+
+            {/* Logs (renamed from Recent Activity; no icons per PM) */}
+            <PaneSection title="LOGS">
+              {selectedMeta?.logs?.length ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {selectedMeta.logs.map((l, i) => (
+                    <div key={i}>
+                      <div style={{ fontSize: 12.5, color: 'var(--text-primary)', lineHeight: 1.5 }}>{l.text}</div>
+                      <div style={{ fontSize: 11.5, color: 'var(--text-muted)', marginTop: 2 }}>{l.time}</div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div style={{ fontSize: 12.5, color: 'var(--text-muted)' }}>No activity yet.</div>
+              )}
+              <a href="#" onClick={(e) => e.preventDefault()} style={{ display: 'inline-block', marginTop: 12, fontSize: 12, color: 'var(--navy)', textDecoration: 'none' }}>View all in Audit Logs →</a>
+            </PaneSection>
+
+            {/* Footer */}
+            <div style={{ display: 'flex', gap: 8, marginTop: 20 }}>
+              <button
+                onClick={() => selectedMember.role !== ROLE.ORG_ADMIN && setEditing(selectedMember)}
+                disabled={selectedMember.role === ROLE.ORG_ADMIN}
+                style={{
+                  flex: 1, padding: '9px 12px', borderRadius: 8,
+                  background: selectedMember.role === ROLE.ORG_ADMIN ? '#cdd1d8' : 'var(--navy)',
+                  color: '#fff', border: 'none',
+                  fontSize: 12.5, fontWeight: 500,
+                  cursor: selectedMember.role === ROLE.ORG_ADMIN ? 'not-allowed' : 'pointer',
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                }}
+                title={selectedMember.role === ROLE.ORG_ADMIN ? 'Org Admin role cannot be edited' : ''}
+              >
+                <UserCog size={13} /> Edit Role
+              </button>
+              <button style={{
+                flex: 1, padding: '9px 12px', borderRadius: 8,
+                background: '#fff', color: 'var(--text-primary)', border: '1px solid var(--border)',
+                fontSize: 12.5, fontWeight: 500, cursor: 'pointer',
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+              }}>
+                <UsersIcon size={13} /> Workspaces
+              </button>
             </div>
-            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 6 }}>
-              {search || roleFilter !== 'all'
-                ? 'Try a different search or clear the filter.'
-                : 'Invite your first colleague to get started.'}
-            </div>
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {filtered.map((m) => (
-              <MemberRow
-                key={m.id}
-                member={m}
-                onEdit={() => setEditing(m)}
-                onRemove={() => setRemoving(m)}
-              />
-            ))}
           </div>
         )}
       </div>
