@@ -165,16 +165,11 @@ export default function WorkflowRunCard({
               />
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 10 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 10 }}>
               <SummaryStat
                 label="Knowledge"
                 value={run.workspaceId ? 'Workspace KB' : 'Global KB'}
                 trailingBadge={<StatusBadge label={run.workspaceId ? 'Workspace KB' : 'Global KB'} variant="source" />}
-              />
-              <SummaryStat
-                label="Mode"
-                value={demoMode ? 'Demo mode' : 'Live mode'}
-                trailingBadge={demoMode ? <StatusBadge label="Demo mode" variant="demo" /> : null}
               />
               <SummaryStat
                 label="Progress"

@@ -254,13 +254,26 @@ export default function WorkflowStepItem({
             )}
           </div>
 
-          <div style={{ height: 1, background: 'var(--border-default)' }} />
-
-          <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: 2 }}>
-            <button onClick={() => copyText(sanitizedOutput || livePreview)} style={actionTileStyle}>
-              <Copy size={12} /> Copy output
-            </button>
-          </div>
+          <button
+            onClick={() => copyText(sanitizedOutput || livePreview)}
+            style={{
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'flex-start',
+              gap: 6,
+              padding: '10px 12px',
+              border: '1px solid var(--border-default)',
+              borderRadius: 10,
+              background: 'var(--bg-surface-alt)',
+              cursor: 'pointer',
+              color: 'var(--text-secondary)',
+              fontSize: 12,
+              fontWeight: 500,
+            }}
+          >
+            <Copy size={12} /> Copy output
+          </button>
         </div>
       )}
       </div>
@@ -483,18 +496,3 @@ const bodyTextStyle: React.CSSProperties = {
   lineHeight: 1.7,
 };
 
-const actionTileStyle: React.CSSProperties = {
-  display: 'inline-flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  gap: 6,
-  minHeight: 36,
-  padding: '8px 16px',
-  borderRadius: 10,
-  border: '1px solid var(--border-default)',
-  background: 'var(--bg-surface-alt)',
-  color: 'var(--text-primary)',
-  fontSize: 12,
-  fontWeight: 500,
-  cursor: 'pointer',
-};
