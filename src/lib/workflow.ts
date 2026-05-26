@@ -85,6 +85,69 @@ export const OPERATIONS_IN_ORDER: WorkflowOperation[] = [
   'generate_report',
 ];
 
+/* ─── Phase 4 of unified-intents: derived workflow ops view ────────────
+ *
+ * `getWorkflowOperations()` returns the full set of operations the
+ * Workflow Builder should show in its picker — derived from the
+ * unified intents store (chatVisible OR workflowVisible). UI chrome
+ * (icon, color, instructionLabel) still comes from OPERATION_CONFIG
+ * because those fields aren't user-editable. New SA-added intents
+ * surface here automatically and get default UI chrome.
+ *
+ * Migration table — old workflow op id → unified intent id:
+ *   analyse_clauses          → clause_analysis
+ *   compare_against_standard → clause_comparison
+ *   research_precedents      → legal_research
+ *   read_documents / generate_report / compliance_check — unchanged
+ *
+ * Used by: nothing yet. Builder consumers still read OPERATION_CONFIG
+ * directly; rewiring is a follow-up. The exports stay in place so the
+ * old code path continues working unchanged.
+ */
+import { loadIntents, seedIntentsIfEmpty, SEED_INTENTS, getWorkflowVisibleIntents, OPERATION_MIGRATION } from './intentsStore';
+
+export interface WorkflowOperationView {
+  id: string;
+  label: string;
+  description: string;
+  icon: string;
+  color: string;
+  instructionLabel: string;
+  instructionPlaceholder: string;
+}
+
+const DEFAULT_UI_CHROME = {
+  icon: 'Cpu',
+  color: 'bg-slate-50 text-slate-700 border-slate-200',
+  instructionLabel: 'What should this step do?',
+  instructionPlaceholder: 'Describe the task in plain English.',
+};
+
+export function getWorkflowOperations(): WorkflowOperationView[] {
+  try { seedIntentsIfEmpty(SEED_INTENTS); } catch { /* ignore */ }
+  const stored = loadIntents() || SEED_INTENTS;
+  const wfIntents = getWorkflowVisibleIntents(stored);
+  return wfIntents.map((intent) => {
+    // Look up legacy UI chrome — first by direct id match, then via the
+    // migration table for renamed ops (clause_analysis ← analyse_clauses,
+    // clause_comparison ← compare_against_standard, etc.).
+    const legacyId = Object.entries(OPERATION_MIGRATION).find(([, newId]) => newId === intent.id)?.[0];
+    const chromeKey = (intent.id in OPERATION_CONFIG)
+      ? intent.id as WorkflowOperation
+      : (legacyId && legacyId in OPERATION_CONFIG ? legacyId as WorkflowOperation : null);
+    const chrome = chromeKey ? OPERATION_CONFIG[chromeKey] : null;
+    return {
+      id: intent.id,
+      label: intent.label,
+      description: intent.description || (chrome?.description || ''),
+      icon: chrome?.icon || DEFAULT_UI_CHROME.icon,
+      color: chrome?.color || DEFAULT_UI_CHROME.color,
+      instructionLabel: chrome?.instructionLabel || DEFAULT_UI_CHROME.instructionLabel,
+      instructionPlaceholder: chrome?.instructionPlaceholder || DEFAULT_UI_CHROME.instructionPlaceholder,
+    };
+  });
+}
+
 /* ─── Core types ─────────────────────────────────────────────────────── */
 
 export interface ReferenceDoc {

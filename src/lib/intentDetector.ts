@@ -1,6 +1,14 @@
 // ─── Smart Intent Detector ───
 // Frontend-only keyword matching — zero latency, no API calls.
-// Uses SA-configured keywords when available, falls back to defaults.
+// Phase 3 of the unified-intents plan: INTENT_DEFAULTS now derives from
+// src/lib/intentsStore.ts at module load so SA edits to keywords +
+// opening behaviour propagate without rebuilding this file.
+
+import {
+  loadIntents,
+  seedIntentsIfEmpty,
+  SEED_INTENTS,
+} from './intentsStore';
 
 export interface IntentConfig {
   keywords: string[];
@@ -15,7 +23,10 @@ export interface IntentMatch {
   keywords: string[];     // Which keywords matched
 }
 
-export const INTENT_DEFAULTS: Record<string, IntentConfig> = {
+// Hardcoded fallback — used when the unified store has empty fields. Kept
+// in sync with the seed by hand; Phase 6 of the unified-intents plan
+// removes this constant once the store is the authoritative source.
+const LEGACY_INTENT_DEFAULTS: Record<string, IntentConfig> = {
   general_chat: {
     keywords: [],
     opening_behaviour: 'start_immediately',
@@ -172,6 +183,34 @@ export const INTENT_DEFAULTS: Record<string, IntentConfig> = {
     response_format: 'structured_sections',
   },
 };
+
+// Derive INTENT_DEFAULTS from the unified store at module load.
+// For each chat-visible intent: use store keywords + openingBehaviour
+// (falls through to LEGACY_INTENT_DEFAULTS for any missing field).
+function buildIntentDefaults(): Record<string, IntentConfig> {
+  try { seedIntentsIfEmpty(SEED_INTENTS); } catch { /* ignore */ }
+  const stored = loadIntents() || SEED_INTENTS;
+  const result: Record<string, IntentConfig> = { ...LEGACY_INTENT_DEFAULTS };
+  for (const intent of stored) {
+    if (!intent.chatVisible) continue;
+    const legacy = LEGACY_INTENT_DEFAULTS[intent.id];
+    result[intent.id] = {
+      keywords: intent.keywords && intent.keywords.length > 0
+        ? intent.keywords
+        : (legacy?.keywords || []),
+      opening_behaviour: intent.openingBehaviour
+        || legacy?.opening_behaviour
+        || 'start_immediately',
+      custom_instruction: legacy?.custom_instruction || '',
+      response_format: intent.legacyResponseFormat
+        || legacy?.response_format
+        || 'plain_prose',
+    };
+  }
+  return result;
+}
+
+export const INTENT_DEFAULTS: Record<string, IntentConfig> = buildIntentDefaults();
 
 // Priority order — legal_qa checked LAST as fallback.
 // find_document sits high so vault-search keyword anchors ("find file",

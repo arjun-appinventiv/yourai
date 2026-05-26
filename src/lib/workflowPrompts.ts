@@ -18,6 +18,12 @@
  */
 
 import type { WorkflowOperation } from './workflow';
+import {
+  loadIntents,
+  seedIntentsIfEmpty,
+  SEED_INTENTS,
+  OPERATION_MIGRATION,
+} from './intentsStore';
 
 const BASE_RULES = `
 ANTI-HALLUCINATION RULES (ALWAYS APPLY):
@@ -34,7 +40,12 @@ OUTPUT FORMAT:
 - Use > blockquote for the single most important takeaway the partner should see first, when one exists.
 `;
 
-export const OPERATION_SYSTEM_PROMPTS: Record<WorkflowOperation, string> = {
+// Phase 5 of the unified-intents plan: this constant is now the
+// FALLBACK only. `getSystemPromptForOperation()` below resolves the
+// prompt by looking up the intent in the unified store first, falling
+// through to this hardcoded map when the store entry is empty (e.g.
+// fresh seed before SA shadow-write).
+const LEGACY_OPERATION_SYSTEM_PROMPTS: Record<WorkflowOperation, string> = {
   read_documents: `You are the "Read Documents" step of a legal AI workflow. Your job is to PARSE and STRUCTURE the uploaded documents so later steps can work with them efficiently. This is a cataloguing step, not an analysis step — save interpretation for later steps.
 
 FOR EACH DOCUMENT (under its own ## filename heading):
@@ -188,8 +199,28 @@ export interface BuildPromptInput {
  * Build the messages[] array to send to /api/chat for a single workflow step.
  * Returns a structure the Edge function's legacy `body.messages[]` path accepts.
  */
+/** Resolve the system prompt for an operation — store first, legacy
+ *  fallback. Translates renamed ops via OPERATION_MIGRATION so persisted
+ *  templates with old ids (analyse_clauses, compare_against_standard,
+ *  research_precedents) still find their prompt. */
+export function getSystemPromptForOperation(operation: WorkflowOperation): string {
+  try { seedIntentsIfEmpty(SEED_INTENTS); } catch { /* ignore */ }
+  const stored = loadIntents() || SEED_INTENTS;
+  const mappedId = OPERATION_MIGRATION[operation as string] || operation;
+  const intent = stored.find((i) => i.id === mappedId);
+  if (intent && intent.systemPrompt && intent.systemPrompt.trim().length > 0) {
+    return intent.systemPrompt;
+  }
+  return LEGACY_OPERATION_SYSTEM_PROMPTS[operation] || '';
+}
+
+/** Back-compat re-export. Old call sites that destructured
+ *  OPERATION_SYSTEM_PROMPTS still work; new call sites should prefer
+ *  getSystemPromptForOperation() so SA edits are picked up. */
+export const OPERATION_SYSTEM_PROMPTS = LEGACY_OPERATION_SYSTEM_PROMPTS;
+
 export function buildStepMessages(input: BuildPromptInput): Array<{ role: 'system' | 'user' | 'assistant'; content: string }> {
-  const systemPrompt = OPERATION_SYSTEM_PROMPTS[input.operation];
+  const systemPrompt = getSystemPromptForOperation(input.operation);
 
   // User message — assemble the full context for this step.
   const parts: string[] = [];

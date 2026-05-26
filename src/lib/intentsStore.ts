@@ -575,3 +575,97 @@ export function getWorkflowVisibleIntents(intents: Intent[]): Intent[] {
 export function getAutoAppendIntent(intents: Intent[]): Intent | undefined {
   return intents.find((i) => i.enabled && i.workflowVisible && i.autoAppendAtWorkflowEnd);
 }
+
+/* ─── SA Bot Persona shape <-> Intent conversion ─────────────────────
+ *
+ * The SA Bot Persona editor (src/pages/super-admin/GlobalKnowledgeBase.jsx)
+ * uses a legacy shape with numeric ids and snake_case fields. These
+ * helpers bridge between that shape and the unified Intent shape so the
+ * editor can shadow-write rich prompts into this store without rewriting
+ * the editor UI in one step. Phase 6 deletes the legacy persona shape. */
+
+export interface LegacyPersonaOp {
+  id: number;
+  label: string;
+  description?: string;
+  systemPrompt?: string;
+  tonePrompt?: string;
+  enabled?: boolean;
+  keywords?: string[];
+  opening_behaviour?: 'start_immediately' | 'ask_for_document' | 'ask_clarifying_question';
+  custom_instruction?: string;
+}
+
+/** Label → canonical string id mapping. Keeps the SA editor's labels in
+ *  sync with the store's stable ids. New labels added in SA fall back to
+ *  a slug of the label so nothing crashes. */
+const LABEL_TO_ID: Record<string, string> = {
+  'General Chat': 'general_chat',
+  'Contract Review': 'contract_review',
+  'Legal Research': 'legal_research',
+  'Document Drafting': 'document_drafting',
+  'Compliance Check': 'compliance_check',
+  'Document Summarisation': 'document_summarisation',
+  'Document Summarization': 'document_summarisation',
+  'Case Law Analysis': 'case_law_analysis',
+  'Clause Comparison': 'clause_comparison',
+  'Clause Analysis': 'clause_analysis',
+  'Email & Letter Drafting': 'email_letter_drafting',
+  'Due Diligence': 'due_diligence',
+  'Legal Q&A': 'legal_qa',
+  'Risk Assessment': 'risk_assessment',
+  'Find Document': 'find_document',
+  'Read Documents': 'read_documents',
+  'Generate Report': 'generate_report',
+};
+
+function labelToId(label: string): string {
+  if (LABEL_TO_ID[label]) return LABEL_TO_ID[label];
+  return label.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+}
+
+/** Convert a single legacy persona op into the unified Intent shape.
+ *  Workflow visibility defaults to false; the caller (SA editor) can
+ *  override via the optional `workflowVisible` arg for ops that have
+ *  workflow counterparts. */
+export function intentFromPersonaOp(
+  op: LegacyPersonaOp,
+  overrides: Partial<Intent> = {}
+): Intent {
+  const id = labelToId(op.label);
+  return {
+    id,
+    label: op.label,
+    description: op.description || '',
+    systemPrompt: op.systemPrompt || '',
+    tonePrompt: op.tonePrompt,
+    keywords: op.keywords || [],
+    chatVisible: true,
+    workflowVisible: WORKFLOW_VISIBLE_BY_DEFAULT.has(id),
+    openingBehaviour: op.opening_behaviour || 'start_immediately',
+    sortOrder: op.id * 10,
+    enabled: op.enabled !== false,
+    ...overrides,
+  };
+}
+
+/** Set of intent ids whose label appears in the SA editor's DEFAULT_INTENTS
+ *  AND that have a workflow counterpart today. Used by intentFromPersonaOp
+ *  to default workflowVisible correctly. */
+const WORKFLOW_VISIBLE_BY_DEFAULT = new Set<string>([
+  'contract_review', 'clause_analysis', 'clause_comparison',
+  'risk_assessment', 'document_summarisation', 'case_law_analysis',
+  'legal_research', 'compliance_check', 'due_diligence',
+]);
+
+/** Convert an array of persona ops + merge with the seed primitives
+ *  (read_documents, generate_report) that the SA editor doesn't surface.
+ *  The result is the full set of intents the store should contain. */
+export function intentsFromPersonaOps(ops: LegacyPersonaOp[]): Intent[] {
+  const fromPersona = ops.map((op) => intentFromPersonaOp(op));
+  const personaIds = new Set(fromPersona.map((i) => i.id));
+  // Pull in workflow-only primitives from the seed for any ids the
+  // persona doesn't include.
+  const primitives = SEED_INTENTS.filter((i) => !i.chatVisible && !personaIds.has(i.id));
+  return [...fromPersona, ...primitives];
+}

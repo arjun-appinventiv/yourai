@@ -1,4 +1,10 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
+import {
+  loadIntents as loadUnifiedIntents,
+  saveIntents as saveUnifiedIntents,
+  seedIntentsIfEmpty as seedUnifiedIntents,
+  intentsFromPersonaOps,
+} from '../../lib/intentsStore';
 import {
   Info, FileText, HardDrive, Clock, Upload, Trash2, Loader, Link2, Plus, ExternalLink, Database,
   Sparkles, Shield, BookOpen, Settings, CreditCard, MessageCircle, HelpCircle, ChevronRight, Lightbulb, X, ArrowRight,
@@ -272,6 +278,16 @@ export default function GlobalKnowledgeBase() {
   });
   const [personaDirty, setPersonaDirty] = useState(false);
   const [personaSaved, setPersonaSaved] = useState(true);
+
+  // Phase 2 of the unified-intents plan: keep the shadow store
+  // (yourai_intents_v1) populated with rich SA prompts so chat / workflow
+  // consumers can read from a single source of truth. Idempotent — only
+  // writes when the store has no entries yet.
+  useEffect(() => {
+    try {
+      seedUnifiedIntents(intentsFromPersonaOps(savedPersona.operations));
+    } catch (_) { /* non-fatal during transition */ }
+  }, [savedPersona.operations]);
   const [editingOp, setEditingOp] = useState(null);
   const [showAddOp, setShowAddOp] = useState(false);
   const [keywordInput, setKeywordInput] = useState('');
@@ -459,6 +475,13 @@ export default function GlobalKnowledgeBase() {
       showToast('Failed to save — localStorage quota exceeded. Remove some documents and try again.', 'error');
       return;
     }
+    // Shadow-write into the unified intents store (Phase 2 of the
+    // unified-intents plan). Chat / workflow consumers read from
+    // yourai_intents_v1; this keeps them in sync with SA edits until
+    // Phase 6 removes the legacy persona shape entirely.
+    try {
+      saveUnifiedIntents(intentsFromPersonaOps(updated.operations));
+    } catch (_) { /* non-fatal — unified store is shadow during transition */ }
     showToast('Bot persona saved — changes apply immediately to new chats', 'success');
   };
 
