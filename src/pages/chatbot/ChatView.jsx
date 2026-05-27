@@ -3040,33 +3040,35 @@ Rules:
                     </div>
                   )}
                 </div>
-                {/* Hero action buttons — 3 connector buttons + Upload + New Document */}
+                {/* Hero action buttons — 3 connector buttons + Upload + New Document.
+                   PM 2026-05-26: bumped sizing across the row so toolbar CTAs feel
+                   substantial rather than small / decorative. */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, flexWrap: 'wrap' }}>
                   {IMPORT_SOURCES.map((src) => (
                     <button
                       key={src.id}
                       onClick={() => startImport(src)}
                       title={src.desc}
-                      style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '8px 12px', borderRadius: 10, background: '#fff', color: 'var(--text-primary)', border: '1px solid var(--border)', fontSize: 13, fontWeight: 500, cursor: 'pointer', transition: 'border-color 120ms, box-shadow 120ms' }}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '11px 16px', borderRadius: 10, background: '#fff', color: 'var(--text-primary)', border: '1px solid var(--border)', fontSize: 14, fontWeight: 500, cursor: 'pointer', transition: 'border-color 120ms, box-shadow 120ms' }}
                       onMouseEnter={(e) => { e.currentTarget.style.borderColor = src.color; e.currentTarget.style.boxShadow = `0 1px 3px ${src.color}22`; }}
                       onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.boxShadow = 'none'; }}
                     >
-                      <BrandLogo source={src.id} size={16} />
+                      <BrandLogo source={src.id} size={18} />
                       {src.name}
                     </button>
                   ))}
                   <button
                     onClick={() => folderUploadRef.current?.click()}
                     title="Upload a folder — subfolder structure is preserved"
-                    style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '10px 16px', borderRadius: 10, background: '#fff', color: 'var(--text-primary)', border: '1px solid var(--border)', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '12px 18px', borderRadius: 10, background: '#fff', color: 'var(--text-primary)', border: '1px solid var(--border)', fontSize: 14, fontWeight: 500, cursor: 'pointer' }}
                   >
-                    <Upload size={14} /> Upload
+                    <Upload size={16} /> Upload
                   </button>
                   <button
                     onClick={onCreateNew}
-                    style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '10px 16px', borderRadius: 10, background: 'var(--navy)', color: '#fff', border: 'none', fontSize: 13, fontWeight: 500, cursor: 'pointer', boxShadow: '0 1px 2px rgba(10,36,99,0.15)' }}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '12px 18px', borderRadius: 10, background: 'var(--navy)', color: '#fff', border: 'none', fontSize: 14, fontWeight: 500, cursor: 'pointer', boxShadow: '0 1px 2px rgba(10,36,99,0.15)' }}
                   >
-                    <FileText size={14} /> New Document
+                    <FileText size={16} /> New Document
                   </button>
                 </div>
               </div>
@@ -3122,14 +3124,13 @@ Rules:
                   { label: 'Confidential', color: '#4a90e2' },
                   { label: 'Final', color: '#5fb86d' },
                   { label: 'Draft', color: '#e6a23c' },
-                  { label: 'Pinned' },
                   { label: 'Mine' },
                 ].map((pill) => (
-                  <button key={pill.label} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 10px', borderRadius: 999, border: '1px solid var(--border)', background: '#fff', fontSize: 12.5, color: 'var(--text-primary)', cursor: 'pointer', fontFamily: 'inherit' }}
+                  <button key={pill.label} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 999, border: '1px solid var(--border)', background: '#fff', fontSize: 13.5, color: 'var(--text-primary)', cursor: 'pointer', fontFamily: 'inherit' }}
                     onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--navy)'; }}
                     onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border)'; }}
                   >
-                    {pill.color && <span style={{ width: 7, height: 7, borderRadius: '50%', background: pill.color, flexShrink: 0 }} />}
+                    {pill.color && <span style={{ width: 8, height: 8, borderRadius: '50%', background: pill.color, flexShrink: 0 }} />}
                     {pill.label}
                   </button>
                 ))}
@@ -3351,7 +3352,7 @@ Rules:
                               <span>{ownerLabel}</span>
                             </div>
                             <button onClick={(e) => { e.stopPropagation(); onSelect ? onSelect(d) : null; }}
-                              style={{ width: '100%', marginTop: 4, padding: '8px 0', borderRadius: 8, border: 'none', background: 'var(--navy)', color: '#fff', fontSize: 12.5, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
+                              style={{ width: '100%', marginTop: 4, padding: '11px 0', borderRadius: 8, border: 'none', background: 'var(--navy)', color: '#fff', fontSize: 13.5, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
                               Use in chat
                             </button>
                           </div>
@@ -3419,18 +3420,13 @@ Rules:
                           {relativeTime(d.createdAt)}
                         </div>
 
-                        {/* Actions column */}
+                        {/* Actions column — Pin button removed per PM 2026-05-26.
+                           Use in chat CTA bumped for parity with the bigger toolbar. */}
                         <div onClick={(e) => e.stopPropagation()} style={{ width: 170, display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'flex-end', flexShrink: 0 }}>
-                          <button title="Pin" style={{ width: 28, height: 28, borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#fff', border: '1px solid #e6e7ec', cursor: 'pointer', color: 'var(--text-muted)' }}
-                            onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--navy)'; }}
-                            onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; }}
-                          >
-                            <Bookmark size={13} />
-                          </button>
                           {onSelect && (
                             <button
                               onClick={(e) => { e.stopPropagation(); onSelect(d); }}
-                              style={{ padding: '6px 14px', borderRadius: 7, background: isDocActive ? '#5CA868' : 'var(--navy)', color: '#fff', border: 'none', fontSize: 12.5, fontWeight: 500, cursor: 'pointer', whiteSpace: 'nowrap' }}
+                              style={{ padding: '9px 18px', borderRadius: 8, background: isDocActive ? '#5CA868' : 'var(--navy)', color: '#fff', border: 'none', fontSize: 13.5, fontWeight: 500, cursor: 'pointer', whiteSpace: 'nowrap' }}
                             >
                               {isDocActive ? 'Active' : 'Use in chat'}
                             </button>
