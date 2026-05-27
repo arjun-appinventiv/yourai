@@ -1229,21 +1229,30 @@ function WorkflowCard({
             </TooltipContent>
           </Tooltip>
 
+          {/* Preview — outlined navy CTA (secondary). Same height as Run for
+             visual rhythm; ghost background keeps it clearly distinct. */}
           <button
             type="button"
             onClick={onOpenDetails}
             style={{
-              background: 'transparent',
-              border: 'none',
-              padding: 0,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '10px 18px',
+              borderRadius: 12,
+              background: '#fff',
               color: 'var(--navy)',
-              fontSize: 12,
+              border: '1.5px solid var(--navy)',
+              fontSize: 13,
               fontWeight: 600,
               cursor: 'pointer',
-              lineHeight: 1.5,
+              lineHeight: 1,
+              transition: 'background 120ms',
             }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(10,36,99,0.05)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; }}
           >
-            Preview what this produces →
+            Preview →
           </button>
         </div>
 
@@ -1251,21 +1260,31 @@ function WorkflowCard({
           {template.visibility === 'platform' && (
             <Tooltip>
               <TooltipTrigger asChild>
+                {/* Duplicate — gold-tinted CTA (tertiary). Distinct hue from
+                   the navy primary + outlined secondary so the three actions
+                   read independently at a glance. */}
                 <button
                   type="button"
                   onClick={onDuplicate}
                   style={{
-                  background: 'transparent',
-                  border: 'none',
-                  padding: 0,
-                  color: 'var(--navy)',
-                  fontSize: 12,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: '10px 18px',
+                  borderRadius: 12,
+                  background: 'rgba(201,168,76,0.12)',
+                  color: '#9a7f2f',
+                  border: '1.5px solid rgba(201,168,76,0.55)',
+                  fontSize: 13,
                   fontWeight: 600,
                   cursor: 'pointer',
-                  lineHeight: 1.5,
+                  lineHeight: 1,
+                  transition: 'background 120ms',
                 }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(201,168,76,0.22)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(201,168,76,0.12)'; }}
               >
-                Duplicate workflow →
+                Duplicate →
                 </button>
               </TooltipTrigger>
               <TooltipContent>Creates a copy in your personal workflows</TooltipContent>
