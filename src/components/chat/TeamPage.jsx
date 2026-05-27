@@ -384,108 +384,52 @@ export default function TeamPage({ onBack, onCountChange, onToast }) {
               color: 'var(--text-primary)', margin: 0, lineHeight: 1.15, letterSpacing: '-0.4px',
             }}>Who has access &amp; what they can do</h1>
             <p style={{ marginTop: 8, fontSize: 13.5, color: 'var(--text-secondary)', lineHeight: 1.55, maxWidth: 720 }}>
-              Invite colleagues and clients, grant permissions, and keep track of who has access. Every action a user takes is recorded in <strong>Audit Logs</strong>.
+              Invite colleagues and clients and grant access.
             </p>
           </div>
 
-          {/* Stats row */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 20 }}>
-            <StatTile
-              icon={UsersIcon}
-              label="Active Users"
-              value={`${activeMembers.length} of 10 seats`}
-              sub={`Enterprise plan · ${10 - activeMembers.length} available`}
-            />
-            <StatTile
-              icon={ShieldCheck}
-              label="MFA Coverage"
-              value={`${mfaEnrolled} of ${activeMembers.length} enrolled`}
-              sub={activeMembers.length - mfaEnrolled > 0 ? `${activeMembers.length - mfaEnrolled} user · action required` : 'All set'}
-              tone={mfaEnrolled < activeMembers.length ? 'warning' : 'neutral'}
-            />
-            <StatTile
-              icon={KeyRound}
-              label="SSO"
-              value={ssoConnected ? 'Okta · Connected' : 'Not configured'}
-              sub={ssoConnected ? `SAML 2.0 · ${members.filter((m) => USER_META[m.id]?.sso).length} of ${members.length} using SSO` : '—'}
-            />
-            <StatTile
-              icon={AlertCircle}
-              label="Pending Invites"
-              value={pendingInvite ? `${counts.invited} outstanding` : 'None'}
-              sub={pendingInvite ? `${pendingInvite.name} · expires in 5d` : 'All accepted'}
-              tone={pendingInvite ? 'warning' : 'neutral'}
-            />
-          </div>
+          {/* MVP cut 2026-05-26 — dropped the 4-stat tile row (Active Users /
+             MFA / SSO / Pending Invites), the pending-invite banner with
+             Resend, the Role/Status/MFA filter chips, and the Permission
+             Matrix link. The role tabs + search + table cover MVP needs. */}
 
-          {/* Role tabs */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12, flexWrap: 'wrap' }}>
-            <span style={{ fontSize: 10.5, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginRight: 4 }}>Roles</span>
-            {[
-              { key: 'all', label: 'Total', count: counts.total },
-              { key: ROLE.ORG_ADMIN, label: 'Org Admins', count: counts.admins },
-              { key: ROLE.INTERNAL_USER, label: 'Internal', count: counts.internal },
-              { key: ROLE.EXTERNAL_USER, label: 'External', count: counts.external },
-            ].map((t) => {
-              const isActive = roleFilter === t.key;
-              return (
-                <button key={t.key}
-                  onClick={() => setRoleFilter(t.key)}
-                  style={{
-                    display: 'inline-flex', alignItems: 'center', gap: 6,
-                    padding: '5px 12px', borderRadius: 999,
-                    border: isActive ? '1.5px solid var(--navy)' : '1px solid var(--border)',
-                    background: isActive ? 'var(--navy)' : '#fff',
-                    fontSize: 12.5, fontWeight: 500,
-                    color: isActive ? '#fff' : 'var(--text-primary)',
-                    cursor: 'pointer',
-                  }}
-                >
-                  {t.label}
-                  <span style={{ color: isActive ? 'rgba(255,255,255,0.75)' : 'var(--text-muted)', fontWeight: 400 }}>{t.count}</span>
-                </button>
-              );
-            })}
-            <a href="#" onClick={(e) => e.preventDefault()} style={{ marginLeft: 12, fontSize: 12, color: 'var(--navy)', textDecoration: 'none' }}>View Permission Matrix →</a>
-          </div>
-
-          {/* Pending invite banner */}
-          {pendingInvite && (
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: 12,
-              padding: '10px 14px', marginBottom: 14,
-              background: '#FBEED5', border: '1px solid #E8A33D33', borderRadius: 10,
-            }}>
-              <AlertCircle size={16} style={{ color: '#C8843E', flexShrink: 0 }} />
-              <div style={{ fontSize: 13, color: 'var(--text-primary)', flex: 1 }}>
-                <strong>{counts.invited} invitation{counts.invited !== 1 ? 's' : ''} outstanding.</strong> {pendingInvite.name} was invited {pendingInvite.invitedAt}. Invitation expires in 5 days.
-              </div>
-              <button
-                onClick={() => onToast?.('Invitation resent')}
-                style={{
-                  padding: '5px 12px', borderRadius: 6, fontSize: 12,
-                  border: '1px solid #E8A33D55', background: '#fff', color: '#C8843E',
-                  fontWeight: 500, cursor: 'pointer',
-                }}
-              >Resend →</button>
-            </div>
-          )}
-
-          {/* Toolbar */}
+          {/* Role tabs + search + invite — single row */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 14, flexWrap: 'wrap' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
-              <div style={{ position: 'relative', width: 260, flexShrink: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0, flexWrap: 'wrap' }}>
+              <div style={{ position: 'relative', width: 280, flexShrink: 0 }}>
                 <Search size={14} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
                 <input
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search by name, email, or role…"
+                  placeholder="Search by name or email…"
                   style={{ width: '100%', height: 36, borderRadius: 8, border: '1px solid var(--border)', paddingLeft: 34, paddingRight: 12, fontSize: 13, outline: 'none', boxSizing: 'border-box', fontFamily: "'DM Sans', sans-serif", background: '#fff' }}
                 />
               </div>
-              <FilterChip label="Role:" value="All" />
-              <FilterChip label="Status:" value="All" />
-              <FilterChip label="MFA:" value="All" />
+              {[
+                { key: 'all', label: 'All', count: counts.total },
+                { key: ROLE.ORG_ADMIN, label: 'Admins', count: counts.admins },
+                { key: ROLE.INTERNAL_USER, label: 'Internal', count: counts.internal },
+                { key: ROLE.EXTERNAL_USER, label: 'External', count: counts.external },
+              ].map((t) => {
+                const isActive = roleFilter === t.key;
+                return (
+                  <button key={t.key}
+                    onClick={() => setRoleFilter(t.key)}
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 6,
+                      padding: '6px 12px', borderRadius: 999,
+                      border: isActive ? '1.5px solid var(--navy)' : '1px solid var(--border)',
+                      background: isActive ? 'var(--navy)' : '#fff',
+                      fontSize: 12.5, fontWeight: 500,
+                      color: isActive ? '#fff' : 'var(--text-primary)',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {t.label}
+                    <span style={{ color: isActive ? 'rgba(255,255,255,0.75)' : 'var(--text-muted)', fontWeight: 400 }}>{t.count}</span>
+                  </button>
+                );
+              })}
             </div>
             <button
               onClick={() => setView('invite')}
@@ -505,7 +449,7 @@ export default function TeamPage({ onBack, onCountChange, onToast }) {
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ background: 'var(--ice-warm)', borderBottom: '1px solid var(--border)' }}>
-                  {['User', 'Role', 'Security', 'Workspaces', 'Last Active'].map((c) => (
+                  {['User', 'Role', 'Workspaces', 'Last Active'].map((c) => (
                     <th key={c} style={{
                       textAlign: 'left', padding: '0 16px', height: 40,
                       fontSize: 11, fontWeight: 600, textTransform: 'uppercase',
@@ -517,7 +461,7 @@ export default function TeamPage({ onBack, onCountChange, onToast }) {
               <tbody>
                 {filtered.length === 0 ? (
                   <tr>
-                    <td colSpan={5} style={{ padding: 40, textAlign: 'center' }}>
+                    <td colSpan={4} style={{ padding: 40, textAlign: 'center' }}>
                       <UsersIcon size={32} style={{ margin: '0 auto 10px', opacity: 0.4, color: 'var(--text-muted)' }} />
                       <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)' }}>
                         {search || roleFilter !== 'all' ? 'No matches' : 'No team members yet'}
@@ -555,14 +499,6 @@ export default function TeamPage({ onBack, onCountChange, onToast }) {
                         </div>
                       </td>
                       <td style={{ padding: '12px 16px' }}><RolePill role={m.role} /></td>
-                      <td style={{ padding: '12px 16px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          {meta?.mfa
-                            ? <ShieldCheck size={14} style={{ color: '#5CA868' }} aria-label="MFA enrolled" />
-                            : <ShieldCheck size={14} style={{ color: '#C65454' }} aria-label="MFA missing" />}
-                          {meta?.sso && <Lock size={13} style={{ color: 'var(--text-muted)' }} aria-label="SSO" />}
-                        </div>
-                      </td>
                       <td style={{ padding: '12px 16px', fontSize: 12.5, color: 'var(--text-primary)' }}>
                         {m.status === 'Invited'
                           ? <span style={{ color: 'var(--text-muted)' }}>—</span>
@@ -570,7 +506,7 @@ export default function TeamPage({ onBack, onCountChange, onToast }) {
                       </td>
                       <td style={{ padding: '12px 16px', fontSize: 12, color: 'var(--text-muted)' }}>
                         {m.status === 'Invited'
-                          ? <span style={{ color: '#C8843E' }}>Invited · expires in 5d</span>
+                          ? <span style={{ color: '#C8843E' }}>Invited</span>
                           : 'Today'}
                       </td>
                     </tr>
@@ -658,22 +594,8 @@ export default function TeamPage({ onBack, onCountChange, onToast }) {
               )}
             </PaneSection>
 
-            {/* Logs (renamed from Recent Activity; no icons per PM) */}
-            <PaneSection title="LOGS">
-              {selectedMeta?.logs?.length ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {selectedMeta.logs.map((l, i) => (
-                    <div key={i}>
-                      <div style={{ fontSize: 12.5, color: 'var(--text-primary)', lineHeight: 1.5 }}>{l.text}</div>
-                      <div style={{ fontSize: 11.5, color: 'var(--text-muted)', marginTop: 2 }}>{l.time}</div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div style={{ fontSize: 12.5, color: 'var(--text-muted)' }}>No activity yet.</div>
-              )}
-              <a href="#" onClick={(e) => e.preventDefault()} style={{ display: 'inline-block', marginTop: 12, fontSize: 12, color: 'var(--navy)', textDecoration: 'none' }}>View all in Audit Logs →</a>
-            </PaneSection>
+            {/* MVP cut 2026-05-26 — LOGS pane section removed; this view
+               no longer surfaces per-user activity history. */}
 
             {/* Footer */}
             <div style={{ display: 'flex', gap: 8, marginTop: 20 }}>
