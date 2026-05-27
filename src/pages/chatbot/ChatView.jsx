@@ -8748,7 +8748,8 @@ INSTRUCTIONS:
                     borderRadius: 24,
                     padding: isFileDropHover ? 17 : 18,
                     display: 'flex', flexDirection: 'column', gap: 12,
-                    transition: 'background 150ms, border-color 150ms',
+                    boxShadow: '0 1px 2px rgba(15,28,63,0.05), 0 8px 24px rgba(15,28,63,0.06)',
+                    transition: 'background 150ms, border-color 150ms, box-shadow 150ms',
                   }}
                 >
                   {/* Active intent pill — background + dot tint inherit from the
@@ -9182,7 +9183,8 @@ INSTRUCTIONS:
                     borderRadius: 20,
                     padding: isFileDropHover ? 15 : 16,
                     display: 'flex', flexDirection: 'column', gap: 12,
-                    transition: 'background 150ms, border-color 150ms',
+                    boxShadow: '0 1px 2px rgba(15,28,63,0.05), 0 8px 24px rgba(15,28,63,0.06)',
+                    transition: 'background 150ms, border-color 150ms, box-shadow 150ms',
                   }}
                 >
                   {/* Intent pill TOP (160w, bucket-coloured, opens DOWNWARD) */}
