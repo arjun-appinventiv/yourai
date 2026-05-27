@@ -652,7 +652,6 @@ export default function WorkflowsPanel({
                     lastRunLabel={getLastRunLabel(template, currentUserId, runs)}
                     isPopular={popularTemplateId === template.id}
                     onOpenDetails={() => openDrawer(template)}
-                    onOpenRunHistory={() => openDrawer(template, 'recent-runs')}
                     onRun={() => handleRunWorkflow(template)}
                     onEdit={() => {
                       onEdit(template);
@@ -823,7 +822,6 @@ interface CardProps {
   lastRunLabel: string;
   isPopular: boolean;
   onOpenDetails: () => void;
-  onOpenRunHistory: () => void;
   onRun: () => void;
   onEdit: () => void;
   onDuplicate: () => void;
@@ -842,7 +840,6 @@ function WorkflowCard({
   lastRunLabel,
   isPopular,
   onOpenDetails,
-  onOpenRunHistory,
   onRun,
   onEdit,
   onDuplicate,
@@ -1200,34 +1197,13 @@ function WorkflowCard({
 
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 10, padding: '16px 20px 18px', borderTop: '1px solid var(--ice)', marginTop: 'auto' }}>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 4 }}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                type="button"
-                onClick={onOpenRunHistory}
-                style={{
-                  fontSize: 12,
-                  color: 'var(--muted)',
-                  background: 'transparent',
-                  border: 'none',
-                  padding: 0,
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                }}
-              >
-                {lastRunLabel}
-              </button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <button
-                type="button"
-                onClick={onOpenRunHistory}
-                style={{ background: 'transparent', border: 'none', padding: 0, cursor: 'pointer', color: 'inherit' }}
-              >
-                View run history →
-              </button>
-            </TooltipContent>
-          </Tooltip>
+          {/* Static status label — run history clickthrough removed per PM
+             2026-05-26 (the historical log was useful info but the feature
+             didn't make the cut). lastRunLabel still surfaces "Never run
+             — be the first" or the last-run summary as plain text. */}
+          <span style={{ fontSize: 12, color: 'var(--muted)', textAlign: 'left' }}>
+            {lastRunLabel}
+          </span>
 
           {/* Preview — outlined navy CTA (secondary). Same height as Run for
              visual rhythm; ghost background keeps it clearly distinct. */}
@@ -1343,14 +1319,6 @@ function WorkflowDetailDrawer({
   onClose: () => void;
   onRun: (template: WorkflowTemplate) => void;
 }) {
-  const recentRunsRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    if (template && initialSection === 'recent-runs' && recentRunsRef.current) {
-      recentRunsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-  }, [initialSection, template]);
-
   if (!template) return null;
 
   const badge = VISIBILITY_BADGE[template.visibility];
@@ -1477,33 +1445,8 @@ function WorkflowDetailDrawer({
             </div>
           </DrawerSection>
 
-          <div ref={recentRunsRef}>
-            <DrawerSection title="Recent runs">
-              {templateRuns.length > 0 ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {templateRuns.map((run) => (
-                    <div
-                      key={run.id}
-                      style={{
-                        padding: '12px 14px',
-                        borderRadius: 12,
-                        border: '1px solid var(--ice)',
-                        background: 'var(--ice-warm)',
-                        fontSize: 13,
-                        color: 'var(--slate)',
-                      }}
-                    >
-                      {`Run by ${formatInitials(getRunActorName(run, currentUserId, currentUserName))} · ${formatRelativeDate(run.completedAt || run.startedAt)} · ${formatDuration(getRunDuration(run, template))}`}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div style={{ fontSize: 13, color: 'var(--muted)' }}>
-                  No runs yet — be the first.
-                </div>
-              )}
-            </DrawerSection>
-          </div>
+          {/* "Recent runs" drawer section removed per PM 2026-05-26 — run
+             history is no longer surfaced anywhere in Workflows. */}
         </div>
 
         <div style={{ padding: '16px 24px 22px', borderTop: '1px solid var(--ice)', background: '#FFFFFF' }}>
