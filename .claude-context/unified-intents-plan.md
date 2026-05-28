@@ -6,6 +6,22 @@
 > proposed by Arjun on 2026-05-20. Load this file via
 > `@.claude-context/unified-intents-plan.md` when picking the work up.
 
+> **STATUS: SHIPPED 2026-05-28** (wireframe). All 6 phases live on
+> `yourai/main`. `src/lib/intentsStore.ts` is the registry; `intents.ts`
+> + `intentDetector.ts` derive from it; SA Bot Persona shadow-writes +
+> has Chat/Workflow toggles; Workflow Builder filters by `workflowVisible`;
+> `workflowPrompts.ts` resolves prompts from the store. **Remaining:**
+> Phase 6 cleanup (delete the legacy `DEFAULT_INTENTS` / `LEGACY_INTENT_DEFAULTS`
+> / `LEGACY_OPERATION_SYSTEM_PROMPTS` fallback constants — kept for rollback,
+> delete once prod is proven stable). `docs/extracted/FRD_Unified_Intents.md`
+> is the dev-team spec — **ON HOLD, don't share until Arjun says go.**
+> Implementation deviated from the plan below in one way: rather than
+> rewriting the SA editor UI, Phase 2 keeps the legacy persona shape and
+> bridges via `intentFromPersonaOp` / `intentsFromPersonaOps` (a
+> shadow-write), and Phases 3-5 keep the old modules as thin
+> derive-from-store views with `LEGACY_*` fallbacks instead of deleting
+> them outright. Net: same architecture, gentler migration.
+
 ---
 
 ## The core idea (Arjun's framing)

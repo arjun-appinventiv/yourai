@@ -379,8 +379,11 @@ Short list of probable next priorities based on today's direction — **user sho
 10. Second-pass workflow operation prompt tightening once Arjun shares real test output.
 11. Audit any remaining `callLLM` callers (final grep across `src/`).
 12. Server-backed favourites (currently localStorage-only).
-13. Reconcile the 3 sources of truth for intents (`intents.ts` / `intentDetector.ts` / `GlobalKnowledgeBase.jsx DEFAULT_INTENTS`).
+13. ~~Reconcile the 3 sources of truth for intents~~ — **done 2026-05-28 via unified-intents Phases 1-6.** `intents.ts` + `intentDetector.ts` now derive from `intentsStore.ts`; SA Bot Persona shadow-writes to it; Workflow Builder reads `workflowVisible` from it. Remaining: **Phase 6 cleanup** — delete the legacy `DEFAULT_INTENTS` (GlobalKnowledgeBase.jsx) / `LEGACY_INTENT_DEFAULTS` (intentDetector.ts) / `LEGACY_OPERATION_SYSTEM_PROMPTS` (workflowPrompts.ts) fallback constants once prod's been stable for a session or two. Don't delete yet — they're the rollback safety net.
 14. Server-side fix for the JSON-schema-with-no-document failure mode at the Edge.
+15. **`FRD_Unified_Intents.md` is ON HOLD** — written + on prod in `docs/extracted/`, but do NOT share with the dev team until Arjun gives the explicit go-ahead.
+16. **`compliance_check` isn't in `INTENT_BUCKETS`** (`intents.ts`) so it's in the unified store but invisible in the chat intent dropdown. Add it to the ANALYZE bucket if it should be chat-pickable.
+17. **Mirror the unified store on the dev-team backend** — `intentsStore.ts` is the staging shape; the backend `intents` table should mirror it (see the FRD when it's unblocked).
 
 ---
 
@@ -547,7 +550,42 @@ Reverse chronological. Each entry: *decision — rationale — date*.
 
 ## Last updated
 
-**2026-05-26** — Long session. Client (Wendy + Ryan) sent a 25-item UI/UX feedback batch + raised the chat answer-routing question + asked about the architecture of workflow operations vs chat intents. Shipped ~20 commits over the day.
+**2026-05-28** — Big session: unified-intents shipped end-to-end + a long client UI batch. ~20 commits, ~18 deploys to `yourai/main`. Final bundle `index-1lFWNwpB.js`.
+
+### Unified intents — all 6 phases shipped + SA toggles + Workflow Builder wired
+
+Arjun's `unified-intents` plan (`.claude-context/unified-intents-plan.md`) is now LIVE on the wireframe. One intents registry replaces the 4 drifting sources.
+
+- **Phase 1** — `src/lib/intentsStore.ts` (new). `Intent` interface (id, label, description, systemPrompt, tonePrompt, keywords, chatVisible, workflowVisible, outputSchema, openingBehaviour, autoAppendAtWorkflowEnd, sourcePill, sortOrder, enabled, legacyResponseFormat) + `loadIntents`/`saveIntents`/`seedIntentsIfEmpty` (mirrors knowledgePackStore) + `SEED_INTENTS` (15 entries migrated from the 4 sources) + `OPERATION_MIGRATION` map (analyse_clauses→clause_analysis, compare_against_standard→clause_comparison, research_precedents→legal_research) + helpers (getChatVisibleIntents / getWorkflowVisibleIntents / getAutoAppendIntent / intentFromPersonaOp / intentsFromPersonaOps). Storage key `yourai_intents_v1`. Commit `872ad49`.
+- **Phase 2** — SA Bot Persona editor (`GlobalKnowledgeBase.jsx`) shadow-writes the persona ops into `yourai_intents_v1` on save + `seedIntentsIfEmpty` on mount. Adapter (LABEL_TO_ID + intentFromPersonaOp) bridges the legacy persona shape to the unified Intent shape without rewriting the editor.
+- **Phase 3** — `intents.ts` (INTENTS + INTENT_DESCRIPTIONS) and `intentDetector.ts` (INTENT_DEFAULTS) now DERIVE from the store at module load; public exports unchanged so consumers don't break. Hardcoded fallbacks renamed `LEGACY_*` and kept for empty-field fallthrough.
+- **Phase 4** — `workflow.ts` `getWorkflowOperations()` derived view + **Workflow Builder dropdown now filters `OPERATIONS_IN_ORDER` by the store's `workflowVisible` flag** (via OPERATION_MIGRATION). Toggling Workflow OFF in SA hides the op from the Builder picker on next page load. Currently-selected op is never hidden.
+- **Phase 5** — `workflowPrompts.ts` `buildStepMessages` resolves the system prompt via `getSystemPromptForOperation()` — store first, `LEGACY_OPERATION_SYSTEM_PROMPTS` fallback, renamed-op migration.
+- **Phase 6** — `docs/extracted/FRD_Unified_Intents.md` (dev-team spec). **ON HOLD per Arjun — do not share with dev team until he says go.** Legacy code paths intentionally retained for one cycle (rollback safety); the in-file `DEFAULT_INTENTS` / `INTENT_DEFAULTS` / `OPERATION_SYSTEM_PROMPTS` constants are still present as fallbacks, NOT deleted.
+- **SA per-surface toggles** — each intent's header row in the Bot Persona editor got two iOS-style switches: **Chat** (`chatVisible`) + **Workflow** (`workflowVisible`), next to the existing Disable/Enable. Green track + knob-right when ON. Flips propagate to `yourai_intents_v1` on save.
+- **read_documents + generate_report surfaced in SA** — both workflow-only primitives added to `DEFAULT_INTENTS` (id 14/15) with `chatVisible:false`, `workflowVisible:true`, full prompts; `generate_report` carries `autoAppendAtWorkflowEnd:true`. They were already Intent records in the store seed + consumed by the executor; this just makes them SA-editable.
+
+### `/app/*` is REFERENCE-ONLY (new hard rule)
+
+Arjun: the entire `src/pages/org-admin/` directory + every `/app/*` route is no longer used in the shipping product — reference only, never edit, never build on. Captured as CLAUDE.md gotcha #46 + auto-memory `feedback_no_app_routes.md`. (I'd rewritten `OrgUserManagement.jsx` early in the session before this rule landed — that work is now orphaned reference; the live version is the chat Team panel.)
+
+### Client UI batch (chat surface + brand)
+
+- **Chat composer** — border darkened `#b8bcc4` → `#6b7280` (was too faint); added a soft navy-tinted layered shadow (`0 1px 2px / 0 8px 24px rgba(15,28,63,…)`) for depth; Drop-files bar idle bg flipped to beige `#efe9d8`; "Drop your files here" label bolded (600).
+- **Empty-state sizing** — greeting 44→56, brand mark 48→56, container maxWidth 820→960 (wider); composer padding/radius bumped then height trimmed back (textarea minHeight + inner padding) after PM said too tall; action row got a `#9ca3af` divider above it + slight horizontal inset on the pills (per PM mockup).
+- **URL per sidebar section** — every chat-sidebar nav item now updates the URL (`/chat/dashboard`, `/chat/team`, `/chat/vault`, `/chat/packs`, `/chat/workflows`, `/chat/prompts`, `/chat/clients`, `/chat/my-time`, `/chat/team-time`, `/chat/audit`, `/chat/settings`). App.jsx catch-all `/chat/:section` route + ChatView reads `pathSection` to seed panel state + a useEffect syncs browser back/forward. One-shot redirect `/chat` → `/chat/dashboard` for Org Admin on mount.
+- **Logo swap** — app brand mark switched from `/yourai-mark.svg` (multi-tonal) to `/yourai-mark.png` (clean line-art fingerprint) across all 7 in-app mounts. Favicon untouched.
+- **Intents → Skills** front-end rename — user-facing copy only (SA Bot Persona section headings / info modals / chip labels, chat card "switch the skill pill" hints, bot fallback message). Code symbols + storage keys untouched (YourVault-rename convention).
+- **YourAI wordmark → solid single tone** — the gold "AI" + navy/white "Your" split removed everywhere. Light bg = `#000`, dark bg = white. Covers SA login, chat login, both sidebars, ChatView sidebar header, TopNav model-selector wordmark, bot sender label.
+
+### YourVault + Workflows + Team trims
+
+- **YourVault** — removed the Pin feature (filter-chip + per-row bookmark button); bumped connector buttons / Upload / New Document / filter chips / both "Use in chat" CTAs to larger sizing.
+- **Workflow card footer** — Preview + Duplicate promoted from text links to CTA buttons matching Run's height: outlined navy (Preview) / gold-tinted (Duplicate) / solid navy (Run). Labels shortened to "Preview →" / "Duplicate →".
+- **Workflow run history removed** — card-footer click-to-history tooltip + Preview drawer "Recent runs" section both gone. `lastRunLabel` kept as static status text.
+- **Team panel trimmed to MVP** (per "no need to track re-send or everything, keep it super simple like MVP") — dropped the 4-stat tile row, the pending-invite banner + Resend, the Role/Status/MFA filter chips, the Permission Matrix link, the Security column, the per-row expiry countdown, and the right-pane LOGS section. Kept: title, search + 4 role tabs + Invite, table (User/Role/Workspaces/Last Active), right pane (avatar + role + permissions + workspace access + Edit/Workspaces footer).
+
+
 
 ### Brand mark — full migration from "Y" letterform to fingerprint
 

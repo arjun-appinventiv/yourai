@@ -4,6 +4,18 @@ Reference for the unified chat-input chrome that ships across the empty
 state, populated chat, and `WorkspaceChatView` — plus the bucket-color
 system that drives the active-intent accent.
 
+> **2026-05-28 updates** (client UI batch): composer border darkened to
+> `1.5px solid #6b7280` (was `#b8bcc4`, too faint); composer now carries a
+> soft navy-tinted drop shadow `0 1px 2px rgba(15,28,63,0.05), 0 8px 24px
+> rgba(15,28,63,0.06)` for depth. Empty-state greeting bumped (Fraunces
+> 56, brand mark 56) + inner column max-width 820 → 960. The separate
+> Drop-files bar uses beige `#efe9d8` idle bg with a **bold (600)** "Drop
+> your files here" label, and a `#9ca3af` divider sits above the
+> bottom action-row (File Search · KP · send) with a small horizontal
+> inset on the pills. Brand wordmark is now solid single-tone (`#000`
+> light / white dark) — no gold "AI" split (see CLAUDE.md). App mark is
+> `/yourai-mark.png`, not the `.svg`.
+
 Load this file (`@.claude-context/chat-composer-pattern.md`) when:
 - Adding a new chat-input surface
 - Touching the existing composers (intent pill, scope pill, KP pill, drag/drop)
