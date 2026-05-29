@@ -4,7 +4,7 @@ import {
   Image as ImageIcon, Mail, Download, Folder, Tag, Calendar, User,
   Sparkles, Eye, ExternalLink, Sliders, MoreHorizontal, Trash2,
   Upload, FilePlus, Inbox, Workflow, Package, FolderInput, MessageSquare,
-  FolderUp, FileUp, Pencil, FolderPlus, ChevronLeft,
+  FolderUp, FileUp, Pencil, FolderPlus,
 } from 'lucide-react';
 
 const PAGE_SIZE = 10;
@@ -248,7 +248,7 @@ function withinDate(createdAt, range) {
 
 /* ─── Row + Grid card ──────────────────────────────────────────── */
 
-function FileRow({ file, isPreview, query, isActive, onPreview, onUse, onEdit, onDelete, canEdit }) {
+function FileRow({ file, isPreview, query, isActive, onPreview, onUse, onEdit, onDelete, canEdit, folderName }) {
   const insideMatch = query && !file.name.toLowerCase().includes(query.toLowerCase());
   const [hovered, setHovered] = useState(false);
   const rowBg = isPreview ? '#FBF6EA' : hovered ? '#FAFBFC' : 'transparent';
@@ -295,6 +295,16 @@ function FileRow({ file, isPreview, query, isActive, onPreview, onUse, onEdit, o
               </>
             )}
           </div>
+        </div>
+        <div style={{ width: 140, flexShrink: 0, fontSize: 12.5, color: '#6B7885', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 6 }}>
+          {folderName ? (
+            <>
+              <Folder size={13} style={{ color: '#9AA5B1', flexShrink: 0 }} />
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{folderName}</span>
+            </>
+          ) : (
+            <span style={{ color: '#C7CFD8' }}>—</span>
+          )}
         </div>
         <div style={{ width: 150, flexShrink: 0, fontSize: 12.5, color: '#4A5663', display: 'flex', alignItems: 'center', gap: 6 }}>
           <span style={{ width: 6, height: 6, borderRadius: '50%', background: matterDot(file.matter), flexShrink: 0 }} />
@@ -592,8 +602,7 @@ export default function VaultFilesPanel({
   /* New Folder */
   const [localFolders, setLocalFolders] = useState([]);
   const [showNewFolderModal, setShowNewFolderModal] = useState(false);
-  /* Folder navigation + pagination */
-  const [selectedFolderId, setSelectedFolderId] = useState(null);
+  /* Pagination */
   const [currentPage, setCurrentPage] = useState(1);
 
   const handleCreateFolder = ({ name, category }) => {
@@ -634,7 +643,7 @@ export default function VaultFilesPanel({
     const ownerLabel = d.ownerId === currentUserId ? 'You' : (d.ownerName || 'Member');
     return {
       ...d,
-      type, status, matter, tags,
+      type, status, matter, tags, folderName,
       modified: relTime(d.createdAt),
       modifiedFull: d.createdAt || '—',
       created: d.createdAt || '—',
@@ -659,22 +668,10 @@ export default function VaultFilesPanel({
     return Array.from(map.values());
   }, [enriched]);
 
-  /* Combined folder list (local + prop) for the navigation rail */
-  const allFolders = useMemo(() => {
-    const propIds = new Set(folders.map((f) => f.id));
-    return [...localFolders, ...folders.filter((f) => !propIds.has(f.id) || true)];
-  }, [localFolders, folders]);
-
   /* Apply search + filters */
   const q = (search || '').trim().toLowerCase();
   const results = useMemo(() => {
     let out = enriched.filter((d) => {
-      /* Folder scope: null = unfoldered docs only; string = that folder */
-      if (selectedFolderId === null) {
-        if (d.folderId) return false;
-      } else {
-        if (d.folderId !== selectedFolderId) return false;
-      }
       if (filters.status.length && !filters.status.includes(d.status)) return false;
       if (filters.type.length && !filters.type.includes(d.type)) return false;
       if (filters.matter.length && !filters.matter.includes(d.matter)) return false;
@@ -691,10 +688,10 @@ export default function VaultFilesPanel({
     });
     out.sort((a, b) => (Date.parse(b.createdAt) || 0) - (Date.parse(a.createdAt) || 0));
     return out;
-  }, [enriched, filters, q, selectedFolderId]);
+  }, [enriched, filters, q]);
 
   /* Reset to page 1 whenever the result set changes */
-  useEffect(() => { setCurrentPage(1); }, [selectedFolderId, filters, q]);
+  useEffect(() => { setCurrentPage(1); }, [filters, q]);
 
   const totalPages = Math.max(1, Math.ceil(results.length / PAGE_SIZE));
   const pagedResults = results.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
@@ -723,9 +720,8 @@ export default function VaultFilesPanel({
   const previewIsActive = previewFile && activeDocument && activeDocument.id === previewFile.id;
   const canEditPreview = previewFile && (isOrgAdmin || previewFile.ownerId === currentUserId || !previewFile.ownerId);
 
-  const vaultEmpty = enriched.length === 0 && allFolders.length === 0;
-  const showZero = !vaultEmpty && results.length === 0 && (selectedFolderId !== null || allFolders.length === 0);
-  const selectedFolder = selectedFolderId ? allFolders.find((f) => f.id === selectedFolderId) : null;
+  const vaultEmpty = enriched.length === 0;
+  const showZero = !vaultEmpty && results.length === 0;
 
   const insideCount = q
     ? results.filter((d) => !d.name.toLowerCase().includes(q) && ((d.description || '').toLowerCase().includes(q) || (d.fileName || '').toLowerCase().includes(q))).length
@@ -966,35 +962,10 @@ export default function VaultFilesPanel({
           <div style={{ maxWidth: 1180, margin: '0 auto', padding: '20px 32px 0' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 12, borderBottom: '1px solid #ECEFF3' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                {selectedFolder && (
-                  <button
-                    onClick={() => { setSelectedFolderId(null); setCurrentPage(1); }}
-                    style={{
-                      display: 'inline-flex', alignItems: 'center', gap: 6, height: 34,
-                      padding: '0 12px', borderRadius: 8, border: '1px solid #E7ECF1',
-                      background: '#fff', color: '#3A4654', fontSize: 13, fontWeight: 500,
-                      cursor: 'pointer', fontFamily: 'inherit',
-                    }}
-                    onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#0A2463'; e.currentTarget.style.color = '#0A2463'; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#E7ECF1'; e.currentTarget.style.color = '#3A4654'; }}
-                  >
-                    <ChevronLeft size={14} /> All Files
-                  </button>
-                )}
-                {selectedFolder ? (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 22, height: 22, borderRadius: 6, background: '#F0F3F6' }}>
-                      <Folder size={13} style={{ color: '#6B7885' }} />
-                    </span>
-                    <span style={{ fontSize: 15, fontWeight: 600, color: '#16223A' }}>{selectedFolder.name}</span>
-                    <span style={{ fontSize: 13, color: '#9AA5B1' }}>· {results.length} doc{results.length !== 1 ? 's' : ''}</span>
-                  </div>
-                ) : (
-                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-                    <span style={{ fontSize: 15, fontWeight: 600, color: '#16223A', fontFamily: 'ui-monospace, Menlo, monospace' }}>{results.length}</span>
-                    <span style={{ fontSize: 14, color: '#6B7885' }}>unfoldered document{results.length !== 1 ? 's' : ''}</span>
-                  </div>
-                )}
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                  <span style={{ fontSize: 15, fontWeight: 600, color: '#16223A', fontFamily: 'ui-monospace, Menlo, monospace' }}>{results.length}</span>
+                  <span style={{ fontSize: 14, color: '#6B7885' }}>document{results.length !== 1 ? 's' : ''}</span>
+                </div>
               </div>
               <div style={{ display: 'inline-flex', padding: 2, borderRadius: 10, background: '#F0F3F6' }}>
                 {[
@@ -1029,29 +1000,19 @@ export default function VaultFilesPanel({
                   zIndex: 5, background: '#fff', borderBottom: '1px solid #ECEFF3',
                 }}>
                   <span style={{ width: 34, flexShrink: 0 }} />
-                  <span style={{ flex: 1, fontSize: 11, fontWeight: 600, color: '#9AA5B1', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-                    {selectedFolder ? 'Document' : 'Folder / Document'}
-                  </span>
+                  <span style={{ flex: 1, fontSize: 11, fontWeight: 600, color: '#9AA5B1', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Document</span>
+                  <span style={{ width: 140, flexShrink: 0, fontSize: 11, fontWeight: 600, color: '#9AA5B1', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Folder</span>
                   <span style={{ width: 150, flexShrink: 0, fontSize: 11, fontWeight: 600, color: '#9AA5B1', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Matter</span>
                   <span style={{ width: 120, flexShrink: 0, fontSize: 11, fontWeight: 600, color: '#9AA5B1', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Category</span>
                   <span style={{ width: 160, flexShrink: 0 }} />
                 </div>
-                {/* Folders — only shown in the root (no folder selected) */}
-                {selectedFolderId === null && allFolders.map((folder) => (
-                  <FolderRow
-                    key={folder.id} folder={folder}
-                    docCount={enriched.filter((d) => d.folderId === folder.id).length}
-                    onNavigate={(id) => { setSelectedFolderId(id); setCurrentPage(1); }}
-                    onDelete={localFolders.some((lf) => lf.id === folder.id) ? handleDeleteLocalFolder : undefined}
-                    canEdit={localFolders.some((lf) => lf.id === folder.id)}
-                  />
-                ))}
                 {pagedResults.map((f) => (
                   <FileRow
                     key={f.id} file={f}
                     isPreview={previewId === f.id}
                     isActive={activeDocument && activeDocument.id === f.id}
                     query={search}
+                    folderName={f.folderName}
                     onPreview={onPreview}
                     onUse={onUse}
                     onEdit={onEdit}
@@ -1063,24 +1024,6 @@ export default function VaultFilesPanel({
               </div>
             ) : (
               <div>
-                {/* Folder cards — only in root view */}
-                {selectedFolderId === null && allFolders.length > 0 && (
-                  <div style={{ display: 'grid', gap: 16, paddingTop: 16, gridTemplateColumns: 'repeat(auto-fill, minmax(232px, 1fr))', paddingBottom: 8 }}>
-                    {allFolders.map((folder) => (
-                      <FolderCard
-                        key={folder.id} folder={folder}
-                        docCount={enriched.filter((d) => d.folderId === folder.id).length}
-                        onNavigate={(id) => { setSelectedFolderId(id); setCurrentPage(1); }}
-                        onDelete={localFolders.some((lf) => lf.id === folder.id) ? handleDeleteLocalFolder : undefined}
-                        canEdit={localFolders.some((lf) => lf.id === folder.id)}
-                      />
-                    ))}
-                  </div>
-                )}
-                {/* Divider between folders + docs in grid root */}
-                {selectedFolderId === null && allFolders.length > 0 && pagedResults.length > 0 && (
-                  <div style={{ margin: '8px 0 16px', borderBottom: '1px solid #ECEFF3' }} />
-                )}
                 <div style={{ display: 'grid', gap: 16, gridTemplateColumns: 'repeat(auto-fill, minmax(232px, 1fr))' }}>
                   {pagedResults.map((f) => (
                     <GridCard
