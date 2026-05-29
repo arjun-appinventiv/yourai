@@ -4,7 +4,7 @@ import {
   Image as ImageIcon, Mail, Download, Folder, Tag, Calendar, User,
   Sparkles, Eye, ExternalLink, Sliders, MoreHorizontal, Trash2,
   Upload, FilePlus, Inbox, Workflow, Package, FolderInput, MessageSquare,
-  FolderUp, FileUp,
+  FolderUp, FileUp, Pencil,
 } from 'lucide-react';
 
 /* ─── Type / status / scope metadata ─────────────────────────────── */
@@ -264,7 +264,7 @@ function withinDate(createdAt, range) {
 
 /* ─── Row + Grid card ──────────────────────────────────────────── */
 
-function FileRow({ file, selected, isPreview, expanded, query, isActive, onSelect, onPreview, onExpand, onUse, onMore }) {
+function FileRow({ file, selected, isPreview, expanded, query, isActive, onSelect, onPreview, onExpand, onUse, onEdit, onDelete, canEdit }) {
   const insideMatch = query && !file.name.toLowerCase().includes(query.toLowerCase());
   const [hovered, setHovered] = useState(false);
   const rowBg = isPreview ? '#FBF6EA' : selected ? '#FCF9F2' : hovered ? '#FAFBFC' : 'transparent';
@@ -340,7 +340,7 @@ function FileRow({ file, selected, isPreview, expanded, query, isActive, onSelec
           >
             <MessageSquare size={13} /> {isActive ? 'In chat' : 'Use in chat'}
           </button>
-          <QuickAction icon={MoreHorizontal} title="More" onClick={() => onMore(file)} />
+          <RowMenu file={file} onEdit={onEdit} onDelete={onDelete} canEdit={canEdit} />
         </div>
       </div>
       {expanded && (
@@ -383,7 +383,47 @@ function QuickAction({ icon: Icon, title, onClick, primary }) {
   );
 }
 
-function GridCard({ file, selected, isPreview, onSelect, onPreview, onUse }) {
+/* Three-dots overflow menu — the ONLY row/card action surface besides
+   Use-in-chat. Holds Edit + Delete (PM 2026-05-29: dropped the inline
+   Preview/eye quick-actions; row/card click still opens the preview
+   drawer). Renders nothing when the user can't edit the doc. */
+function RowMenu({ file, onEdit, onDelete, canEdit }) {
+  const [open, setOpen] = useState(false);
+  if (!canEdit) return null;
+  const itemStyle = {
+    display: 'flex', alignItems: 'center', gap: 8, width: '100%',
+    padding: '8px 10px', borderRadius: 7, border: 'none', background: 'transparent',
+    fontSize: 13, fontFamily: 'inherit', color: '#3A4654', cursor: 'pointer', textAlign: 'left',
+  };
+  return (
+    <div style={{ position: 'relative' }} onClick={(e) => e.stopPropagation()}>
+      <QuickAction icon={MoreHorizontal} title="More" onClick={() => setOpen((v) => !v)} />
+      {open && (
+        <>
+          <div onClick={() => setOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 50 }} />
+          <div style={{
+            position: 'absolute', top: 'calc(100% + 4px)', right: 0, minWidth: 150,
+            background: '#fff', borderRadius: 10, border: '1px solid #E7ECF1',
+            boxShadow: '0 12px 32px rgba(15,28,63,0.12)', padding: 5, zIndex: 51,
+          }}>
+            <button style={itemStyle}
+              onMouseEnter={(e) => { e.currentTarget.style.background = '#F0F3F6'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+              onClick={() => { setOpen(false); onEdit && onEdit(file); }}
+            ><Pencil size={14} /> Edit</button>
+            <button style={{ ...itemStyle, color: '#C65454' }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = '#FBEDED'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+              onClick={() => { setOpen(false); onDelete && onDelete(file.id); }}
+            ><Trash2 size={14} /> Delete</button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function GridCard({ file, selected, isPreview, onSelect, onPreview, onUse, onEdit, onDelete, canEdit }) {
   const t = TYPE_META[file.type] || TYPE_META.other;
   const [hovered, setHovered] = useState(false);
   return (
@@ -439,7 +479,7 @@ function GridCard({ file, selected, isPreview, onSelect, onPreview, onUse }) {
           }}>
             <MessageSquare size={13} /> Use in chat
           </button>
-          <QuickAction icon={Eye} title="Preview" onClick={() => onPreview(file.id)} />
+          <RowMenu file={file} onEdit={onEdit} onDelete={onDelete} canEdit={canEdit} />
         </div>
       </div>
     </div>
@@ -1074,7 +1114,9 @@ export default function VaultFilesPanel({
                     onPreview={onPreview}
                     onExpand={onExpand}
                     onUse={onUse}
-                    onMore={onEdit}
+                    onEdit={onEdit}
+                    onDelete={onDelete}
+                    canEdit={isOrgAdmin || f.ownerId === currentUserId || !f.ownerId}
                   />
                 ))}
               </div>
@@ -1088,6 +1130,9 @@ export default function VaultFilesPanel({
                     onSelect={onSelectOne}
                     onPreview={onPreview}
                     onUse={onUse}
+                    onEdit={onEdit}
+                    onDelete={onDelete}
+                    canEdit={isOrgAdmin || f.ownerId === currentUserId || !f.ownerId}
                   />
                 ))}
               </div>
