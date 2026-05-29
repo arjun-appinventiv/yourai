@@ -273,16 +273,7 @@ function FileRow({ file, isPreview, query, isActive, onPreview, onUse, onEdit, o
               fontSize: 14, fontWeight: 500, color: '#16223A',
               whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
             }}>{file.name}</span>
-            {file.fromChat && (
-              <span style={{
-                display: 'inline-flex', alignItems: 'center', gap: 4, padding: '1px 6px',
-                borderRadius: 4, fontSize: 10.5, fontWeight: 500, background: '#EEF1F8',
-                color: '#0A2463', flexShrink: 0,
-              }}>
-                <MessageSquare size={10} /> from chat
-              </span>
-            )}
-          </div>
+            </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 2, fontSize: 12, color: '#9AA5B1' }}>
             <span style={{ fontFamily: 'ui-monospace, Menlo, monospace' }}>{file.sizeLabel}</span>
             {file.metaLabel && <><span style={{ color: '#D5DCE3' }}>·</span><span>{file.metaLabel}</span></>}

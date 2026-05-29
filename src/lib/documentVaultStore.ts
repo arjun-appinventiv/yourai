@@ -40,10 +40,12 @@ export interface VaultFolder {
 }
 
 // v2: bumped 2026-04-27 when seed docs gained `content` + `sampleUrl`.
-// Older entries didn't carry real text; bumping forces re-seed so users
-// get the new sample PDFs and the bot can actually read them.
-const KEY = 'yourai_document_vault_v2';
-const FOLDERS_KEY = 'yourai_document_vault_folders_v1';
+// v3: bumped 2026-05-29 — added seed docs for new matter folders so the
+//     Folder column is populated on first load.
+// Folders v2: bumped 2026-05-29 — added Discovery, Pleadings, Correspondence,
+//     Due Diligence, Employment & HR, Harper Trust, and Series B folders.
+const KEY = 'yourai_document_vault_v3';
+const FOLDERS_KEY = 'yourai_document_vault_folders_v2';
 
 export function loadVault(): VaultDoc[] | null {
   try {
