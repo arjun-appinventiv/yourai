@@ -8959,12 +8959,18 @@ INSTRUCTIONS:
           and closes the modal. ─── */}
       {isVaultPickerModalOpen && (() => {
         const q = vaultPickerQuery.trim().toLowerCase();
-        const filtered = q
+        const filteredDocs = q
           ? documentVault.filter((d) => `${d.name || ''} ${d.description || ''} ${d.fileName || ''}`.toLowerCase().includes(q))
           : documentVault;
+        const filteredFolders = q
+          ? vaultFolders.filter((f) => f.name.toLowerCase().includes(q))
+          : vaultFolders;
+        const isEmpty = documentVault.length === 0 && vaultFolders.length === 0;
+        const noMatch = !isEmpty && filteredDocs.length === 0 && filteredFolders.length === 0;
+        const closePicker = () => { setIsVaultPickerModalOpen(false); setVaultPickerQuery(''); };
         return (
           <div
-            onClick={() => { setIsVaultPickerModalOpen(false); setVaultPickerQuery(''); }}
+            onClick={closePicker}
             style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.45)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}
           >
             <div
@@ -8975,9 +8981,9 @@ INSTRUCTIONS:
               <div style={{ padding: '20px 24px 14px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
                 <div>
                   <div style={{ fontFamily: "'Fraunces', serif", fontSize: 22, color: 'var(--navy)', lineHeight: 1.2 }}>Attach from YourVault</div>
-                  <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>Pick a document to attach to this conversation.</div>
+                  <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>Pick a document or folder to attach to this conversation.</div>
                 </div>
-                <button onClick={() => { setIsVaultPickerModalOpen(false); setVaultPickerQuery(''); }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: 'var(--text-muted)' }}>
+                <button onClick={closePicker} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: 'var(--text-muted)' }}>
                   <X size={18} />
                 </button>
               </div>
@@ -8990,66 +8996,122 @@ INSTRUCTIONS:
                     type="text"
                     value={vaultPickerQuery}
                     onChange={(e) => setVaultPickerQuery(e.target.value)}
-                    placeholder="Search YourVault by name, description, or file…"
+                    placeholder="Search folders and documents…"
                     style={{ width: '100%', height: 40, borderRadius: 10, border: '1px solid var(--border)', paddingLeft: 36, paddingRight: 14, fontSize: 13, outline: 'none', boxSizing: 'border-box', fontFamily: "inherit", background: '#FBFAF7' }}
                   />
                 </div>
               </div>
               {/* List */}
               <div style={{ flex: 1, overflowY: 'auto' }}>
-                {documentVault.length === 0 ? (
+                {isEmpty ? (
                   <div style={{ padding: 32, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
                     YourVault is empty. Drop a file from the chat to populate it.
                   </div>
-                ) : filtered.length === 0 ? (
+                ) : noMatch ? (
                   <div style={{ padding: 32, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
-                    No documents match "{vaultPickerQuery}".
+                    No folders or documents match "{vaultPickerQuery}".
                   </div>
                 ) : (
-                  filtered.map((doc) => {
-                    const isCurrent = activeVaultDocument?.id === doc.id;
-                    const folder = doc.folderId ? vaultFolders.find((f) => f.id === doc.folderId) : null;
-                    return (
-                      <div
-                        key={doc.id}
-                        onClick={() => { handleSelectVaultDocument(doc); setSearchScope('vault'); setIsVaultPickerModalOpen(false); setVaultPickerQuery(''); }}
-                        style={{
-                          padding: '12px 24px', cursor: 'pointer',
-                          display: 'flex', alignItems: 'center', gap: 12,
-                          borderBottom: '1px solid var(--border)',
-                          background: isCurrent ? 'rgba(10, 36, 99, 0.04)' : 'transparent',
-                          transition: 'background 100ms',
-                        }}
-                        onMouseEnter={(e) => { if (!isCurrent) e.currentTarget.style.backgroundColor = 'var(--ice-warm)'; }}
-                        onMouseLeave={(e) => { if (!isCurrent) e.currentTarget.style.backgroundColor = 'transparent'; }}
-                      >
-                        <div style={{ width: 36, height: 36, borderRadius: 8, background: 'var(--ice-warm)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                          <File size={16} style={{ color: 'var(--navy)' }} />
+                  <>
+                    {/* ── Folders section ── */}
+                    {filteredFolders.length > 0 && (
+                      <>
+                        <div style={{ padding: '10px 24px 6px', fontSize: 10.5, fontWeight: 700, letterSpacing: '0.1em', color: 'var(--text-muted)', textTransform: 'uppercase', fontFamily: "'IBM Plex Mono', monospace" }}>
+                          Folders
                         </div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{doc.name}</div>
-                          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {folder ? `${folder.name} · ` : ''}{doc.description || doc.fileName || '—'}
+                        {filteredFolders.map((folder) => {
+                          const isCurrentFolder = activeVaultFolder?.id === folder.id;
+                          const docCount = documentVault.filter((d) => d.folderId === folder.id).length;
+                          return (
+                            <div
+                              key={folder.id}
+                              onClick={() => { handleSelectVaultFolder(folder); setSearchScope('vault'); closePicker(); }}
+                              style={{
+                                padding: '11px 24px', cursor: 'pointer',
+                                display: 'flex', alignItems: 'center', gap: 12,
+                                borderBottom: '1px solid var(--border)',
+                                background: isCurrentFolder ? 'rgba(10,36,99,0.04)' : 'transparent',
+                                transition: 'background 100ms',
+                              }}
+                              onMouseEnter={(e) => { if (!isCurrentFolder) e.currentTarget.style.backgroundColor = 'var(--ice-warm)'; }}
+                              onMouseLeave={(e) => { if (!isCurrentFolder) e.currentTarget.style.backgroundColor = 'transparent'; }}
+                            >
+                              <div style={{ width: 36, height: 36, borderRadius: 8, background: '#F0F3F6', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                <Folder size={16} style={{ color: 'var(--navy)' }} />
+                              </div>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{folder.name}</div>
+                                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
+                                  {docCount} {docCount === 1 ? 'document' : 'documents'}
+                                </div>
+                              </div>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleSelectVaultFolder(folder); setSearchScope('vault'); closePicker(); }}
+                                style={{ padding: '7px 14px', borderRadius: 8, background: isCurrentFolder ? '#5CA868' : 'var(--navy)', color: '#fff', border: 'none', fontSize: 12, fontWeight: 500, cursor: 'pointer', flexShrink: 0 }}
+                              >
+                                {isCurrentFolder ? 'Attached' : 'Attach folder'}
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </>
+                    )}
+                    {/* ── Documents section ── */}
+                    {filteredDocs.length > 0 && (
+                      <>
+                        {filteredFolders.length > 0 && (
+                          <div style={{ padding: '10px 24px 6px', fontSize: 10.5, fontWeight: 700, letterSpacing: '0.1em', color: 'var(--text-muted)', textTransform: 'uppercase', fontFamily: "'IBM Plex Mono', monospace" }}>
+                            Documents
                           </div>
-                        </div>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); handleSelectVaultDocument(doc); setSearchScope('vault'); setIsVaultPickerModalOpen(false); setVaultPickerQuery(''); }}
-                          style={{ padding: '7px 14px', borderRadius: 8, background: 'var(--navy)', color: '#fff', border: 'none', fontSize: 12, fontWeight: 500, cursor: 'pointer', flexShrink: 0 }}
-                        >
-                          {isCurrent ? 'Attached' : 'Use in chat'}
-                        </button>
-                      </div>
-                    );
-                  })
+                        )}
+                        {filteredDocs.map((doc) => {
+                          const isCurrent = activeVaultDocument?.id === doc.id;
+                          const folder = doc.folderId ? vaultFolders.find((f) => f.id === doc.folderId) : null;
+                          return (
+                            <div
+                              key={doc.id}
+                              onClick={() => { handleSelectVaultDocument(doc); setSearchScope('vault'); closePicker(); }}
+                              style={{
+                                padding: '12px 24px', cursor: 'pointer',
+                                display: 'flex', alignItems: 'center', gap: 12,
+                                borderBottom: '1px solid var(--border)',
+                                background: isCurrent ? 'rgba(10, 36, 99, 0.04)' : 'transparent',
+                                transition: 'background 100ms',
+                              }}
+                              onMouseEnter={(e) => { if (!isCurrent) e.currentTarget.style.backgroundColor = 'var(--ice-warm)'; }}
+                              onMouseLeave={(e) => { if (!isCurrent) e.currentTarget.style.backgroundColor = 'transparent'; }}
+                            >
+                              <div style={{ width: 36, height: 36, borderRadius: 8, background: 'var(--ice-warm)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                <File size={16} style={{ color: 'var(--navy)' }} />
+                              </div>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{doc.name}</div>
+                                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                  {folder ? `${folder.name} · ` : ''}{doc.description || doc.fileName || '—'}
+                                </div>
+                              </div>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleSelectVaultDocument(doc); setSearchScope('vault'); closePicker(); }}
+                                style={{ padding: '7px 14px', borderRadius: 8, background: isCurrent ? '#5CA868' : 'var(--navy)', color: '#fff', border: 'none', fontSize: 12, fontWeight: 500, cursor: 'pointer', flexShrink: 0 }}
+                              >
+                                {isCurrent ? 'Attached' : 'Use in chat'}
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </>
+                    )}
+                  </>
                 )}
               </div>
-              {/* Footer link */}
+              {/* Footer */}
               <div style={{ padding: '12px 24px', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#FBFAF7' }}>
                 <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                  {documentVault.length} {documentVault.length === 1 ? 'document' : 'documents'} in YourVault
+                  {vaultFolders.length > 0 && `${vaultFolders.length} ${vaultFolders.length === 1 ? 'folder' : 'folders'} · `}
+                  {documentVault.length} {documentVault.length === 1 ? 'document' : 'documents'}
                 </span>
                 <button
-                  onClick={() => { setIsVaultPickerModalOpen(false); setVaultPickerQuery(''); closeAllPanels(); setShowDocumentVaultPanel(true); }}
+                  onClick={() => { closePicker(); closeAllPanels(); setShowDocumentVaultPanel(true); }}
                   style={{ background: 'none', border: 'none', padding: 0, fontSize: 13, color: 'var(--navy)', fontWeight: 500, cursor: 'pointer' }}
                 >
                   Open YourVault →
