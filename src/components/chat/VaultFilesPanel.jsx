@@ -4,8 +4,10 @@ import {
   Image as ImageIcon, Mail, Download, Folder, Tag, Calendar, User,
   Sparkles, Eye, ExternalLink, Sliders, MoreHorizontal, Trash2,
   Upload, FilePlus, Inbox, Workflow, Package, FolderInput, MessageSquare,
-  FolderUp, FileUp, Pencil, FolderPlus,
+  FolderUp, FileUp, Pencil, FolderPlus, ChevronLeft,
 } from 'lucide-react';
+
+const PAGE_SIZE = 10;
 
 /* ─── Type / status / scope metadata ─────────────────────────────── */
 
@@ -590,6 +592,9 @@ export default function VaultFilesPanel({
   /* New Folder */
   const [localFolders, setLocalFolders] = useState([]);
   const [showNewFolderModal, setShowNewFolderModal] = useState(false);
+  /* Folder navigation + pagination */
+  const [selectedFolderId, setSelectedFolderId] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const handleCreateFolder = ({ name, category }) => {
     setLocalFolders((prev) => [{
@@ -654,10 +659,22 @@ export default function VaultFilesPanel({
     return Array.from(map.values());
   }, [enriched]);
 
+  /* Combined folder list (local + prop) for the navigation rail */
+  const allFolders = useMemo(() => {
+    const propIds = new Set(folders.map((f) => f.id));
+    return [...localFolders, ...folders.filter((f) => !propIds.has(f.id) || true)];
+  }, [localFolders, folders]);
+
   /* Apply search + filters */
   const q = (search || '').trim().toLowerCase();
   const results = useMemo(() => {
     let out = enriched.filter((d) => {
+      /* Folder scope: null = unfoldered docs only; string = that folder */
+      if (selectedFolderId === null) {
+        if (d.folderId) return false;
+      } else {
+        if (d.folderId !== selectedFolderId) return false;
+      }
       if (filters.status.length && !filters.status.includes(d.status)) return false;
       if (filters.type.length && !filters.type.includes(d.type)) return false;
       if (filters.matter.length && !filters.matter.includes(d.matter)) return false;
@@ -674,7 +691,13 @@ export default function VaultFilesPanel({
     });
     out.sort((a, b) => (Date.parse(b.createdAt) || 0) - (Date.parse(a.createdAt) || 0));
     return out;
-  }, [enriched, filters, q]);
+  }, [enriched, filters, q, selectedFolderId]);
+
+  /* Reset to page 1 whenever the result set changes */
+  useEffect(() => { setCurrentPage(1); }, [selectedFolderId, filters, q]);
+
+  const totalPages = Math.max(1, Math.ceil(results.length / PAGE_SIZE));
+  const pagedResults = results.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   const filtersActive = filters.status.length || filters.type.length || filters.matter.length
     || filters.tags.length || filters.updatedBy.length || filters.date !== 'any';
@@ -700,8 +723,9 @@ export default function VaultFilesPanel({
   const previewIsActive = previewFile && activeDocument && activeDocument.id === previewFile.id;
   const canEditPreview = previewFile && (isOrgAdmin || previewFile.ownerId === currentUserId || !previewFile.ownerId);
 
-  const vaultEmpty = enriched.length === 0;
-  const showZero = !vaultEmpty && results.length === 0;
+  const vaultEmpty = enriched.length === 0 && allFolders.length === 0;
+  const showZero = !vaultEmpty && results.length === 0 && (selectedFolderId !== null || allFolders.length === 0);
+  const selectedFolder = selectedFolderId ? allFolders.find((f) => f.id === selectedFolderId) : null;
 
   const insideCount = q
     ? results.filter((d) => !d.name.toLowerCase().includes(q) && ((d.description || '').toLowerCase().includes(q) || (d.fileName || '').toLowerCase().includes(q))).length
@@ -941,9 +965,36 @@ export default function VaultFilesPanel({
           {/* Toolbar */}
           <div style={{ maxWidth: 1180, margin: '0 auto', padding: '20px 32px 0' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 12, borderBottom: '1px solid #ECEFF3' }}>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-                <span style={{ fontSize: 15, fontWeight: 600, color: '#16223A', fontFamily: 'ui-monospace, Menlo, monospace' }}>{results.length}</span>
-                <span style={{ fontSize: 14, color: '#6B7885' }}>document{results.length !== 1 ? 's' : ''}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                {selectedFolder && (
+                  <button
+                    onClick={() => { setSelectedFolderId(null); setCurrentPage(1); }}
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 6, height: 34,
+                      padding: '0 12px', borderRadius: 8, border: '1px solid #E7ECF1',
+                      background: '#fff', color: '#3A4654', fontSize: 13, fontWeight: 500,
+                      cursor: 'pointer', fontFamily: 'inherit',
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#0A2463'; e.currentTarget.style.color = '#0A2463'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#E7ECF1'; e.currentTarget.style.color = '#3A4654'; }}
+                  >
+                    <ChevronLeft size={14} /> All Files
+                  </button>
+                )}
+                {selectedFolder ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 22, height: 22, borderRadius: 6, background: '#F0F3F6' }}>
+                      <Folder size={13} style={{ color: '#6B7885' }} />
+                    </span>
+                    <span style={{ fontSize: 15, fontWeight: 600, color: '#16223A' }}>{selectedFolder.name}</span>
+                    <span style={{ fontSize: 13, color: '#9AA5B1' }}>· {results.length} doc{results.length !== 1 ? 's' : ''}</span>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                    <span style={{ fontSize: 15, fontWeight: 600, color: '#16223A', fontFamily: 'ui-monospace, Menlo, monospace' }}>{results.length}</span>
+                    <span style={{ fontSize: 14, color: '#6B7885' }}>unfoldered document{results.length !== 1 ? 's' : ''}</span>
+                  </div>
+                )}
               </div>
               <div style={{ display: 'inline-flex', padding: 2, borderRadius: 10, background: '#F0F3F6' }}>
                 {[
@@ -978,19 +1029,24 @@ export default function VaultFilesPanel({
                   zIndex: 5, background: '#fff', borderBottom: '1px solid #ECEFF3',
                 }}>
                   <span style={{ width: 34, flexShrink: 0 }} />
-                  <span style={{ flex: 1, fontSize: 11, fontWeight: 600, color: '#9AA5B1', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Document</span>
+                  <span style={{ flex: 1, fontSize: 11, fontWeight: 600, color: '#9AA5B1', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                    {selectedFolder ? 'Document' : 'Folder / Document'}
+                  </span>
                   <span style={{ width: 150, flexShrink: 0, fontSize: 11, fontWeight: 600, color: '#9AA5B1', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Matter</span>
                   <span style={{ width: 120, flexShrink: 0, fontSize: 11, fontWeight: 600, color: '#9AA5B1', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Category</span>
                   <span style={{ width: 160, flexShrink: 0 }} />
                 </div>
-                {localFolders.map((folder) => (
+                {/* Folders — only shown in the root (no folder selected) */}
+                {selectedFolderId === null && allFolders.map((folder) => (
                   <FolderRow
                     key={folder.id} folder={folder}
-                    onDelete={handleDeleteLocalFolder}
-                    canEdit={true}
+                    docCount={enriched.filter((d) => d.folderId === folder.id).length}
+                    onNavigate={(id) => { setSelectedFolderId(id); setCurrentPage(1); }}
+                    onDelete={localFolders.some((lf) => lf.id === folder.id) ? handleDeleteLocalFolder : undefined}
+                    canEdit={localFolders.some((lf) => lf.id === folder.id)}
                   />
                 ))}
-                {results.map((f) => (
+                {pagedResults.map((f) => (
                   <FileRow
                     key={f.id} file={f}
                     isPreview={previewId === f.id}
@@ -1003,27 +1059,42 @@ export default function VaultFilesPanel({
                     canEdit={isOrgAdmin || f.ownerId === currentUserId || !f.ownerId}
                   />
                 ))}
+                <Pagination currentPage={currentPage} totalPages={totalPages} onChange={(p) => setCurrentPage(p)} />
               </div>
             ) : (
-              <div style={{ display: 'grid', gap: 16, paddingTop: 16, gridTemplateColumns: 'repeat(auto-fill, minmax(232px, 1fr))' }}>
-                {localFolders.map((folder) => (
-                  <FolderCard
-                    key={folder.id} folder={folder}
-                    onDelete={handleDeleteLocalFolder}
-                    canEdit={true}
-                  />
-                ))}
-                {results.map((f) => (
-                  <GridCard
-                    key={f.id} file={f}
-                    isPreview={previewId === f.id}
-                    onPreview={onPreview}
-                    onUse={onUse}
-                    onEdit={onEdit}
-                    onDelete={onDelete}
-                    canEdit={isOrgAdmin || f.ownerId === currentUserId || !f.ownerId}
-                  />
-                ))}
+              <div>
+                {/* Folder cards — only in root view */}
+                {selectedFolderId === null && allFolders.length > 0 && (
+                  <div style={{ display: 'grid', gap: 16, paddingTop: 16, gridTemplateColumns: 'repeat(auto-fill, minmax(232px, 1fr))', paddingBottom: 8 }}>
+                    {allFolders.map((folder) => (
+                      <FolderCard
+                        key={folder.id} folder={folder}
+                        docCount={enriched.filter((d) => d.folderId === folder.id).length}
+                        onNavigate={(id) => { setSelectedFolderId(id); setCurrentPage(1); }}
+                        onDelete={localFolders.some((lf) => lf.id === folder.id) ? handleDeleteLocalFolder : undefined}
+                        canEdit={localFolders.some((lf) => lf.id === folder.id)}
+                      />
+                    ))}
+                  </div>
+                )}
+                {/* Divider between folders + docs in grid root */}
+                {selectedFolderId === null && allFolders.length > 0 && pagedResults.length > 0 && (
+                  <div style={{ margin: '8px 0 16px', borderBottom: '1px solid #ECEFF3' }} />
+                )}
+                <div style={{ display: 'grid', gap: 16, gridTemplateColumns: 'repeat(auto-fill, minmax(232px, 1fr))' }}>
+                  {pagedResults.map((f) => (
+                    <GridCard
+                      key={f.id} file={f}
+                      isPreview={previewId === f.id}
+                      onPreview={onPreview}
+                      onUse={onUse}
+                      onEdit={onEdit}
+                      onDelete={onDelete}
+                      canEdit={isOrgAdmin || f.ownerId === currentUserId || !f.ownerId}
+                    />
+                  ))}
+                </div>
+                <Pagination currentPage={currentPage} totalPages={totalPages} onChange={(p) => setCurrentPage(p)} />
               </div>
             )}
           </div>
@@ -1258,17 +1329,20 @@ function NewFolderModal({ onClose, onCreate }) {
 
 /* ─── Folder row (list view) ────────────────────────────────────── */
 
-function FolderRow({ folder, onDelete, canEdit }) {
+function FolderRow({ folder, docCount = 0, onNavigate, onDelete, canEdit }) {
   const [hovered, setHovered] = useState(false);
   const meta = folder.category ? STATUS_META[folder.category] : null;
   return (
     <div
+      onClick={() => onNavigate && onNavigate(folder.id)}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
         display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px',
         borderBottom: '1px solid #F2F5F8', minHeight: 54,
-        background: hovered ? '#FAFBFC' : 'transparent',
+        background: hovered ? '#F8F4ED' : 'transparent',
+        cursor: onNavigate ? 'pointer' : 'default',
+        transition: 'background 100ms',
       }}
     >
       {/* Icon tile: category dot or plain folder */}
@@ -1283,29 +1357,41 @@ function FolderRow({ folder, onDelete, canEdit }) {
         }
       </span>
       <div style={{ flex: 1, minWidth: 0, paddingRight: 8 }}>
-        <span style={{ fontSize: 14, fontWeight: 500, color: '#16223A' }}>{folder.name}</span>
-        <div style={{ fontSize: 12, color: '#9AA5B1', marginTop: 2 }}>
-          Folder · {folder.docCount || 0} document{folder.docCount !== 1 ? 's' : ''}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontSize: 14, fontWeight: 500, color: '#16223A' }}>{folder.name}</span>
+          <span style={{ fontSize: 11.5, color: '#9AA5B1' }}>{docCount} doc{docCount !== 1 ? 's' : ''}</span>
         </div>
+        <div style={{ fontSize: 12, color: '#9AA5B1', marginTop: 1 }}>Folder</div>
       </div>
       <div style={{ width: 150, flexShrink: 0 }} />
       <div style={{ width: 120, flexShrink: 0 }}>
         {meta && <StatusChip status={folder.category} />}
       </div>
       <div style={{ width: 160, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }} onClick={(e) => e.stopPropagation()}>
-        {canEdit && (
+        {onNavigate && (
+          <button style={{
+            height: 32, padding: '0 12px', borderRadius: 8, border: '1px solid #E7ECF1',
+            background: '#fff', color: '#0A2463', fontSize: 12.5, fontWeight: 500,
+            cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 5,
+            fontFamily: 'inherit',
+          }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = '#EEF1F8'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; }}
+            onClick={(e) => { e.stopPropagation(); onNavigate(folder.id); }}
+          >Open <ChevronRight size={13} /></button>
+        )}
+        {canEdit && onDelete && (
           <button
-            onClick={() => onDelete(folder.id)}
+            onClick={(e) => { e.stopPropagation(); onDelete(folder.id); }}
             title="Delete folder"
             style={{
-              height: 32, padding: '0 12px', borderRadius: 8, border: '1px solid #E7ECF1',
+              width: 32, height: 32, borderRadius: 8, border: '1px solid #E7ECF1',
               background: '#fff', color: '#C65454', fontSize: 12.5, fontWeight: 500,
-              cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6,
-              fontFamily: 'inherit',
+              cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
             }}
             onMouseEnter={(e) => { e.currentTarget.style.background = '#FBEDED'; e.currentTarget.style.borderColor = '#E8BABA'; }}
             onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.borderColor = '#E7ECF1'; }}
-          ><Trash2 size={13} /> Delete</button>
+          ><Trash2 size={13} /></button>
         )}
       </div>
     </div>
@@ -1314,11 +1400,12 @@ function FolderRow({ folder, onDelete, canEdit }) {
 
 /* ─── Folder card (grid view) ───────────────────────────────────── */
 
-function FolderCard({ folder, onDelete, canEdit }) {
+function FolderCard({ folder, docCount = 0, onNavigate, onDelete, canEdit }) {
   const [hovered, setHovered] = useState(false);
   const meta = folder.category ? STATUS_META[folder.category] : null;
   return (
     <div
+      onClick={() => onNavigate && onNavigate(folder.id)}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
@@ -1326,6 +1413,7 @@ function FolderCard({ folder, onDelete, canEdit }) {
         border: '1px solid ' + (hovered ? '#C9A84C' : '#ECEFF3'),
         boxShadow: hovered ? '0 8px 24px -10px rgba(10,36,99,0.18)' : '0 1px 2px rgba(10,36,99,0.04)',
         display: 'flex', flexDirection: 'column', transition: 'all 150ms',
+        cursor: onNavigate ? 'pointer' : 'default',
       }}
     >
       {/* Tile top */}
@@ -1348,25 +1436,99 @@ function FolderCard({ folder, onDelete, canEdit }) {
       <div style={{ padding: '14px', flex: 1, display: 'flex', flexDirection: 'column' }}>
         <div style={{ fontSize: 13.5, fontWeight: 500, color: '#16223A', lineHeight: 1.35 }}>{folder.name}</div>
         <div style={{ fontSize: 11.5, color: '#9AA5B1', marginTop: 6 }}>
-          {folder.docCount || 0} document{folder.docCount !== 1 ? 's' : ''}
+          {docCount} document{docCount !== 1 ? 's' : ''}
         </div>
         {meta && <div style={{ marginTop: 8 }}><StatusChip status={folder.category} /></div>}
-        {canEdit && (
-          <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid #F2F5F8' }}>
+        <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid #F2F5F8', display: 'flex', gap: 6 }}>
+          {onNavigate && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onNavigate(folder.id); }}
+              style={{
+                flex: 1, height: 32, borderRadius: 8, border: 'none',
+                background: '#0A2463', color: '#fff', fontSize: 12.5, fontWeight: 600,
+                cursor: 'pointer', display: 'inline-flex', alignItems: 'center',
+                justifyContent: 'center', gap: 5, fontFamily: 'inherit',
+              }}
+            >Open <ChevronRight size={13} /></button>
+          )}
+          {canEdit && onDelete && (
             <button
               onClick={(e) => { e.stopPropagation(); onDelete(folder.id); }}
               style={{
-                width: '100%', height: 32, borderRadius: 8, border: '1px solid #E7ECF1',
+                width: 32, height: 32, borderRadius: 8, border: '1px solid #E7ECF1',
                 background: '#fff', color: '#C65454', fontSize: 12.5, fontWeight: 500,
-                cursor: 'pointer', display: 'inline-flex', alignItems: 'center',
-                justifyContent: 'center', gap: 6, fontFamily: 'inherit',
+                cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
               }}
               onMouseEnter={(e) => { e.currentTarget.style.background = '#FBEDED'; e.currentTarget.style.borderColor = '#E8BABA'; }}
               onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.borderColor = '#E7ECF1'; }}
-            ><Trash2 size={13} /> Delete</button>
-          </div>
-        )}
+            ><Trash2 size={13} /></button>
+          )}
+        </div>
       </div>
+    </div>
+  );
+}
+
+/* ─── Pagination ─────────────────────────────────────────────────── */
+
+function Pagination({ currentPage, totalPages, onChange }) {
+  if (totalPages <= 1) return null;
+
+  /* Show at most 5 page numbers centered around currentPage */
+  const pages = [];
+  const half = 2;
+  let start = Math.max(1, currentPage - half);
+  let end = Math.min(totalPages, start + 4);
+  if (end - start < 4) start = Math.max(1, end - 4);
+  for (let i = start; i <= end; i++) pages.push(i);
+
+  const btnBase = {
+    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+    minWidth: 34, height: 34, borderRadius: 8, border: '1px solid #E7ECF1',
+    background: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 500,
+    fontFamily: 'inherit', transition: 'all 100ms',
+  };
+
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, padding: '20px 0 8px' }}>
+      <button
+        onClick={() => onChange(currentPage - 1)}
+        disabled={currentPage === 1}
+        style={{ ...btnBase, color: currentPage === 1 ? '#C7CFD8' : '#4A5663', borderColor: currentPage === 1 ? '#F0F3F6' : '#E7ECF1' }}
+        onMouseEnter={(e) => { if (currentPage > 1) { e.currentTarget.style.borderColor = '#0A2463'; e.currentTarget.style.color = '#0A2463'; } }}
+        onMouseLeave={(e) => { if (currentPage > 1) { e.currentTarget.style.borderColor = '#E7ECF1'; e.currentTarget.style.color = '#4A5663'; } }}
+      >
+        <ChevronLeft size={15} />
+      </button>
+      {start > 1 && <>
+        <button onClick={() => onChange(1)} style={{ ...btnBase, color: '#4A5663' }}>1</button>
+        {start > 2 && <span style={{ fontSize: 13, color: '#9AA5B1', padding: '0 4px' }}>…</span>}
+      </>}
+      {pages.map((n) => (
+        <button
+          key={n} onClick={() => onChange(n)}
+          style={{
+            ...btnBase,
+            background: n === currentPage ? '#0A2463' : '#fff',
+            color: n === currentPage ? '#fff' : '#4A5663',
+            border: '1px solid ' + (n === currentPage ? '#0A2463' : '#E7ECF1'),
+            fontWeight: n === currentPage ? 700 : 500,
+          }}
+        >{n}</button>
+      ))}
+      {end < totalPages && <>
+        {end < totalPages - 1 && <span style={{ fontSize: 13, color: '#9AA5B1', padding: '0 4px' }}>…</span>}
+        <button onClick={() => onChange(totalPages)} style={{ ...btnBase, color: '#4A5663' }}>{totalPages}</button>
+      </>}
+      <button
+        onClick={() => onChange(currentPage + 1)}
+        disabled={currentPage === totalPages}
+        style={{ ...btnBase, color: currentPage === totalPages ? '#C7CFD8' : '#4A5663', borderColor: currentPage === totalPages ? '#F0F3F6' : '#E7ECF1' }}
+        onMouseEnter={(e) => { if (currentPage < totalPages) { e.currentTarget.style.borderColor = '#0A2463'; e.currentTarget.style.color = '#0A2463'; } }}
+        onMouseLeave={(e) => { if (currentPage < totalPages) { e.currentTarget.style.borderColor = '#E7ECF1'; e.currentTarget.style.color = '#4A5663'; } }}
+      >
+        <ChevronRight size={15} />
+      </button>
     </div>
   );
 }
