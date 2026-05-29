@@ -4,7 +4,7 @@ import {
   Image as ImageIcon, Mail, Download, Folder, Tag, Calendar, User,
   Sparkles, Eye, ExternalLink, Sliders, MoreHorizontal, Trash2,
   Upload, FilePlus, Inbox, Workflow, Package, FolderInput, MessageSquare,
-  FolderUp, FileUp, Pencil,
+  FolderUp, FileUp, Pencil, FolderPlus,
 } from 'lucide-react';
 
 /* ─── Type / status / scope metadata ─────────────────────────────── */
@@ -701,6 +701,26 @@ export default function VaultFilesPanel({
   const [toast, setToast] = useState(null);
   const toastTimer = useRef(null);
   const folderUploadRef = useRef(null);
+  /* New Folder */
+  const [localFolders, setLocalFolders] = useState([]);
+  const [showNewFolderModal, setShowNewFolderModal] = useState(false);
+
+  const handleCreateFolder = ({ name, category }) => {
+    setLocalFolders((prev) => [{
+      id: `local-folder-${Date.now()}`,
+      name, category,
+      docCount: 0,
+      created: new Date().toISOString(),
+    }, ...prev]);
+    setShowNewFolderModal(false);
+    flash(<span>Folder <strong>{name}</strong> created</span>);
+  };
+
+  const handleDeleteLocalFolder = (id) => {
+    const f = localFolders.find((x) => x.id === id);
+    setLocalFolders((prev) => prev.filter((x) => x.id !== id));
+    if (f) flash(<span>Folder <strong>{f.name}</strong> deleted</span>);
+  };
 
   const flash = (msg) => {
     setToast(msg);
@@ -895,6 +915,19 @@ export default function VaultFilesPanel({
                     {src.name}
                   </button>
                 ))}
+                {/* New Folder — ghost with dashed border to signal "create"
+                   vs the solid/outlined "upload" actions to its right. */}
+                <button onClick={() => setShowNewFolderModal(true)} style={{
+                  height: 40, padding: '0 16px', borderRadius: 12,
+                  border: '1.5px dashed #9AA5B1',
+                  background: '#fff', color: '#4A5663', fontSize: 13.5, fontWeight: 600,
+                  cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8, fontFamily: 'inherit',
+                }}
+                  onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#0A2463'; e.currentTarget.style.color = '#0A2463'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#9AA5B1'; e.currentTarget.style.color = '#4A5663'; }}
+                >
+                  <FolderPlus size={15} /> New Folder
+                </button>
                 {/* Upload Folder — SECONDARY: navy-outlined so it reads as a
                    native upload action, distinct from the gray connector
                    buttons (Google Drive / iManage / OneDrive) to its left. */}
@@ -1083,7 +1116,7 @@ export default function VaultFilesPanel({
           {/* Content */}
           <div style={{ maxWidth: 1180, margin: '0 auto', padding: '4px 32px 100px' }}>
             {vaultEmpty ? (
-              <EmptyVault onUpload={() => folderUploadRef.current?.click()} onCreateNew={onCreateNew} />
+              <EmptyVault onUpload={() => folderUploadRef.current?.click()} onCreateNew={onCreateNew} onNewFolder={() => setShowNewFolderModal(true)} />
             ) : showZero ? (
               <EmptyResults query={search} onClear={clearAll} />
             ) : view === 'list' ? (
@@ -1102,6 +1135,13 @@ export default function VaultFilesPanel({
                   <span style={{ width: 120, flexShrink: 0, fontSize: 11, fontWeight: 600, color: '#9AA5B1', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Category</span>
                   <span style={{ width: 160, flexShrink: 0 }} />
                 </div>
+                {localFolders.map((folder) => (
+                  <FolderRow
+                    key={folder.id} folder={folder}
+                    onDelete={handleDeleteLocalFolder}
+                    canEdit={true}
+                  />
+                ))}
                 {results.map((f) => (
                   <FileRow
                     key={f.id} file={f}
@@ -1122,6 +1162,13 @@ export default function VaultFilesPanel({
               </div>
             ) : (
               <div style={{ display: 'grid', gap: 16, paddingTop: 16, gridTemplateColumns: 'repeat(auto-fill, minmax(232px, 1fr))' }}>
+                {localFolders.map((folder) => (
+                  <FolderCard
+                    key={folder.id} folder={folder}
+                    onDelete={handleDeleteLocalFolder}
+                    canEdit={true}
+                  />
+                ))}
                 {results.map((f) => (
                   <GridCard
                     key={f.id} file={f}
@@ -1154,11 +1201,17 @@ export default function VaultFilesPanel({
           onDelete={(f) => { setPreviewId(null); onDelete && onDelete(f.id); }}
         />
       )}
+      {showNewFolderModal && (
+        <NewFolderModal
+          onClose={() => setShowNewFolderModal(false)}
+          onCreate={handleCreateFolder}
+        />
+      )}
     </div>
   );
 }
 
-function EmptyVault({ onUpload, onCreateNew }) {
+function EmptyVault({ onUpload, onCreateNew, onNewFolder }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '88px 24px', textAlign: 'center' }}>
       <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 56, height: 56, borderRadius: 18, background: '#F0F3F6', marginBottom: 16 }}>
@@ -1166,9 +1219,14 @@ function EmptyVault({ onUpload, onCreateNew }) {
       </span>
       <h3 style={{ margin: 0, fontSize: 17, fontWeight: 600, color: '#16223A' }}>Nothing in YourVault yet</h3>
       <p style={{ margin: '8px 0 0', fontSize: 14, color: '#6B7885', maxWidth: 360, lineHeight: 1.5 }}>
-        Pull documents in from a connected source, upload from your device, or draft a new document.
+        Pull documents in from a connected source, upload from your device, or create a folder to organise your files.
       </p>
-      <div style={{ display: 'flex', gap: 8, marginTop: 22 }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 22, justifyContent: 'center' }}>
+        <button onClick={onNewFolder} style={{
+          height: 40, padding: '0 16px', borderRadius: 12, border: '1.5px dashed #9AA5B1',
+          background: '#fff', color: '#4A5663', fontSize: 13.5, fontWeight: 600, cursor: 'pointer',
+          display: 'inline-flex', alignItems: 'center', gap: 8, fontFamily: 'inherit',
+        }}><FolderPlus size={15} /> New Folder</button>
         <button onClick={onUpload} style={{
           height: 40, padding: '0 16px', borderRadius: 12, border: '1.5px solid #0A2463',
           background: '#fff', color: '#0A2463', fontSize: 13.5, fontWeight: 600, cursor: 'pointer',
@@ -1179,6 +1237,296 @@ function EmptyVault({ onUpload, onCreateNew }) {
           background: '#0A2463', color: '#fff', fontSize: 13.5, fontWeight: 600, cursor: 'pointer',
           display: 'inline-flex', alignItems: 'center', gap: 8, fontFamily: 'inherit',
         }}><FileUp size={15} /> Upload Document</button>
+      </div>
+    </div>
+  );
+}
+
+/* ─── New Folder Modal ─────────────────────────────────────────── */
+
+function NewFolderModal({ onClose, onCreate }) {
+  const [name, setName] = useState('');
+  const [category, setCategory] = useState('');
+  const nameRef = useRef(null);
+
+  useEffect(() => { nameRef.current?.focus(); }, []);
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!name.trim()) return;
+    onCreate({ name: name.trim(), category: category || null });
+  };
+
+  const closeBtnStyle = {
+    width: 30, height: 30, borderRadius: 8, border: 'none', background: 'transparent',
+    color: '#9AA5B1', cursor: 'pointer', display: 'inline-flex',
+    alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+  };
+
+  return (
+    <>
+      <div
+        onClick={onClose}
+        style={{ position: 'fixed', inset: 0, background: 'rgba(10,36,99,0.20)', zIndex: 200 }}
+      />
+      <div style={{
+        position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
+        width: 428, borderRadius: 18, background: '#fff', zIndex: 201,
+        border: '1px solid #E7ECF1', boxShadow: '0 28px 64px -12px rgba(10,36,99,0.28)',
+        padding: '24px',
+      }}>
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 22 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{
+              width: 34, height: 34, borderRadius: 10, background: '#F0F3F6',
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <FolderPlus size={17} style={{ color: '#6B7885' }} />
+            </span>
+            <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: '#16223A' }}>New Folder</h3>
+          </div>
+          <button
+            onClick={onClose}
+            style={closeBtnStyle}
+            onMouseEnter={(e) => { e.currentTarget.style.background = '#F0F3F6'; e.currentTarget.style.color = '#0A2463'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#9AA5B1'; }}
+          ><X size={17} /></button>
+        </div>
+
+        <form onSubmit={handleSubmit}>
+          {/* Folder name */}
+          <div style={{ marginBottom: 20 }}>
+            <label style={{
+              display: 'block', fontSize: 11.5, fontWeight: 600, color: '#6B7885',
+              letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 7,
+              fontFamily: 'ui-monospace, Menlo, monospace',
+            }}>Folder Name</label>
+            <input
+              ref={nameRef}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g. Discovery Documents"
+              style={{
+                width: '100%', height: 44, padding: '0 14px', borderRadius: 10,
+                border: '1.5px solid #E7ECF1', fontSize: 14, color: '#16223A',
+                outline: 'none', fontFamily: 'inherit', background: '#fff',
+                boxSizing: 'border-box', transition: 'border-color 150ms',
+              }}
+              onFocus={(e) => { e.target.style.borderColor = '#0A2463'; e.target.style.boxShadow = '0 0 0 3px rgba(10,36,99,0.07)'; }}
+              onBlur={(e) => { e.target.style.borderColor = '#E7ECF1'; e.target.style.boxShadow = 'none'; }}
+            />
+          </div>
+
+          {/* Category (optional) */}
+          <div style={{ marginBottom: 20 }}>
+            <label style={{
+              display: 'block', fontSize: 11.5, fontWeight: 600, color: '#6B7885',
+              letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 7,
+              fontFamily: 'ui-monospace, Menlo, monospace',
+            }}>
+              Category{' '}
+              <span style={{ fontWeight: 400, textTransform: 'none', opacity: 0.7, letterSpacing: 0 }}>
+                (optional)
+              </span>
+            </label>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              {Object.entries(STATUS_META).map(([key, meta]) => {
+                const active = category === key;
+                return (
+                  <button
+                    key={key} type="button"
+                    onClick={() => setCategory((c) => c === key ? '' : key)}
+                    style={{
+                      height: 34, padding: '0 14px', borderRadius: 999, cursor: 'pointer',
+                      border: '1.5px solid ' + (active ? meta.dot : '#E7ECF1'),
+                      background: active ? meta.bg : '#fff',
+                      color: active ? meta.fg : '#4A5663',
+                      fontSize: 13, fontWeight: active ? 600 : 400,
+                      display: 'inline-flex', alignItems: 'center', gap: 7,
+                      fontFamily: 'inherit', transition: 'all 120ms',
+                    }}
+                  >
+                    <span style={{ width: 7, height: 7, borderRadius: '50%', background: meta.dot, flexShrink: 0 }} />
+                    {key}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Live preview */}
+          <div style={{
+            marginBottom: 22, padding: '12px 14px', borderRadius: 10,
+            background: '#FAFBFC', border: '1px solid #F0F3F6',
+            display: 'flex', alignItems: 'center', gap: 12,
+          }}>
+            {category ? (
+              <span style={{
+                width: 36, height: 36, borderRadius: 10, flexShrink: 0,
+                background: STATUS_META[category].bg,
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <span style={{ width: 11, height: 11, borderRadius: '50%', background: STATUS_META[category].dot }} />
+              </span>
+            ) : (
+              <span style={{
+                width: 36, height: 36, borderRadius: 10, flexShrink: 0,
+                background: '#F0F3F6',
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <Folder size={17} style={{ color: '#9AA5B1' }} />
+              </span>
+            )}
+            <span style={{
+              fontSize: 14, fontWeight: 500,
+              color: name.trim() ? '#16223A' : '#B6BFC9',
+              fontStyle: name.trim() ? 'normal' : 'italic',
+            }}>
+              {name.trim() || 'Folder name'}
+            </span>
+          </div>
+
+          {/* Actions */}
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button type="button" onClick={onClose} style={{
+              flex: 1, height: 42, borderRadius: 10, border: '1px solid #E7ECF1',
+              background: '#fff', color: '#3A4654', fontSize: 13.5, fontWeight: 500,
+              cursor: 'pointer', fontFamily: 'inherit',
+            }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = '#F4F6F8'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; }}
+            >Cancel</button>
+            <button type="submit" disabled={!name.trim()} style={{
+              flex: 2, height: 42, borderRadius: 10, border: 'none',
+              background: name.trim() ? '#0A2463' : '#E7ECF1',
+              color: name.trim() ? '#fff' : '#9AA5B1',
+              fontSize: 13.5, fontWeight: 600,
+              cursor: name.trim() ? 'pointer' : 'default',
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+              gap: 8, fontFamily: 'inherit',
+            }}>
+              <FolderPlus size={15} /> Create Folder
+            </button>
+          </div>
+        </form>
+      </div>
+    </>
+  );
+}
+
+/* ─── Folder row (list view) ────────────────────────────────────── */
+
+function FolderRow({ folder, onDelete, canEdit }) {
+  const [hovered, setHovered] = useState(false);
+  const meta = folder.category ? STATUS_META[folder.category] : null;
+  return (
+    <div
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px',
+        borderBottom: '1px solid #F2F5F8', minHeight: 54,
+        background: hovered ? '#FAFBFC' : 'transparent',
+      }}
+    >
+      <span style={{ width: 20, flexShrink: 0 }} />
+      <span style={{ width: 17, flexShrink: 0 }} />
+      {/* Icon tile: category dot or plain folder */}
+      <span style={{
+        width: 34, height: 34, borderRadius: 8, flexShrink: 0,
+        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+        background: meta ? meta.bg : '#F0F3F6',
+      }}>
+        {meta
+          ? <span style={{ width: 10, height: 10, borderRadius: '50%', background: meta.dot }} />
+          : <Folder size={16} style={{ color: '#9AA5B1' }} />
+        }
+      </span>
+      <div style={{ flex: 1, minWidth: 0, paddingRight: 8 }}>
+        <span style={{ fontSize: 14, fontWeight: 500, color: '#16223A' }}>{folder.name}</span>
+        <div style={{ fontSize: 12, color: '#9AA5B1', marginTop: 2 }}>
+          Folder · {folder.docCount || 0} document{folder.docCount !== 1 ? 's' : ''}
+        </div>
+      </div>
+      <div style={{ width: 150, flexShrink: 0 }} />
+      <div style={{ width: 120, flexShrink: 0 }}>
+        {meta && <StatusChip status={folder.category} />}
+      </div>
+      <div style={{ width: 160, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }} onClick={(e) => e.stopPropagation()}>
+        {canEdit && (
+          <button
+            onClick={() => onDelete(folder.id)}
+            title="Delete folder"
+            style={{
+              height: 32, padding: '0 12px', borderRadius: 8, border: '1px solid #E7ECF1',
+              background: '#fff', color: '#C65454', fontSize: 12.5, fontWeight: 500,
+              cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6,
+              fontFamily: 'inherit',
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = '#FBEDED'; e.currentTarget.style.borderColor = '#E8BABA'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.borderColor = '#E7ECF1'; }}
+          ><Trash2 size={13} /> Delete</button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ─── Folder card (grid view) ───────────────────────────────────── */
+
+function FolderCard({ folder, onDelete, canEdit }) {
+  const [hovered, setHovered] = useState(false);
+  const meta = folder.category ? STATUS_META[folder.category] : null;
+  return (
+    <div
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        borderRadius: 12, background: '#fff', overflow: 'hidden',
+        border: '1px solid ' + (hovered ? '#C9A84C' : '#ECEFF3'),
+        boxShadow: hovered ? '0 8px 24px -10px rgba(10,36,99,0.18)' : '0 1px 2px rgba(10,36,99,0.04)',
+        display: 'flex', flexDirection: 'column', transition: 'all 150ms',
+      }}
+    >
+      {/* Tile top */}
+      <div style={{
+        height: 130, display: 'flex', alignItems: 'center', justifyContent: 'center',
+        background: meta ? meta.bg : '#F4F6F8',
+      }}>
+        {meta ? (
+          <span style={{
+            width: 52, height: 52, borderRadius: 16, background: meta.dot + '22',
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <span style={{ width: 18, height: 18, borderRadius: '50%', background: meta.dot }} />
+          </span>
+        ) : (
+          <Folder size={40} style={{ color: '#C7CFD8' }} />
+        )}
+      </div>
+      {/* Body */}
+      <div style={{ padding: '14px', flex: 1, display: 'flex', flexDirection: 'column' }}>
+        <div style={{ fontSize: 13.5, fontWeight: 500, color: '#16223A', lineHeight: 1.35 }}>{folder.name}</div>
+        <div style={{ fontSize: 11.5, color: '#9AA5B1', marginTop: 6 }}>
+          {folder.docCount || 0} document{folder.docCount !== 1 ? 's' : ''}
+        </div>
+        {meta && <div style={{ marginTop: 8 }}><StatusChip status={folder.category} /></div>}
+        {canEdit && (
+          <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid #F2F5F8' }}>
+            <button
+              onClick={(e) => { e.stopPropagation(); onDelete(folder.id); }}
+              style={{
+                width: '100%', height: 32, borderRadius: 8, border: '1px solid #E7ECF1',
+                background: '#fff', color: '#C65454', fontSize: 12.5, fontWeight: 500,
+                cursor: 'pointer', display: 'inline-flex', alignItems: 'center',
+                justifyContent: 'center', gap: 6, fontFamily: 'inherit',
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = '#FBEDED'; e.currentTarget.style.borderColor = '#E8BABA'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.borderColor = '#E7ECF1'; }}
+            ><Trash2 size={13} /> Delete</button>
+          </div>
+        )}
       </div>
     </div>
   );
