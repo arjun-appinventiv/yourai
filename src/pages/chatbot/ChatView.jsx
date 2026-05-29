@@ -2492,7 +2492,6 @@ function DocumentVaultPanel({
   const [askExplanation, setAskExplanation] = useState('');
   const [openFilterMenu, setOpenFilterMenu] = useState(null); // 'date' | 'uploader' | 'type' | 'sort' | null
   const [viewMode, setViewMode] = useState('list'); // 'list' | 'grid'
-  const [expandedMatters, setExpandedMatters] = useState(() => new Set(['m3'])); // Acme Corp expanded by default
 
   const clearAllFilters = () => {
     setDateFilter('any');
@@ -2987,99 +2986,8 @@ Rules:
         <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", letterSpacing: '0.08em', textTransform: 'uppercase' }}>YourVault</span>
       </div>
 
-      {/* Body — left rail + main pane.
-          Designer note (YourVault mockup):
-            • Hero: "Ask across your documents" + subtitle + Upload / New Document on right
-            • Big Ask-anything bar centered below hero (replaces the small toolbar input)
-            • Step-numbered toolbar: 1. Visualize (List/Grid) · context · 3. Refine · 4. Move hint
-            • "Inspect" right rail (selected-doc details) — phased in as a follow-up
-              once a `selectedDocId` state is added; the detail strip on row hover
-              already conveys the key fields. */}
+      {/* Body — full-width files panel (no left rail) */}
       <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
-        {/* ── LEFT RAIL: Matters / Filter / My Folders ── */}
-        <div style={{ width: 300, flexShrink: 0, borderRight: '1px solid var(--border)', background: '#FAF8F4', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-          <div style={{ flex: 1, overflowY: 'auto', paddingBottom: 16 }}>
-            {/* MATTERS section */}
-            {(() => {
-              const MATTERS = [
-                { id: 'm1', name: 'Meridian v. Apex', count: 4, color: '#7c6ee6', folders: [] },
-                { id: 'm2', name: 'Harper Trust', count: 2, color: '#5fb86d', folders: [] },
-                { id: 'm3', name: 'Acme Corp', count: 12, color: '#e6a23c', folders: [
-                  { id: 'f-contracts', name: 'Contracts', count: 5, active: true },
-                  { id: 'f-pleadings', name: 'Pleadings', count: 2 },
-                  { id: 'f-discovery', name: 'Discovery', count: 3, hasActivity: true },
-                  { id: 'f-correspondence', name: 'Correspondence', count: 1 },
-                  { id: 'f-workproduct', name: 'Work Product', count: 1, hasActivity: true },
-                ]},
-                { id: 'm4', name: 'Series B Funding', count: 3, color: '#4a90e2', folders: [] },
-                { id: 'm5', name: 'Unassigned', count: 1, color: '#6b7280', folders: [] },
-              ];
-              return (
-                <>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 16px 8px' }}>
-                    <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}>Matters</span>
-                    <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--gold)', letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}>{MATTERS.filter(m => m.id !== 'm5').length} Active</span>
-                  </div>
-                  {MATTERS.map((matter) => {
-                    const isExpanded = expandedMatters.has(matter.id);
-                    return (
-                      <div key={matter.id}>
-                        <div
-                          onClick={() => {
-                            const next = new Set(expandedMatters);
-                            if (isExpanded) next.delete(matter.id); else next.add(matter.id);
-                            setExpandedMatters(next);
-                            if (matter.id !== 'm3') goToAllDocs();
-                          }}
-                          style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 12px 7px 14px', cursor: 'pointer', borderRadius: 6, margin: '1px 6px', transition: 'background 100ms' }}
-                          onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(15,23,42,0.04)'; }}
-                          onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
-                        >
-                          <ChevronRight size={13} style={{ color: 'var(--text-muted)', flexShrink: 0, transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 150ms' }} />
-                          <span style={{ width: 9, height: 9, borderRadius: '50%', background: matter.color, flexShrink: 0 }} />
-                          <span style={{ flex: 1, fontSize: 14, fontWeight: 500, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{matter.name}</span>
-                          <span style={{ fontSize: 13, color: 'var(--text-muted)', flexShrink: 0 }}>{matter.count}</span>
-                        </div>
-                        {isExpanded && matter.folders.length > 0 && (
-                          <div style={{ marginLeft: 12 }}>
-                            {matter.folders.map((sf) => {
-                              const realFolderId = visibleFolders.find(f => f.name === sf.name)?.id || null;
-                              const isActive = currentFolderId && currentFolderId === realFolderId;
-                              return (
-                                <div
-                                  key={sf.id}
-                                  onClick={() => realFolderId ? setCurrentFolderId(realFolderId) : null}
-                                  style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px 6px 14px', cursor: 'pointer', borderRadius: 6, margin: '1px 6px', background: isActive ? 'var(--navy)' : 'transparent', transition: 'background 100ms' }}
-                                  onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = 'rgba(15,23,42,0.06)'; }}
-                                  onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
-                                >
-                                  <Folder size={14} style={{ color: isActive ? '#d4b96a' : '#c9a04a', flexShrink: 0 }} />
-                                  <span style={{ flex: 1, fontSize: 13.5, color: isActive ? '#fff' : 'var(--text-primary)', fontWeight: isActive ? 600 : 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sf.name}</span>
-                                  <span style={{ fontSize: 12, color: isActive ? 'rgba(255,255,255,0.65)' : 'var(--text-muted)', flexShrink: 0 }}>{sf.count}</span>
-                                  {sf.hasActivity && <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#e55151', flexShrink: 0 }} />}
-                                </div>
-                              );
-                            })}
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 10px 5px 14px', cursor: 'pointer', margin: '1px 6px', color: 'var(--text-muted)', fontSize: 13 }}
-                              onClick={() => setCreatingFolder(true)}
-                              onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--navy)'; }}
-                              onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; }}
-                            >
-                              <Plus size={12} /> Add sub-folder
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </>
-              );
-            })()}
-
-          </div>
-        </div>
-
-        {/* ── MAIN AREA (redesigned files panel) ── */}
         <VaultFilesPanel
           docs={scopedDocs}
           folders={visibleFolders}
