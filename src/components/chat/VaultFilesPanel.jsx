@@ -263,7 +263,7 @@ function withinDate(createdAt, range) {
 
 /* ─── Row + Grid card ──────────────────────────────────────────── */
 
-function FileRow({ file, selected, isPreview, expanded, query, onSelect, onPreview, onExpand, onUse, onMore }) {
+function FileRow({ file, selected, isPreview, expanded, query, isActive, onSelect, onPreview, onExpand, onUse, onMore }) {
   const insideMatch = query && !file.name.toLowerCase().includes(query.toLowerCase());
   const [hovered, setHovered] = useState(false);
   const rowBg = isPreview ? '#FBF6EA' : selected ? '#FCF9F2' : hovered ? '#FAFBFC' : 'transparent';
@@ -323,25 +323,24 @@ function FileRow({ file, selected, isPreview, expanded, query, onSelect, onPrevi
           <span style={{ width: 6, height: 6, borderRadius: '50%', background: matterDot(file.matter), flexShrink: 0 }} />
           <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{file.matter}</span>
         </div>
-        <div style={{ width: 150, flexShrink: 0, display: 'flex', alignItems: 'center', gap: 6, overflow: 'hidden' }}>
-          {file.tags.slice(0, 1).map((t) => <TagChip key={t} tag={t} />)}
-          {file.tags.length > 1 && <span style={{ fontSize: 11, color: '#9AA5B1', fontWeight: 500 }}>+{file.tags.length - 1}</span>}
-        </div>
         <div style={{ width: 120, flexShrink: 0 }}>
           <StatusChip status={file.status} />
         </div>
-        <div style={{ width: 80, flexShrink: 0, fontSize: 12, color: '#6B7885' }}>{file.modified}</div>
-        {hovered && (
-          <div style={{
-            position: 'absolute', right: 16, top: '50%', transform: 'translateY(-50%)',
-            display: 'flex', alignItems: 'center', gap: 4, paddingLeft: 30,
-            background: `linear-gradient(90deg, transparent, ${rowBg} 28%)`,
-          }} onClick={(e) => e.stopPropagation()}>
-            <QuickAction icon={Eye} title="Preview" onClick={() => onPreview(file.id)} />
-            <QuickAction icon={MessageSquare} title="Add to chat" primary onClick={() => onUse(file)} />
-            <QuickAction icon={MoreHorizontal} title="More" onClick={() => onMore(file)} />
-          </div>
-        )}
+        <div style={{ width: 160, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }} onClick={(e) => e.stopPropagation()}>
+          <button
+            onClick={() => onUse(file)}
+            style={{
+              height: 32, padding: '0 14px', borderRadius: 8, border: 'none',
+              background: isActive ? '#5CA868' : '#0A2463', color: '#fff',
+              fontSize: 12.5, fontWeight: 600, cursor: 'pointer',
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              whiteSpace: 'nowrap', fontFamily: 'inherit',
+            }}
+          >
+            <MessageSquare size={13} /> {isActive ? 'In chat' : 'Use in chat'}
+          </button>
+          <QuickAction icon={MoreHorizontal} title="More" onClick={() => onMore(file)} />
+        </div>
       </div>
       {expanded && (
         <div style={{
@@ -944,16 +943,6 @@ export default function VaultFilesPanel({
                   <CheckRow key={m} checked={filters.matter.includes(m)} onClick={() => toggle('matter', m)} dot={matterDot(m)}>{m}</CheckRow>
                 ))}
               </FilterPill>
-              <FilterPill icon={Tag} label="Tags" id="tags" openId={openFilterId} setOpenId={setOpenFilterId} width={240}
-                valueLabel={summarize(filters.tags)}>
-                <div style={{ maxHeight: 280, overflowY: 'auto' }}>
-                  {allTags.length === 0 ? (
-                    <div style={{ padding: '12px 14px', fontSize: 13, color: '#9AA5B1' }}>No tags yet.</div>
-                  ) : allTags.map((t) => (
-                    <CheckRow key={t} checked={filters.tags.includes(t)} onClick={() => toggle('tags', t)}>{t}</CheckRow>
-                  ))}
-                </div>
-              </FilterPill>
               <FilterPill icon={Calendar} label="Date" id="date" openId={openFilterId} setOpenId={setOpenFilterId} width={190}
                 valueLabel={filters.date !== 'any' ? DATE_OPTS.find((d) => d.value === filters.date).label : null}>
                 {DATE_OPTS.map((d) => (
@@ -1064,15 +1053,15 @@ export default function VaultFilesPanel({
                   <span style={{ width: 34, flexShrink: 0 }} />
                   <span style={{ flex: 1, fontSize: 11, fontWeight: 600, color: '#9AA5B1', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Document</span>
                   <span style={{ width: 150, flexShrink: 0, fontSize: 11, fontWeight: 600, color: '#9AA5B1', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Matter</span>
-                  <span style={{ width: 150, flexShrink: 0, fontSize: 11, fontWeight: 600, color: '#9AA5B1', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Tags</span>
                   <span style={{ width: 120, flexShrink: 0, fontSize: 11, fontWeight: 600, color: '#9AA5B1', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Category</span>
-                  <span style={{ width: 80, flexShrink: 0, fontSize: 11, fontWeight: 600, color: '#9AA5B1', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Modified</span>
+                  <span style={{ width: 160, flexShrink: 0 }} />
                 </div>
                 {results.map((f) => (
                   <FileRow
                     key={f.id} file={f}
                     selected={selectedSet.has(f.id)}
                     isPreview={previewId === f.id}
+                    isActive={activeDocument && activeDocument.id === f.id}
                     expanded={expandedRow === f.id}
                     query={search}
                     onSelect={onSelectOne}
