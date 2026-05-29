@@ -144,24 +144,6 @@ function TagChip({ tag }) {
   );
 }
 
-function Checkbox({ checked, indeterminate, onClick, size = 17 }) {
-  return (
-    <button
-      onClick={(e) => { e.stopPropagation(); onClick && onClick(); }}
-      style={{
-        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-        width: size, height: size, borderRadius: 5, padding: 0, cursor: 'pointer',
-        border: '1.5px solid ' + ((checked || indeterminate) ? '#0A2463' : '#C7CFD8'),
-        background: (checked || indeterminate) ? '#0A2463' : '#fff', flexShrink: 0,
-      }}
-      aria-label={checked ? 'Deselect' : 'Select'}
-    >
-      {checked && <Check size={11} strokeWidth={3} style={{ color: '#fff' }} />}
-      {indeterminate && !checked && <span style={{ width: 8, height: 2, background: '#fff', borderRadius: 1 }} />}
-    </button>
-  );
-}
-
 /* ─── Filter dropdown ───────────────────────────────────────────── */
 
 function Popover({ open, onClose, width = 220, align = 'left', children }) {
@@ -264,17 +246,17 @@ function withinDate(createdAt, range) {
 
 /* ─── Row + Grid card ──────────────────────────────────────────── */
 
-function FileRow({ file, selected, isPreview, expanded, query, isActive, onSelect, onPreview, onExpand, onUse, onEdit, onDelete, canEdit }) {
+function FileRow({ file, isPreview, query, isActive, onPreview, onUse, onEdit, onDelete, canEdit }) {
   const insideMatch = query && !file.name.toLowerCase().includes(query.toLowerCase());
   const [hovered, setHovered] = useState(false);
-  const rowBg = isPreview ? '#FBF6EA' : selected ? '#FCF9F2' : hovered ? '#FAFBFC' : 'transparent';
+  const rowBg = isPreview ? '#FBF6EA' : hovered ? '#FAFBFC' : 'transparent';
   return (
     <div
       onClick={() => onPreview(file.id)}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
-        position: 'relative', cursor: 'pointer', transition: 'background 100ms',
+        cursor: 'pointer', transition: 'background 100ms',
         background: rowBg, boxShadow: isPreview ? 'inset 3px 0 0 #C9A84C' : 'none',
       }}
     >
@@ -282,14 +264,6 @@ function FileRow({ file, selected, isPreview, expanded, query, isActive, onSelec
         display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px',
         borderBottom: '1px solid #F2F5F8', minHeight: 58,
       }}>
-        <button onClick={(e) => { e.stopPropagation(); onExpand(file.id); }} style={{
-          display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-          width: 20, height: 20, borderRadius: 4, border: 'none', background: 'transparent',
-          color: '#B6BFC9', cursor: 'pointer', flexShrink: 0,
-        }}>
-          <ChevronRight size={14} style={{ transform: expanded ? 'rotate(90deg)' : 'none', transition: 'transform 150ms' }} />
-        </button>
-        <Checkbox checked={selected} onClick={() => onSelect(file.id)} />
         <TypeBadge type={file.type} />
         <div style={{ flex: 1, minWidth: 0, paddingRight: 8 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -343,27 +317,6 @@ function FileRow({ file, selected, isPreview, expanded, query, isActive, onSelec
           <RowMenu file={file} onEdit={onEdit} onDelete={onDelete} canEdit={canEdit} />
         </div>
       </div>
-      {expanded && (
-        <div style={{
-          display: 'flex', flexWrap: 'wrap', gap: '14px 36px',
-          padding: '14px 16px 16px 136px', background: '#FAFBFC',
-          borderBottom: '1px solid #F2F5F8',
-        }}>
-          <Meta label="Created"    value={file.created || '—'} />
-          <Meta label="Full path"  value={`YourVault / ${file.path}`} mono />
-          <Meta label="Uploaded by" value={file.byLabel} />
-          <Meta label="Description" value={file.description || '—'} />
-        </div>
-      )}
-    </div>
-  );
-}
-
-function Meta({ label, value, mono }) {
-  return (
-    <div>
-      <div style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#9AA5B1', marginBottom: 2 }}>{label}</div>
-      <div style={{ fontSize: 12.5, color: '#3A4654', fontFamily: mono ? 'ui-monospace, Menlo, monospace' : 'inherit' }}>{value}</div>
     </div>
   );
 }
@@ -423,7 +376,7 @@ function RowMenu({ file, onEdit, onDelete, canEdit }) {
   );
 }
 
-function GridCard({ file, selected, isPreview, onSelect, onPreview, onUse, onEdit, onDelete, canEdit }) {
+function GridCard({ file, isPreview, onPreview, onUse, onEdit, onDelete, canEdit }) {
   const t = TYPE_META[file.type] || TYPE_META.other;
   const [hovered, setHovered] = useState(false);
   return (
@@ -433,7 +386,7 @@ function GridCard({ file, selected, isPreview, onSelect, onPreview, onUse, onEdi
       onMouseLeave={() => setHovered(false)}
       style={{
         position: 'relative', borderRadius: 12, background: '#fff', cursor: 'pointer',
-        border: '1px solid ' + (isPreview || selected ? '#C9A84C' : '#ECEFF3'),
+        border: '1px solid ' + (isPreview ? '#C9A84C' : '#ECEFF3'),
         boxShadow: isPreview ? '0 8px 24px -10px rgba(10,36,99,0.18)' : '0 1px 2px rgba(10,36,99,0.04)',
         display: 'flex', flexDirection: 'column', overflow: 'hidden',
         transition: 'all 150ms',
@@ -448,9 +401,6 @@ function GridCard({ file, selected, isPreview, onSelect, onPreview, onUse, onEdi
           backgroundImage: 'repeating-linear-gradient(45deg, rgba(255,255,255,0.5) 0 10px, transparent 10px 20px)',
         }} />
         <TypeBadge type={file.type} size={52} />
-        <div style={{ position: 'absolute', top: 10, left: 10, opacity: selected || isPreview || hovered ? 1 : 0, transition: 'opacity 150ms' }} onClick={(e) => e.stopPropagation()}>
-          <Checkbox checked={selected} onClick={() => onSelect(file.id)} />
-        </div>
         <div style={{ position: 'absolute', top: 10, right: 10 }}>
           <StatusChip status={file.status} />
         </div>
@@ -599,68 +549,6 @@ function DrawerMeta({ label, value, children }) {
   );
 }
 
-/* ─── Bulk action bar ──────────────────────────────────────────── */
-
-function BulkBar({ count, onClear, onAction }) {
-  if (!count) return null;
-  const actions = [
-    { k: 'download', icon: Download,    label: 'Download' },
-    { k: 'move',     icon: FolderInput, label: 'Move' },
-    { k: 'tag',      icon: Tag,         label: 'Tag' },
-    { k: 'pack',     icon: Package,     label: 'Add to Knowledge Pack' },
-  ];
-  return (
-    <div style={{
-      position: 'absolute', left: '50%', bottom: 24, transform: 'translateX(-50%)',
-      display: 'flex', alignItems: 'center', gap: 6, paddingLeft: 16, paddingRight: 8,
-      height: 56, borderRadius: 16, background: '#0A2463', color: '#fff', zIndex: 60,
-      boxShadow: '0 18px 40px -12px rgba(10,36,99,0.55)',
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingRight: 12, marginRight: 4, borderRight: '1px solid rgba(255,255,255,0.18)' }}>
-        <span style={{
-          display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-          minWidth: 24, height: 24, padding: '0 6px', borderRadius: 999,
-          background: '#C9A84C', color: '#0A2463', fontSize: 12.5, fontWeight: 700,
-          fontFamily: 'ui-monospace, Menlo, monospace',
-        }}>{count}</span>
-        <span style={{ fontSize: 13.5, fontWeight: 500, whiteSpace: 'nowrap' }}>selected</span>
-      </div>
-      {actions.map((a) => (
-        <button key={a.k} onClick={() => onAction(a.k)} style={{
-          display: 'inline-flex', alignItems: 'center', gap: 8, height: 36,
-          padding: '0 12px', borderRadius: 8, border: 'none', background: 'transparent',
-          color: 'rgba(255,255,255,0.92)', fontSize: 13, fontWeight: 500, cursor: 'pointer',
-          whiteSpace: 'nowrap', fontFamily: 'inherit',
-        }}
-          onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.12)'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
-        >
-          <a.icon size={15} /> {a.label}
-        </button>
-      ))}
-      <button onClick={() => onAction('delete')} style={{
-        display: 'inline-flex', alignItems: 'center', gap: 8, height: 36,
-        padding: '0 12px', borderRadius: 8, border: 'none', background: 'transparent',
-        color: '#FF9B8E', fontSize: 13, fontWeight: 500, cursor: 'pointer',
-        whiteSpace: 'nowrap', fontFamily: 'inherit',
-      }}
-        onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(192,57,43,0.25)'; }}
-        onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
-      >
-        <Trash2 size={15} /> Delete
-      </button>
-      <button onClick={onClear} style={{
-        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-        width: 36, height: 36, borderRadius: 8, border: 'none', background: 'transparent',
-        color: 'rgba(255,255,255,0.6)', cursor: 'pointer', marginLeft: 4,
-      }}
-        onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.12)'; e.currentTarget.style.color = '#fff'; }}
-        onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(255,255,255,0.6)'; }}
-      ><X size={17} /></button>
-    </div>
-  );
-}
-
 function Toast({ msg }) {
   if (!msg) return null;
   return (
@@ -696,8 +584,6 @@ export default function VaultFilesPanel({
   });
   const [openFilterId, setOpenFilterId] = useState(null);
   const [previewId, setPreviewId] = useState(null);
-  const [expandedRow, setExpandedRow] = useState(null);
-  const [selectedSet, setSelectedSet] = useState(new Set());
   const [toast, setToast] = useState(null);
   const toastTimer = useRef(null);
   const folderUploadRef = useRef(null);
@@ -803,46 +689,11 @@ export default function VaultFilesPanel({
   });
   const setDate = (v) => setFilters((f) => ({ ...f, date: v }));
 
-  /* Selection */
-  const resultIds = results.map((d) => d.id);
-  const selectedInView = resultIds.filter((id) => selectedSet.has(id));
-  const allChecked = results.length > 0 && selectedInView.length === results.length;
-  const someChecked = selectedInView.length > 0 && !allChecked;
-  const onSelectOne = (id) => setSelectedSet((s) => {
-    const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n;
-  });
-  const toggleAll = () => setSelectedSet((s) => {
-    const n = new Set(s);
-    if (allChecked) resultIds.forEach((id) => n.delete(id));
-    else resultIds.forEach((id) => n.add(id));
-    return n;
-  });
-
   const onPreview = (id) => setPreviewId((p) => (p === id ? null : id));
-  const onExpand = (id) => setExpandedRow((e) => (e === id ? null : id));
 
   const onUse = (file) => {
     onSelect && onSelect(file);
     flash(<span><strong>{file.name}</strong> added to chat context</span>);
-  };
-
-  const onBulk = (action) => {
-    const n = selectedInView.length;
-    if (action === 'delete') {
-      selectedInView.forEach((id) => onDelete && onDelete(id));
-      setSelectedSet(new Set());
-      flash(<span><strong>{n}</strong> document{n > 1 ? 's' : ''} deleted</span>);
-      return;
-    }
-    if (action === 'download') {
-      flash(<span>Downloading <strong>{n}</strong> document{n > 1 ? 's' : ''}…</span>);
-      return;
-    }
-    if (action === 'pack') {
-      flash(<span>Added <strong>{n}</strong> document{n > 1 ? 's' : ''} to Knowledge Pack</span>);
-      return;
-    }
-    flash(<span>{action === 'move' ? 'Move' : 'Tag'} <strong>{n}</strong> document{n > 1 ? 's' : ''}…</span>);
   };
 
   const previewFile = previewId ? enriched.find((d) => d.id === previewId) : null;
@@ -1093,7 +944,6 @@ export default function VaultFilesPanel({
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
                 <span style={{ fontSize: 15, fontWeight: 600, color: '#16223A', fontFamily: 'ui-monospace, Menlo, monospace' }}>{results.length}</span>
                 <span style={{ fontSize: 14, color: '#6B7885' }}>document{results.length !== 1 ? 's' : ''}</span>
-                {selectedInView.length > 0 && <span style={{ fontSize: 13, color: '#9AA5B1' }}>· {selectedInView.length} selected</span>}
               </div>
               <div style={{ display: 'inline-flex', padding: 2, borderRadius: 10, background: '#F0F3F6' }}>
                 {[
@@ -1127,8 +977,6 @@ export default function VaultFilesPanel({
                   padding: '10px 16px', height: 36, position: 'sticky', top: 0,
                   zIndex: 5, background: '#fff', borderBottom: '1px solid #ECEFF3',
                 }}>
-                  <span style={{ width: 20, flexShrink: 0 }} />
-                  <Checkbox checked={allChecked} indeterminate={someChecked} onClick={toggleAll} />
                   <span style={{ width: 34, flexShrink: 0 }} />
                   <span style={{ flex: 1, fontSize: 11, fontWeight: 600, color: '#9AA5B1', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Document</span>
                   <span style={{ width: 150, flexShrink: 0, fontSize: 11, fontWeight: 600, color: '#9AA5B1', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Matter</span>
@@ -1145,14 +993,10 @@ export default function VaultFilesPanel({
                 {results.map((f) => (
                   <FileRow
                     key={f.id} file={f}
-                    selected={selectedSet.has(f.id)}
                     isPreview={previewId === f.id}
                     isActive={activeDocument && activeDocument.id === f.id}
-                    expanded={expandedRow === f.id}
                     query={search}
-                    onSelect={onSelectOne}
                     onPreview={onPreview}
-                    onExpand={onExpand}
                     onUse={onUse}
                     onEdit={onEdit}
                     onDelete={onDelete}
@@ -1172,9 +1016,7 @@ export default function VaultFilesPanel({
                 {results.map((f) => (
                   <GridCard
                     key={f.id} file={f}
-                    selected={selectedSet.has(f.id)}
                     isPreview={previewId === f.id}
-                    onSelect={onSelectOne}
                     onPreview={onPreview}
                     onUse={onUse}
                     onEdit={onEdit}
@@ -1187,7 +1029,6 @@ export default function VaultFilesPanel({
           </div>
         </div>
 
-        <BulkBar count={selectedInView.length} onClear={() => setSelectedSet(new Set())} onAction={onBulk} />
       </div>
 
       {previewFile && (
@@ -1430,8 +1271,6 @@ function FolderRow({ folder, onDelete, canEdit }) {
         background: hovered ? '#FAFBFC' : 'transparent',
       }}
     >
-      <span style={{ width: 20, flexShrink: 0 }} />
-      <span style={{ width: 17, flexShrink: 0 }} />
       {/* Icon tile: category dot or plain folder */}
       <span style={{
         width: 34, height: 34, borderRadius: 8, flexShrink: 0,
