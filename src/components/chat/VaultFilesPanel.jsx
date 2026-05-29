@@ -27,15 +27,6 @@ const STATUS_META = {
   Draft:        { dot: '#C9A84C', fg: '#8A6D1F', bg: '#FBF3E0' },
 };
 
-const MATTER_DOT = {
-  'Meridian v. Apex': '#7A4DB8',
-  'Harper Trust':     '#1B7A4B',
-  'Acme Corp':        '#C9A84C',
-  'Series B Funding': '#2563EB',
-  'Unassigned':       '#9AA5B1',
-};
-const matterDot = (m) => MATTER_DOT[m] || '#9AA5B1';
-
 /* Heuristic derivations from the existing VaultDoc shape */
 
 function typeOf(fileName = '') {
@@ -55,16 +46,6 @@ function statusOf(d, folderName) {
   if (d.addedFromChat) return 'Draft';
   if (fn.includes('discovery') || fn.includes('cap table') || fn.includes('financ')) return 'Confidential';
   return 'Confidential';
-}
-
-function matterOf(folderName) {
-  if (!folderName) return 'Unassigned';
-  const fn = folderName.toLowerCase();
-  if (fn.includes('meridian') || fn.includes('apex')) return 'Meridian v. Apex';
-  if (fn.includes('harper')) return 'Harper Trust';
-  if (fn.includes('series') || fn.includes('financ') || fn.includes('cap table')) return 'Series B Funding';
-  if (fn.includes('acme') || fn.includes('contract') || fn.includes('pleading') || fn.includes('discovery') || fn.includes('correspondence') || fn.includes('work product')) return 'Acme Corp';
-  return 'Unassigned';
 }
 
 function tagsOf(d, folderName) {
@@ -297,10 +278,6 @@ function FileRow({ file, isPreview, query, isActive, onPreview, onUse, onEdit, o
             <span style={{ color: '#C7CFD8' }}>—</span>
           )}
         </div>
-        <div style={{ width: 150, flexShrink: 0, fontSize: 12.5, color: '#4A5663', display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ width: 6, height: 6, borderRadius: '50%', background: matterDot(file.matter), flexShrink: 0 }} />
-          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{file.matter}</span>
-        </div>
         <div style={{ width: 120, flexShrink: 0 }}>
           <StatusChip status={file.status} />
         </div>
@@ -414,10 +391,6 @@ function GridCard({ file, isPreview, onPreview, onUse, onEdit, onDelete, canEdit
           display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
           overflow: 'hidden', minHeight: 36,
         }}>{file.name}</div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8 }}>
-          <span style={{ width: 6, height: 6, borderRadius: '50%', background: matterDot(file.matter), flexShrink: 0 }} />
-          <span style={{ fontSize: 11.5, color: '#6B7885', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{file.matter}</span>
-        </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8, fontSize: 11.5, color: '#9AA5B1' }}>
           <span>{file.sizeLabel}</span>
           <span style={{ color: '#D5DCE3' }}>·</span>
@@ -507,12 +480,6 @@ function PreviewDrawer({ file, onClose, onUse, onEdit, onDelete, canEdit, isActi
         </div>
         <div style={{ padding: '18px 18px 0' }}>
           <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.1em', color: '#9AA5B1', marginBottom: 4, fontFamily: 'ui-monospace, Menlo, monospace', textTransform: 'uppercase' }}>Details</div>
-          <DrawerMeta label="Matter">
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ width: 7, height: 7, borderRadius: '50%', background: matterDot(file.matter) }} />
-              {file.matter}
-            </span>
-          </DrawerMeta>
           <DrawerMeta label="Location" value={`YourVault / ${file.path}`} />
           <DrawerMeta label="Type" value={`${(TYPE_META[file.type] || TYPE_META.other).label} · ${file.sizeLabel}`} />
           <DrawerMeta label="Uploaded by" value={file.byLabel} />
@@ -583,7 +550,7 @@ export default function VaultFilesPanel({
 }) {
   const [view, setView] = useState('list');
   const [filters, setFilters] = useState({
-    status: [], type: [], matter: [], tags: [], updatedBy: [], date: 'any',
+    status: [], type: [], tags: [], updatedBy: [], date: 'any',
   });
   const [openFilterId, setOpenFilterId] = useState(null);
   const [previewId, setPreviewId] = useState(null);
@@ -627,14 +594,13 @@ export default function VaultFilesPanel({
   const enriched = useMemo(() => docs.map((d) => {
     const folder = d.folderId ? folderById.get(d.folderId) : null;
     const folderName = folder?.name || null;
-    const matter = matterOf(folderName);
     const status = statusOf(d, folderName);
     const type = typeOf(d.fileName);
     const tags = tagsOf(d, folderName);
     const ownerLabel = d.ownerId === currentUserId ? 'You' : (d.ownerName || 'Member');
     return {
       ...d,
-      type, status, matter, tags, folderName,
+      type, status, tags, folderName,
       modified: relTime(d.createdAt),
       modifiedFull: d.createdAt || '—',
       created: d.createdAt || '—',
@@ -643,13 +609,12 @@ export default function VaultFilesPanel({
       byLabel: ownerLabel,
       fromChat: !!d.addedFromChat,
       scope: d.isGlobal ? 'Org-wide' : (d.ownerId === currentUserId ? 'Mine' : 'Member'),
-      path: folderName ? `${matter} / ${folderName}` : matter,
+      path: folderName || 'Root',
     };
   }), [docs, folderById, currentUserId]);
 
   /* Filter universes */
   const allTags = useMemo(() => Array.from(new Set(enriched.flatMap((d) => d.tags))).sort(), [enriched]);
-  const allMatters = useMemo(() => Array.from(new Set(enriched.map((d) => d.matter))).sort(), [enriched]);
   const allOwners = useMemo(() => {
     const map = new Map();
     enriched.forEach((d) => {
@@ -665,7 +630,6 @@ export default function VaultFilesPanel({
     let out = enriched.filter((d) => {
       if (filters.status.length && !filters.status.includes(d.status)) return false;
       if (filters.type.length && !filters.type.includes(d.type)) return false;
-      if (filters.matter.length && !filters.matter.includes(d.matter)) return false;
       if (filters.tags.length && !d.tags.some((t) => filters.tags.includes(t))) return false;
       if (filters.updatedBy.length && !filters.updatedBy.includes(d.ownerId)) return false;
       if (!withinDate(d.createdAt, filters.date)) return false;
@@ -687,10 +651,10 @@ export default function VaultFilesPanel({
   const totalPages = Math.max(1, Math.ceil(results.length / PAGE_SIZE));
   const pagedResults = results.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
-  const filtersActive = filters.status.length || filters.type.length || filters.matter.length
+  const filtersActive = filters.status.length || filters.type.length
     || filters.tags.length || filters.updatedBy.length || filters.date !== 'any';
   const clearAll = () => {
-    setFilters({ status: [], type: [], matter: [], tags: [], updatedBy: [], date: 'any' });
+    setFilters({ status: [], type: [], tags: [], updatedBy: [], date: 'any' });
     setSearch && setSearch('');
   };
 
@@ -878,12 +842,6 @@ export default function VaultFilesPanel({
                   <CheckRow key={k} checked={filters.type.includes(k)} onClick={() => toggle('type', k)}>{TYPE_META[k].label} · {k.toUpperCase()}</CheckRow>
                 ))}
               </FilterPill>
-              <FilterPill icon={Folder} label="Matter" id="matter" openId={openFilterId} setOpenId={setOpenFilterId} width={240}
-                valueLabel={summarize(filters.matter)}>
-                {allMatters.map((m) => (
-                  <CheckRow key={m} checked={filters.matter.includes(m)} onClick={() => toggle('matter', m)} dot={matterDot(m)}>{m}</CheckRow>
-                ))}
-              </FilterPill>
               <FilterPill icon={Calendar} label="Date" id="date" openId={openFilterId} setOpenId={setOpenFilterId} width={190}
                 valueLabel={filters.date !== 'any' ? DATE_OPTS.find((d) => d.value === filters.date).label : null}>
                 {DATE_OPTS.map((d) => (
@@ -922,7 +880,6 @@ export default function VaultFilesPanel({
                 {[
                   ...filters.status.map((s) => ({ k: 's:' + s, label: s, rm: () => toggle('status', s) })),
                   ...filters.type.map((t) => ({ k: 't:' + t, label: TYPE_META[t].label, rm: () => toggle('type', t) })),
-                  ...filters.matter.map((m) => ({ k: 'm:' + m, label: m, rm: () => toggle('matter', m) })),
                   ...filters.tags.map((t) => ({ k: 'g:' + t, label: t, rm: () => toggle('tags', t) })),
                   ...filters.updatedBy.map((p) => ({ k: 'u:' + p, label: 'by ' + ((allOwners.find((o) => o.id === p)?.name || p).split(' ')[0]), rm: () => toggle('updatedBy', p) })),
                   ...(filters.date !== 'any' ? [{ k: 'd', label: DATE_OPTS.find((d) => d.value === filters.date).label, rm: () => setDate('any') }] : []),
@@ -993,7 +950,6 @@ export default function VaultFilesPanel({
                   <span style={{ width: 34, flexShrink: 0 }} />
                   <span style={{ flex: 1, fontSize: 11, fontWeight: 600, color: '#9AA5B1', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Document</span>
                   <span style={{ width: 140, flexShrink: 0, fontSize: 11, fontWeight: 600, color: '#9AA5B1', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Folder</span>
-                  <span style={{ width: 150, flexShrink: 0, fontSize: 11, fontWeight: 600, color: '#9AA5B1', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Matter</span>
                   <span style={{ width: 120, flexShrink: 0, fontSize: 11, fontWeight: 600, color: '#9AA5B1', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Category</span>
                   <span style={{ width: 160, flexShrink: 0 }} />
                 </div>
