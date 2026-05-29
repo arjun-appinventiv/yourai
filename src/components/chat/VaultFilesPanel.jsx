@@ -4,6 +4,7 @@ import {
   Image as ImageIcon, Mail, Download, Folder, Tag, Calendar, User,
   Sparkles, Eye, ExternalLink, Sliders, MoreHorizontal, Trash2,
   Upload, FilePlus, Inbox, Workflow, Package, FolderInput, MessageSquare,
+  FolderUp, FileUp,
 } from 'lucide-react';
 
 /* ─── Type / status / scope metadata ─────────────────────────────── */
@@ -854,19 +855,24 @@ export default function VaultFilesPanel({
                     {src.name}
                   </button>
                 ))}
+                {/* Upload Folder — SECONDARY: navy-outlined so it reads as a
+                   native upload action, distinct from the gray connector
+                   buttons (Google Drive / iManage / OneDrive) to its left. */}
                 <button onClick={() => folderUploadRef.current?.click()} style={{
-                  height: 40, padding: '0 14px', borderRadius: 12, border: '1px solid #E7ECF1',
-                  background: '#fff', color: '#3A4654', fontSize: 13, fontWeight: 500,
+                  height: 40, padding: '0 16px', borderRadius: 12, border: '1.5px solid #0A2463',
+                  background: '#fff', color: '#0A2463', fontSize: 13.5, fontWeight: 600,
                   cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8, fontFamily: 'inherit',
                 }}>
-                  <Upload size={15} style={{ color: '#6B7885' }} /> Upload
+                  <FolderUp size={15} style={{ color: '#0A2463' }} /> Upload Folder
                 </button>
+                {/* Upload Document — PRIMARY: solid navy. The single-doc
+                   upload is the most common action so it gets the filled CTA. */}
                 <button onClick={onCreateNew} style={{
-                  height: 40, padding: '0 16px', borderRadius: 12, border: 'none',
+                  height: 40, padding: '0 16px', borderRadius: 12, border: '1.5px solid #0A2463',
                   background: '#0A2463', color: '#fff', fontSize: 13.5, fontWeight: 600,
                   cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8, fontFamily: 'inherit',
                 }}>
-                  <FilePlus size={15} /> New Document
+                  <FileUp size={15} /> Upload Document
                 </button>
               </div>
             </div>
@@ -1119,15 +1125,15 @@ function EmptyVault({ onUpload, onCreateNew }) {
       </p>
       <div style={{ display: 'flex', gap: 8, marginTop: 22 }}>
         <button onClick={onUpload} style={{
-          height: 40, padding: '0 16px', borderRadius: 12, border: '1px solid #E7ECF1',
-          background: '#fff', color: '#3A4654', fontSize: 13.5, fontWeight: 500, cursor: 'pointer',
+          height: 40, padding: '0 16px', borderRadius: 12, border: '1.5px solid #0A2463',
+          background: '#fff', color: '#0A2463', fontSize: 13.5, fontWeight: 600, cursor: 'pointer',
           display: 'inline-flex', alignItems: 'center', gap: 8, fontFamily: 'inherit',
-        }}><Upload size={15} /> Upload files</button>
+        }}><FolderUp size={15} /> Upload Folder</button>
         <button onClick={onCreateNew} style={{
-          height: 40, padding: '0 16px', borderRadius: 12, border: 'none',
+          height: 40, padding: '0 16px', borderRadius: 12, border: '1.5px solid #0A2463',
           background: '#0A2463', color: '#fff', fontSize: 13.5, fontWeight: 600, cursor: 'pointer',
           display: 'inline-flex', alignItems: 'center', gap: 8, fontFamily: 'inherit',
-        }}><FilePlus size={15} /> New document</button>
+        }}><FileUp size={15} /> Upload Document</button>
       </div>
     </div>
   );
