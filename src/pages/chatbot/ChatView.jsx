@@ -2808,11 +2808,20 @@ Rules:
     setRenameDraft('');
   };
 
+  // Folder-upload flow: stage the picked files, prompt for a category, then
+  // hand off to onUploadFolder with the chosen category applied to every
+  // sub-folder + doc created from this batch.
+  const [pendingFolderFiles, setPendingFolderFiles] = useState(null);
   const handleFolderUpload = (fileList) => {
     if (!fileList || !onUploadFolder) return;
     const files = Array.from(fileList);
     if (files.length === 0) return;
-    onUploadFolder(files, currentFolderId || null);
+    setPendingFolderFiles(files);
+  };
+  const commitFolderUpload = (category) => {
+    const files = pendingFolderFiles;
+    setPendingFolderFiles(null);
+    if (files && files.length) onUploadFolder(files, currentFolderId || null, category || null);
   };
 
   // ─── Recursive tree node ───
@@ -2978,6 +2987,15 @@ Rules:
         </>
       )}
 
+      {/* ── Folder upload — category prompt ── */}
+      {pendingFolderFiles && pendingFolderFiles.length > 0 && (
+        <FolderCategoryPrompt
+          fileCount={pendingFolderFiles.length}
+          onConfirm={(cat) => commitFolderUpload(cat)}
+          onCancel={() => setPendingFolderFiles(null)}
+        />
+      )}
+
       {/* Page chrome — Back to chat + breadcrumb-eyebrow */}
       <div style={{ padding: '12px 28px', borderBottom: '1px solid var(--border)', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
         <button
@@ -3085,6 +3103,79 @@ Rules:
   );
 }
 
+/* ─────────────── Folder Upload — Category Prompt Modal ──────────────
+   Shown after the user picks a folder via the OS picker. Lets them tag
+   the entire incoming batch (new sub-folders + every doc) with one
+   category. Skippable. */
+function FolderCategoryPrompt({ fileCount, onConfirm, onCancel }) {
+  const [category, setCategory] = useState('');
+  const CATS = [
+    { key: 'Privileged',   dot: '#C0392B', bg: '#FBEBE9', fg: '#9A2A1E' },
+    { key: 'Confidential', dot: '#2563EB', bg: '#EAF0FE', fg: '#1E40AF' },
+    { key: 'Final',        dot: '#1B7A4B', bg: '#E8F4EC', fg: '#15673F' },
+    { key: 'Draft',        dot: '#C9A84C', bg: '#FBF3E0', fg: '#8A6D1F' },
+  ];
+  return (
+    <>
+      <div onClick={onCancel} style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)', zIndex: 80, backdropFilter: 'blur(4px)' }} />
+      <div style={{
+        position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)',
+        zIndex: 81, width: 480, maxWidth: 'calc(100vw - 32px)',
+        background: '#fff', borderRadius: 16,
+        boxShadow: '0 24px 64px rgba(15,23,42,0.22)',
+        padding: '22px 24px 20px',
+      }}>
+        <h3 style={{ margin: 0, fontFamily: "'Fraunces', serif", fontSize: 19, color: 'var(--text-primary)' }}>
+          Tag this upload with a category?
+        </h3>
+        <p style={{ margin: '8px 0 0', fontSize: 13.5, color: 'var(--text-muted)', lineHeight: 1.5 }}>
+          You're uploading <strong style={{ color: 'var(--text-primary)' }}>{fileCount} {fileCount === 1 ? 'file' : 'files'}</strong>.
+          Pick a category and every new sub-folder + doc in this batch will be tagged.
+        </p>
+        <div style={{ marginTop: 16, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+          {CATS.map((c) => {
+            const active = category === c.key;
+            return (
+              <button
+                key={c.key}
+                type="button"
+                onClick={() => setCategory(active ? '' : c.key)}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 8,
+                  padding: '8px 14px', borderRadius: 999, cursor: 'pointer',
+                  border: '1px solid ' + (active ? c.dot : '#E7ECF1'),
+                  background: active ? c.bg : '#fff',
+                  color: active ? c.fg : 'var(--text-secondary)',
+                  fontSize: 13.5, fontWeight: active ? 600 : 500,
+                  fontFamily: 'inherit',
+                }}
+              >
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: c.dot }} />
+                {c.key}
+              </button>
+            );
+          })}
+        </div>
+        <div style={{ marginTop: 22, display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+          <button
+            onClick={onCancel}
+            style={{ height: 38, padding: '0 16px', borderRadius: 10, border: '1px solid var(--border)', background: '#fff', color: 'var(--text-secondary)', fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }}
+          >Cancel</button>
+          <button
+            onClick={() => onConfirm(null)}
+            style={{ height: 38, padding: '0 16px', borderRadius: 10, border: '1px solid var(--border)', background: '#fff', color: 'var(--text-secondary)', fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }}
+          >Skip</button>
+          <button
+            onClick={() => onConfirm(category || null)}
+            disabled={!category}
+            style={{ height: 38, padding: '0 18px', borderRadius: 10, border: 'none', background: category ? 'var(--navy)' : '#9CA3AF', color: '#fff', fontSize: 13.5, fontWeight: 600, cursor: category ? 'pointer' : 'not-allowed', fontFamily: 'inherit' }}
+          >Upload {fileCount} {fileCount === 1 ? 'file' : 'files'}</button>
+        </div>
+      </div>
+    </>
+  );
+}
+
 /* ─────────────────── Edit / Create Document Modal ─────────────────── */
 function EditDocumentModal({ document: docItem, onClose, onSave, folders = [], defaultFolderId = null }) {
   const isNew = !docItem;
@@ -3093,6 +3184,7 @@ function EditDocumentModal({ document: docItem, onClose, onSave, folders = [], d
   const [fileName, setFileName] = useState(docItem?.fileName || '');
   const [fileSize, setFileSize] = useState(docItem?.fileSize || '');
   const [folderId, setFolderId] = useState(docItem?.folderId ?? defaultFolderId ?? '');
+  const [category, setCategory] = useState(docItem?.category || '');
   const fileInputRef = useRef(null);
 
   const [fileError, setFileError] = useState('');
@@ -3125,6 +3217,7 @@ function EditDocumentModal({ document: docItem, onClose, onSave, folders = [], d
       fileSize: fileSize || '—',
       createdAt: docItem?.createdAt || new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
       folderId: folderId || null,
+      category: category || null,
     });
     onClose();
   };
@@ -3188,6 +3281,42 @@ function EditDocumentModal({ document: docItem, onClose, onSave, folders = [], d
                 });
               })()}
             </select>
+          </div>
+
+          {/* Category — Privileged / Confidential / Final / Draft. Optional. */}
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>
+              Category <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>(optional)</span>
+            </label>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              {[
+                { key: 'Privileged',   dot: '#C0392B', bg: '#FBEBE9', fg: '#9A2A1E' },
+                { key: 'Confidential', dot: '#2563EB', bg: '#EAF0FE', fg: '#1E40AF' },
+                { key: 'Final',        dot: '#1B7A4B', bg: '#E8F4EC', fg: '#15673F' },
+                { key: 'Draft',        dot: '#C9A84C', bg: '#FBF3E0', fg: '#8A6D1F' },
+              ].map((c) => {
+                const active = category === c.key;
+                return (
+                  <button
+                    key={c.key}
+                    type="button"
+                    onClick={() => setCategory(active ? '' : c.key)}
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 8,
+                      padding: '7px 14px', borderRadius: 999, cursor: 'pointer',
+                      border: '1px solid ' + (active ? c.dot : '#E7ECF1'),
+                      background: active ? c.bg : '#fff',
+                      color: active ? c.fg : 'var(--text-secondary)',
+                      fontSize: 13, fontWeight: active ? 600 : 500,
+                      fontFamily: 'inherit',
+                    }}
+                  >
+                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: c.dot }} />
+                    {c.key}
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           <div>
