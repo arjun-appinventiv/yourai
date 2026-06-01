@@ -27,6 +27,15 @@ const DEMO_USERS: Record<string, { password: string; user: User }> = {
     password: 'Client@123',
     user: { id: 'm-004', email: 'liaison@acmecorp.com', name: 'Acme Corp (Client)', role: 'MEMBER', orgId: 'org-hartwell', orgName: 'Hartwell & Associates', avatar: 'AC', plan: 'PROFESSIONAL', tenantRole: 'EXTERNAL_USER', permissions: [] },
   },
+  // QA test attorneys — same firm as Ryan, internal users
+  'sarah@hartwell.com': {
+    password: 'Test@1234',
+    user: { id: 'm-005', email: 'sarah@hartwell.com', name: 'Sarah Chen', role: 'MEMBER', orgId: 'org-hartwell', orgName: 'Hartwell & Associates', avatar: 'SC', plan: 'PROFESSIONAL', tenantRole: 'INTERNAL_USER', permissions: ['create_workspace', 'view_audit_logs'] },
+  },
+  'james@hartwell.com': {
+    password: 'Test@1234',
+    user: { id: 'm-006', email: 'james@hartwell.com', name: 'James Wu', role: 'MEMBER', orgId: 'org-hartwell', orgName: 'Hartwell & Associates', avatar: 'JW', plan: 'PROFESSIONAL', tenantRole: 'INTERNAL_USER', permissions: ['create_workspace', 'view_audit_logs'] },
+  },
 };
 
 export interface User {
