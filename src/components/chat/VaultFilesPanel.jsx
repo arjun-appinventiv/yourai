@@ -547,12 +547,17 @@ export default function VaultFilesPanel({
   onUploadFolder, onConnectorImport, importSources = [],
   scope, setScope, counts,
   search, setSearch,
+  onActiveCategoriesChange,
+  onCreateFolder,
 }) {
   const [view, setView] = useState('list');
   const [filters, setFilters] = useState({
     status: [], type: [], tags: [], updatedBy: [], date: 'any',
   });
   const [openFilterId, setOpenFilterId] = useState(null);
+  useEffect(() => {
+    if (typeof onActiveCategoriesChange === 'function') onActiveCategoriesChange(filters.status);
+  }, [filters.status, onActiveCategoriesChange]);
   const [previewId, setPreviewId] = useState(null);
   const [toast, setToast] = useState(null);
   const toastTimer = useRef(null);
@@ -564,12 +569,16 @@ export default function VaultFilesPanel({
   const [currentPage, setCurrentPage] = useState(1);
 
   const handleCreateFolder = ({ name, category }) => {
-    setLocalFolders((prev) => [{
-      id: `local-folder-${Date.now()}`,
-      name, category,
-      docCount: 0,
-      created: new Date().toISOString(),
-    }, ...prev]);
+    if (typeof onCreateFolder === 'function') {
+      onCreateFolder(name, null, category || null);
+    } else {
+      setLocalFolders((prev) => [{
+        id: `local-folder-${Date.now()}`,
+        name, category,
+        docCount: 0,
+        created: new Date().toISOString(),
+      }, ...prev]);
+    }
     setShowNewFolderModal(false);
     flash(<span>Folder <strong>{name}</strong> created</span>);
   };
