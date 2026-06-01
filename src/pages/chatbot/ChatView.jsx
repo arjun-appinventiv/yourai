@@ -67,6 +67,7 @@ import {
 } from '../../data/mockData';
 import { callLLM, getApiKey } from '../../lib/llm-client';
 import { extractFileText } from '../../lib/file-parser';
+import { loadEvents as loadAuditEvents, seedAuditLogIfEmpty, subscribe as subscribeAudit } from '../../lib/auditLogStore';
 import { trackDocUpload } from '../../lib/auth';
 import { useSessionGuard } from '../../lib/useSessionGuard';
 import { detectIntent, detectAllIntents } from '../../lib/intentDetector';
@@ -4286,12 +4287,31 @@ function AuditLogsPanel({ onBack }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [isUserOpen, setIsUserOpen] = useState(false);
   const [isDateOpen, setIsDateOpen] = useState(false);
+  const [tick, setTick] = useState(0);
+
+  useEffect(() => {
+    seedAuditLogIfEmpty(ORG_AUDIT_EVENTS.map((e) => ({
+      id: e.id || `seed-${e.ts}-${e.user}`,
+      ts: e.ts, userName: e.user, userEmail: '',
+      avatar: e.user ? e.user.split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase() : '??',
+      tenant: 'Hartwell & Associates', category: e.category,
+      action: e.action, target: e.target, workspace: e.workspace, flagged: e.flagged,
+    })));
+    const unsub = subscribeAudit(() => setTick((t) => t + 1));
+    return unsub;
+  }, []);
+
+  const liveEvents = useMemo(() => {
+    const stored = loadAuditEvents();
+    return [...stored].sort((a, b) => new Date(b.ts).getTime() - new Date(a.ts).getTime());
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tick]);
 
   const users = useMemo(() => {
     const set = new Set();
-    ORG_AUDIT_EVENTS.forEach((e) => set.add(e.user));
+    liveEvents.forEach((e) => set.add(e.userName));
     return Array.from(set);
-  }, []);
+  }, [liveEvents]);
 
   const filtered = useMemo(() => {
     const cutoff = (() => {
@@ -4302,23 +4322,23 @@ function AuditLogsPanel({ onBack }) {
       return Date.now() - f.days * 86400000;
     })();
     const q = searchQuery.trim().toLowerCase();
-    return ORG_AUDIT_EVENTS
-      .filter((e) => userFilter === 'all' || e.user === userFilter)
+    return liveEvents
+      .filter((e) => userFilter === 'all' || e.userName === userFilter)
       .filter((e) => cutoff === null || new Date(e.ts).getTime() >= cutoff)
       .filter((e) => {
         if (!q) return true;
         const hay = [
           e.ts, formatAuditTs(e.ts),
-          e.user, e.ip, e.category, e.action, e.target, e.workspace,
+          e.userName, e.userEmail, e.category, e.action, e.target, e.workspace,
           e.flagged ? 'flagged' : '',
-        ].join('   ').toLowerCase();
+        ].join('   ').toLowerCase();
         return hay.includes(q);
       });
-  }, [userFilter, dateFilter, searchQuery]);
+  }, [liveEvents, userFilter, dateFilter, searchQuery]);
 
   const handleExportCSV = () => {
-    const header = ['Timestamp', 'User', 'IP', 'Category', 'Action', 'Target', 'Workspace', 'Flagged'];
-    const rows = filtered.map((e) => [e.ts, e.user, e.ip || '', e.category, e.action, e.target, e.workspace || '', e.flagged ? 'yes' : '']);
+    const header = ['Timestamp', 'User', 'Category', 'Action', 'Target', 'Workspace', 'Flagged'];
+    const rows = filtered.map((e) => [e.ts, e.userName, e.category, e.action, e.target || '', e.workspace || '', e.flagged ? 'yes' : '']);
     const csv = [header, ...rows]
       .map((r) => r.map((v) => `"${String(v || '').replace(/"/g, '""')}"`).join(','))
       .join('\n');
@@ -4479,7 +4499,7 @@ function AuditLogsPanel({ onBack }) {
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ background: 'var(--ice-warm)', borderBottom: '1px solid var(--border)' }}>
-                {['Timestamp', 'User', 'IP', 'Category', 'Action', 'Target'].map((h) => (
+                {['Timestamp', 'User', 'Category', 'Action', 'Target'].map((h) => (
                   <th key={h} style={{ padding: '10px 16px', textAlign: 'left', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}>{h}</th>
                 ))}
               </tr>
@@ -4487,12 +4507,13 @@ function AuditLogsPanel({ onBack }) {
             <tbody>
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={6} style={{ padding: '48px 24px', textAlign: 'center', fontSize: 13, color: 'var(--text-muted)' }}>
+                  <td colSpan={5} style={{ padding: '48px 24px', textAlign: 'center', fontSize: 13, color: 'var(--text-muted)' }}>
                     No events match these filters.
                   </td>
                 </tr>
               ) : filtered.map((e, idx) => {
-                const Icon = AUDIT_ICON_MAP[e.icon] || CheckCircle;
+                const CATEGORY_ICON = { auth: LogIn, documents: Upload, workspaces: Briefcase, workflows: CheckCircle, users: UserPlus, knowledge_packs: Shield, threads: Trash2, billing: AlertCircle, system: AlertTriangle };
+                const Icon = CATEGORY_ICON[e.category] || CheckCircle;
                 const meta = CATEGORY_META[e.category] || { label: e.category, color: 'var(--text-muted)' };
                 return (
                   <tr key={e.id} style={{ borderBottom: idx === filtered.length - 1 ? 'none' : '1px solid var(--border)' }}>
@@ -4502,12 +4523,10 @@ function AuditLogsPanel({ onBack }) {
                         <div style={{ width: 24, height: 24, borderRadius: '50%', background: 'var(--ice-warm)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 600, color: 'var(--navy)', flexShrink: 0 }}>
                           {e.avatar}
                         </div>
-                        <span style={{ fontSize: 13, color: 'var(--text-primary)', fontWeight: 500 }}>{e.user}</span>
+                        <span style={{ fontSize: 13, color: 'var(--text-primary)', fontWeight: 500 }}>{e.userName}</span>
                       </div>
                     </td>
-                    <td style={{ padding: '12px 16px', whiteSpace: 'nowrap', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', fontSize: 12, color: e.ip && !e.ip.startsWith('10.') ? '#9A3412' : 'var(--text-muted)' }}>
-                      {e.ip || '—'}
-                    </td>
+
                     <td style={{ padding: '12px 16px' }}>
                       <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: 4, fontSize: 10, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', background: `${meta.color}1a`, color: meta.color }}>
                         {meta.label}
