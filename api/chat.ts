@@ -344,6 +344,7 @@ Rules:
     credentials: { accessKeyId, secretAccessKey },
   });
 
+  console.log('[api/chat] calling Bedrock', { region, model: DEFAULT_MODEL, accessKeyId: accessKeyId?.slice(0, 8) + '…' });
   let upstream: Awaited<ReturnType<typeof client.send>>;
   try {
     upstream = await client.send(
@@ -354,7 +355,9 @@ Rules:
         body:        JSON.stringify(bedrockBody),
       }),
     );
+    console.log('[api/chat] Bedrock response received');
   } catch (err: any) {
+    console.error('[api/chat] Bedrock error:', err?.name, err?.message);
     const raw = (err?.message || '').toLowerCase();
     let message = 'Something went wrong. Please try again.';
     if (/throttl|too many request|rate.?limit/.test(raw))        message = 'The AI is busy right now. Please try again in a moment.';
