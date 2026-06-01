@@ -5850,11 +5850,10 @@ export default function ChatView({ initialView = 'chat' }) {
     setShowClientsPanel(section === 'clients');
     setShowTeamPage(section === 'team');
     setShowWorkflowsPanel(section === 'workflows');
-    // Workspaces stays on its dedicated route; section === '' for Org
-    // Admin reopens the dashboard since that's their home surface.
-    if (section === '' && isOrgAdmin && initialView !== 'workspaces') {
-      setShowOrgDashboard(true);
-    }
+    // section === '' means /chat root — show the chat empty state.
+    // The one-shot mount effect (above) handles the Org Admin initial
+    // redirect to /chat/dashboard; don't re-open it here or clicking
+    // "Chat" in the sidebar will immediately bounce back to dashboard.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.pathname]);
   const [editingWorkflow, setEditingWorkflow] = useState(null);
