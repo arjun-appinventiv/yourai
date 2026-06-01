@@ -2425,6 +2425,9 @@ function DocumentVaultPanel({
   const [search, setSearch] = useState('');
   const [scope, setScope] = useState('all'); // Org Admin only
   const [currentFolderId, setCurrentFolderId] = useState(null);
+  // Category filter mirrored from VaultFilesPanel so the folder rail can
+  // tint folder icons in the active category's colour.
+  const [activeCategories, setActiveCategories] = useState([]);
   const [creatingFolder, setCreatingFolder] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
   const [renamingFolderId, setRenamingFolderId] = useState(null);
@@ -2988,10 +2991,74 @@ Rules:
         <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", letterSpacing: '0.08em', textTransform: 'uppercase' }}>YourVault</span>
       </div>
 
-      {/* Body — full-width files panel (no left rail) */}
+      {/* Body — folder-tree left rail + files panel */}
       <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
+        {/* ── FOLDER TREE LEFT RAIL ── */}
+        <div style={{ width: 260, flexShrink: 0, borderRight: '1px solid var(--border)', background: '#FAF8F4', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <div style={{ flex: 1, overflowY: 'auto', paddingBottom: 16 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 16px 8px' }}>
+              <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}>Folders</span>
+              <button
+                onClick={() => setCreatingFolder(true)}
+                title="New folder"
+                style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 22, height: 22, borderRadius: 6, border: 'none', background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer' }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(15,23,42,0.06)'; e.currentTarget.style.color = 'var(--navy)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-muted)'; }}
+              ><Plus size={13} /></button>
+            </div>
+
+            {/* All documents row */}
+            <div
+              onClick={() => setCurrentFolderId(null)}
+              style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 12px 7px 14px', cursor: 'pointer', borderRadius: 6, margin: '1px 6px', background: !currentFolderId ? 'rgba(10,36,99,0.08)' : 'transparent', color: !currentFolderId ? 'var(--navy)' : 'var(--text-primary)', fontWeight: !currentFolderId ? 600 : 400, transition: 'background 100ms' }}
+              onMouseEnter={(e) => { if (currentFolderId) e.currentTarget.style.background = 'rgba(15,23,42,0.04)'; }}
+              onMouseLeave={(e) => { if (currentFolderId) e.currentTarget.style.background = 'transparent'; }}
+            >
+              <FolderOpen size={14} style={{ color: !currentFolderId ? 'var(--navy)' : 'var(--text-muted)', flexShrink: 0 }} />
+              <span style={{ flex: 1, fontSize: 13.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>All documents</span>
+              <span style={{ fontSize: 12, color: 'var(--text-muted)', flexShrink: 0 }}>{visibleDocs.length}</span>
+            </div>
+
+            {/* Flat folder list — no nesting. Each folder's icon reflects
+               its own saved category (Privileged / Confidential / Final /
+               Draft): a 14 px tinted dot in the category colour. Folders
+               with no category fall back to the gold folder icon. */}
+            {(() => {
+              const CATEGORY_COLOR = {
+                Privileged:   '#C0392B',
+                Confidential: '#2563EB',
+                Final:        '#1B7A4B',
+                Draft:        '#C9A84C',
+              };
+              return visibleFolders.map((f) => {
+                const isActive = currentFolderId === f.id;
+                const docCount = scopedDocs.filter((d) => d.folderId === f.id).length;
+                const catColor = f.category ? CATEGORY_COLOR[f.category] : null;
+                return (
+                  <div
+                    key={f.id}
+                    onClick={() => setCurrentFolderId(f.id)}
+                    style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 12px 7px 14px', cursor: 'pointer', borderRadius: 6, margin: '1px 6px', background: isActive ? 'rgba(10,36,99,0.08)' : 'transparent', color: isActive ? 'var(--navy)' : 'var(--text-primary)', fontWeight: isActive ? 600 : 400, transition: 'background 100ms' }}
+                    onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = 'rgba(15,23,42,0.04)'; }}
+                    onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
+                  >
+                    {catColor ? (
+                      <span title={f.category} style={{ width: 14, height: 14, borderRadius: '50%', background: catColor, flexShrink: 0, display: 'inline-block' }} />
+                    ) : (
+                      <Folder size={14} style={{ color: isActive ? 'var(--navy)' : '#c9a04a', flexShrink: 0 }} />
+                    )}
+                    <span style={{ flex: 1, fontSize: 13.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.name}</span>
+                    <span style={{ fontSize: 12, color: isActive ? 'rgba(10,36,99,0.65)' : 'var(--text-muted)', flexShrink: 0 }}>{docCount}</span>
+                  </div>
+                );
+              });
+            })()}
+          </div>
+        </div>
+
+        {/* ── FILES PANEL ── */}
         <VaultFilesPanel
-          docs={scopedDocs}
+          docs={folderDocs}
           folders={visibleFolders}
           isOrgAdmin={isOrgAdmin}
           currentUserId={currentUserId}
@@ -3009,6 +3076,9 @@ Rules:
           counts={counts}
           search={search}
           setSearch={setSearch}
+          currentFolderName={currentFolder?.name || null}
+          onActiveCategoriesChange={setActiveCategories}
+          onCreateFolder={onCreateFolder}
         />
       </div>
     </div>
@@ -7430,7 +7500,7 @@ INSTRUCTIONS:
     showToast(`Folder "${folder.name}" attached to chat`);
   }, [showToast]);
 
-  const handleCreateVaultFolder = useCallback((name, parentId = null) => {
+  const handleCreateVaultFolder = useCallback((name, parentId = null, category = null) => {
     const trimmed = (name || '').trim();
     if (!trimmed) return;
     const newFolder = {
@@ -7441,6 +7511,7 @@ INSTRUCTIONS:
       ownerName: operator?.name || 'You',
       isGlobal: false,
       parentId: parentId || null,
+      ...(category ? { category } : {}),
     };
     setVaultFolders((prev) => [newFolder, ...prev]);
     showToast(`Folder "${trimmed}" created`);
