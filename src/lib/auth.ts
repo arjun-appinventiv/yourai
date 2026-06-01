@@ -1,5 +1,6 @@
 // config — reads from .env.local
 // Auth functions — all calls go to the backend API.
+import { logEvent } from './auditLogStore';
 // Session is managed via httpOnly cookies set by the backend.
 // No tokens stored in localStorage or JS memory.
 // Removed: mock credentials replaced by real API calls to /api/auth/*
@@ -99,6 +100,7 @@ export async function login(
       registered[email] = { password: demo.password, user: demo.user };
       localStorage.setItem('yourai_registered_users', JSON.stringify(registered));
     } catch { /* ignore */ }
+    logEvent({ category: 'auth', action: 'Signed in', operator: { userId: demo.user.id, userName: demo.user.name, userEmail: email, avatar: demo.user.avatar, tenant: demo.user.orgName, tenantId: demo.user.orgId } });
     return { success: true, requiresOtp: false, user: demo.user };
   }
 
@@ -109,6 +111,7 @@ export async function login(
     if (reg && reg.password === password) {
       const reason = getBlockReason(email);
       if (reason) return blockedResponse(reason);
+      logEvent({ category: 'auth', action: 'Signed in', operator: { userId: reg.user.id, userName: reg.user.name, userEmail: email, avatar: reg.user.avatar, tenant: reg.user.orgName, tenantId: reg.user.orgId } });
       return { success: true, requiresOtp: false, user: reg.user };
     }
   } catch { /* ignore */ }
