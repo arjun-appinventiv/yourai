@@ -29,10 +29,11 @@ export const config = { runtime: 'nodejs' };
 type ChatMessage = { role: 'system' | 'user' | 'assistant'; content: string };
 
 // Default Claude model on Bedrock.
-// claude-3-5-haiku is comparable to gpt-4o-mini in speed and cost.
-// Swap to the sonnet ID below for higher-quality responses:
-//   anthropic.claude-3-5-sonnet-20241022-v2:0
-const DEFAULT_MODEL = 'anthropic.claude-3-5-haiku-20241022-v1:0';
+// Newer Claude models require a cross-region inference profile ID (us.* prefix)
+// rather than the bare model ID — on-demand throughput is not supported directly.
+// Swap to sonnet for higher-quality responses:
+//   us.anthropic.claude-3-5-sonnet-20241022-v2:0
+const DEFAULT_MODEL = 'us.anthropic.claude-3-5-haiku-20241022-v1:0';
 
 // ── Per-intent JSON schemas. These match the *CardData types in
 // src/components/chat/cards/*.tsx. If you add a new card-rendering
