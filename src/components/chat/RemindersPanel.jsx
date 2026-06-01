@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   Bell, Plus, ArrowLeft, Check, Clock, Calendar,
   AlertTriangle, X, ChevronDown, CheckCircle2,
@@ -774,6 +774,12 @@ function NewReminderModal({ onClose, onSave }) {
 
 function ExtractCard({ onOpen }) {
   const [isDragOver, setIsDragOver] = useState(false);
+  const fileInputRef = useRef(null);
+
+  function handleFileSelected(file) {
+    if (!file) return;
+    onOpen(file.name);
+  }
 
   return (
     <div style={{
@@ -793,12 +799,26 @@ function ExtractCard({ onOpen }) {
         Drop in any court order, scheduling order, or contract — Your AI reads it and creates reminders with cascade timing.
       </p>
 
+      {/* Hidden file input — triggered by click or drop */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".pdf,.doc,.docx,.txt"
+        style={{ display: 'none' }}
+        onChange={e => { handleFileSelected(e.target.files?.[0]); e.target.value = ''; }}
+      />
+
       {/* Dashed drop zone */}
       <div
         onDragOver={e => { e.preventDefault(); setIsDragOver(true); }}
         onDragLeave={() => setIsDragOver(false)}
-        onDrop={e => { e.preventDefault(); setIsDragOver(false); onOpen(); }}
-        onClick={onOpen}
+        onDrop={e => {
+          e.preventDefault();
+          setIsDragOver(false);
+          const file = e.dataTransfer.files?.[0];
+          if (file) handleFileSelected(file);
+        }}
+        onClick={() => fileInputRef.current?.click()}
         style={{
           border: `2px dashed ${isDragOver ? '#C9A84C' : '#d4b896'}`,
           borderRadius: 8,
@@ -816,7 +836,7 @@ function ExtractCard({ onOpen }) {
         </div>
       </div>
       <button
-        onClick={onOpen}
+        onClick={() => fileInputRef.current?.click()}
         style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11.5, color: '#9a7a3c', textDecoration: 'underline', padding: 0, fontFamily: "'DM Sans', sans-serif" }}
       >
         Or click to select a file
