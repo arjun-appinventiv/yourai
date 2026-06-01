@@ -163,9 +163,10 @@ export default async function handler(req: Request): Promise<Response> {
     return new Response('Method not allowed', { status: 405 });
   }
 
-  // BEDROCK_KEY = AWS IAM Access Key ID (AKIA…) supplied by the client.
-  // AWS_SECRET_ACCESS_KEY = the companion secret key.
-  const accessKeyId     = process.env.BEDROCK_KEY || process.env.AWS_ACCESS_KEY_ID;
+  // AWS_ACCESS_KEY_ID (AKIA…) + AWS_SECRET_ACCESS_KEY = standard IAM credentials
+  // used by the Bedrock SDK to sign requests. These are what the SDK needs.
+  // BEDROCK_KEY (ABSK…) is a different credential type not used by this SDK path.
+  const accessKeyId     = process.env.AWS_ACCESS_KEY_ID;
   const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
   const region          = process.env.AWS_REGION || 'us-east-1';
 
