@@ -373,20 +373,19 @@ export default function ExtractedDeadlinesModal({
           ))}
         </div>
 
-        {/* Footer */}
+        {/* Footer — two rows so sync pills + CTA don't overflow 540px */}
         <div
           style={{
             borderTop: '1px solid #f0f0f2',
-            padding: '14px 24px',
+            padding: '12px 24px',
             display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
+            flexDirection: 'column',
+            gap: 10,
             flexShrink: 0,
             background: '#fafafa',
-            gap: 12,
           }}
         >
-          {/* Left: sync targets */}
+          {/* Row 1: sync targets */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <span style={{ fontSize: 11, color: '#9ca3af', fontFamily: "'IBM Plex Mono', monospace", letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>
               Syncs to
@@ -437,8 +436,8 @@ export default function ExtractedDeadlinesModal({
             </div>
           </div>
 
-          {/* Right: action buttons */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+          {/* Row 2: action buttons */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
             {/* + Add manual ghost button */}
             <button
               style={{
