@@ -923,6 +923,7 @@ export default function RemindersPanel({ onBack }) {
   const [reminders, setReminders] = useState([]);
   const [activeTab, setActiveTab] = useState('upcoming');
   const [showExtractModal, setShowExtractModal] = useState(false);
+  const [extractDocName, setExtractDocName] = useState('');
   const [showNewModal, setShowNewModal] = useState(false);
   const [hoveredId, setHoveredId] = useState(null);
   const [calMonth, setCalMonth] = useState(() => new Date());
@@ -1402,7 +1403,7 @@ export default function RemindersPanel({ onBack }) {
               paddingTop: 0,
             }}>
               {/* Extract card */}
-              <ExtractCard onOpen={() => setShowExtractModal(true)} />
+              <ExtractCard onOpen={(name) => { setExtractDocName(name || 'Uploaded document'); setShowExtractModal(true); }} />
 
               {/* Mini calendar */}
               <div style={{ marginBottom: 16 }}>
@@ -1424,7 +1425,7 @@ export default function RemindersPanel({ onBack }) {
       {/* ── Modals ── */}
       {showExtractModal && (
         <ExtractedDeadlinesModal
-          docName="Scheduling Order.pdf"
+          docName={extractDocName || 'Scheduling Order.pdf'}
           onSave={handleExtractSave}
           onClose={() => setShowExtractModal(false)}
         />
