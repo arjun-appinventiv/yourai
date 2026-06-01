@@ -1,18 +1,37 @@
-// ─── /api/chat — server-side OpenAI proxy ────────────────────────────────
+// ─── /api/chat — AWS Bedrock / Claude proxy ──────────────────────────────
 //
-// Lets the browser talk to OpenAI without ever seeing the key. Accepts the
-// client's simple `{ message, conversationId?, sessionId?, sessionDocId?,
-// history?, system? }` shape (and also the older `{ messages: [...] }`
-// shape for back-compat), calls OpenAI Chat Completions with stream=true,
-// and pipes the assistant's text back as a plain `text/plain` stream so
-// the existing ChatView reader (which just concatenates chunks) works
-// unchanged.
+// Lets the browser talk to Claude on AWS Bedrock without ever seeing
+// credentials. Accepts the client's simple `{ message, history?, system?,
+// intent?, docAttached? }` shape (and the older `{ messages: [...] }` shape
+// for back-compat), builds a Claude Messages API request, and pipes the
+// assistant's text back as a plain `text/plain` stream so the existing
+// ChatView reader (which just concatenates chunks) works unchanged.
 //
-// Runs on Vercel's Edge runtime for first-class streaming.
+// Requires Vercel env vars:
+//   AWS_ACCESS_KEY_ID      — IAM access key
+//   AWS_SECRET_ACCESS_KEY  — IAM secret key
+//   AWS_REGION             — e.g. us-east-1
+// (BEDROCK_KEY is not used — standard IAM credentials are sufficient)
+//
+// Switched from Edge runtime (OpenAI fetch-based) to Node.js runtime
+// because the AWS SDK's binary event-stream decoder requires Node APIs.
 
-export const config = { runtime: 'edge' };
+import {
+  BedrockRuntimeClient,
+  InvokeModelWithResponseStreamCommand,
+} from '@aws-sdk/client-bedrock-runtime';
+
+// Node.js serverless runtime — required for @aws-sdk/client-bedrock-runtime.
+// Edge runtime doesn't support the binary event-stream decoder the SDK uses.
+export const config = { runtime: 'nodejs18.x' };
 
 type ChatMessage = { role: 'system' | 'user' | 'assistant'; content: string };
+
+// Default Claude model on Bedrock.
+// claude-3-5-haiku is comparable to gpt-4o-mini in speed and cost.
+// Swap to the sonnet ID below for higher-quality responses:
+//   anthropic.claude-3-5-sonnet-20241022-v2:0
+const DEFAULT_MODEL = 'anthropic.claude-3-5-haiku-20241022-v1:0';
 
 // ── Per-intent JSON schemas. These match the *CardData types in
 // src/components/chat/cards/*.tsx. If you add a new card-rendering
@@ -144,8 +163,11 @@ export default async function handler(req: Request): Promise<Response> {
     return new Response('Method not allowed', { status: 405 });
   }
 
-  const apiKey = (globalThis as any).process?.env?.OPENAI_API_KEY;
-  if (!apiKey) {
+  const accessKeyId     = process.env.AWS_ACCESS_KEY_ID;
+  const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
+  const region          = process.env.AWS_REGION || 'us-east-1';
+
+  if (!accessKeyId || !secretAccessKey) {
     return new Response('AI service is not configured on the server.', {
       status: 500, headers: { 'Content-Type': 'text/plain' },
     });
@@ -159,10 +181,10 @@ export default async function handler(req: Request): Promise<Response> {
   // Build messages[] — accept both legacy `{messages}` and the client's
   // `{message, history?, system?}` shape.
   let messages: ChatMessage[] = [];
-  // Track card schema in outer scope so the OpenAI call downstream can
-  // flip on response_format: json_object when a card-rendering intent
-  // is active.
+  // Track card schema in outer scope so we can inject JSON format
+  // instructions and the assistant-prefill trick downstream.
   let cardSchema: string | undefined;
+
   if (Array.isArray(body?.messages) && body.messages.length > 0) {
     messages = body.messages;
   } else if (typeof body?.message === 'string' && body.message.trim()) {
@@ -215,12 +237,6 @@ Within the legal domain: be concise, accurate, cite jurisdictions where relevant
       : [];
     messages = [system, ...history, { role: 'user', content: body.message }];
 
-    // ── Intent-specific card-shape instructions ──────────────────────
-    // When the client tags the request with a card-rendering intent,
-    // prepend a JSON-only instruction with the exact schema so the
-    // response renders in the corresponding front-end card. Combined
-    // with response_format: json_object on the OpenAI call, this
-    // guarantees valid JSON output.
     // ── Doc-attached override ─────────────────────────────────────────
     // When the client signals a document IS attached (content stitched
     // into the user message under the [Documents attached…] header),
@@ -239,6 +255,12 @@ Use the document content provided. If the user's question is ambiguous, do your 
       });
     }
 
+    // ── Intent-specific card-shape instructions ──────────────────────
+    // When the client tags the request with a card-rendering intent,
+    // prepend a JSON-only instruction with the exact schema. Combined
+    // with the assistant-prefill trick below, this ensures structured
+    // JSON output without relying on a native JSON-mode flag
+    // (Bedrock/Claude doesn't have response_format: json_object).
     cardSchema = CARD_SCHEMAS[body.intent as string];
     if (cardSchema) {
       messages.unshift({
@@ -259,8 +281,7 @@ Rules:
       });
     }
   } else {
-    // Surface exactly what keys arrived so we can diagnose shape mismatches.
-    const keys = body && typeof body === 'object' ? Object.keys(body) : [];
+    const keys    = body && typeof body === 'object' ? Object.keys(body) : [];
     const msgType = typeof body?.message;
     const msgLen  = typeof body?.message === 'string' ? body.message.length : 0;
     const msgsLen = Array.isArray(body?.messages) ? body.messages.length : 'not-array';
@@ -270,85 +291,92 @@ Rules:
     );
   }
 
-  const model       = body.model       || 'gpt-4o-mini';
-  const temperature = body.temperature ?? 0.7;
-  const max_tokens  = body.max_tokens  || 2048;
+  // ── Build the Claude Messages API request ────────────────────────────
+  // Claude's API requires system instructions in a top-level `system`
+  // field (not in the messages array). Extract all system-role entries
+  // and join them, then pass only user/assistant messages.
+  const systemParts   = messages.filter(m => m.role === 'system').map(m => m.content);
+  const chatMessages  = messages.filter(m => m.role !== 'system') as Array<{ role: 'user' | 'assistant'; content: string }>;
 
-  const upstream = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model,
-      messages,
-      temperature,
-      max_tokens,
-      stream: true,
-      // Force JSON object output when a card schema is active — this
-      // is OpenAI's native structured-output flag and is the reliable
-      // way to guarantee the response is a JSON object (vs. prose).
-      ...(cardSchema ? { response_format: { type: 'json_object' } } : {}),
-    }),
+  // Clamp temperature to Anthropic's 0–1 range (client may send OpenAI's 0–2).
+  const temperature = Math.min(body.temperature ?? 0.7, 1);
+  const max_tokens  = body.max_tokens || 2048;
+
+  // Assistant-prefill trick: for card intents, seed the assistant turn
+  // with `{` so Claude is forced to continue with valid JSON.
+  // We'll prepend that `{` back into the output stream below.
+  if (cardSchema) {
+    chatMessages.push({ role: 'assistant', content: '{' });
+  }
+
+  const bedrockBody = {
+    anthropic_version: 'bedrock-2023-05-31',
+    ...(systemParts.length > 0 ? { system: systemParts.join('\n\n') } : {}),
+    messages: chatMessages,
+    max_tokens,
+    temperature,
+  };
+
+  const client = new BedrockRuntimeClient({
+    region,
+    credentials: { accessKeyId, secretAccessKey },
   });
 
-  if (!upstream.ok || !upstream.body) {
-    const errJson = await upstream.json().catch(() => ({}));
-    const raw = (errJson?.error?.message || '').toLowerCase();
+  let upstream: Awaited<ReturnType<typeof client.send>>;
+  try {
+    upstream = await client.send(
+      new InvokeModelWithResponseStreamCommand({
+        modelId: DEFAULT_MODEL,
+        contentType: 'application/json',
+        accept:      'application/json',
+        body:        JSON.stringify(bedrockBody),
+      }),
+    );
+  } catch (err: any) {
+    const raw = (err?.message || '').toLowerCase();
     let message = 'Something went wrong. Please try again.';
-    if (/rate.?limit|too many requests|429|quota|exceeded/.test(raw))       message = 'The AI is busy right now. Please try again in a moment.';
-    else if (/invalid.?api.?key|unauthorized|401/.test(raw))                message = 'AI service is temporarily unavailable. Please contact your administrator.';
-    else if (/context.?length|maximum context|too long/.test(raw))          message = 'This conversation is too long to continue. Please start a new chat.';
-    else if (/model.?not.?found|does not exist|deprecated/.test(raw))       message = 'AI service is temporarily unavailable. Please try again.';
-    else if (/timeout|timed out|connection|network/.test(raw))              message = 'The AI took too long to respond. Please try again.';
+    if (/throttl|too many request|rate.?limit/.test(raw))      message = 'The AI is busy right now. Please try again in a moment.';
+    else if (/access denied|forbidden|not authorized/.test(raw)) message = 'AI service is temporarily unavailable. Please contact your administrator.';
+    else if (/context.?length|too long/.test(raw))              message = 'This conversation is too long to continue. Please start a new chat.';
+    else if (/timeout|timed out|connection/.test(raw))          message = 'The AI took too long to respond. Please try again.';
     return new Response(message, {
-      status: upstream.status, headers: { 'Content-Type': 'text/plain' },
+      status: 500, headers: { 'Content-Type': 'text/plain' },
     });
   }
 
-  // Transform OpenAI SSE → plain text chunks for the client.
+  // Transform Bedrock event-stream → plain text chunks for the client.
+  // Each event.chunk.bytes decodes to a Claude streaming event JSON.
+  // We extract only content_block_delta / text_delta events.
   const encoder = new TextEncoder();
   const decoder = new TextDecoder();
-  const reader  = upstream.body.getReader();
 
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
-      let buffer = '';
+      // Re-inject the prefill `{` so the client receives complete JSON.
+      if (cardSchema) {
+        controller.enqueue(encoder.encode('{'));
+      }
       try {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          buffer += decoder.decode(value, { stream: true });
-
-          // SSE frames are separated by "\n\n"
-          let sepIdx;
-          while ((sepIdx = buffer.indexOf('\n\n')) !== -1) {
-            const frame = buffer.slice(0, sepIdx);
-            buffer = buffer.slice(sepIdx + 2);
-
-            for (const line of frame.split('\n')) {
-              if (!line.startsWith('data:')) continue;
-              const data = line.slice(5).trim();
-              if (!data || data === '[DONE]') continue;
-              try {
-                const json = JSON.parse(data);
-                const delta = json?.choices?.[0]?.delta?.content;
-                if (typeof delta === 'string' && delta.length > 0) {
-                  controller.enqueue(encoder.encode(delta));
-                }
-              } catch { /* skip malformed frame */ }
+        for await (const event of upstream.body!) {
+          if (event.chunk?.bytes) {
+            const chunk = JSON.parse(decoder.decode(event.chunk.bytes));
+            if (
+              chunk.type === 'content_block_delta' &&
+              chunk.delta?.type === 'text_delta' &&
+              typeof chunk.delta.text === 'string' &&
+              chunk.delta.text.length > 0
+            ) {
+              controller.enqueue(encoder.encode(chunk.delta.text));
             }
           }
         }
-      } catch (err) {
-        // Surface a friendly error in-stream rather than abort mid-response.
+      } catch {
         controller.enqueue(encoder.encode('\n\n[Connection interrupted. Please try again.]'));
       } finally {
         controller.close();
       }
     },
-    cancel() { try { reader.cancel(); } catch { /* ignore */ } },
+    cancel() { /* AWS SDK handles cleanup */ },
   });
 
   return new Response(stream, {
