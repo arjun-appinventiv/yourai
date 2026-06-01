@@ -16,6 +16,7 @@
 // Switched from Edge runtime (OpenAI fetch-based) to Node.js runtime
 // because the AWS SDK's binary event-stream decoder requires Node APIs.
 
+import type { IncomingMessage, ServerResponse } from 'http';
 import {
   BedrockRuntimeClient,
   InvokeModelWithResponseStreamCommand,
@@ -158,9 +159,17 @@ const CARD_SCHEMAS: Record<string, string> = {
 }`,
 };
 
-export default async function handler(req: Request): Promise<Response> {
+// Node.js serverless handler — uses (req, res) style, not Web Fetch API.
+// The Web Fetch Response style only works on Edge runtime; Node.js runtime
+// requires res.write() / res.end() for streaming.
+export default async function handler(
+  req: IncomingMessage & { body?: any },
+  res: ServerResponse,
+): Promise<void> {
   if (req.method !== 'POST') {
-    return new Response('Method not allowed', { status: 405 });
+    res.statusCode = 405;
+    res.end('Method not allowed');
+    return;
   }
 
   // AWS_ACCESS_KEY_ID (AKIA…) + AWS_SECRET_ACCESS_KEY = standard IAM credentials
@@ -171,14 +180,25 @@ export default async function handler(req: Request): Promise<Response> {
   const region          = process.env.AWS_REGION || 'us-east-1';
 
   if (!accessKeyId || !secretAccessKey) {
-    return new Response('AI service is not configured on the server.', {
-      status: 500, headers: { 'Content-Type': 'text/plain' },
-    });
+    res.statusCode = 500;
+    res.setHeader('Content-Type', 'text/plain');
+    res.end('AI service is not configured on the server.');
+    return;
   }
 
-  let body: any;
-  try { body = await req.json(); } catch (e) {
-    return new Response(`Invalid JSON body: ${(e as Error)?.message || 'parse failed'}`, { status: 400 });
+  // Vercel's Node.js runtime auto-parses application/json bodies into req.body.
+  // Fall back to reading the raw stream if it hasn't been parsed yet.
+  let body: any = req.body;
+  if (!body) {
+    try {
+      const chunks: Buffer[] = [];
+      for await (const chunk of req as AsyncIterable<Buffer>) chunks.push(Buffer.from(chunk));
+      body = JSON.parse(Buffer.concat(chunks).toString());
+    } catch (e) {
+      res.statusCode = 400;
+      res.end(`Invalid JSON body: ${(e as Error)?.message || 'parse failed'}`);
+      return;
+    }
   }
 
   // Build messages[] — accept both legacy `{messages}` and the client's
@@ -288,10 +308,9 @@ Rules:
     const msgType = typeof body?.message;
     const msgLen  = typeof body?.message === 'string' ? body.message.length : 0;
     const msgsLen = Array.isArray(body?.messages) ? body.messages.length : 'not-array';
-    return new Response(
-      `Request missing usable content. keys=[${keys.join(',')}] message:${msgType}(len=${msgLen}) messages:${msgsLen}`,
-      { status: 400, headers: { 'Content-Type': 'text/plain' } },
-    );
+    res.statusCode = 400;
+    res.end(`Request missing usable content. keys=[${keys.join(',')}] message:${msgType}(len=${msgLen}) messages:${msgsLen}`);
+    return;
   }
 
   // ── Build the Claude Messages API request ────────────────────────────
@@ -338,57 +357,48 @@ Rules:
   } catch (err: any) {
     const raw = (err?.message || '').toLowerCase();
     let message = 'Something went wrong. Please try again.';
-    if (/throttl|too many request|rate.?limit/.test(raw))      message = 'The AI is busy right now. Please try again in a moment.';
+    if (/throttl|too many request|rate.?limit/.test(raw))        message = 'The AI is busy right now. Please try again in a moment.';
     else if (/access denied|forbidden|not authorized/.test(raw)) message = 'AI service is temporarily unavailable. Please contact your administrator.';
-    else if (/context.?length|too long/.test(raw))              message = 'This conversation is too long to continue. Please start a new chat.';
-    else if (/timeout|timed out|connection/.test(raw))          message = 'The AI took too long to respond. Please try again.';
-    return new Response(message, {
-      status: 500, headers: { 'Content-Type': 'text/plain' },
-    });
+    else if (/context.?length|too long/.test(raw))               message = 'This conversation is too long to continue. Please start a new chat.';
+    else if (/timeout|timed out|connection/.test(raw))           message = 'The AI took too long to respond. Please try again.';
+    res.statusCode = 500;
+    res.setHeader('Content-Type', 'text/plain');
+    res.end(message);
+    return;
   }
 
-  // Transform Bedrock event-stream → plain text chunks for the client.
+  // Stream Bedrock event-stream → plain text chunks via res.write().
   // Each event.chunk.bytes decodes to a Claude streaming event JSON.
   // We extract only content_block_delta / text_delta events.
-  const encoder = new TextEncoder();
   const decoder = new TextDecoder();
 
-  const stream = new ReadableStream<Uint8Array>({
-    async start(controller) {
-      // Re-inject the prefill `{` so the client receives complete JSON.
-      if (cardSchema) {
-        controller.enqueue(encoder.encode('{'));
-      }
-      try {
-        for await (const event of upstream.body!) {
-          if (event.chunk?.bytes) {
-            const chunk = JSON.parse(decoder.decode(event.chunk.bytes));
-            if (
-              chunk.type === 'content_block_delta' &&
-              chunk.delta?.type === 'text_delta' &&
-              typeof chunk.delta.text === 'string' &&
-              chunk.delta.text.length > 0
-            ) {
-              controller.enqueue(encoder.encode(chunk.delta.text));
-            }
-          }
-        }
-      } catch {
-        controller.enqueue(encoder.encode('\n\n[Connection interrupted. Please try again.]'));
-      } finally {
-        controller.close();
-      }
-    },
-    cancel() { /* AWS SDK handles cleanup */ },
-  });
+  res.statusCode = 200;
+  res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-cache, no-transform');
+  res.setHeader('X-Accel-Buffering', 'no');
+  res.setHeader('X-Source-Type', 'AI_GENERATED');
+  res.setHeader('Transfer-Encoding', 'chunked');
 
-  return new Response(stream, {
-    status: 200,
-    headers: {
-      'Content-Type': 'text/plain; charset=utf-8',
-      'Cache-Control': 'no-cache, no-transform',
-      'X-Accel-Buffering': 'no',
-      'X-Source-Type': 'AI_GENERATED',
-    },
-  });
+  // Re-inject the prefill `{` so the client receives complete JSON.
+  if (cardSchema) res.write('{');
+
+  try {
+    for await (const event of upstream.body!) {
+      if (event.chunk?.bytes) {
+        const chunk = JSON.parse(decoder.decode(event.chunk.bytes));
+        if (
+          chunk.type === 'content_block_delta' &&
+          chunk.delta?.type === 'text_delta' &&
+          typeof chunk.delta.text === 'string' &&
+          chunk.delta.text.length > 0
+        ) {
+          res.write(chunk.delta.text);
+        }
+      }
+    }
+  } catch {
+    res.write('\n\n[Connection interrupted. Please try again.]');
+  }
+
+  res.end();
 }
