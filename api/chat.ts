@@ -28,8 +28,12 @@ export const config = { runtime: 'nodejs' };
 
 type ChatMessage = { role: 'system' | 'user' | 'assistant'; content: string };
 
-// Default Claude model on Bedrock — Claude Opus 4.7 cross-region inference profile.
-const DEFAULT_MODEL = 'us.anthropic.claude-opus-4-7-20250514-v1:0';
+// Claude Sonnet 4.5 — confirmed active on client's Bedrock account.
+// Other available IDs (incomplete, may need date suffix from AWS console):
+//   us.anthropic.claude-sonnet-4-6
+//   us.anthropic.claude-opus-4-6-v1
+//   anthropic.claude-3-haiku-20240307-v1:0
+const DEFAULT_MODEL = 'us.anthropic.claude-sonnet-4-5-20250929-v1:0';
 
 // ── Per-intent JSON schemas. These match the *CardData types in
 // src/components/chat/cards/*.tsx. If you add a new card-rendering
