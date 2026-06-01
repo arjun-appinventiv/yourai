@@ -28,11 +28,8 @@ export const config = { runtime: 'nodejs' };
 
 type ChatMessage = { role: 'system' | 'user' | 'assistant'; content: string };
 
-// Default Claude model on Bedrock.
-// Use the cross-region inference profile ID (us.* prefix) — bare model IDs
-// require provisioned throughput. Haiku was marked Legacy on this account;
-// Sonnet v2 is the stable replacement.
-const DEFAULT_MODEL = 'us.anthropic.claude-3-5-sonnet-20241022-v2:0';
+// Default Claude model on Bedrock — Claude Opus 4.7 cross-region inference profile.
+const DEFAULT_MODEL = 'us.anthropic.claude-opus-4-7-20250514-v1:0';
 
 // ── Per-intent JSON schemas. These match the *CardData types in
 // src/components/chat/cards/*.tsx. If you add a new card-rendering
