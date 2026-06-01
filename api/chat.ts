@@ -23,7 +23,7 @@ import {
 
 // Node.js serverless runtime — required for @aws-sdk/client-bedrock-runtime.
 // Edge runtime doesn't support the binary event-stream decoder the SDK uses.
-export const config = { runtime: 'nodejs18.x' };
+export const config = { runtime: 'nodejs' };
 
 type ChatMessage = { role: 'system' | 'user' | 'assistant'; content: string };
 
