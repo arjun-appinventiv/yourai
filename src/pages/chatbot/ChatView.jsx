@@ -7723,6 +7723,7 @@ INSTRUCTIONS:
               isGlobal: false,
               folderId,
               addedFromChat: false,
+              ...(category ? { category } : {}),
             });
           });
           return next;
