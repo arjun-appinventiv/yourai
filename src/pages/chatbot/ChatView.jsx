@@ -36,6 +36,7 @@ import SessionTimerPill from '../../components/chat/SessionTimerPill';
 import BillingDraftModal from '../../components/chat/BillingDraftModal';
 import MyTimePanel from '../../components/chat/MyTimePanel';
 import TeamTimePanel from '../../components/chat/TeamTimePanel';
+import RemindersPanel from '../../components/chat/RemindersPanel';
 import { startOrResumeTimer, finalizeTimer, recordActivity as recordTimerActivity } from '../../lib/sessionTimer';
 import { seedEventsIfEmpty as seedBillingEventsIfEmpty } from '../../lib/aiTimeStore';
 import { buildDemoBillingEvents } from '../../data/demoBillingEvents';
@@ -556,7 +557,7 @@ const riskColors = {
    Layout structure confirmed by Arjun. Not signed off by Ryan.
    All existing nav items preserved — reorganised only. */
 
-function Sidebar({ activeKey, onOpenChat, onOpenOrgDashboard, onOpenPromptTemplates, onOpenClients, onOpenKnowledgePacks, onOpenDocumentVault, onOpenInviteTeam, onOpenAuditLogs, onOpenBilling, onOpenMyTime, onOpenTeamTime, onOpenWorkspaces, onOpenWorkflows, promptCount, clientCount, packCount, vaultCount, memberCount, workspaceCount, workflowCount, isOpen, onClose, threads, activeThreadId, onSwitchThread, onNewThread, onDeleteThread, onRenameThread, threadSearch, onThreadSearchChange, onSignOut, runningWorkflow, onViewRunning }) {
+function Sidebar({ activeKey, onOpenChat, onOpenOrgDashboard, onOpenPromptTemplates, onOpenClients, onOpenKnowledgePacks, onOpenDocumentVault, onOpenInviteTeam, onOpenAuditLogs, onOpenBilling, onOpenMyTime, onOpenTeamTime, onOpenWorkspaces, onOpenWorkflows, onOpenReminders, promptCount, clientCount, packCount, vaultCount, memberCount, workspaceCount, workflowCount, isOpen, onClose, threads, activeThreadId, onSwitchThread, onNewThread, onDeleteThread, onRenameThread, threadSearch, onThreadSearchChange, onSignOut, runningWorkflow, onViewRunning }) {
   // Role + permission gating — every nav item decides visibility via hasPermission
   // rather than by comparing role strings directly. See src/lib/roles.ts.
   const { hasPermission, isOrgAdmin, isExternalUser } = useRole();
@@ -616,6 +617,7 @@ function Sidebar({ activeKey, onOpenChat, onOpenOrgDashboard, onOpenPromptTempla
   const workspaceItems = [
     isOrgAdmin && { id: 'org-dashboard', icon: LayoutDashboard, label: 'Dashboard', onClick: onOpenOrgDashboard },
     { id: 'chat', icon: MessageSquare, label: 'Chat', onClick: onOpenChat },
+    !isExternalUser && { id: 'reminders', icon: Bell, label: 'Reminders', onClick: onOpenReminders },
     { id: 'workspaces', icon: Briefcase, label: 'Matters', rightText: String(workspaceCount ?? 0), onClick: onOpenWorkspaces },
     !isExternalUser && { id: 'invite-team', icon: UserPlus, label: 'Team', rightText: memberCount != null ? String(memberCount) : undefined, onClick: onOpenInviteTeam },
   ].filter(Boolean).map((it) => ({ ...it, active: it.id === activeKey }));
@@ -5512,6 +5514,7 @@ export default function ChatView({ initialView = 'chat' }) {
   });
   const [showBillingPanel, setShowBillingPanel] = useState(pathSection === 'settings');
   const [showAuditLogsPanel, setShowAuditLogsPanel] = useState(pathSection === 'audit');
+  const [showRemindersPanel, setShowRemindersPanel] = useState(pathSection === 'reminders');
   // AI-time meter
   const [showMyTimePanel, setShowMyTimePanel] = useState(pathSection === 'my-time');
   const [showTeamTimePanel, setShowTeamTimePanel] = useState(pathSection === 'team-time');
@@ -5639,6 +5642,7 @@ export default function ChatView({ initialView = 'chat' }) {
     setShowOrgDashboard(section === 'dashboard');
     setShowBillingPanel(section === 'settings');
     setShowAuditLogsPanel(section === 'audit');
+    setShowRemindersPanel(section === 'reminders');
     setShowMyTimePanel(section === 'my-time');
     setShowTeamTimePanel(section === 'team-time');
     setShowKnowledgePacksPanel(section === 'packs');
@@ -7751,6 +7755,7 @@ INSTRUCTIONS:
     setShowOrgDashboard(false);
     setShowBillingPanel(false);
     setShowAuditLogsPanel(false);
+    setShowRemindersPanel(false);
     setShowMyTimePanel(false);
     setShowTeamTimePanel(false);
     setEditingWorkflow(null);
@@ -7760,6 +7765,7 @@ INSTRUCTIONS:
     if (showOrgDashboard) return 'org-dashboard';
     if (showBillingPanel) return 'billing';
     if (showAuditLogsPanel) return 'audit-logs';
+    if (showRemindersPanel) return 'reminders';
     if (showMyTimePanel) return 'my-time';
     if (showTeamTimePanel) return 'team-time';
     if (showTeamPage) return 'invite-team';
@@ -7785,6 +7791,7 @@ INSTRUCTIONS:
         onOpenDocumentVault={() => { closeAllPanels(); setShowDocumentVaultPanel(true); setSidebarOpen(false); navigate('/chat/vault', { replace: true }); }}
         onOpenInviteTeam={() => { closeAllPanels(); setShowTeamPage(true); setSidebarOpen(false); navigate('/chat/team', { replace: true }); }}
         onOpenAuditLogs={() => { closeAllPanels(); setShowAuditLogsPanel(true); setSidebarOpen(false); navigate('/chat/audit', { replace: true }); }}
+        onOpenReminders={() => { closeAllPanels(); setShowRemindersPanel(true); setSidebarOpen(false); navigate('/chat/reminders', { replace: true }); }}
         onOpenBilling={() => { closeAllPanels(); setShowBillingPanel(true); setSidebarOpen(false); navigate('/chat/settings', { replace: true }); }}
         onOpenMyTime={() => { closeAllPanels(); setShowMyTimePanel(true); setSidebarOpen(false); navigate('/chat/my-time', { replace: true }); }}
         onOpenTeamTime={() => { closeAllPanels(); setShowTeamTimePanel(true); setSidebarOpen(false); navigate('/chat/team-time', { replace: true }); }}
@@ -7827,7 +7834,7 @@ INSTRUCTIONS:
       {/* Chat main area — hidden when a full-page panel (Team / Workspaces /
           Workflows / Vault / Knowledge Packs / Workflow Builder) is active
           so the sidebar stays visible but the chat UI is replaced. */}
-      <div style={{ flex: 1, display: (showOrgDashboard || showBillingPanel || showAuditLogsPanel || showMyTimePanel || showTeamTimePanel || showTeamPage || showWorkspacesPanel || showWorkflowsPanel || editingWorkflow || showDocumentVaultPanel || showKnowledgePacksPanel || showPromptPanel) ? 'none' : 'flex', flexDirection: 'column', minWidth: 0 }}>
+      <div style={{ flex: 1, display: (showOrgDashboard || showBillingPanel || showAuditLogsPanel || showRemindersPanel || showMyTimePanel || showTeamTimePanel || showTeamPage || showWorkspacesPanel || showWorkflowsPanel || editingWorkflow || showDocumentVaultPanel || showKnowledgePacksPanel || showPromptPanel) ? 'none' : 'flex', flexDirection: 'column', minWidth: 0 }}>
         <TopNav plan={plan} usage={usage} onOpenSidebar={() => setSidebarOpen(true)} />
 
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: showEmptyState ? '#fff' : 'var(--cream)', minHeight: 0 }}>
@@ -8959,7 +8966,7 @@ INSTRUCTIONS:
           run starts and from the sidebar running-strip. Does not
           overlay — it shrinks the chat area so users can keep chatting
           while the workflow runs. ─── */}
-      {runPanelOpen && !showOrgDashboard && !showBillingPanel && !showAuditLogsPanel && !showMyTimePanel && !showTeamTimePanel && !showTeamPage && !showWorkspacesPanel && !showWorkflowsPanel && !editingWorkflow && (
+      {runPanelOpen && !showOrgDashboard && !showBillingPanel && !showAuditLogsPanel && !showRemindersPanel && !showMyTimePanel && !showTeamTimePanel && !showTeamPage && !showWorkspacesPanel && !showWorkflowsPanel && !editingWorkflow && (
         <WorkflowRunPanel
           userId={currentUserId}
           focusRunId={runPanelFocusId}
@@ -9319,6 +9326,11 @@ INSTRUCTIONS:
       {/* ─── Audit Logs Panel (Org Admin) ─── */}
       {showAuditLogsPanel && (
         <AuditLogsPanel onBack={() => setShowAuditLogsPanel(false)} />
+      )}
+
+      {/* ─── Reminders Panel (all non-external users) ─── */}
+      {showRemindersPanel && (
+        <RemindersPanel onBack={() => { setShowRemindersPanel(false); navigate('/chat', { replace: true }); }} />
       )}
 
       {/* ─── My Time Panel (any attorney) ─── */}
