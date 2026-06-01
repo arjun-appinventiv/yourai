@@ -350,7 +350,8 @@ export default function ExtractedDeadlinesModal({
           </span>
         </div>
 
-        {/* Deadline list */}
+        {/* Deadline list — minHeight:0 lets this flex child shrink below its
+            content height so the footer is never pushed off-screen */}
         <div
           style={{
             overflowY: 'auto',
@@ -359,6 +360,7 @@ export default function ExtractedDeadlinesModal({
             flexDirection: 'column',
             gap: 8,
             flex: 1,
+            minHeight: 0,
           }}
         >
           {extractedItems.map(item => (
