@@ -11,14 +11,21 @@ const PAGE_SIZE = 10;
 
 /* ─── Type / status / scope metadata ─────────────────────────────── */
 
+// Only PDF, DOCX, TXT are accepted for upload — keep other entries as
+// fallback for any legacy docs but only expose the three in the filter UI.
 const TYPE_META = {
   pdf:   { label: 'PDF',  icon: File,     fg: '#B42318', bg: '#FDECEA' },
-  docx:  { label: 'DOC',  icon: FileText, fg: '#1D4ED8', bg: '#EAF0FE' },
-  xlsx:  { label: 'XLS',  icon: FileText, fg: '#1B7A4B', bg: '#E8F4EC' },
-  image: { label: 'IMG',  icon: ImageIcon,fg: '#7A4DB8', bg: '#F1EBFA' },
-  email: { label: 'EML',  icon: Mail,     fg: '#B7791F', bg: '#FBF1DF' },
+  docx:  { label: 'DOCX', icon: FileText, fg: '#1D4ED8', bg: '#EAF0FE' },
+  txt:   { label: 'TXT',  icon: FileText, fg: '#374151', bg: '#F1F5F9' },
   other: { label: 'FILE', icon: File,     fg: '#64748B', bg: '#F1F5F9' },
 };
+// Keep legacy mappings for any old vault entries (not shown in filter)
+const LEGACY_TYPE_META = {
+  xlsx:  { label: 'XLS',  icon: FileText, fg: '#1B7A4B', bg: '#E8F4EC' },
+  image: { label: 'IMG',  icon: File,     fg: '#7A4DB8', bg: '#F1EBFA' },
+  email: { label: 'EML',  icon: File,     fg: '#B7791F', bg: '#FBF1DF' },
+};
+const ALL_TYPE_META = { ...TYPE_META, ...LEGACY_TYPE_META };
 
 const STATUS_META = {
   Privileged:   { dot: '#C0392B', fg: '#9A2A1E', bg: '#FBEBE9' },
@@ -33,6 +40,8 @@ function typeOf(fileName = '') {
   const ext = fileName.split('.').pop().toLowerCase();
   if (ext === 'pdf') return 'pdf';
   if (ext === 'doc' || ext === 'docx') return 'docx';
+  if (ext === 'txt') return 'txt';
+  // Legacy types for old vault entries
   if (ext === 'xls' || ext === 'xlsx' || ext === 'csv') return 'xlsx';
   if (['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'].includes(ext)) return 'image';
   if (ext === 'eml' || ext === 'msg') return 'email';
@@ -85,7 +94,7 @@ function parseSizeMb(s) {
 /* ─── Atoms ─────────────────────────────────────────────────────── */
 
 function TypeBadge({ type, size = 34 }) {
-  const t = TYPE_META[type] || TYPE_META.other;
+  const t = ALL_TYPE_META[type] || ALL_TYPE_META.other;
   return (
     <span
       style={{
@@ -357,7 +366,7 @@ function RowMenu({ file, onEdit, onDelete, canEdit }) {
 }
 
 function GridCard({ file, isPreview, onPreview, onUse, onEdit, onDelete, canEdit }) {
-  const t = TYPE_META[file.type] || TYPE_META.other;
+  const t = ALL_TYPE_META[file.type] || ALL_TYPE_META.other;
   const [hovered, setHovered] = useState(false);
   return (
     <div
@@ -416,7 +425,7 @@ function GridCard({ file, isPreview, onPreview, onUse, onEdit, onDelete, canEdit
 
 function PreviewDrawer({ file, onClose, onUse, onEdit, onDelete, canEdit, isActive }) {
   if (!file) return null;
-  const t = TYPE_META[file.type] || TYPE_META.other;
+  const t = ALL_TYPE_META[file.type] || ALL_TYPE_META.other;
   return (
     <div style={{
       width: 372, flexShrink: 0, height: '100%', borderLeft: '1px solid #ECEFF3',
@@ -481,7 +490,7 @@ function PreviewDrawer({ file, onClose, onUse, onEdit, onDelete, canEdit, isActi
         <div style={{ padding: '18px 18px 0' }}>
           <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.1em', color: '#9AA5B1', marginBottom: 4, fontFamily: 'ui-monospace, Menlo, monospace', textTransform: 'uppercase' }}>Details</div>
           <DrawerMeta label="Location" value={`YourVault / ${file.path}`} />
-          <DrawerMeta label="Type" value={`${(TYPE_META[file.type] || TYPE_META.other).label} · ${file.sizeLabel}`} />
+          <DrawerMeta label="Type" value={`${(ALL_TYPE_META[file.type] || ALL_TYPE_META.other).label} · ${file.sizeLabel}`} />
           <DrawerMeta label="Uploaded by" value={file.byLabel} />
           <DrawerMeta label="Created" value={file.created || '—'} />
           <DrawerMeta label="Modified" value={file.modifiedFull || '—'} />
@@ -844,10 +853,10 @@ export default function VaultFilesPanel({
                   <CheckRow key={s} checked={filters.status.includes(s)} onClick={() => toggle('status', s)} dot={STATUS_META[s].dot}>{s}</CheckRow>
                 ))}
               </FilterPill>
-              <FilterPill icon={File} label="Type" id="type" openId={openFilterId} setOpenId={setOpenFilterId} width={200}
-                valueLabel={summarize(filters.type, (k) => TYPE_META[k].label)}>
-                {Object.keys(TYPE_META).filter(k => k !== 'other').map((k) => (
-                  <CheckRow key={k} checked={filters.type.includes(k)} onClick={() => toggle('type', k)}>{TYPE_META[k].label} · {k.toUpperCase()}</CheckRow>
+              <FilterPill icon={File} label="Type" id="type" openId={openFilterId} setOpenId={setOpenFilterId} width={160}
+                valueLabel={summarize(filters.type, (k) => TYPE_META[k]?.label || k.toUpperCase())}>
+                {['pdf', 'docx', 'txt'].map((k) => (
+                  <CheckRow key={k} checked={filters.type.includes(k)} onClick={() => toggle('type', k)}>{TYPE_META[k].label}</CheckRow>
                 ))}
               </FilterPill>
               <FilterPill icon={Calendar} label="Date" id="date" openId={openFilterId} setOpenId={setOpenFilterId} width={190}
@@ -887,7 +896,7 @@ export default function VaultFilesPanel({
                 <span style={{ fontSize: 12, color: '#9AA5B1', fontWeight: 500 }}>Active</span>
                 {[
                   ...filters.status.map((s) => ({ k: 's:' + s, label: s, rm: () => toggle('status', s) })),
-                  ...filters.type.map((t) => ({ k: 't:' + t, label: TYPE_META[t].label, rm: () => toggle('type', t) })),
+                  ...filters.type.map((t) => ({ k: 't:' + t, label: (TYPE_META[t] || ALL_TYPE_META[t])?.label || t.toUpperCase(), rm: () => toggle('type', t) })),
                   ...filters.tags.map((t) => ({ k: 'g:' + t, label: t, rm: () => toggle('tags', t) })),
                   ...filters.updatedBy.map((p) => ({ k: 'u:' + p, label: 'by ' + ((allOwners.find((o) => o.id === p)?.name || p).split(' ')[0]), rm: () => toggle('updatedBy', p) })),
                   ...(filters.date !== 'any' ? [{ k: 'd', label: DATE_OPTS.find((d) => d.value === filters.date).label, rm: () => setDate('any') }] : []),
