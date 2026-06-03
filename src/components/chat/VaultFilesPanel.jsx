@@ -699,7 +699,15 @@ export default function VaultFilesPanel({
         <input
           ref={folderUploadRef} type="file" multiple
           webkitdirectory="" directory="" style={{ display: 'none' }}
-          onChange={(e) => { if (onUploadFolder && e.target.files) onUploadFolder(Array.from(e.target.files), null); e.target.value = ''; }}
+          accept=".pdf,.docx,.txt"
+          onChange={(e) => {
+            if (onUploadFolder && e.target.files) {
+              // Filter to only PDF/DOCX/TXT even when uploading a whole folder
+              const allowed = Array.from(e.target.files).filter(f => /\.(pdf|docx|txt)$/i.test(f.name));
+              if (allowed.length) onUploadFolder(allowed, null);
+            }
+            e.target.value = '';
+          }}
         />
 
         <div style={{ flex: 1, overflowY: 'auto' }}>
