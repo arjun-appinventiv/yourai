@@ -3127,7 +3127,7 @@ function EditDocumentModal({ document: docItem, onClose, onSave, folders = [], d
     if (!f) return;
     const ext = f.name.lastIndexOf('.') !== -1 ? f.name.slice(f.name.lastIndexOf('.')).toLowerCase() : '';
     if (!SUPPORTED_EXTS.includes(ext)) {
-      setFileError('This file is not currently supported right now. Please upload a PDF, Word, PowerPoint, Excel, CSV, TXT, RTF, Open Document, Apple iWork, HTML, XML, or JSON file.');
+      setFileError('Unsupported file type. YourVault accepts PDF, DOCX, and TXT files only.');
       e.target.value = '';
       return;
     }
@@ -3157,7 +3157,7 @@ function EditDocumentModal({ document: docItem, onClose, onSave, folders = [], d
 
   return (
     <>
-      <input ref={fileInputRef} type="file" accept=".pdf,.doc,.docx,.txt,.rtf,.odt,.xls,.xlsx,.csv,.ppt,.pptx,.ods,.odp,.pages,.numbers,.key,.html,.htm,.xml,.json" style={{ display: 'none' }} onChange={handleFileChange} />
+      <input ref={fileInputRef} type="file" accept=".pdf,.docx,.txt" style={{ display: 'none' }} onChange={handleFileChange} />
       <div onClick={onClose} style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)', zIndex: 70, backdropFilter: 'blur(4px)' }} />
       <div
         className="fixed inset-0 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-[560px] md:max-h-[90vh] md:rounded-2xl"
