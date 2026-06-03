@@ -550,7 +550,98 @@ Reverse chronological. Each entry: *decision — rationale — date*.
 
 ## Last updated
 
-**2026-06-01** — Two features shipped: Reminders panel (calendar/deadline tracking from client wireframes) + YourVault folder-tree left rail with category dot icons (PR #2). Two deploys to `yourai/main`. Final bundle `index-9ZfdEU05.js`.
+**2026-06-01 (session 2)** — Heavy polish + infrastructure session. OpenAI → AWS Bedrock migration, audit-log live events, reminders modal fixes, vault type restrictions, vault picker redesign, two more PR merges. Final bundle `index-fd80feb.js` (approximate).
+
+### OpenAI → AWS Bedrock migration (`api/chat.ts`)
+
+Switched the entire chat backend from OpenAI `gpt-4o-mini` to Claude via AWS Bedrock. Several iterations to land the right config.
+
+**Key decisions:**
+- **Runtime**: Changed `runtime: 'edge'` → `runtime: 'nodejs'` (Vercel's exact string, not `nodejs18.x`). The AWS SDK binary event-stream decoder requires Node APIs; Edge runtime is V8-only.
+- **Handler style**: Edge used Web Fetch `Response` API. Node.js serverless requires `(req: IncomingMessage, res: ServerResponse)` with `res.write()` / `res.end()` for streaming.
+- **Credentials**: `AWS_ACCESS_KEY_ID` (AKIA…) + `AWS_SECRET_ACCESS_KEY` + `AWS_REGION` = standard IAM. `BEDROCK_KEY` (ABSK…) is a Bedrock-specific API key — not used by the SDK path.
+- **Model ID format**: Newer Claude models on Bedrock require the cross-region inference profile prefix `us.` (e.g. `us.anthropic.claude-sonnet-4-5-20250929-v1:0`). Bare model IDs return `ValidationException: on-demand throughput isn't supported`.
+- **JSON enforcement**: Claude on Bedrock has no `response_format: json_object` equivalent. Replaced with the assistant-prefill trick: add `{role:'assistant', content:'{'}` to the messages array for card intents, re-emit that `{` as the first stream chunk.
+- **Active model** (client's Bedrock account): `us.anthropic.claude-sonnet-4-5-20250929-v1:0` — other models on the account were either Legacy (inactive 30 days) or had incomplete IDs.
+
+**Errors encountered (good reference for future):**
+1. `unsupported "runtime" value "nodejs18.x"` — Vercel only accepts `"nodejs"` or `"edge"`
+2. `WARN: default export returned a 'Response'` — Web Fetch handler style doesn't work on Node.js runtime
+3. `ValidationException: on-demand throughput isn't supported` — bare model ID, needed `us.` prefix
+4. `ResourceNotFoundException: model marked as Legacy` — model inactive on client's account
+5. `Could not resolve "../../lib/auditLogStore"` — untracked file never committed
+
+---
+
+### Audit log — live events (was static mock only)
+
+`AuditLogsPanel` was reading from `ORG_AUDIT_EVENTS` (static mock array in `mockData.js`), completely ignoring the `auditLogStore` localStorage. Real login events written by `logEvent()` never appeared.
+
+**Fixes:**
+- `auth.ts` now imports `logEvent` and writes `{category:'auth', action:'Signed in'}` on every successful login (demo users + registered users). Operator fields passed explicitly so the event captures the correct user even before `yourai_current_email` is set.
+- `AuditLogsPanel` rewritten to use `loadAuditEvents()` + `subscribeAudit()` (pub-sub pattern mirrors workflowRunner). Seeds mock data via `seedAuditLogIfEmpty()` on mount, then subscribes so the table updates live when events fire.
+- `auditLogStore.ts` was never `git add`-ed — it existed only in the local worktree, causing two consecutive Vercel build failures. Filed as new gotcha #47.
+
+---
+
+### Reminders panel — modal + upload fixes
+
+Several issues found during QA testing:
+
+- **ExtractedDeadlinesModal footer cut** — Single-row footer had 5 items (sync label + 2 pills + Add manual + CTA) overflowing 540px. Fixed by splitting into two rows: sync pills on row 1, action buttons on row 2 with `space-between`.
+- **Items list flex overflow** — `flex: 1` without `minHeight: 0` prevented the scrollable list from shrinking below content height, pushing the footer off screen. Added `minHeight: 0`.
+- **File upload not wiring** — "Or click to select a file" was calling `onOpen()` directly (no file picker). Fixed by adding a hidden `<input type="file" ref={fileInputRef}>` and triggering it on click/drop. File name now threads through `onOpen(name)` → `extractDocName` state → `ExtractedDeadlinesModal docName` prop.
+
+**Test users added** (same firm as Ryan, both `INTERNAL_USER`, password `Test@1234`):
+- `sarah@hartwell.com` → Sarah Chen (id: m-005)
+- `james@hartwell.com` → James Wu (id: m-006)
+
+**Court scheduling order doc**: `public/sample-docs/sample-court-scheduling-order.txt` — federal court scheduling order for Hartwell v. Meridian Data Corp with 6 deadlines (Jul–Dec 2026) + SoL note. Use to test deadline extraction in the Reminders panel.
+
+---
+
+### YourVault — upload type restriction
+
+Vault uploads now accept **PDF, DOCX, TXT only**:
+- New Document modal `fileInputRef`: `accept=".pdf,.docx,.txt"`
+- VaultFilesPanel folder upload: `accept` attr + JS filter in `onChange` (so files inside a dropped folder are also filtered)
+- Error message updated: "YourVault accepts PDF, DOCX, and TXT files only."
+- `TYPE_META` trimmed to pdf / docx / txt / other. Legacy types (xlsx/image/email) moved to `LEGACY_TYPE_META` → merged into `ALL_TYPE_META` for badge display on old entries. `typeOf()` now maps `.txt` → `'txt'`.
+- Type filter dropdown in YourVault: hardcoded to `['pdf', 'docx', 'txt']` — no more XLS/IMG/EML options.
+
+---
+
+### YourVault chat picker — flat list + folder search + scroll pagination
+
+Rewrote the "Attach from YourVault" modal:
+
+- **Default view**: all files flat (no folder section). Folder names shown as muted inline prefix on each row's subtitle.
+- **Search**: matches name + description + fileName + folder name. When query matches a folder name, that folder appears at top with "Attach folder" button + doc count. A DOCUMENTS eyebrow separates folder results from file results.
+- **Scroll pagination**: `vaultPickerVisible` state starts at 20, increments by 20 when user scrolls within 60px of bottom. "Showing N of M — scroll for more" hint. Resets on query change and on close.
+- New state: `vaultPickerVisible` (default 20), reset via `setVaultPickerVisible(20)` in `closePicker` and in the search `onChange`.
+
+---
+
+### Chat nav bounce fix (Org Admin)
+
+Clicking "Chat" in the sidebar as Org Admin navigated to `/chat` but immediately bounced back to the Dashboard panel. Root cause: the URL-sync `useEffect` had `if (section === '' && isOrgAdmin) setShowOrgDashboard(true)` — this fired on every back-navigation to `/chat`, immediately undoing `closeAllPanels()`. Removed that branch; the one-shot mount redirect (`useEffect([], [])`) already handles the initial load redirect from `/chat` → `/chat/dashboard` for Org Admins.
+
+---
+
+### PR merges
+
+- **PR #2** (`claude/vault-folder-rail`): vault folder-tree left rail + per-folder category dot icons. Merged `--admin` (branch protection bypass). Squash commit `d8130e7`.
+- **PR #3** (`claude/upload-category`): one-line fix — docs inside a folder upload now inherit the category (was only applied to sub-folders). Merged `--admin`. Squash commit `0020f584`.
+
+---
+
+### Bundle progression (session 2)
+
+`index-9ZfdEU05.js` (PR #2 live) → multiple Bedrock iteration bundles → `index-BgChbRtb.js` (BEDROCK_KEY fix) → failed builds × 2 (missing auditLogStore.ts) → `index-DEYi0HLH.js` (modal minHeight + misc) → `index-fd80feb.js` (vault picker flat list) → `dacbe5f` (type filter) → `fd80feb` (folder attach in picker) — final.
+
+---
+
+**2026-06-01 (session 1)** — Two features shipped: Reminders panel (calendar/deadline tracking from client wireframes) + YourVault folder-tree left rail with category dot icons (PR #2). Two deploys to `yourai/main`. Final bundle `index-9ZfdEU05.js`.
 
 ### Reminders — "Never miss a deadline" calendar feature
 
