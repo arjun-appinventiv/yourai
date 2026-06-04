@@ -409,6 +409,7 @@ These live in `docs/extracted/` too and mirror the PMs' tenant-management refere
 - `docs/extracted/FRD_Workflows.docx` — Workflows module surfaces end-to-end: picker, builder, pre-run modal, execution, run panel, report, favourites, permissions. 75 QA test scenarios.
 - `docs/extracted/FRD_Workflow_Operations.docx` — the 7 operations (Read Documents, Analyse Clauses, Compare Against Standard, Research Precedents, Compliance Check, Update Knowledge Base, Generate Report) with per-operation behaviour, vague-doc handling, and test matrices.
 - `docs/extracted/FRD_Incorrect_Document_Handling.docx` — 9-category taxonomy of mismatched uploads + the three-stage handling protocol (Pre-Run → per-step degradation → Report honesty) + 9 worked end-to-end scenarios + 30 QA tests.
+- `docs/extracted/FRD_YourVault.docx` — YourVault end-to-end: full-page surface, folder + document lifecycle, search + filters, the chat-input Attach from YourVault picker modal and SEARCH WITHIN scope, mid-thread upload behaviour, role visibility matrix, document-status taxonomy (Privileged / Confidential / Final / Draft). 60 QA scenarios. Source: `docs/extracted/YourVault.md`.
 
 ## Sub-agents
 
