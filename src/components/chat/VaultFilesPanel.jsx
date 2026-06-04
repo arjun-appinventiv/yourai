@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   Search, X, Check, ChevronDown, ChevronRight, FileText, File,
   Image as ImageIcon, Mail, Download, Folder, Tag, Calendar, User,
-  Sparkles, Eye, ExternalLink, Sliders, MoreHorizontal, Trash2,
+  Sparkles, Sliders, MoreHorizontal, Trash2,
   Upload, FilePlus, Inbox, Workflow, Package, FolderInput, MessageSquare,
   FolderUp, FileUp, Pencil, FolderPlus,
 } from 'lucide-react';
@@ -126,16 +126,6 @@ function StatusChip({ status }) {
   );
 }
 
-function TagChip({ tag }) {
-  return (
-    <span style={{
-      display: 'inline-flex', alignItems: 'center', padding: '2px 8px',
-      borderRadius: 999, fontSize: 11, fontWeight: 500, whiteSpace: 'nowrap',
-      background: '#F0F3F6', color: '#4A5663',
-    }}>{tag}</span>
-  );
-}
-
 /* ─── Filter dropdown ───────────────────────────────────────────── */
 
 function Popover({ open, onClose, width = 220, align = 'left', children }) {
@@ -238,18 +228,17 @@ function withinDate(createdAt, range) {
 
 /* ─── Row + Grid card ──────────────────────────────────────────── */
 
-function FileRow({ file, isPreview, query, isActive, onPreview, onUse, onEdit, onDelete, canEdit, folderName }) {
+function FileRow({ file, query, isActive, onUse, onEdit, onDelete, canEdit, folderName }) {
   const insideMatch = query && !file.name.toLowerCase().includes(query.toLowerCase());
   const [hovered, setHovered] = useState(false);
-  const rowBg = isPreview ? '#FBF6EA' : hovered ? '#FAFBFC' : 'transparent';
+  const rowBg = hovered ? '#FAFBFC' : 'transparent';
   return (
     <div
-      onClick={() => onPreview(file.id)}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
-        cursor: 'pointer', transition: 'background 100ms',
-        background: rowBg, boxShadow: isPreview ? 'inset 3px 0 0 #C9A84C' : 'none',
+        transition: 'background 100ms',
+        background: rowBg,
       }}
     >
       <div style={{
@@ -365,18 +354,17 @@ function RowMenu({ file, onEdit, onDelete, canEdit }) {
   );
 }
 
-function GridCard({ file, isPreview, onPreview, onUse, onEdit, onDelete, canEdit }) {
+function GridCard({ file, onUse, onEdit, onDelete, canEdit }) {
   const t = ALL_TYPE_META[file.type] || ALL_TYPE_META.other;
   const [hovered, setHovered] = useState(false);
   return (
     <div
-      onClick={() => onPreview(file.id)}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
-        position: 'relative', borderRadius: 12, background: '#fff', cursor: 'pointer',
-        border: '1px solid ' + (isPreview ? '#C9A84C' : '#ECEFF3'),
-        boxShadow: isPreview ? '0 8px 24px -10px rgba(10,36,99,0.18)' : '0 1px 2px rgba(10,36,99,0.04)',
+        position: 'relative', borderRadius: 12, background: '#fff',
+        border: '1px solid ' + (hovered ? '#C7CFD8' : '#ECEFF3'),
+        boxShadow: hovered ? '0 4px 12px -6px rgba(10,36,99,0.10)' : '0 1px 2px rgba(10,36,99,0.04)',
         display: 'flex', flexDirection: 'column', overflow: 'hidden',
         transition: 'all 150ms',
       }}
@@ -421,113 +409,6 @@ function GridCard({ file, isPreview, onPreview, onUse, onEdit, onDelete, canEdit
   );
 }
 
-/* ─── Preview drawer ───────────────────────────────────────────── */
-
-function PreviewDrawer({ file, onClose, onUse, onEdit, onDelete, canEdit, isActive }) {
-  if (!file) return null;
-  const t = ALL_TYPE_META[file.type] || ALL_TYPE_META.other;
-  return (
-    <div style={{
-      width: 372, flexShrink: 0, height: '100%', borderLeft: '1px solid #ECEFF3',
-      background: '#fff', display: 'flex', flexDirection: 'column', overflow: 'hidden',
-    }}>
-      <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        height: 52, padding: '0 18px', borderBottom: '1px solid #F0F3F6', flexShrink: 0,
-      }}>
-        <span style={{
-          fontSize: 12, fontWeight: 600, letterSpacing: '0.1em',
-          color: '#9AA5B1', textTransform: 'uppercase',
-          fontFamily: 'ui-monospace, Menlo, monospace',
-        }}>Preview</span>
-        <button onClick={onClose} style={{
-          width: 30, height: 30, borderRadius: 8, border: 'none', background: 'transparent',
-          color: '#9AA5B1', cursor: 'pointer', display: 'inline-flex',
-          alignItems: 'center', justifyContent: 'center',
-        }}
-          onMouseEnter={(e) => { e.currentTarget.style.background = '#F0F3F6'; e.currentTarget.style.color = '#0A2463'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#9AA5B1'; }}
-        ><X size={17} /></button>
-      </div>
-      <div style={{ flex: 1, overflowY: 'auto' }}>
-        <div style={{ padding: '18px 18px 0' }}>
-          <div style={{
-            position: 'relative', height: 170, borderRadius: 12, background: t.bg,
-            border: '1px solid #ECEFF3', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            overflow: 'hidden',
-          }}>
-            <div style={{
-              position: 'absolute', inset: 0, opacity: 0.5,
-              backgroundImage: 'repeating-linear-gradient(45deg, rgba(255,255,255,0.55) 0 12px, transparent 12px 24px)',
-            }} />
-            <TypeBadge type={file.type} size={64} />
-          </div>
-        </div>
-        <div style={{ padding: '14px 18px 0' }}>
-          <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: '#16223A', lineHeight: 1.35 }}>{file.name}</h3>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
-            <StatusChip status={file.status} />
-            {file.tags.map((t2) => <TagChip key={t2} tag={t2} />)}
-          </div>
-        </div>
-        <div style={{ padding: '14px 18px 0', display: 'flex', alignItems: 'center', gap: 8 }}>
-          <button onClick={() => onUse(file)} style={{
-            flex: 1, height: 40, borderRadius: 10, border: 'none',
-            background: isActive ? '#5CA868' : '#0A2463', color: '#fff', fontSize: 13.5,
-            fontWeight: 600, cursor: 'pointer', display: 'inline-flex',
-            alignItems: 'center', justifyContent: 'center', gap: 6, fontFamily: 'inherit',
-          }}>
-            <MessageSquare size={15} /> {isActive ? 'In chat' : 'Add to chat'}
-          </button>
-          {file.sampleUrl && (
-            <button onClick={() => window.open(file.sampleUrl, '_blank')} title="Open preview" style={{
-              width: 40, height: 40, borderRadius: 10, border: '1px solid #E7ECF1',
-              background: '#fff', color: '#0A2463', cursor: 'pointer',
-              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-            }}><ExternalLink size={17} /></button>
-          )}
-        </div>
-        <div style={{ padding: '18px 18px 0' }}>
-          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.1em', color: '#9AA5B1', marginBottom: 4, fontFamily: 'ui-monospace, Menlo, monospace', textTransform: 'uppercase' }}>Details</div>
-          <DrawerMeta label="Location" value={`YourVault / ${file.path}`} />
-          <DrawerMeta label="Type" value={`${(ALL_TYPE_META[file.type] || ALL_TYPE_META.other).label} · ${file.sizeLabel}`} />
-          <DrawerMeta label="Uploaded by" value={file.byLabel} />
-          <DrawerMeta label="Created" value={file.created || '—'} />
-          <DrawerMeta label="Modified" value={file.modifiedFull || '—'} />
-          {file.description && <DrawerMeta label="Description" value={file.description} />}
-          <DrawerMeta label="Access" value={file.scope} />
-        </div>
-        {canEdit && (
-          <div style={{ padding: '18px 18px 24px', display: 'flex', gap: 8 }}>
-            <button onClick={() => onEdit(file)} style={{
-              flex: 1, height: 34, borderRadius: 8, border: '1px solid #E7ECF1',
-              background: '#fff', color: '#0A2463', fontSize: 12.5, fontWeight: 500,
-              cursor: 'pointer', fontFamily: 'inherit',
-            }}>Edit</button>
-            <button onClick={() => onDelete(file)} style={{
-              height: 34, borderRadius: 8, border: '1px solid #E7ECF1',
-              background: '#fff', color: '#C0392B', fontSize: 12.5, fontWeight: 500,
-              cursor: 'pointer', padding: '0 14px', display: 'inline-flex',
-              alignItems: 'center', gap: 6, fontFamily: 'inherit',
-            }}>
-              <Trash2 size={13} /> Delete
-            </button>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function DrawerMeta({ label, value, children }) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '10px 0', borderBottom: '1px solid #F2F5F8' }}>
-      <div style={{ width: 92, flexShrink: 0, fontSize: 12, fontWeight: 500, color: '#9AA5B1', paddingTop: 1 }}>{label}</div>
-      <div style={{ flex: 1, fontSize: 13, color: '#3A4654' }}>{children || value}</div>
-    </div>
-  );
-}
-
 function Toast({ msg }) {
   if (!msg) return null;
   return (
@@ -567,7 +448,6 @@ export default function VaultFilesPanel({
   useEffect(() => {
     if (typeof onActiveCategoriesChange === 'function') onActiveCategoriesChange(filters.status);
   }, [filters.status, onActiveCategoriesChange]);
-  const [previewId, setPreviewId] = useState(null);
   const [toast, setToast] = useState(null);
   const toastTimer = useRef(null);
   const folderUploadRef = useRef(null);
@@ -682,16 +562,10 @@ export default function VaultFilesPanel({
   });
   const setDate = (v) => setFilters((f) => ({ ...f, date: v }));
 
-  const onPreview = (id) => setPreviewId((p) => (p === id ? null : id));
-
   const onUse = (file) => {
     onSelect && onSelect(file);
     flash(<span><strong>{file.name}</strong> added to chat context</span>);
   };
-
-  const previewFile = previewId ? enriched.find((d) => d.id === previewId) : null;
-  const previewIsActive = previewFile && activeDocument && activeDocument.id === previewFile.id;
-  const canEditPreview = previewFile && (isOrgAdmin || previewFile.ownerId === currentUserId || !previewFile.ownerId);
 
   const vaultEmpty = enriched.length === 0;
   const showZero = !vaultEmpty && results.length === 0;
@@ -982,11 +856,9 @@ export default function VaultFilesPanel({
                 {pagedResults.map((f) => (
                   <FileRow
                     key={f.id} file={f}
-                    isPreview={previewId === f.id}
                     isActive={activeDocument && activeDocument.id === f.id}
                     query={search}
                     folderName={f.folderName}
-                    onPreview={onPreview}
                     onUse={onUse}
                     onEdit={onEdit}
                     onDelete={onDelete}
@@ -1001,8 +873,6 @@ export default function VaultFilesPanel({
                   {pagedResults.map((f) => (
                     <GridCard
                       key={f.id} file={f}
-                      isPreview={previewId === f.id}
-                      onPreview={onPreview}
                       onUse={onUse}
                       onEdit={onEdit}
                       onDelete={onDelete}
@@ -1018,17 +888,6 @@ export default function VaultFilesPanel({
 
       </div>
 
-      {previewFile && (
-        <PreviewDrawer
-          file={previewFile}
-          isActive={previewIsActive}
-          canEdit={canEditPreview}
-          onClose={() => setPreviewId(null)}
-          onUse={onUse}
-          onEdit={(f) => { setPreviewId(null); onEdit && onEdit(f); }}
-          onDelete={(f) => { setPreviewId(null); onDelete && onDelete(f.id); }}
-        />
-      )}
       {showNewFolderModal && (
         <NewFolderModal
           onClose={() => setShowNewFolderModal(false)}
