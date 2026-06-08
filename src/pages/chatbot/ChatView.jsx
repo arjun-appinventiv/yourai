@@ -5144,6 +5144,41 @@ function MessageBubble({ msg, onOpenArtifact, isActiveArtifact, onConfirmAction 
                 );
               };
 
+              // find_document inline results — prose heading + list with
+              // "Use in chat" underlined link per row. Fires the existing
+              // yourai:vault-use-doc window event handled in ChatView so
+              // MessageBubble doesn't need access to documentVault state.
+              if (msg.findResults) {
+                const { query, results, totalCount } = msg.findResults;
+                return (
+                  <div style={{ fontSize: 14, color: 'var(--text-primary)', lineHeight: 1.7 }}>
+                    <p style={{ margin: '0 0 8px 0' }}>
+                      {totalCount > results.length
+                        ? <>Showing top {results.length} of <strong>{totalCount}</strong> documents matching &ldquo;{query}&rdquo;:</>
+                        : <>Found <strong>{results.length === 1 ? '1 document' : `${results.length} documents`}</strong> matching &ldquo;{query}&rdquo;:</>
+                      }
+                    </p>
+                    {results.map((r) => (
+                      <div key={r.id} style={{ marginBottom: 5 }}>
+                        <strong style={{ fontWeight: 600 }}>{r.name}</strong>
+                        {(r.folderPath || r.fileSize) && (
+                          <span style={{ color: 'var(--text-muted)', fontSize: 13 }}>
+                            {' '}({[r.folderPath, r.fileSize].filter(Boolean).join(' · ')})
+                          </span>
+                        )}
+                        <span style={{ color: 'var(--text-muted)', fontSize: 13 }}>{' · '}</span>
+                        <a
+                          onClick={() => window.dispatchEvent(new CustomEvent('yourai:vault-use-doc', { detail: { doc: r } }))}
+                          style={{ color: 'var(--navy)', textDecoration: 'underline', cursor: 'pointer', fontSize: 13, fontWeight: 500 }}
+                        >
+                          Use in chat
+                        </a>
+                      </div>
+                    ))}
+                  </div>
+                );
+              }
+
               // Card intents → preview chip (panel renders the full card).
               if (msg.cardData && isCardIntent(msg.intent)) {
                 return renderArtifactChip(msg.cardData);
@@ -6795,6 +6830,10 @@ export default function ChatView({ initialView = 'chat' }) {
         id: Date.now() + 1,
         sender: 'bot',
         content: findDocContent,
+        // Structured results attached so the render can add "Use in chat" links.
+        // Only present when there are actual matches — empty/no-query states
+        // just render the plain content string via ReactMarkdown.
+        findResults: resultRows.length > 0 ? { query: q, results: resultRows, totalCount: matches.length } : null,
         timestamp: ts,
         sourceBadge: null,
       };
