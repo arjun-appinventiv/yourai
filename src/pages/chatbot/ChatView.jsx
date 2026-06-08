@@ -6810,23 +6810,14 @@ export default function ChatView({ initialView = 'chat' }) {
     setIsTyping(true);
     setStreamingContent('');
 
-    // ─── Classifier fallback indicator (Q8, 2026-05-16) ───
-    // If we attempted the LLM classifier and got null back (timeout,
-    // network failure, malformed response), surface a discreet system
-    // note in the thread so the user knows routing accuracy may be
-    // reduced for this turn. Distinct from "didn't attempt" (chit-chat
-    // / slash / re-fires), which never shows this note.
-    if (classifierFallback) {
-      const fallbackNote = {
-        id: Date.now() + 0.25,
-        sender: 'bot',
-        content: 'Routing classifier unavailable — used keyword fallback. Skill accuracy may be reduced for this message.',
-        timestamp: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
-        sourceBadge: null,
-        isSystemNote: true,
-      };
-      setMessages((prev) => [...prev, fallbackNote]);
-    }
+    // classifierFallback is retained for future telemetry use but no
+    // longer surfaces a banner. The Bedrock backend (since 2026-06-01)
+    // doesn't support the gpt-4o-mini classifier call, so the fallback
+    // fires on every message — showing a "routing unavailable" note on
+    // every send is alarming and misleading (keyword routing works fine).
+    // Remove the banner entirely; re-introduce when the agentic
+    // classifier ships on Bedrock in Sprint 3.
+    void classifierFallback;
 
     // ─── Hard Intent Guardrail ───
     // If the user is in General Chat but their message clearly matches a specific intent,
