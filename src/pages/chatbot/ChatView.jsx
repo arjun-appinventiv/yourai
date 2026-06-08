@@ -5144,14 +5144,7 @@ function MessageBubble({ msg, onOpenArtifact, isActiveArtifact, onConfirmAction 
                 );
               };
 
-              // find_document keeps its inline list rendering.
-              if (msg.intent === 'find_document') {
-                if (msg.cardData) return <IntentCard intent={msg.intent} data={msg.cardData} />;
-                const parsed = tryParseCardData(msg.content);
-                if (parsed) return <IntentCard intent={msg.intent} data={parsed} />;
-              }
-
-              // Other card intents → preview chip (panel renders the full card).
+              // Card intents → preview chip (panel renders the full card).
               if (msg.cardData && isCardIntent(msg.intent)) {
                 return renderArtifactChip(msg.cardData);
               }
@@ -6772,19 +6765,36 @@ export default function ChatView({ initialView = 'chat' }) {
         timestamp: ts,
         attachments: pendingAttachments,
       };
+
+      // Build plain markdown — renders through the standard ReactMarkdown
+      // path, no card chrome. Same prose style as multi-intent inline picks.
+      let findDocContent;
+      if (documentVault.length === 0) {
+        findDocContent = 'Your vault is empty — upload a document first to search for it.';
+      } else if (!q) {
+        findDocContent = "What are you looking for? Type a name, folder, or description and I'll search your vault.";
+      } else if (resultRows.length === 0) {
+        findDocContent = `No documents found for **"${q}"** in your vault. Try a different keyword.`;
+      } else {
+        const n = resultRows.length;
+        const total = matches.length;
+        const heading = total > n
+          ? `Showing top ${n} of **${total} documents** matching "${q}":`
+          : `Found **${n === 1 ? '1 document' : `${n} documents`}** matching "${q}":`;
+        const rows = resultRows.map((r) => {
+          const parts = [];
+          if (r.folderPath) parts.push(r.folderPath);
+          if (r.fileSize) parts.push(r.fileSize);
+          const meta = parts.length ? ` (${parts.join(' · ')})` : '';
+          return `- **${r.name}**${meta}`;
+        });
+        findDocContent = `${heading}\n\n${rows.join('\n')}`;
+      }
+
       const botMsg = {
         id: Date.now() + 1,
         sender: 'bot',
-        content: '',
-        intent: 'find_document',
-        cardData: {
-          query: q,
-          rawQuery,
-          results: resultRows,
-          totalCount: matches.length,
-          vaultIsEmpty: documentVault.length === 0,
-          queryWasStripped: !q && rawQuery.length > 0,
-        },
+        content: findDocContent,
         timestamp: ts,
         sourceBadge: null,
       };
