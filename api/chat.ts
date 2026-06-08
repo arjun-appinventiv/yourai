@@ -345,21 +345,40 @@ Rules:
     credentials: { accessKeyId, secretAccessKey },
   });
 
+  const command = new InvokeModelWithResponseStreamCommand({
+    modelId: DEFAULT_MODEL,
+    contentType: 'application/json',
+    accept:      'application/json',
+    body:        JSON.stringify(bedrockBody),
+  });
+
+  // Retry once on transient errors (throttling, timeouts, connection resets).
+  // Auth / config errors are permanent — throw immediately on those.
+  const isTransient = (e: any) => /throttl|too many request|rate.?limit|timeout|timed out|connection|ECONNRESET|ETIMEDOUT/i.test(e?.message || '');
+  const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
+
   console.log('[api/chat] calling Bedrock', { region, model: DEFAULT_MODEL, accessKeyId: accessKeyId?.slice(0, 8) + '…' });
   let upstream: Awaited<ReturnType<typeof client.send>>;
-  try {
-    upstream = await client.send(
-      new InvokeModelWithResponseStreamCommand({
-        modelId: DEFAULT_MODEL,
-        contentType: 'application/json',
-        accept:      'application/json',
-        body:        JSON.stringify(bedrockBody),
-      }),
-    );
-    console.log('[api/chat] Bedrock response received');
-  } catch (err: any) {
-    console.error('[api/chat] Bedrock error:', err?.name, err?.message);
-    const raw = (err?.message || '').toLowerCase();
+  let lastErr: any;
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      upstream = await client.send(command);
+      console.log('[api/chat] Bedrock response received (attempt', attempt, ')');
+      lastErr = null;
+      break;
+    } catch (err: any) {
+      lastErr = err;
+      if (attempt < 2 && isTransient(err)) {
+        console.warn('[api/chat] transient error, retrying in 800 ms…', err?.name, err?.message);
+        await sleep(800);
+      } else {
+        break;
+      }
+    }
+  }
+  if (lastErr) {
+    console.error('[api/chat] Bedrock error (all attempts):', lastErr?.name, lastErr?.message);
+    const raw = (lastErr?.message || '').toLowerCase();
     let message = 'Something went wrong. Please try again.';
     if (/throttl|too many request|rate.?limit/.test(raw))        message = 'The AI is busy right now. Please try again in a moment.';
     else if (/access denied|forbidden|not authorized/.test(raw)) message = 'AI service is temporarily unavailable. Please contact your administrator.';

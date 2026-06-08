@@ -4,6 +4,7 @@
  */
 
 import * as pdfjsLib from 'pdfjs-dist';
+import { unzip } from 'fflate';
 
 // Configure PDF.js worker
 pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
@@ -97,21 +98,52 @@ export async function extractFileText(
       return { text: text.slice(0, maxChars) };
     }
 
-    // DOCX, DOC, ODT, XLS, XLSX, PPT, PPTX — try readAsText as best-effort
-    // These are binary formats; readAsText won't work well but we handle gracefully
-    if (['doc', 'docx', 'odt', 'xls', 'xlsx', 'ppt', 'pptx'].includes(ext)) {
-      // For DOCX: it's a ZIP containing XML. readAsText gives partial results.
-      // We attempt readAsText and check if it's mostly readable
-      const text = await extractPlainText(file);
-      const readableRatio = text.replace(/[^\x20-\x7E\n\r\t]/g, '').length / (text.length || 1);
-
-      if (readableRatio < 0.5) {
-        // Too much binary — return a descriptive message instead of garbled text
+    // DOCX / DOC: extract word/document.xml from the ZIP using fflate,
+    // then strip XML tags to get plain text.
+    if (['doc', 'docx'].includes(ext)) {
+      try {
+        const buffer = await file.arrayBuffer();
+        const uint8 = new Uint8Array(buffer);
+        const text = await new Promise<string>((resolve, reject) => {
+          unzip(uint8, { filter: (f) => f.name === 'word/document.xml' }, (err, files) => {
+            if (err || !files['word/document.xml']) {
+              reject(err || new Error('word/document.xml not found'));
+              return;
+            }
+            const xml = new TextDecoder('utf-8').decode(files['word/document.xml']);
+            // Paragraph ends → newlines; break elements → newlines; strip all tags
+            const plain = xml
+              .replace(/<\/w:p>/gi, '\n\n')
+              .replace(/<w:br[^>]*\/>/gi, '\n')
+              .replace(/<[^>]+>/g, ' ')
+              .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+              .replace(/&quot;/g, '"').replace(/&apos;/g, "'")
+              .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(parseInt(n, 10)))
+              .replace(/[ \t]+/g, ' ')
+              .replace(/\n[ \t]+/g, '\n')
+              .replace(/\n{3,}/g, '\n\n')
+              .trim();
+            resolve(plain);
+          });
+        });
+        if (!text) {
+          return {
+            text: `[File: ${file.name}] This DOCX appears to be empty or image-based — no readable text could be extracted.`,
+          };
+        }
+        return { text: text.slice(0, maxChars) };
+      } catch {
         return {
-          text: `[File: ${file.name}] This is a ${ext.toUpperCase()} file (${formatFileSize(file.size)}). The file format requires server-side processing for full text extraction. Please use TXT or PDF format for best results.`,
+          text: `[File: ${file.name}] Could not extract text from this DOCX file. Try saving as PDF or TXT and uploading again.`,
         };
       }
-      return { text: text.slice(0, maxChars) };
+    }
+
+    // ODT, XLS, XLSX, PPT, PPTX — binary formats; advise conversion
+    if (['odt', 'xls', 'xlsx', 'ppt', 'pptx'].includes(ext)) {
+      return {
+        text: `[File: ${file.name}] This ${ext.toUpperCase()} file format requires server-side processing. Please convert to PDF or TXT for best results.`,
+      };
     }
 
     // Fallback: try reading as text
