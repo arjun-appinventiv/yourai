@@ -92,6 +92,48 @@ In priority order (these are the ones to ask the dev team about first):
 
 ---
 
+## Opening behaviour solution (2026-06-08) — YL-537 / YL-540 / YL-542
+
+QA filed three bugs, all the **same root cause**: the **"Ask Clarifying Question"** opening
+behaviour is ignored and the bot returns the grounding-gate fallback *"I could not find
+enough information…"* instead of asking.
+
+- **Affected intents**: Risk Assessment (YL-537), Case Law Analysis (YL-540), Email & Letter
+  Drafting (YL-542).
+- **Root cause**: the `low_overlap < ~0.55` refusal gate runs **before** the opening-behaviour
+  logic. "Ask for input" (clarify / ask-for-document) and "I can't answer" are opposite
+  outcomes, but the gate collapses both into the refusal. **No prompt fixes this alone** — the
+  pipeline must let the `ask_*` branches bypass the refusal gate for that turn (a clarify turn
+  needs no retrieval coverage; it's asking the user to provide it).
+- **The three modes** (mutually exclusive; mirror our `src/lib/intentsStore.ts`):
+  `start_immediately`, `ask_for_document`, `ask_clarifying_question`.
+- **Turn-decision order to implement**: read opening_behaviour → sufficiency check (does this
+  turn have the required inputs + context?) → if missing AND mode is `ask_*` → emit the ask and
+  SKIP the refusal gate → else PROCEED with retrieval + answer.
+
+**Deliverable**: `~/Desktop/YourAI_Opening_Behaviour_Solution.md` — three drop-in prompt modules
+(one per mode), per-intent `REQUIRED_INPUTS` lists, the isolation test, and a validation
+checklist. Two items live in chat history but not yet folded into the doc:
+
+1. **`start_immediately` was producing dull/rude one-liners.** First draft said *"do not open
+   with a greeting / perform directly"* → Nova Lite read it as "be terse." Rewrote to mean
+   *"don't gate — just help"* with explicit *"warm opening sentence, never a curt one-liner,
+   greet warmly on small talk"* lines. **Keep those explicit lines — a weak model needs them.**
+
+2. **System prompt vs custom instruction vs tone prompt precedence** (their team was confused).
+   LLMs have NO built-in precedence between parts of one prompt — conflicts are a coin flip.
+   Model to recommend: split "system prompt" into **Core (locked: identity, safety,
+   anti-hallucination, output contract) — never overridable** and **Defaults (formatting/length)
+   — overridable**. Tone = voice only. Custom instruction overrides Defaults + Tone, never Core.
+   Cleanest enforcement: keep Core out of the admin-editable field entirely. A paste-ready
+   assembly wrapper with an explicit precedence header was provided in chat.
+
+**YL-542 has a second, separate bug**: the configured custom instruction isn't reaching the
+output — prompt-assembly drop, or the early refusal returns before the apply step. The prompt
+can't fix it until the string is wired into the final system prompt.
+
+---
+
 ## How we test their build
 
 The test-suite MD is the canonical regression set. Two ways to run it:

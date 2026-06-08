@@ -550,6 +550,37 @@ Reverse chronological. Each entry: *decision — rationale — date*.
 
 ## Last updated
 
+**2026-06-08** — Jira/Atlassian MCP connected + dev-team opening-behaviour solution + SA Workflows parity (deployed). Final prod bundle `index-BoVXYXMj.js`.
+
+### Jira (Atlassian MCP) connected
+- The Atlassian MCP connector is now authenticated for `appinventivtech.atlassian.net`. Claude can read tickets, run JQL, and comment. The live bug project is **`YL` ("YourAI OLD")** — confirm with Arjun whether a newer project exists before assuming `YL` is canonical.
+- Cloud/site id for tool calls: `appinventivtech.atlassian.net`.
+
+### Dev-team opening-behaviour solution (YL-537 / YL-540 / YL-542)
+- QA filed three bugs — Risk Assessment (YL-537), Case Law Analysis (YL-540), Email & Letter Drafting (YL-542) — all the **same root cause**: the "Ask Clarifying Question" opening behaviour is ignored and the bot returns the grounding-gate fallback *"I could not find enough information…"* instead.
+- **Root cause**: the `low_overlap < ~0.55` refusal gate runs **before** the opening-behaviour logic. "Ask for input" (clarify / ask-for-document) and "I can't answer" are opposite outcomes, but the gate collapses them into the same refusal. **No prompt fixes this alone** — the pipeline must let the `ask_*` branches bypass the refusal gate.
+- **Their three opening-behaviour modes** (mutually exclusive, from `src/lib/intentsStore.ts`): `start_immediately`, `ask_for_document`, `ask_clarifying_question`.
+- **Deliverable**: `~/Desktop/YourAI_Opening_Behaviour_Solution.md` — solution-focused doc: the turn-decision order (check behaviour → sufficiency check → ask vs proceed → bypass refusal on ask), three drop-in prompt modules (one per mode), per-intent `REQUIRED_INPUTS` lists, an isolation test, and a validation checklist.
+- **`start_immediately` follow-up (shared in chat, not yet in the doc)**: the team reported dull/rude one-liners. Cause: the first draft said *"do not open with a greeting / perform directly"* → Nova Lite (weak instruction-follower) read that as "be terse." Fix: rewrote the module to mean *"don't gate — just help,"* with explicit *"warm opening sentence, never a curt one-liner, greet warmly on small talk"* lines. **Keep those explicit lines — they do real work on a weak model; don't trim for brevity.**
+- **Custom-instruction miss (YL-542 second half)** is a separate bug: the custom-instruction string isn't reaching the model (prompt-assembly drop, or the early refusal returns before the apply step). Prompt can't fix it until the string is wired in.
+- **System prompt vs custom instruction vs tone prompt precedence** (team confusion): LLMs have NO built-in precedence between parts of one prompt — conflicting instructions are a coin flip. Recommended model: split the "system prompt" into **Core (locked: identity, safety, anti-hallucination, output contract) — never overridable** and **Defaults (formatting/length) — overridable by custom instruction**. Tone prompt = voice only. Custom instruction overrides Defaults + Tone, never Core. Cleanest enforcement = keep Core out of the admin-editable field entirely (structurally un-overridable). Gave a paste-ready assembly wrapper with an explicit precedence header.
+
+### SA Workflows = ChatView workflows (shipped + deployed)
+- `src/pages/super-admin/WorkflowTemplates.jsx` rewritten to **render the actual chat workflow components** (`WorkflowsPanel` + `WorkflowBuilder` + `PreRunModal` + `WorkflowRunPanel`) instead of its old, diverged Apr-17 UI. `/super-admin/workflows` is now pixel- and behaviour-identical to `/chat/workflows`. Diff: **+119 / −623 lines**.
+- Wrapped in `ChatRoleProvider` (SA routes lack the chat RoleContext that `useRole()` needs — see CLAUDE.md gotcha #50; it defaults to `ORG_ADMIN` so create/edit/run are enabled). Full-bleed wrapper cancels SA `Layout`'s 28×32 padding (`margin: -28px -32px; height: calc(100vh - 88px)`).
+- Handler wiring mirrors ChatView's `editingWorkflow` / `runningPrep` / `runPanelOpen` / `runPanelFocusId` exactly. Back-breadcrumb (`← Dashboard`) → `/super-admin/dashboard`.
+- **One judgment call**: back-breadcrumb target is the SA dashboard; change if a different SA landing is preferred.
+- Commit `4cf027f` → merged to `yourai/main` (`62def69..14287ae`). Clean build; deploy verified — live bundle `index-BoVXYXMj.js` matches the local clean-build hash.
+- New conventions added to CLAUDE.md: "SA Workflows reuses chat components — do not fork" + gotcha #50 (ChatRoleProvider wrap for reusing chat components in SA).
+
+### What's next (from this session)
+- **Dev team applies the opening-behaviour fix**: the pipeline change (bypass refusal gate on `ask_*`) is the unlock; prompt modules + per-intent required inputs follow. Then re-test YL-537 / 540 / 542. YL-542 also needs the custom-instruction wiring fix.
+- Consider folding the `start_immediately` rewrite + the prompt-precedence model into the Desktop doc (currently only in chat history) before sending to the dev team.
+- Decide whether to **comment the solution directly on the Jira tickets** (offered; not yet done).
+- Confirm whether `YL` is the canonical Jira project or if a newer one supersedes it.
+
+---
+
 **2026-06-01 (session 2)** — Heavy polish + infrastructure session. OpenAI → AWS Bedrock migration, audit-log live events, reminders modal fixes, vault type restrictions, vault picker redesign, two more PR merges. Final bundle `index-fd80feb.js` (approximate).
 
 ### OpenAI → AWS Bedrock migration (`api/chat.ts`)
