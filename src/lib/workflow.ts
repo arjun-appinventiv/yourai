@@ -489,6 +489,12 @@ export function upsertRun(run: WorkflowRun): void {
   if (idx === -1) all.unshift(run); else all[idx] = run;
   saveRuns(all);
 }
+export function deleteRun(id: string): void {
+  saveRuns(listRuns().filter((r) => r.id !== id));
+}
+export function clearAllRuns(): void {
+  saveRuns([]);
+}
 
 /* Active-run guard — one workflow at a time per user.
    The active run id is mirrored to its own key for cheap reads from

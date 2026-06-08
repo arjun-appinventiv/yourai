@@ -41,6 +41,8 @@ import {
   canCreateWorkflow,
   canDeleteTemplate,
   canEditTemplate,
+  clearAllRuns,
+  deleteRun,
   getActiveRunId,
   getRun,
   isFavouriteTemplate,
@@ -100,7 +102,8 @@ const STEP_TYPE_DESCRIPTIONS: Record<string, string> = {
   custom: 'runs a custom step',
 };
 
-type FilterKey = 'all' | 'platform' | 'org' | 'personal';
+type FilterKey = 'all' | 'platform' | 'org' | 'personal' | 'history';
+type HistoryFilter = 'all' | 'complete' | 'failed' | 'cancelled';
 type SortMode = 'default' | 'duration';
 type DrawerSection = 'overview' | 'recent-runs';
 
@@ -111,6 +114,7 @@ export interface WorkflowsPanelProps {
   onEdit: (template: WorkflowTemplate) => void;
   onDuplicate: (template: WorkflowTemplate) => void;
   onDelete: (id: string) => void;
+  onViewRun?: (runId: string) => void;
 }
 
 function formatRelativeDate(iso?: string | null): string {
@@ -193,6 +197,7 @@ export default function WorkflowsPanel({
   onEdit,
   onDuplicate,
   onDelete,
+  onViewRun,
 }: WorkflowsPanelProps) {
   const navigate = useNavigate();
   const showToast = useToast();
@@ -212,6 +217,7 @@ export default function WorkflowsPanel({
   const [templates, setTemplates] = useState<WorkflowTemplate[]>([]);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<FilterKey>('all');
+  const [historyFilter, setHistoryFilter] = useState<HistoryFilter>('all');
   const [sortMode, setSortMode] = useState<SortMode>('default');
   const [recentRunsOnly, setRecentRunsOnly] = useState(false);
   const [menuOpenFor, setMenuOpenFor] = useState<string | null>(null);
@@ -219,6 +225,7 @@ export default function WorkflowsPanel({
   const [drawerSection, setDrawerSection] = useState<DrawerSection>('overview');
   const [activeTemplateId, setActiveTemplateId] = useState<string | null>(null);
   const [runs, setRuns] = useState<WorkflowRun[]>([]);
+  const [confirmClearHistory, setConfirmClearHistory] = useState(false);
   const platformCardRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   useEffect(() => {
@@ -311,6 +318,26 @@ export default function WorkflowsPanel({
   const handleTabChange = (nextFilter: FilterKey) => {
     setFilter(nextFilter);
     resetTransientState();
+  };
+
+  const refreshRuns = () => {
+    const allRuns = listRuns().sort((a, b) => {
+      const aTime = new Date(a.completedAt || a.startedAt).getTime();
+      const bTime = new Date(b.completedAt || b.startedAt).getTime();
+      return bTime - aTime;
+    });
+    setRuns(allRuns);
+  };
+
+  const handleDeleteRun = (runId: string) => {
+    deleteRun(runId);
+    refreshRuns();
+  };
+
+  const handleClearAllHistory = () => {
+    clearAllRuns();
+    setConfirmClearHistory(false);
+    refreshRuns();
   };
 
   const openDrawer = (template: WorkflowTemplate, section: DrawerSection = 'overview') => {
@@ -568,6 +595,7 @@ export default function WorkflowsPanel({
               <FilterPill label="Platform" count={counts.platform} active={filter === 'platform'} tooltip="Maintained by YourAI" onClick={() => handleTabChange('platform')} />
               <FilterPill label="Your Org" count={counts.org} active={filter === 'org'} tooltip="Shared across your organisation" onClick={() => handleTabChange('org')} />
               <FilterPill label="Yours" count={counts.personal} active={filter === 'personal'} tooltip="Visible only to you" onClick={() => handleTabChange('personal')} />
+              <FilterPill label="History" count={runs.length} active={filter === 'history'} tooltip="All past workflow runs" onClick={() => handleTabChange('history')} />
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginLeft: 'auto', flexWrap: 'wrap' }}>
@@ -631,7 +659,20 @@ export default function WorkflowsPanel({
             </div>
           </div>
 
-          {filteredTemplates.length === 0 ? (
+          {filter === 'history' ? (
+            /* ── History view ──────────────────────────────────────────── */
+            <HistoryView
+              runs={runs}
+              historyFilter={historyFilter}
+              onHistoryFilterChange={setHistoryFilter}
+              confirmClear={confirmClearHistory}
+              onRequestClear={() => setConfirmClearHistory(true)}
+              onCancelClear={() => setConfirmClearHistory(false)}
+              onConfirmClear={handleClearAllHistory}
+              onDeleteRun={handleDeleteRun}
+              onViewRun={onViewRun}
+            />
+          ) : filteredTemplates.length === 0 ? (
             emptyState
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: 20 }}>
@@ -755,6 +796,239 @@ function StatTile({
     </Tooltip>
   );
 }
+
+/* ── HistoryView ─────────────────────────────────────────────────────────── */
+
+function HistoryView({
+  runs,
+  historyFilter,
+  onHistoryFilterChange,
+  confirmClear,
+  onRequestClear,
+  onCancelClear,
+  onConfirmClear,
+  onDeleteRun,
+  onViewRun,
+}: {
+  runs: WorkflowRun[];
+  historyFilter: HistoryFilter;
+  onHistoryFilterChange: (f: HistoryFilter) => void;
+  confirmClear: boolean;
+  onRequestClear: () => void;
+  onCancelClear: () => void;
+  onConfirmClear: () => void;
+  onDeleteRun: (id: string) => void;
+  onViewRun?: (runId: string) => void;
+}) {
+  const filtered = runs.filter((r) => {
+    if (historyFilter === 'all') return true;
+    if (historyFilter === 'complete') return r.status === 'complete';
+    if (historyFilter === 'failed') return r.status === 'failed';
+    if (historyFilter === 'cancelled') return r.status === 'cancelled';
+    return true;
+  });
+
+  const counts = {
+    all: runs.length,
+    complete: runs.filter((r) => r.status === 'complete').length,
+    failed: runs.filter((r) => r.status === 'failed').length,
+    cancelled: runs.filter((r) => r.status === 'cancelled').length,
+  };
+
+  const STATUS_STYLE: Record<string, { bg: string; color: string; label: string }> = {
+    complete:  { bg: 'rgba(42,157,110,0.10)',  color: '#206B4D', label: 'Completed' },
+    failed:    { bg: 'rgba(196,79,79,0.10)',   color: '#A33F3F', label: 'Failed' },
+    cancelled: { bg: 'rgba(107,114,128,0.10)', color: '#4B5563', label: 'Cancelled' },
+    running:   { bg: 'rgba(11,29,58,0.06)',    color: 'var(--navy)', label: 'Running' },
+  };
+
+  const formatDate = (iso: string | null) => {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    const diff = Date.now() - d.getTime();
+    const mins  = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+    const days  = Math.floor(diff / 86400000);
+    if (mins < 1) return 'Just now';
+    if (mins < 60) return `${mins}m ago`;
+    if (hours < 24) return `${hours}h ago`;
+    if (days === 1) return `Yesterday, ${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+    if (days < 7)  return `${days} days ago`;
+    return d.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ', ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
+  const formatDur = (secs: number | undefined | null) => {
+    if (!secs) return '—';
+    if (secs < 60) return `${secs}s`;
+    return `${Math.floor(secs / 60)}m ${secs % 60}s`;
+  };
+
+  const totalDuration = (r: WorkflowRun) =>
+    r.steps.reduce((sum, s) => sum + (s.durationSeconds || 0), 0);
+
+  return (
+    <div>
+      {/* Toolbar */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
+        {/* Status filter pills */}
+        <div style={{ display: 'inline-flex', border: '1px solid #e2e3e7', borderRadius: 9, background: '#fff', padding: 3, gap: 2 }}>
+          {(['all', 'complete', 'failed', 'cancelled'] as HistoryFilter[]).map((key) => {
+            const label = key === 'all' ? 'All' : key.charAt(0).toUpperCase() + key.slice(1);
+            const count = counts[key];
+            const active = historyFilter === key;
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => onHistoryFilterChange(key)}
+                style={{
+                  padding: '6px 12px',
+                  borderRadius: 6,
+                  border: 'none',
+                  background: active ? 'var(--gold-bg)' : 'transparent',
+                  color: active ? 'var(--text-primary)' : 'var(--text-secondary)',
+                  fontSize: 12.5,
+                  fontWeight: active ? 600 : 400,
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 5,
+                }}
+              >
+                {label}
+                <span style={{ fontSize: 11, opacity: 0.75 }}>{count}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Clear history */}
+        {runs.length > 0 && !confirmClear && (
+          <button
+            type="button"
+            onClick={onRequestClear}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12.5, color: 'var(--text-muted)', background: 'none', border: '1px solid var(--border)', borderRadius: 8, padding: '6px 12px', cursor: 'pointer' }}
+          >
+            <Trash2 size={13} /> Clear history
+          </button>
+        )}
+        {confirmClear && (
+          <div style={{ fontSize: 12.5, color: '#991B1B', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8, padding: '6px 12px' }}>
+            Clear all {runs.length} runs?{' '}
+            <button type="button" onClick={onConfirmClear} style={{ fontWeight: 700, color: '#DC2626', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: 12.5 }}>Yes</button>
+            {' · '}
+            <button type="button" onClick={onCancelClear} style={{ color: '#6B7280', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: 12.5 }}>Cancel</button>
+          </div>
+        )}
+      </div>
+
+      {filtered.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '52px 28px', borderRadius: 16, border: '1px solid var(--ice)', background: '#fff' }}>
+          <div style={{ fontFamily: "'Fraunces', serif", fontSize: 20, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 8 }}>
+            {runs.length === 0 ? 'No runs yet' : 'No runs match this filter'}
+          </div>
+          <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0 }}>
+            {runs.length === 0
+              ? 'Run a workflow and the history will appear here.'
+              : 'Try a different status filter.'}
+          </p>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 1, border: '1px solid var(--ice)', borderRadius: 14, overflow: 'hidden', background: '#fff' }}>
+          {/* Table header */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 130px 90px 80px 90px', gap: 0, padding: '9px 16px', background: 'var(--ice-warm)', borderBottom: '1px solid var(--ice)' }}>
+            {['Workflow', 'Date', 'Status', 'Duration', 'Docs'].map((h) => (
+              <div key={h} style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.07em', textTransform: 'uppercase', fontFamily: "'IBM Plex Mono', monospace" }}>{h}</div>
+            ))}
+          </div>
+
+          {filtered.map((run, idx) => {
+            const st = STATUS_STYLE[run.status] || STATUS_STYLE.complete;
+            const dur = totalDuration(run);
+            const isLast = idx === filtered.length - 1;
+            return (
+              <div
+                key={run.id}
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 130px 90px 80px 90px',
+                  gap: 0,
+                  padding: '11px 16px',
+                  borderBottom: isLast ? 'none' : '1px solid var(--ice)',
+                  alignItems: 'center',
+                  background: '#fff',
+                  transition: 'background 100ms',
+                }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.background = 'var(--ice-warm)'; }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.background = '#fff'; }}
+              >
+                {/* Workflow name + view / delete actions */}
+                <div style={{ minWidth: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, paddingRight: 8 }}>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {run.templateName}
+                    </div>
+                    {run.uploadedDocs.length > 0 && (
+                      <div style={{ fontSize: 11.5, color: 'var(--text-muted)', marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {run.uploadedDocs.map((d) => d.name).join(', ')}
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+                    {run.status === 'complete' && onViewRun && (
+                      <button
+                        type="button"
+                        title="View report"
+                        onClick={() => onViewRun(run.id)}
+                        style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--navy)', background: 'none', border: '1px solid var(--border)', borderRadius: 6, padding: '3px 9px', cursor: 'pointer' }}
+                      >
+                        View →
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      title="Delete run"
+                      onClick={() => onDeleteRun(run.id)}
+                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 24, height: 24, borderRadius: 6, border: '1px solid var(--border)', background: '#fff', color: 'var(--text-muted)', cursor: 'pointer' }}
+                      onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = '#DC2626'; (e.currentTarget as HTMLButtonElement).style.borderColor = '#FECACA'; }}
+                      onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)'; (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border)'; }}
+                    >
+                      <Trash2 size={11} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Date */}
+                <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{formatDate(run.completedAt || run.startedAt)}</div>
+
+                {/* Status badge */}
+                <div>
+                  <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: 999, background: st.bg, color: st.color, fontSize: 11, fontWeight: 600 }}>
+                    {st.label}
+                  </span>
+                </div>
+
+                {/* Duration */}
+                <div style={{ fontSize: 12, color: 'var(--text-secondary)', fontFamily: "'IBM Plex Mono', monospace" }}>
+                  {dur > 0 ? formatDur(dur) : '—'}
+                </div>
+
+                {/* Doc count */}
+                <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+                  {run.uploadedDocs.length > 0
+                    ? `${run.uploadedDocs.length} file${run.uploadedDocs.length !== 1 ? 's' : ''}`
+                    : '—'}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── FilterPill ─────────────────────────────────────────────────────────── */
 
 function FilterPill({
   label,

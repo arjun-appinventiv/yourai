@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Filter, Maximize2, Minimize2, X } from 'lucide-react';
-import { listRuns, type WorkflowRun } from '../../lib/workflow';
+import { Filter, Maximize2, Minimize2, Trash2, X } from 'lucide-react';
+import { clearAllRuns, deleteRun, listRuns, type WorkflowRun } from '../../lib/workflow';
 import { subscribeRun } from '../../lib/workflowRunner';
 import StatusBadge from './workflow-runs/StatusBadge';
 import WorkflowRunCard from './workflow-runs/WorkflowRunCard';
@@ -13,25 +13,20 @@ interface Props {
   onRunAnother?: () => void;
 }
 
-type FilterState = 'all' | 'running' | 'complete';
+type FilterState = 'all' | 'running' | 'complete' | 'failed';
 
 export default function WorkflowRunPanel({ userId, onClose, focusRunId }: Props) {
   const [tick, setTick] = useState(0);
   const [fullscreen, setFullscreen] = useState(false);
   const [activeFilter, setActiveFilter] = useState<FilterState>('all');
   const [expandedRunId, setExpandedRunId] = useState<string | null>(focusRunId || null);
+  const [confirmClear, setConfirmClear] = useState(false);
 
   const runs = useMemo<WorkflowRun[]>(() => {
-    const all = listRuns().filter((run) => run.userId === userId);
-    const cutoff = Date.now() - (24 * 60 * 60 * 1000);
-    return all
-      .filter((run) => {
-        if (run.status === 'failed') return false;
-        if (run.status === 'running') return true;
-        const time = run.completedAt ? new Date(run.completedAt).getTime() : new Date(run.startedAt).getTime();
-        return time >= cutoff;
-      })
+    return listRuns()
+      .filter((run) => run.userId === userId)
       .sort((a, b) => {
+        // Running always floats to the top
         const aRank = a.status === 'running' ? 0 : 1;
         const bRank = b.status === 'running' ? 0 : 1;
         if (aRank !== bRank) return aRank - bRank;
@@ -63,6 +58,7 @@ export default function WorkflowRunPanel({ userId, onClose, focusRunId }: Props)
     if (activeFilter === 'all') return true;
     if (activeFilter === 'running') return run.status === 'running';
     if (activeFilter === 'complete') return run.status === 'complete';
+    if (activeFilter === 'failed') return run.status === 'failed' || run.status === 'cancelled';
     return false;
   });
 
@@ -75,6 +71,20 @@ export default function WorkflowRunPanel({ userId, onClose, focusRunId }: Props)
   const counts = {
     running: runs.filter((run) => run.status === 'running').length,
     complete: runs.filter((run) => run.status === 'complete').length,
+    failed: runs.filter((run) => run.status === 'failed' || run.status === 'cancelled').length,
+  };
+
+  const handleDeleteRun = (runId: string) => {
+    deleteRun(runId);
+    if (expandedRunId === runId) setExpandedRunId(null);
+    setTick((v) => v + 1);
+  };
+
+  const handleClearAll = () => {
+    clearAllRuns();
+    setExpandedRunId(null);
+    setConfirmClear(false);
+    setTick((v) => v + 1);
   };
 
   return (
@@ -86,13 +96,20 @@ export default function WorkflowRunPanel({ userId, onClose, focusRunId }: Props)
       <div style={headerStyle}>
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
           <div style={{ minWidth: 0, flex: 1 }}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>Workflow Runs</div>
+            <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Run History</div>
             <div style={{ fontSize: 22, fontFamily: "'DM Serif Display', serif", color: 'var(--text-primary)', lineHeight: 1.1, marginTop: 2 }}>
-              {runs.length} recent
+              {runs.length} {runs.length === 1 ? 'run' : 'runs'} total
             </div>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, paddingTop: 2 }}>
+            {runs.length > 0 && !confirmClear && (
+              <IconButton
+                label="Clear all history"
+                onClick={() => setConfirmClear(true)}
+                icon={<Trash2 size={15} />}
+              />
+            )}
             <IconButton
               label="Show all runs"
               onClick={() => setActiveFilter('all')}
@@ -111,6 +128,15 @@ export default function WorkflowRunPanel({ userId, onClose, focusRunId }: Props)
           </div>
         </div>
 
+        {confirmClear && (
+          <div style={{ marginTop: 10, padding: '10px 14px', borderRadius: 10, background: '#FEF2F2', border: '1px solid #FECACA', fontSize: 13, color: '#991B1B' }}>
+            Clear all {runs.length} run{runs.length !== 1 ? 's' : ''}?{' '}
+            <button type="button" onClick={handleClearAll} style={{ fontWeight: 600, color: '#DC2626', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: 13 }}>Yes, clear</button>
+            {' · '}
+            <button type="button" onClick={() => setConfirmClear(false)} style={{ color: '#6B7280', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: 13 }}>Cancel</button>
+          </div>
+        )}
+
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 12 }}>
           <FilterPill
             label={`Running ${counts.running}`}
@@ -124,22 +150,63 @@ export default function WorkflowRunPanel({ userId, onClose, focusRunId }: Props)
             active={activeFilter === 'complete'}
             onClick={() => setActiveFilter(activeFilter === 'complete' ? 'all' : 'complete')}
           />
+          {counts.failed > 0 && (
+            <FilterPill
+              label={`Failed ${counts.failed}`}
+              variant="failed"
+              active={activeFilter === 'failed'}
+              onClick={() => setActiveFilter(activeFilter === 'failed' ? 'all' : 'failed')}
+            />
+          )}
         </div>
       </div>
 
       <div style={{ flex: 1, overflowY: 'auto', padding: 14, display: 'flex', flexDirection: 'column', gap: 12 }}>
         {visibleRuns.length === 0 ? (
-          <div style={{ border: '1px solid var(--border-default)', borderRadius: 14, background: '#FFFFFF', padding: 18, fontSize: 12.5, color: 'var(--text-secondary)', lineHeight: 1.7 }}>
-            No workflow runs match this filter yet.
+          <div style={{ border: '1px solid var(--border-default)', borderRadius: 14, background: '#FFFFFF', padding: 24, textAlign: 'center' }}>
+            <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+              {runs.length === 0
+                ? 'No runs yet — run a workflow to see history here.'
+                : 'No runs match this filter.'}
+            </div>
           </div>
         ) : (
           visibleRuns.map((run) => (
-            <WorkflowRunCard
-              key={run.id}
-              run={run}
-              isExpanded={expandedRunId === run.id}
-              onToggle={() => setExpandedRunId((current) => current === run.id ? null : run.id)}
-            />
+            <div key={run.id} style={{ position: 'relative' }}>
+              <WorkflowRunCard
+                run={run}
+                isExpanded={expandedRunId === run.id}
+                onToggle={() => setExpandedRunId((current) => current === run.id ? null : run.id)}
+              />
+              {/* Per-run delete — only shown on non-running runs */}
+              {run.status !== 'running' && (
+                <button
+                  type="button"
+                  title="Delete this run"
+                  onClick={() => handleDeleteRun(run.id)}
+                  style={{
+                    position: 'absolute',
+                    top: 10,
+                    right: 10,
+                    width: 26,
+                    height: 26,
+                    borderRadius: 7,
+                    border: '1px solid var(--border-default)',
+                    background: '#fff',
+                    color: 'var(--text-muted)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    opacity: 0.7,
+                  }}
+                  onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.opacity = '1'; (e.currentTarget as HTMLButtonElement).style.color = '#DC2626'; }}
+                  onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.opacity = '0.7'; (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)'; }}
+                >
+                  <Trash2 size={12} />
+                </button>
+              )}
+            </div>
           ))
         )}
       </div>
@@ -186,7 +253,7 @@ function FilterPill({
   onClick,
 }: {
   label: string;
-  variant: 'running' | 'complete';
+  variant: 'running' | 'complete' | 'failed';
   active: boolean;
   onClick: () => void;
 }) {

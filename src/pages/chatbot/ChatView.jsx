@@ -9678,6 +9678,11 @@ INSTRUCTIONS:
             setToastMsg('Workflow deleted');
             setTimeout(() => setToastMsg(''), 3200);
           }}
+          onViewRun={(runId) => {
+            setShowWorkflowsPanel(false);
+            setRunPanelFocusId(runId);
+            setRunPanelOpen(true);
+          }}
         />
       )}
 
