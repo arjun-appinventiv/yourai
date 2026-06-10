@@ -49,8 +49,11 @@ export default function WorkflowRunPanel({ userId, onClose, focusRunId }: Props)
     }
     setExpandedRunId((current) => {
       if (current && runs.some((run) => run.id === current)) return current;
+      // Auto-expand a live run so its progress is visible. Completed runs stay
+      // collapsed — the history reads as a straightforward list with a
+      // "View progress" CTA per row, not an auto-opened progress view.
       const running = runs.find((run) => run.status === 'running');
-      return running?.id || runs[0]?.id || null;
+      return running?.id || null;
     });
   }, [focusRunId, runs]);
 
@@ -62,11 +65,9 @@ export default function WorkflowRunPanel({ userId, onClose, focusRunId }: Props)
     return false;
   });
 
-  const expandedVisible = expandedRunId
-    ? filteredRuns.find((run) => run.id === expandedRunId) || null
-    : null;
-
-  const visibleRuns = expandedVisible ? [expandedVisible] : filteredRuns;
+  // Always render the full list — expanding a run reveals its progress inline
+  // (accordion) rather than collapsing the history down to a single run.
+  const visibleRuns = filteredRuns;
 
   const counts = {
     running: runs.filter((run) => run.status === 'running').length,

@@ -29,7 +29,7 @@ export default function WorkflowStepTimeline({
     <div style={{ position: 'relative', display: 'grid', gap: 14 }}>
       {run.steps.map((step, index) => (
         <WorkflowStepItem
-          key={step.stepId}
+          key={step.stepId ?? index}
           step={step}
           stepNumber={index + 1}
           isLast={index === run.steps.length - 1}

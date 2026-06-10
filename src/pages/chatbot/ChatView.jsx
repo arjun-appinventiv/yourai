@@ -946,50 +946,37 @@ function Sidebar({ activeKey, onOpenChat, onOpenOrgDashboard, onOpenPromptTempla
         )}
       </div>
 
-      {/* ═══ ZONE 5.5 — Running Workflow Strip (Part 8) ═══
-          Visible only while a workflow run is in progress. Clicking "View"
-          jumps to that run's card in the chat thread. The spinner + mini
-          progress bar reflect the live subscription state in the parent. */}
-      {runningWorkflow && (
+      {/* ═══ ZONE 5.5 — Workflow History CTA (Part 8) ═══
+          A clean, always-visible call-to-action that opens the run panel
+          (run history + live progress). No inline step counts or progress
+          bars here — when a run is in progress the icon swaps to a spinner
+          as the only live cue; everything else lives in the panel. */}
+      {onViewRunning && (
         <div
           onClick={onViewRunning}
           style={{
             borderTop: '0.5px solid var(--border)',
-            padding: '10px 12px',
-            background: 'linear-gradient(180deg, #F8F4ED 0%, #FDFBF6 100%)',
-            cursor: onViewRunning ? 'pointer' : 'default',
-            display: 'flex', flexDirection: 'column', gap: 6,
+            padding: '11px 12px',
+            cursor: 'pointer',
+            display: 'flex', alignItems: 'center', gap: 8,
           }}
-          onMouseEnter={(e) => { if (onViewRunning) e.currentTarget.style.background = '#F3ECDD'; }}
-          onMouseLeave={(e) => { if (onViewRunning) e.currentTarget.style.background = 'linear-gradient(180deg, #F8F4ED 0%, #FDFBF6 100%)'; }}
-          title="Jump to the running workflow"
+          onMouseEnter={(e) => { e.currentTarget.style.background = '#F3ECDD'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+          title="Open workflow history"
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            {/* Spinner */}
+          {runningWorkflow ? (
             <div style={{
               width: 12, height: 12, borderRadius: '50%',
               border: '1.5px solid #C9A84C', borderTopColor: 'transparent',
               animation: 'spin 0.9s linear infinite', flexShrink: 0,
             }} />
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--navy)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {runningWorkflow.templateName || 'Workflow running'}
-              </div>
-              <div style={{ fontSize: 10, color: 'var(--text-muted)', lineHeight: 1.2 }}>
-                Step {Math.min((runningWorkflow.currentStepIndex ?? 0) + 1, runningWorkflow.steps?.length || 1)} of {runningWorkflow.steps?.length || 1}
-                {onViewRunning ? ' · View →' : ''}
-              </div>
-            </div>
-          </div>
-          {/* Progress bar */}
-          <div style={{ height: 3, borderRadius: 2, background: '#E8DCC2', overflow: 'hidden' }}>
-            <div style={{
-              height: '100%',
-              width: `${Math.min(100, Math.round(((runningWorkflow.currentStepIndex ?? 0) / Math.max(1, (runningWorkflow.steps?.length || 1))) * 100))}%`,
-              background: '#C9A84C',
-              transition: 'width 300ms ease',
-            }} />
-          </div>
+          ) : (
+            <Clock size={13} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+          )}
+          <span style={{ flex: 1, fontSize: 12.5, fontWeight: 600, color: 'var(--navy)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            Workflow History
+          </span>
+          <ChevronRight size={13} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
         </div>
       )}
 
@@ -8060,15 +8047,12 @@ INSTRUCTIONS:
         workflowCount={workflowCount}
         runningWorkflow={runningWorkflow}
         onViewRunning={() => {
-          // Close overlay panels so the chat + run panel are visible,
-          // then open the multi-run panel and auto-expand the active run.
-          setShowTeamPage(false);
-          setShowWorkspacesPanel(false);
-          setShowWorkflowsPanel(false);
-          setShowPromptPanel(false);
-          setShowClientsPanel(false);
-          setShowKnowledgePacksPanel(false);
-          setShowDocumentVaultPanel(false);
+          // Close every full-page panel (incl. Org Dashboard / Billing / Audit /
+          // Time) so the chat + run panel are visible, then open the multi-run
+          // panel and auto-expand the active run. Without closeAllPanels the run
+          // panel stays gated behind whichever full-page panel is open and the
+          // "View progress" CTA appears to do nothing (e.g. Org Admin on dashboard).
+          closeAllPanels();
           setSidebarOpen(false);
           setRunPanelFocusId(runningWorkflow?.id || null);
           setRunPanelOpen(true);

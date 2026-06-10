@@ -1,7 +1,7 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import { Copy, Download, FileText, ListTree, ScrollText } from 'lucide-react';
 import { type WorkflowReport } from '../../../lib/workflow';
-import WorkflowReportCard, { openWorkflowReportPrintableWindow } from '../WorkflowReportCard';
+import { openWorkflowReportPrintableWindow } from '../WorkflowReportCard';
 import StatusBadge from './StatusBadge';
 
 export default function WorkflowArtifactCard({
@@ -9,7 +9,6 @@ export default function WorkflowArtifactCard({
 }: {
   report: WorkflowReport | null;
 }) {
-  const [showFullReport, setShowFullReport] = useState(false);
 
   const findings = useMemo(() => extractFindings(report?.summary || ''), [report?.summary]);
 
@@ -77,20 +76,12 @@ export default function WorkflowArtifactCard({
           <button onClick={() => copyText(report.summary || findings.join('\n'))} style={secondaryButtonStyle}>
             <Copy size={12} /> Copy summary
           </button>
-          <button onClick={() => setShowFullReport((prev) => !prev)} style={tertiaryButtonStyle}>
-            Open report
-          </button>
           <button onClick={() => openWorkflowReportPrintableWindow(report)} style={primaryButtonStyle}>
-            <Download size={12} /> Download Report
+            <Download size={12} /> Open Report
           </button>
         </div>
       </div>
 
-      {showFullReport && (
-        <div style={{ marginTop: 14 }}>
-          <WorkflowReportCard report={report} />
-        </div>
-      )}
     </div>
   );
 }
@@ -213,21 +204,6 @@ const primaryButtonStyle: React.CSSProperties = {
   color: '#FFFFFF',
   fontSize: 12,
   fontWeight: 700,
-  cursor: 'pointer',
-  whiteSpace: 'nowrap',
-};
-
-const tertiaryButtonStyle: React.CSSProperties = {
-  display: 'inline-flex',
-  alignItems: 'center',
-  gap: 6,
-  padding: '10px 14px',
-  borderRadius: 10,
-  border: '1px solid rgba(201,168,76,0.16)',
-  background: '#FFFFFF',
-  color: 'var(--text-primary)',
-  fontSize: 12,
-  fontWeight: 600,
   cursor: 'pointer',
   whiteSpace: 'nowrap',
 };

@@ -84,8 +84,11 @@ export default function WorkflowRunCard({
               <StatusBadge label={run.workspaceId ? 'Workspace KB' : 'Global KB'} variant="source" />
             </div>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          {isExpanded ? <ChevronDown size={16} color="#8899AB" /> : <ChevronRight size={16} color="#8899AB" />}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0, color: 'var(--brand-navy)', marginRight: isRunning ? 0 : 26 }}>
+            <span style={{ fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap' }}>
+              {isExpanded ? 'Hide' : 'View progress'}
+            </span>
+            {isExpanded ? <ChevronDown size={15} color="var(--brand-navy)" /> : <ChevronRight size={15} color="var(--brand-navy)" />}
           </div>
         </div>
       </button>
