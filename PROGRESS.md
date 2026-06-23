@@ -550,6 +550,54 @@ Reverse chronological. Each entry: *decision — rationale — date*.
 
 ## Last updated
 
+**2026-06-23** — Workflow Output: locked final step in the Builder + user-defined output format + mandatory-instruction-when-attached. Deployed to prod.
+
+- **Locked "Workflow Output · Required" step**: the `generate_report` invariant step is now surfaced in the Builder (was appended invisibly at save). `WorkflowBuilder` seeds it via `ensureGenerateReportLast`, renders it via `StepCard locked` (lock icon, static "Workflow Output · Required" pill, `draggable=false`, no remove, tinted card). Pinned last — `addStep` splices before it, `onDrop` clamps so nothing lands after it / it can't move, and `generate_report` is filtered out of `OperationDropdown`.
+- **Author-defined output format**: the step's instruction (relabelled "Output format & instructions", improved default text) and an attachable "Output template" (Advanced options) both drive formatting. The `generate_report` system prompt (in `intentsStore.ts` SEED_INTENTS — store key bumped to `yourai_intents_v2` to force re-seed; legacy fallback in `workflowPrompts.ts` kept in sync) now follows priority: **user instruction → attached template → default executive report**. `buildStepMessages` relabels an attached reference doc as an "Output format template" when `operation === 'generate_report'`.
+- **Mandatory instruction when a doc/template is attached** (every reference-doc-supporting step): empty instruction + attached doc → red "· required" label + red helper + red border + hard Save block (`stepsMissingRequiredInstruction` in `handleSave`). Distinct from the existing soft empty-instruction warning.
+- **Latent bug fixed**: `supportsReferenceDoc` + op-dropdown filtering used `require('../../lib/intentsStore')`, which is `undefined` in the browser ESM runtime → always fell into its catch (the per-step reference-doc / output-template UI never rendered in dev). Replaced with a static import + `operationSupportsReferenceDoc()` helper. CLAUDE.md gotcha #51 added.
+- Files: `WorkflowBuilder.tsx`, `intentsStore.ts`, `workflow.ts`, `workflowPrompts.ts`. Clean build, verified end-to-end in preview (locked render, Add Step ordering, required-when-attached block + unblock, persistence).
+
+**2026-06-19** — Intents registry deliverable, external framework evaluations, Vercel outage (no code changes).
+
+### YourAI_Intents_Registry.xlsx
+- Generated `~/Downloads/YourAI_Intents_Registry.xlsx` (13 KB, 4 sheets) as a quick-reference deliverable for the intent / skill system.
+- **Sheet 1 — All Intents**: all 15 intents grouped by bucket with colour-coded rows. Columns: Intent ID · Label · Description · Chat Skill · Workflow Op · Bucket · Opening Behaviour · Reference Doc · Source Pill · Notes.
+- **Sheet 2 — Chat Skills**: 13 intents visible in the chat intent dropdown; notes flag which are also workflow ops.
+- **Sheet 3 — Workflow Operations**: 10 workflow ops — type (Dual-use vs Workflow only), reference doc support.
+- **Sheet 4 — Quick Reference**: one row per intent, all four visibility columns + summary totals (15 total · 13 chat · 10 workflow · 8 dual-use). Tab colours match bucket palette (navy / blue / amber / green).
+- Generator script: `/tmp/gen_intents_xlsx.py` (openpyxl). Re-run after any `SEED_INTENTS` change.
+
+### External framework evaluations
+- **Ponytail** (`github.com/DietrichGebert/ponytail`) — prompt framework that injects a YAGNI decision ladder into AI agents. Claims 80–94% less generated code, 3–6× faster, 47–77% cheaper. **Decision: skip for YourAI.** The CLAUDE.md conventions already enforce the same discipline; the project is too mature and opinionated for first-pass framework value. Worth using on the *next* greenfield project from day one.
+- **Factvault** (`github.com/petersimmons1972/factvault`) — self-hostable research database (Go + Postgres + Docker) where every stored fact carries verbatim excerpt + character offsets + SHA-256 hash + Wayback Machine archive. LLM fabrication at the retrieval layer is rejected before `INSERT`. Ships an MCP server. **Decision: watch, don't integrate yet.** Interesting for the Legal Research intent — could be used to pre-ingest public case law URLs and serve verified citations instead of LLM-generated ones. Blocker: its extraction pipeline is designed for web URLs, not uploaded DOCX/PDF files. Revisit once the dev team's Postgres backend is stable (adding a third database before the second is live is premature).
+
+### Vercel platform outage
+- `yourai-black.vercel.app` was fully down — 15 s timeout, no response from prod domain or Vercel dashboard. Confirmed not a code issue (local `npm run build` passes clean, new bundle `index-Y4skX2tJ.js`). Vercel itself was experiencing a platform-wide incident. No action needed — site recovered on its own when Vercel resolved.
+
+---
+
+**2026-06-10** — Find Document FRD authored, workflow report buttons merged, per-intent reference-doc gating (`supportsReferenceDoc`). Earlier in the session (already committed): "Use in chat" inline link on find_document results, Sprint 3 WBS, proper workflow run-history management.
+
+### Find Document FRD
+- Authored `docs/extracted/FRD_Find_Document.md` + `.docx` (53 KB) against `docs/frd-template.md` — full 10-section spec, **45 QA scenarios** across 9 groups (activation, query extraction, search matching, result rendering, empty states, "Use in chat", cross-skill, roles, edge cases), 7 open questions.
+- Captures the key architectural facts QA needs: find_document is the **only chat skill that never calls the AI backend** (pure client-side vault search), renders **inline in chat NOT in the artifact panel**, the query-extraction strip rules, the 5-result cap + overflow heading, the 4 response states, and the `yourai:vault-use-doc` window-event wiring for "Use in chat".
+
+### Workflow report — "Open report" + "Download Report" merged into one
+- `WorkflowArtifactCard.tsx` footer had three buttons (Copy summary · Open report · Download Report). The two report buttons were redundant — both surface the same content. Merged into a single navy primary **"Open Report"** that opens the printable report window (`openWorkflowReportPrintableWindow`), which is both the reading view and the print/save-as-PDF surface.
+- Removed the inline `showFullReport` toggle + the inline `WorkflowReportCard` render + the now-unused `tertiaryButtonStyle` + the `WorkflowReportCard` import. Footer is now Copy summary · Open Report.
+
+### Per-intent reference-doc gating — `supportsReferenceDoc`
+- **Problem**: now that SA can add *any* intent to workflows (unified-intents), the Workflow Builder's "Advanced options → reference document" attachment showed on every step regardless of whether the op could use one. Hardcoding a list of op-ids wouldn't scale to SA-added intents.
+- **Solution**: new optional `supportsReferenceDoc?: boolean` field on the `Intent` interface in `src/lib/intentsStore.ts`. `StepCard` in `WorkflowBuilder.tsx` resolves the active op → intent (through `OPERATION_MIGRATION` for legacy ids) and only renders the Advanced block when the flag is true. Switching a step to a non-supporting op **auto-clears** any previously-attached `referenceDoc`.
+- **Flag set true on 5 intents** (two rationales — *compare against an external standard* and *shape output to a supplied format*): `contract_review` (firm playbook), `clause_comparison` (reference standard), `risk_assessment` (risk rubric/checklist), `compliance_check` (regulation/policy), `generate_report` (output format template).
+- **Hidden on 5**: `read_documents`, `clause_analysis`, `legal_research`, `document_summarisation`, `case_law_analysis`.
+- PM judgment call mid-session: started with 3 (clause_comparison / compliance_check / generate_report), added contract_review + risk_assessment after reconsidering. Declined the "format template" rationale for summarisation / case-law to avoid putting Advanced back on nearly everything.
+- **SA-extensible**: any SA-added intent flagged `supportsReferenceDoc: true` gets the Advanced section automatically — no code change.
+- Uncommitted at session end: `WorkflowArtifactCard.tsx`, `WorkflowBuilder.tsx`, `intentsStore.ts`, + the two new FRD files. Clean build verified.
+
+---
+
 **2026-06-08** — Jira/Atlassian MCP connected + dev-team opening-behaviour solution + SA Workflows parity (deployed). Final prod bundle `index-BoVXYXMj.js`.
 
 ### Jira (Atlassian MCP) connected

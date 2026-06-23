@@ -333,7 +333,7 @@ export function ensureGenerateReportLast(steps: WorkflowStep[]): WorkflowStep[] 
     name: OPERATION_CONFIG.generate_report.label,
     operation: 'generate_report',
     instruction:
-      'Synthesise the prior steps into an executive report. Include an overview, key findings in priority order with citations, an overall risk rating, and a numbered list of recommended actions.',
+      'Combine the outputs of every prior step into one executive report a partner can act on. Include: (1) a short overview of what was reviewed; (2) the key findings in priority order, highest risk first, each with a citation; (3) an overall risk rating with a one-line rationale; and (4) a numbered list of recommended next actions. Keep it under one page.',
     referenceDoc: null,
     estimatedSeconds: 4,
   };

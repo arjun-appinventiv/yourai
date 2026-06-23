@@ -15,7 +15,7 @@ import {
   ArrowLeft, ArrowRight, Check, ChevronDown, FileText, Package, Plus, Search,
   Trash2, UploadCloud, X,
   FileText as FileTextIcon, Search as SearchIcon, GitCompare,
-  FileOutput, BookOpen, ShieldCheck, GripVertical,
+  FileOutput, BookOpen, ShieldCheck, GripVertical, Lock,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useRole } from '../../context/RoleContext';
@@ -31,9 +31,25 @@ import {
   type WorkflowVisibility, type ReferenceDoc, type PermissionContext,
   OPERATION_CONFIG, OPERATIONS_IN_ORDER,
   createTemplate, updateTemplate, visibilityOptionsForRole, canEditTemplate,
+  ensureGenerateReportLast,
 } from '../../lib/workflow';
 import { extractFileText } from '../../lib/file-parser';
 import { loadVault } from '../../lib/documentVaultStore';
+import { loadIntents, SEED_INTENTS, OPERATION_MIGRATION } from '../../lib/intentsStore';
+
+/* Resolve a workflow operation id to its unified-store intent (handles renamed
+ * ops via OPERATION_MIGRATION: analyse_clauses→clause_analysis, etc.). Static
+ * import — NOT require() — because require is undefined in the browser ESM
+ * runtime and silently throws, which previously made every store lookup fall
+ * through to its fallback (supportsReferenceDoc always false in dev). */
+function resolveIntentForOperation(op: WorkflowOperation) {
+  const stored = loadIntents() || SEED_INTENTS;
+  const mappedId = OPERATION_MIGRATION[op as string] || op;
+  return stored.find((i) => i.id === mappedId) || null;
+}
+function operationSupportsReferenceDoc(op: WorkflowOperation): boolean {
+  return resolveIntentForOperation(op)?.supportsReferenceDoc === true;
+}
 
 /* ─── Config ─── */
 
@@ -103,11 +119,16 @@ export default function WorkflowBuilder({ template, knowledgePacks = [], onBack,
   // use the operation name as step name." This keeps the saved record's
   // shape unchanged but guarantees the displayed name is the operation
   // label everywhere.
+  // The final `generate_report` step is a system invariant (every workflow
+  // ends with it). We surface it in the Builder as a locked "Workflow Output"
+  // step instead of appending it invisibly at save time, so authors can edit
+  // its format instruction / attach an output template. ensureGenerateReportLast
+  // is idempotent, so wrapping both the new-template and edit-template paths is safe.
   const [steps, setSteps] = useState<WorkflowStep[]>(() => {
     if (template?.steps) {
-      return template.steps.map((s) => ({ ...s, name: OPERATION_CONFIG[s.operation].label }));
+      return ensureGenerateReportLast(template.steps.map((s) => ({ ...s, name: OPERATION_CONFIG[s.operation].label })));
     }
-    return [makeNewStep()];
+    return ensureGenerateReportLast([makeNewStep()]);
   });
 
   const [errors, setErrors] = useState<{ name?: string; practiceArea?: string; steps?: string }>({});
@@ -166,6 +187,13 @@ export default function WorkflowBuilder({ template, knowledgePacks = [], onBack,
     () => steps.some((step) => !step.instruction.trim()) || duplicateOperationWarnings.length > 0,
     [duplicateOperationWarnings.length, steps],
   );
+  // Hard requirement (not just a soft warning): if a step has a document /
+  // output template attached, the user MUST tell the AI how to use it — an
+  // attachment with no instruction is ambiguous. Blocks Save.
+  const stepsMissingRequiredInstruction = useMemo(
+    () => steps.some((step) => step.referenceDoc && !step.instruction.trim()),
+    [steps],
+  );
 
   /* ─── Step mutations ─── */
   function updateStep(id: string, patch: Partial<WorkflowStep>) {
@@ -178,7 +206,16 @@ export default function WorkflowBuilder({ template, knowledgePacks = [], onBack,
   }
   function addStep() {
     if (steps.length >= MAX_STEPS) return;
-    setSteps((prev) => [...prev, makeNewStep()]);
+    setSteps((prev) => {
+      // Keep the locked Workflow Output step pinned last — new steps insert before it.
+      const lastIsOutput = prev.length > 0 && prev[prev.length - 1].operation === 'generate_report';
+      if (lastIsOutput) {
+        const next = [...prev];
+        next.splice(prev.length - 1, 0, makeNewStep());
+        return next;
+      }
+      return [...prev, makeNewStep()];
+    });
     setPipelineWarningsAcknowledged(false);
   }
 
@@ -209,9 +246,15 @@ export default function WorkflowBuilder({ template, knowledgePacks = [], onBack,
       const from = prev.findIndex((s) => s.id === draggingId);
       const to = prev.findIndex((s) => s.id === overId);
       if (from === -1 || to === -1) return prev;
+      // The Workflow Output step is pinned last — it can't be moved, and
+      // nothing may land after it.
+      if (prev[from].operation === 'generate_report') return prev;
+      const lastIsOutput = prev[prev.length - 1].operation === 'generate_report';
+      const maxIndex = lastIsOutput ? prev.length - 2 : prev.length - 1;
+      const clampedTo = Math.min(to, maxIndex);
       const next = [...prev];
       const [moved] = next.splice(from, 1);
-      next.splice(to, 0, moved);
+      next.splice(clampedTo, 0, moved);
       return next;
     });
     setDraggingId(null);
@@ -224,9 +267,16 @@ export default function WorkflowBuilder({ template, knowledgePacks = [], onBack,
     if (!name.trim()) next.name = 'Workflow name is required.';
     if (!practiceArea) next.practiceArea = 'Select a practice area.';
     if (steps.length === 0) next.steps = 'At least one step is required.';
+    if (stepsMissingRequiredInstruction) {
+      next.steps = 'Add instructions for each step that has a document attached — tell the AI how to use it.';
+    }
 
     setErrors(next);
-    if (Object.keys(next).length > 0) return;
+    if (Object.keys(next).length > 0) {
+      // Surface the per-step required state on the missing-instruction case.
+      if (stepsMissingRequiredInstruction) setShowPipelineSoftWarnings(true);
+      return;
+    }
 
     if (hasSoftWarnings && !pipelineWarningsAcknowledged) {
       setShowPipelineSoftWarnings(true);
@@ -499,22 +549,29 @@ export default function WorkflowBuilder({ template, knowledgePacks = [], onBack,
                 Workflow Steps
               </h3>
               <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 6, lineHeight: 1.6 }}>
-                Add steps in the order they should run. Max 8 steps. Each step is one AI task.
+                Add steps in the order they should run. Max 8 steps. Each step is one AI task. Your uploaded documents are read automatically before the first step. Every workflow ends with a <strong style={{ fontWeight: 600, color: 'var(--text-primary)' }}>Workflow Output</strong> step — that's where you choose how the final deliverable is formatted.
               </p>
               {errors.steps && <p style={{ fontSize: 11, color: '#C65454', marginTop: 4 }}>{errors.steps}</p>}
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {steps.map((step, idx) => (
+              {steps.map((step, idx) => {
+                // The last step is always generate_report (system invariant) —
+                // render it as the locked "Workflow Output" step. A non-final
+                // step can be removed only while at least one analysis step remains.
+                const isOutputStep = idx === steps.length - 1 && step.operation === 'generate_report';
+                const analysisStepCount = steps.filter((s) => s.operation !== 'generate_report').length;
+                return (
                 <StepCard
                   key={step.id}
                   step={step}
                   index={idx}
+                  locked={isOutputStep}
                   dragging={draggingId === step.id}
                   advancedOpen={advancedOpenFor.has(step.id)}
                   refTab={refTabFor[step.id] || 'upload'}
                   knowledgePacks={knowledgePacks}
-                  canRemove={steps.length > 1}
+                  canRemove={!isOutputStep && analysisStepCount > 1}
                   showSoftWarnings={showPipelineSoftWarnings}
                   onChange={(patch) => updateStep(step.id, patch)}
                   onRemove={() => removeStep(step.id)}
@@ -526,7 +583,8 @@ export default function WorkflowBuilder({ template, knowledgePacks = [], onBack,
                   onDrop={() => onDrop(step.id)}
                   onDragEnd={onDragEnd}
                 />
-              ))}
+                );
+              })}
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginTop: 16, flexWrap: 'wrap' }}>
@@ -710,6 +768,8 @@ function WorkflowStepper({
 interface StepCardProps {
   step: WorkflowStep;
   index: number;
+  /** The pinned, non-removable final "Workflow Output" step. */
+  locked?: boolean;
   dragging: boolean;
   advancedOpen: boolean;
   refTab: 'upload' | 'vault' | 'kp';
@@ -728,92 +788,150 @@ interface StepCardProps {
 }
 
 function StepCard(props: StepCardProps) {
-  const { step, index, dragging, advancedOpen, refTab, knowledgePacks, canRemove,
+  const { step, index, locked = false, dragging, advancedOpen, refTab, knowledgePacks, canRemove,
     showSoftWarnings, onChange, onRemove, onToggleAdvanced, onSetRefTab, onSetRef,
     onDragStart, onDragOver, onDrop, onDragEnd } = props;
   const cfg = OPERATION_CONFIG[step.operation];
 
+  // Whether this operation supports a reference doc, from the unified intents
+  // store — covers SA-added intents automatically via the supportsReferenceDoc flag.
+  const supportsReferenceDoc = useMemo<boolean>(
+    () => operationSupportsReferenceDoc(step.operation),
+    [step.operation],
+  );
+
   const handleOperationChange = (op: WorkflowOperation) => {
     // Step name follows the operation label (PM 2026-05-20: no separate
-    // step-name field; the operation IS the name).
-    onChange({ operation: op, estimatedSeconds: DEFAULT_SECONDS[op], name: OPERATION_CONFIG[op].label });
+    // step-name field; the operation IS the name). If the new op doesn't
+    // support a reference doc, clear any previously attached one.
+    onChange({
+      operation: op,
+      estimatedSeconds: DEFAULT_SECONDS[op],
+      name: OPERATION_CONFIG[op].label,
+      ...(operationSupportsReferenceDoc(op) ? {} : { referenceDoc: null }),
+    });
   };
+
+  // When a document / output template is attached, the instruction becomes
+  // mandatory — an attachment with no guidance is ambiguous.
+  const instructionRequired = !!step.referenceDoc;
+  const instructionMissing = instructionRequired && !step.instruction.trim();
+  const instructionBorder = instructionMissing
+    ? '#C65454'
+    : (showSoftWarnings && !step.instruction.trim() ? 'var(--status-warning, #D97706)' : 'var(--border-default, var(--ice))');
 
   return (
     <div
       className="step-card"
-      draggable
-      onDragStart={onDragStart}
-      onDragOver={onDragOver}
-      onDrop={onDrop}
-      onDragEnd={onDragEnd}
+      draggable={!locked}
+      onDragStart={locked ? undefined : onDragStart}
+      onDragOver={locked ? undefined : onDragOver}
+      onDrop={locked ? undefined : onDrop}
+      onDragEnd={locked ? undefined : onDragEnd}
       style={{
-        border: '1px solid var(--border)', borderRadius: 12,
-        background: '#fff', padding: '14px 14px 14px 10px',
+        border: locked ? '1px solid var(--border)' : '1px solid var(--border)', borderRadius: 12,
+        background: locked ? 'var(--ice-warm)' : '#fff', padding: '14px 14px 14px 10px',
         display: 'flex', gap: 10, alignItems: 'flex-start',
         opacity: dragging ? 0.5 : 1, transition: 'opacity 150ms',
       }}
     >
-      {/* Drag handle */}
+      {/* Drag handle — hidden on the locked Workflow Output step */}
       <div
         className="drag-handle"
         title="Drag to reorder"
-        style={{ cursor: 'grab', padding: '4px 0', color: '#D1D5DB', flexShrink: 0, visibility: canRemove ? 'visible' : 'hidden' }}
+        style={{ cursor: 'grab', padding: '4px 0', color: '#D1D5DB', flexShrink: 0, visibility: !locked && canRemove ? 'visible' : 'hidden' }}
       >
         <GripVertical size={16} />
       </div>
 
-      {/* Step number badge */}
-      <div style={{
-        width: 28, height: 28, borderRadius: '50%',
-        background: 'var(--navy)', color: '#C9A84C',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
-        fontSize: 11, fontWeight: 600, flexShrink: 0, marginTop: 2,
-      }}>
-        {String(index + 1).padStart(2, '0')}
-      </div>
+      {/* Step number badge — a lock on the pinned Workflow Output step */}
+      {locked ? (
+        <div style={{
+          width: 28, height: 28, borderRadius: '50%',
+          background: '#E7E9EF', color: 'var(--text-secondary)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          flexShrink: 0, marginTop: 2,
+        }} title="Required final step — can't be removed or reordered">
+          <Lock size={13} />
+        </div>
+      ) : (
+        <div style={{
+          width: 28, height: 28, borderRadius: '50%',
+          background: 'var(--navy)', color: '#C9A84C',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+          fontSize: 11, fontWeight: 600, flexShrink: 0, marginTop: 2,
+        }}>
+          {String(index + 1).padStart(2, '0')}
+        </div>
+      )}
 
       {/* Content */}
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {/* Operation + estimated time */}
-        <div className="flex items-center gap-2 flex-wrap">
-          <OperationDropdown value={step.operation} onChange={handleOperationChange} />
-          <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}>
-            ~{step.estimatedSeconds}s
-          </span>
-          <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>·</span>
-          <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{cfg.description}</span>
-        </div>
+        {/* Operation + estimated time — the locked output step shows a static pill */}
+        {locked ? (
+          <div className="flex items-center gap-2 flex-wrap">
+            <span style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              padding: '6px 12px', borderRadius: 999,
+              background: '#fff', border: '1px solid var(--border)',
+              fontSize: 13, fontWeight: 600, color: 'var(--text-primary)',
+            }}>
+              <FileOutput size={13} style={{ color: 'var(--navy)' }} />
+              Workflow Output
+            </span>
+            <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>·</span>
+            <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--text-tertiary)' }}>Required</span>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 flex-wrap">
+            <OperationDropdown value={step.operation} onChange={handleOperationChange} />
+            <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}>
+              ~{step.estimatedSeconds}s
+            </span>
+            <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>·</span>
+            <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{cfg.description}</span>
+          </div>
+        )}
 
         <div>
           <label style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)', display: 'block', marginBottom: 6 }}>
-            Document type instructions
-            <span style={{ color: 'var(--text-tertiary)', fontWeight: 400, fontSize: 12, marginLeft: 4 }}>(optional)</span>
+            {locked ? 'Output format & instructions' : 'Document type instructions'}
+            {instructionRequired ? (
+              <span style={{ color: '#C65454', fontWeight: 600, fontSize: 12, marginLeft: 4 }}>· required</span>
+            ) : (
+              <span style={{ color: 'var(--text-tertiary)', fontWeight: 400, fontSize: 12, marginLeft: 4 }}>(optional)</span>
+            )}
           </label>
           <textarea
             value={step.instruction}
             onChange={(e) => onChange({ instruction: e.target.value.slice(0, MAX_INSTRUCTION) })}
-            placeholder="e.g. All executed contracts and amendments attached as exhibits."
+            placeholder={locked
+              ? "e.g. Write as a client-ready memo: a one-line bottom line, then Background, Analysis, and Recommended next steps. Keep it under one page."
+              : "e.g. All executed contracts and amendments attached as exhibits."}
             rows={4}
             style={{
-              width: '100%', border: `1px solid ${showSoftWarnings && !step.instruction.trim() ? 'var(--status-warning, #D97706)' : 'var(--border-default, var(--ice))'}`, borderRadius: 10,
+              width: '100%', border: `1px solid ${instructionBorder}`, borderRadius: 10,
               minHeight: 120, padding: '10px 12px', fontSize: 14, outline: 'none', resize: 'vertical',
               lineHeight: 1.55, fontFamily: "'DM Sans', sans-serif",
               boxSizing: 'border-box',
               boxShadow: '0 1px 3px rgba(11,29,58,0.04)',
             }}
           />
-          <p style={{ fontSize: 12, color: 'var(--text-tertiary)', marginTop: 4, lineHeight: 1.5 }}>
-            Describe the documents this step should process.
+          <p style={{ fontSize: 12, color: instructionMissing ? '#C65454' : 'var(--text-tertiary)', marginTop: 4, lineHeight: 1.5 }}>
+            {instructionMissing
+              ? "Required — you've attached a document, so tell the AI how to use it (the format to follow, what to extract, or what to compare)."
+              : locked
+                ? 'Tell the AI how you want the final deliverable formatted — sections, length, tone, audience, or document type (memo, client letter, table, checklist). Leave as-is for a standard executive report.'
+                : 'Describe the documents this step should process.'}
           </p>
           <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 3, textAlign: 'right' }}>
             {step.instruction.length}/{MAX_INSTRUCTION}
           </div>
         </div>
 
-        {/* Advanced options — reference doc */}
-        <div>
+        {/* Advanced options — reference doc (only shown for ops that support it) */}
+        {supportsReferenceDoc && <div>
           <button
             onClick={onToggleAdvanced}
             style={{
@@ -824,14 +942,18 @@ function StepCard(props: StepCardProps) {
             }}
           >
             <ChevronDown size={12} style={{ transform: advancedOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 150ms' }} />
-            Advanced options{step.referenceDoc ? ` (1 reference doc)` : ''}
+            Advanced options{step.referenceDoc ? (locked ? ` (1 output template)` : ` (1 reference doc)`) : ''}
           </button>
 
           {advancedOpen && (
-            <div style={{ marginTop: 8, padding: 12, borderRadius: 10, background: 'var(--ice-warm)', border: '1px solid var(--border)' }}>
-              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 2 }}>Reference document (optional)</div>
+            <div style={{ marginTop: 8, padding: 12, borderRadius: 10, background: locked ? '#fff' : 'var(--ice-warm)', border: '1px solid var(--border)' }}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 2 }}>
+                {locked ? 'Output template (optional)' : 'Reference document (optional)'}
+              </div>
               <p style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.55, margin: '0 0 10px 0' }}>
-                Upload a playbook, checklist, or standard template. The AI will use it as context for this step.
+                {locked
+                  ? "Attach a sample or your firm's template (memo, client letter, report) and the AI will match its structure and formatting."
+                  : 'Upload a playbook, checklist, or standard template. The AI will use it as context for this step.'}
               </p>
 
               {/* Active chip if a reference doc is set */}
@@ -860,7 +982,7 @@ function StepCard(props: StepCardProps) {
               {refTab === 'kp'     && <KnowledgePackTab packs={knowledgePacks || []} onSelect={(ref) => onSetRef(ref)} />}
             </div>
           )}
-        </div>
+        </div>}
       </div>
 
       {/* Remove button */}
@@ -893,20 +1015,17 @@ function OperationDropdown({ value, onChange }: { value: WorkflowOperation; onCh
   // ids (analyse_clauses, compare_against_standard, research_precedents)
   // still match their unified intent id (clause_analysis, etc.).
   const visibleOps = useMemo<WorkflowOperation[]>(() => {
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      const { loadIntents, SEED_INTENTS, OPERATION_MIGRATION } = require('../../lib/intentsStore');
-      const stored = loadIntents() || SEED_INTENTS;
-      return OPERATIONS_IN_ORDER.filter((op) => {
-        if (op === value) return true; // never hide the currently-selected op
-        const mappedId = (OPERATION_MIGRATION as Record<string, string>)[op] || op;
-        const intent = stored.find((i: { id: string }) => i.id === mappedId);
-        if (!intent) return true; // unknown ops fall through unfiltered
-        return intent.enabled !== false && intent.workflowVisible !== false;
-      });
-    } catch {
-      return OPERATIONS_IN_ORDER;
-    }
+    const stored = loadIntents() || SEED_INTENTS;
+    return OPERATIONS_IN_ORDER.filter((op) => {
+      // generate_report is owned by the pinned "Workflow Output" step — never
+      // offer it as a regular, unlocked operation in the dropdown.
+      if (op === 'generate_report') return false;
+      if (op === value) return true; // never hide the currently-selected op
+      const mappedId = OPERATION_MIGRATION[op as string] || op;
+      const intent = stored.find((i) => i.id === mappedId);
+      if (!intent) return true; // unknown ops fall through unfiltered
+      return intent.enabled !== false && intent.workflowVisible !== false;
+    });
   }, [value]);
 
   useEffect(() => {

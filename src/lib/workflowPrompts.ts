@@ -100,11 +100,17 @@ Target 300–500 words total.
 
 ${BASE_RULES}`,
 
-  generate_report: `You are the "Generate Report" step of a legal AI workflow — the final deliverable. Your job is to SYNTHESISE the outputs of ALL prior steps into an executive summary a partner can read in 90 seconds and act on.
+  generate_report: `You are the final "Workflow Output" step of a legal AI workflow — you produce the deliverable the user takes away. Your job is to turn the outputs of ALL prior steps into one finished document.
 
 This is a synthesis, not a re-analysis. Prior step outputs are the source of truth; draw from them directly. Do not re-examine the raw documents.
 
-STRUCTURE:
+HOW TO FORMAT THE OUTPUT — follow this priority order:
+
+1. THE USER'S INSTRUCTION BELOW IS THE AUTHORITATIVE FORMAT SPEC. If it names sections, a structure, a length, a tone, an audience, or a document type (memo, client letter, table, checklist, email, slide outline), follow it EXACTLY — even when that differs from the default structure below. The user owns the format of their deliverable.
+
+2. IF AN OUTPUT TEMPLATE / REFERENCE DOCUMENT IS ATTACHED, match its structure, headings, and formatting as closely as the content allows.
+
+3. OTHERWISE, default to this executive-report structure:
 
 ## Overview
 One paragraph (2–3 sentences): what the workflow analysed (document types, parties if relevant, scope). If any input was missing, limited, or failed, state that here in one sentence.
@@ -119,7 +125,7 @@ One paragraph (2–3 sentences): what the workflow analysed (document types, par
 ## Recommended actions
 3–5 numbered actions, priority order. Each action must be DISTINCT from the findings (what to DO, not what was found) and concrete enough to assign — e.g. "Negotiate the liability cap up to 12 months of fees", not "Address the liability cap".
 
-TARGET: 300–500 words. Confident, professional tone — this is a deliverable. Never "it seems that" or "we might want to".
+REGARDLESS OF FORMAT: synthesise rather than re-derive; cite sources with [Doc: filename] or [Step N]; keep a confident, professional tone — this is a deliverable, never "it seems that" or "we might want to"; never fabricate. Default length is 300–500 words unless the user's instruction asks for something longer or shorter.
 
 ${BASE_RULES}`,
 
@@ -263,10 +269,16 @@ export function buildStepMessages(input: BuildPromptInput): Array<{ role: 'syste
     parts.push('');
   }
 
-  // Reference document (step-specific playbook/template)
+  // Reference document (step-specific playbook/template). On the final
+  // Workflow Output step the reference doc is the user's OUTPUT FORMAT
+  // TEMPLATE — frame it as a structure to match, not as background context.
   if (input.referenceDoc && input.referenceDoc.content) {
     parts.push(`---`);
-    parts.push(`**Reference document for this step** (supporting context — a playbook or standard template):`);
+    parts.push(
+      input.operation === 'generate_report'
+        ? `**Output format template for this deliverable** (match this document's structure, headings, and formatting in your output):`
+        : `**Reference document for this step** (supporting context — a playbook or standard template):`,
+    );
     parts.push('');
     parts.push(`### ${input.referenceDoc.name}`);
     const trimmed = input.referenceDoc.content.length > 6000 ? input.referenceDoc.content.slice(0, 6000) + '\n\n[... reference truncated ...]' : input.referenceDoc.content;

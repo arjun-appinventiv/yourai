@@ -55,6 +55,11 @@ export interface Intent {
    *  if it isn't already there. Replaces the hardcoded
    *  `ensureGenerateReportLast` check against the literal string. */
   autoAppendAtWorkflowEnd?: boolean;
+  /** When true, the Workflow Builder shows an "Advanced options" reference-doc
+   *  attachment on this step. Set for ops that compare/check against an external
+   *  standard (clause_comparison, compliance_check) or generate output in a
+   *  caller-supplied format (generate_report). SA can toggle per-intent. */
+  supportsReferenceDoc?: boolean;
   /** Source pill rendered on the chat message (kb / doc / workspace / local). */
   sourcePill?: 'kb' | 'doc' | 'workspace' | 'local' | 'none';
   /** Used for the SA editor display + dropdown ordering. */
@@ -67,7 +72,11 @@ export interface Intent {
   legacyResponseFormat?: 'risk_card' | 'structured_sections' | 'plain_prose';
 }
 
-const KEY = 'yourai_intents_v1';
+// v2 (2026-06-23): generate_report prompt reworked to honour a caller-supplied
+// output format (instruction / attached template) instead of forcing a fixed
+// executive-report structure. Bumped to force a re-seed so existing browsers
+// pick up the new prompt — seedIntentsIfEmpty only seeds an empty key.
+const KEY = 'yourai_intents_v2';
 
 export function loadIntents(): Intent[] | null {
   try {
@@ -216,6 +225,7 @@ export const SEED_INTENTS: Intent[] = [
     chatVisible: true,
     workflowVisible: true,
     openingBehaviour: 'ask_for_document',
+    supportsReferenceDoc: true,
     sourcePill: 'doc',
     sortOrder: 40,
     enabled: true,
@@ -290,6 +300,7 @@ ${BASE_RULES}`,
     chatVisible: true,
     workflowVisible: true,
     openingBehaviour: 'ask_for_document',
+    supportsReferenceDoc: true,
     sourcePill: 'doc',
     sortOrder: 60,
     enabled: true,
@@ -310,6 +321,7 @@ ${BASE_RULES}`,
     chatVisible: true,
     workflowVisible: true,
     openingBehaviour: 'ask_for_document',
+    supportsReferenceDoc: true,
     sourcePill: 'doc',
     sortOrder: 70,
     enabled: true,
@@ -430,6 +442,7 @@ ${BASE_RULES}`,
     chatVisible: true,
     workflowVisible: true,
     openingBehaviour: 'ask_for_document',
+    supportsReferenceDoc: true,
     sourcePill: 'doc',
     sortOrder: 110,
     enabled: true,
@@ -503,11 +516,17 @@ ${BASE_RULES}`,
     id: 'generate_report',
     label: 'Generate Report',
     description: 'Synthesise prior step outputs into an executive deliverable.',
-    systemPrompt: `You are the "Generate Report" step of a legal AI workflow — the final deliverable. Your job is to SYNTHESISE the outputs of ALL prior steps into an executive summary a partner can read in 90 seconds and act on.
+    systemPrompt: `You are the final "Workflow Output" step of a legal AI workflow — you produce the deliverable the user takes away. Your job is to turn the outputs of ALL prior steps into one finished document.
 
 This is a synthesis, not a re-analysis. Prior step outputs are the source of truth; draw from them directly. Do not re-examine the raw documents.
 
-STRUCTURE:
+HOW TO FORMAT THE OUTPUT — follow this priority order:
+
+1. THE USER'S INSTRUCTION BELOW IS THE AUTHORITATIVE FORMAT SPEC. If it names sections, a structure, a length, a tone, an audience, or a document type (memo, client letter, table, checklist, email, slide outline), follow it EXACTLY — even when that differs from the default structure below. The user owns the format of their deliverable.
+
+2. IF AN OUTPUT TEMPLATE / REFERENCE DOCUMENT IS ATTACHED, match its structure, headings, and formatting as closely as the content allows.
+
+3. OTHERWISE, default to this executive-report structure:
 
 ## Overview
 One paragraph (2–3 sentences): what the workflow analysed (document types, parties if relevant, scope). If any input was missing, limited, or failed, state that here in one sentence.
@@ -522,13 +541,14 @@ One paragraph (2–3 sentences): what the workflow analysed (document types, par
 ## Recommended actions
 3–5 numbered actions, priority order. Each action must be DISTINCT from the findings (what to DO, not what was found) and concrete enough to assign — e.g. "Negotiate the liability cap up to 12 months of fees", not "Address the liability cap".
 
-TARGET: 300–500 words. Confident, professional tone — this is a deliverable. Never "it seems that" or "we might want to".
+REGARDLESS OF FORMAT: synthesise rather than re-derive; cite sources with [Doc: filename] or [Step N]; keep a confident, professional tone — this is a deliverable, never "it seems that" or "we might want to"; never fabricate. Default length is 300–500 words unless the user's instruction asks for something longer or shorter.
 ${BASE_RULES}`,
     keywords: [],
     chatVisible: false,
     workflowVisible: true,
     openingBehaviour: 'start_immediately',
     autoAppendAtWorkflowEnd: true,
+    supportsReferenceDoc: true,
     sortOrder: 999,
     enabled: true,
   },
