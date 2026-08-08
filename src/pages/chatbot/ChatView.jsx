@@ -4920,7 +4920,7 @@ function MessageBubble({ msg, onOpenArtifact, isActiveArtifact, onConfirmAction 
          in a soft-bg bubble; bot stays flat-left as today. */}
       <div className="max-w-[85%] md:max-w-[70%]" style={{ flex: isBot ? 1 : '0 1 auto', minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: isBot ? 'flex-start' : 'flex-end' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexDirection: isBot ? 'row' : 'row-reverse' }}>
-          <span style={{ fontSize: 14, fontWeight: 600, color: isBot ? '#000' : 'var(--text-primary)' }}>{isBot ? 'YourAI' : 'Ryan'}</span>
+          <span style={{ fontSize: 14, fontWeight: 600, color: isBot ? '#000' : 'var(--text-primary)' }}>{isBot ? 'VelaAI' : 'Ryan'}</span>
           <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>{msg.timestamp}</span>
         </div>
         {msg.attachments && msg.attachments.length > 0 && (

@@ -399,7 +399,7 @@ Rules:
   res.setHeader('Content-Type', 'text/plain; charset=utf-8');
   res.setHeader('Cache-Control', 'no-cache, no-transform');
   res.setHeader('X-Accel-Buffering', 'no');
-  res.setHeader('X-Source-Type', 'AI_GENERATED');
+  res.setHeader('X-Source-Type', body.docAttached === true ? 'UPLOADED_DOC' : 'AI_GENERATED');
   res.setHeader('Transfer-Encoding', 'chunked');
 
   // Re-inject the prefill `{` so the client receives complete JSON.
