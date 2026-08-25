@@ -17,6 +17,7 @@
     { "source": "/bot-persona-flow.html", "destination": "/bot-persona-flow.html" },
     { "source": "/api/frd-generate", "destination": "/api/frd-generate" },
     { "source": "/api/chat", "destination": "/api/chat" },
+    { "source": "/ilumos", "destination": "/ilumos.html" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }

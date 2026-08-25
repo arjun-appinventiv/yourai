@@ -1,0 +1,830 @@
+<title>iLumos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+
+<style>
+  :root{
+    color-scheme:light;
+    --ground:#efe9dd; --surface:#ffffff; --surface-2:#f6f1e7; --raise:#faf7f2;
+    --ink:#1a2238; --navy:#0f1c3f; --muted:#5f6678; --faint:#8a8f9c; --border:#e6e6ea; --border-strong:#d0d5dd;
+    --accent:#0f1c3f; --accent-ink:#132c54; --accent-soft:#fdf6e7;
+    --gold:#c9a04a; --gold-deep:#a97f26; --gold-border:#e9d29a;
+    --hi:#2f7d5b; --hi-bg:#e6f2ea; --med:#a9760a; --med-bg:#faf2df; --lo:#c0453f; --lo-bg:#f7e6e2;
+    --shadow:0 1px 2px rgba(15,28,63,.05), 0 10px 30px rgba(15,28,63,.07);
+    --shadow-lg:0 14px 44px rgba(15,28,63,.16);
+  }
+  :root:not([data-theme="light"]){
+    @media (prefers-color-scheme: dark) and (min-width:99999px){
+      --ground:#0e1017; --surface:#161925; --surface-2:#1d2130; --raise:#1a1e2b;
+      --ink:#e9ebf5; --muted:#9aa1b6; --faint:#697089; --border:#282d3d; --border-strong:#39405400;
+      --border-strong:#3a4056;
+      --accent:#7f8dff; --accent-ink:#aab3ff; --accent-soft:#212643;
+      --hi:#3fca8e; --hi-bg:#123020; --med:#e2ac41; --med-bg:#312611; --lo:#ee6c80; --lo-bg:#32191f;
+      --shadow:0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.35);
+      --shadow-lg:0 12px 40px rgba(0,0,0,.5);
+    }
+  }
+  :root[data-theme="__off__"]{
+    --ground:#0e1017; --surface:#161925; --surface-2:#1d2130; --raise:#1a1e2b;
+    --ink:#e9ebf5; --muted:#9aa1b6; --faint:#697089; --border:#282d3d; --border-strong:#3a4056;
+    --accent:#7f8dff; --accent-ink:#aab3ff; --accent-soft:#212643;
+    --hi:#3fca8e; --hi-bg:#123020; --med:#e2ac41; --med-bg:#312611; --lo:#ee6c80; --lo-bg:#32191f;
+    --shadow:0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.35);
+    --shadow-lg:0 12px 40px rgba(0,0,0,.5);
+  }
+
+  *{box-sizing:border-box}
+  [hidden]{display:none!important}
+  html,body{height:100%}
+  body{
+    margin:0; background:var(--ground); color:var(--ink);
+    font-family:"Inter", system-ui, sans-serif; font-size:15px; line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  .mono{font-family:"IBM Plex Mono", ui-monospace, monospace}
+  .serif{font-family:"Fraunces", Georgia, serif}
+  button{font-family:inherit; cursor:pointer}
+  :focus-visible{outline:2px solid var(--accent); outline-offset:2px; border-radius:6px}
+
+  /* ---------- App shell ---------- */
+  .app{height:100dvh; display:flex; flex-direction:column; overflow:hidden}
+  .topbar{
+    flex:0 0 auto; display:flex; align-items:center; gap:16px;
+    padding:10px 18px; background:var(--surface); border-bottom:1px solid var(--border);
+  }
+  .brand{display:flex; align-items:center; gap:9px; font-weight:600; letter-spacing:-.01em}
+  .brand .mark{
+    width:26px; height:26px; border-radius:7px; display:grid; place-items:center;
+    background:linear-gradient(150deg, var(--gold), var(--gold-deep)); color:var(--navy); font-size:15px; font-weight:600;
+    box-shadow:0 2px 6px color-mix(in srgb, var(--gold) 50%, transparent);
+  }
+  .brand b{font-size:16px}
+  .brand .serif{font-style:italic; font-weight:600}
+  .matter{
+    display:flex; flex-direction:column; line-height:1.2; padding-left:16px; margin-left:2px;
+    border-left:1px solid var(--border);
+  }
+  .matter .k{font-size:10.5px; letter-spacing:.09em; text-transform:uppercase; color:var(--faint)}
+  .matter .v{font-size:13px; font-weight:500}
+  .spacer{flex:1}
+  .tb-btn{
+    display:inline-flex; align-items:center; gap:7px; height:34px; padding:0 12px;
+    border:1px solid var(--border-strong); background:var(--surface); color:var(--ink);
+    border-radius:8px; font-size:13px; font-weight:500;
+  }
+  .tb-btn:hover{background:var(--surface-2)}
+  .tb-btn[disabled]{opacity:.4; cursor:not-allowed}
+  .tb-btn.primary{background:var(--accent); border-color:var(--accent); color:#fff}
+  .tb-btn.primary:hover{background:var(--accent-ink)}
+  .verpill{
+    font-family:"IBM Plex Mono", monospace; font-size:11.5px; color:var(--muted);
+    background:var(--surface-2); border:1px solid var(--border); padding:4px 9px; border-radius:20px;
+  }
+  .modesw{display:inline-flex; background:var(--surface-2); border:1px solid var(--border); border-radius:8px; padding:2px}
+  .msw-opt{border:none; background:transparent; color:var(--muted); font-size:12px; font-weight:500; padding:5px 11px; border-radius:6px; cursor:pointer}
+  .msw-opt.active{background:var(--surface); color:var(--navy); box-shadow:var(--shadow)}
+  .icon{width:15px; height:15px; stroke:currentColor; fill:none; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round}
+
+  /* ---------- Setup screen ---------- */
+  .setup-wrap{flex:1; overflow:auto; display:grid; place-items:center; padding:32px 20px}
+  .setup{
+    width:min(680px, 100%); background:var(--surface); border:1px solid var(--border);
+    border-radius:16px; box-shadow:var(--shadow); overflow:hidden;
+  }
+  .setup-head{padding:26px 28px 6px}
+  .eyebrow{font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--accent-ink)}
+  .setup-head h1{font-family:"Fraunces",serif; font-weight:600; font-size:26px; margin:8px 0 4px; letter-spacing:-.01em; text-wrap:balance}
+  .setup-head p{margin:0; color:var(--muted); max-width:56ch}
+  .setup-body{padding:14px 28px 26px; display:flex; flex-direction:column; gap:18px}
+  .field .lab{display:flex; align-items:center; gap:8px; font-size:12px; font-weight:600; letter-spacing:.02em; color:var(--muted); margin-bottom:8px}
+  .step-n{font-family:"IBM Plex Mono",monospace; font-size:11px; width:19px; height:19px; border-radius:50%; display:grid; place-items:center; background:var(--accent-soft); color:var(--accent-ink)}
+  .drop{
+    border:1.5px dashed var(--border-strong); border-radius:11px; padding:16px; background:var(--raise);
+    display:flex; align-items:center; gap:13px; text-align:left;
+  }
+  .drop .di{width:38px; height:38px; border-radius:9px; background:var(--surface-2); display:grid; place-items:center; color:var(--accent); flex:0 0 auto}
+  .drop .dt{flex:1}
+  .drop .dt b{display:block; font-size:14px}
+  .drop .dt span{font-size:12.5px; color:var(--faint)}
+  .mini{height:30px; padding:0 12px; border-radius:7px; border:1px solid var(--accent); background:var(--accent-soft); color:var(--accent-ink); font-weight:600; font-size:12.5px}
+  .mini:hover{background:var(--accent); color:#fff}
+  .chips{display:flex; flex-wrap:wrap; gap:7px; margin-top:10px}
+  .chip{
+    display:inline-flex; align-items:center; gap:6px; font-family:"IBM Plex Mono",monospace; font-size:11.5px;
+    padding:5px 9px; border-radius:7px; background:var(--surface-2); border:1px solid var(--border); color:var(--muted);
+  }
+  .chip .x{width:12px; height:12px}
+  .ta{
+    width:100%; border:1px solid var(--border-strong); border-radius:10px; background:var(--raise); color:var(--ink);
+    padding:11px 13px; font-family:inherit; font-size:13.5px; line-height:1.55; resize:vertical; min-height:88px;
+  }
+  .ta:focus{outline:none; border-color:var(--accent)}
+  .setup-foot{padding:16px 28px; border-top:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; background:var(--raise)}
+  .setup-foot .note{font-size:12px; color:var(--faint)}
+  .go{
+    height:40px; padding:0 20px; border-radius:9px; border:none; background:var(--accent); color:#fff;
+    font-weight:600; font-size:14px; display:inline-flex; align-items:center; gap:9px;
+    box-shadow:0 4px 14px color-mix(in srgb, var(--accent) 40%, transparent);
+  }
+  .go:hover{background:var(--accent-ink)}
+  .go[disabled]{opacity:.45; cursor:not-allowed; box-shadow:none}
+
+  /* ---------- Workspace ---------- */
+  .work{flex:1; display:grid; grid-template-columns:1.35fr 1fr; min-height:0}
+  .panel{min-height:0; display:flex; flex-direction:column; overflow:hidden}
+  .chart-panel{border-right:1px solid var(--border); background:var(--ground)}
+  .phead{
+    flex:0 0 auto; display:flex; align-items:baseline; gap:12px; padding:14px 20px 12px;
+    border-bottom:1px solid var(--border); background:var(--surface);
+  }
+  .phead h2{font-family:"Fraunces",serif; font-weight:600; font-size:17px; margin:0}
+  .phead .sub{font-family:"IBM Plex Mono",monospace; font-size:11.5px; color:var(--faint)}
+  .chart-scroll{flex:1; overflow:auto; padding:16px 18px 40px}
+
+  .elrow{
+    background:var(--surface); border:1px solid var(--border); border-radius:12px; margin-bottom:12px;
+    overflow:hidden; box-shadow:var(--shadow); transition:box-shadow .2s, border-color .2s;
+  }
+  .elrow.flash{animation:flash 1.6s ease}
+  @keyframes flash{0%{box-shadow:0 0 0 2px var(--accent)}100%{box-shadow:var(--shadow)}}
+  .elrow.isnew{border-color:var(--accent)}
+  .elrow-top{display:flex; align-items:center; gap:10px; padding:11px 14px; border-bottom:1px solid var(--border); background:var(--raise)}
+  .elid{font-family:"IBM Plex Mono",monospace; font-size:11px; color:var(--accent-ink); background:var(--accent-soft); padding:3px 8px; border-radius:6px; font-weight:500}
+  .elrow-top .claim{flex:1; font-family:"Fraunces",serif; font-size:14.5px; font-weight:500; line-height:1.35}
+  .badge{
+    display:inline-flex; align-items:center; gap:5px; font-family:"IBM Plex Mono",monospace; font-size:10.5px;
+    font-weight:500; padding:3px 8px; border-radius:20px; letter-spacing:.02em; text-transform:uppercase; white-space:nowrap;
+  }
+  .badge .dot{width:6px; height:6px; border-radius:50%; background:currentColor}
+  .badge.hi{color:var(--hi); background:var(--hi-bg)}
+  .badge.med{color:var(--med); background:var(--med-bg)}
+  .badge.lo{color:var(--lo); background:var(--lo-bg)}
+  .elrow-cols{display:grid; grid-template-columns:1fr 1fr; gap:0}
+  .col{padding:12px 14px; min-width:0}
+  .col + .col{border-left:1px solid var(--border)}
+  .col .ch{font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--faint); margin-bottom:6px; display:flex; gap:6px; align-items:center}
+  .col .cbody{font-size:13px; line-height:1.5; color:var(--ink)}
+  .col .cbody .quote{font-family:"Fraunces",serif; font-style:italic; color:var(--muted)}
+  .cite{
+    margin-top:9px; display:inline-flex; align-items:center; gap:6px; font-family:"IBM Plex Mono",monospace;
+    font-size:10.5px; color:var(--muted); background:var(--surface-2); border:1px solid var(--border);
+    padding:3px 8px; border-radius:6px;
+  }
+  .cite.none{color:var(--lo); background:var(--lo-bg); border-color:transparent}
+  .diff-add{background:color-mix(in srgb, var(--hi) 16%, transparent); border-radius:3px; padding:0 2px}
+
+  /* ---------- 3-column claim chart table ---------- */
+  .cchart{background:var(--surface); border:1px solid var(--border); border-radius:12px; box-shadow:var(--shadow); overflow:hidden}
+  .crow{display:grid; grid-template-columns:1.05fr 1.3fr 1.15fr}
+  .crow + .crow{border-top:1px solid var(--border)}
+  .chead{background:var(--raise)}
+  .chead .ccell{font-family:"IBM Plex Mono",monospace; font-size:10px; letter-spacing:.07em; text-transform:uppercase; color:var(--muted); font-weight:500; padding:10px 15px}
+  .ccell{padding:13px 15px; min-width:0}
+  .ccell + .ccell{border-left:1px solid var(--border)}
+  .crow.flash{animation:rowflash 1.7s ease}
+  @keyframes rowflash{0%{background:var(--accent-soft)}100%{background:transparent}}
+  .c-claim .celtop{display:flex; align-items:center; gap:7px; margin-bottom:8px}
+  .c-claim .claim{font-family:"Fraunces",serif; font-size:14.5px; font-weight:500; line-height:1.34; color:var(--navy); margin-bottom:10px}
+  .cbody{font-size:12.5px; line-height:1.5; color:var(--ink)}
+  .cbody b{font-weight:600}
+  .cbody .quote{font-family:"Fraunces",serif; font-style:italic; color:var(--muted)}
+  .ccell.revised{background:color-mix(in srgb, var(--gold) 8%, transparent)}
+  .revtag{display:inline-block; font-family:"IBM Plex Mono",monospace; font-size:9px; letter-spacing:.05em; text-transform:uppercase; color:var(--gold-deep); background:var(--accent-soft); border:1px solid var(--gold-border); padding:2px 7px; border-radius:20px; margin-bottom:8px}
+  .revtag.new{color:var(--accent-ink); background:var(--surface-2); border-color:var(--border-strong); margin-bottom:0}
+  @media (max-width:860px){ .crow{grid-template-columns:1fr} .ccell + .ccell{border-left:none; border-top:1px solid var(--border)} .chead{display:none} }
+
+  /* ---------- Ingest banner + empty cells ---------- */
+  .ingest{background:var(--surface); border:1px solid var(--gold-border); border-left:3px solid var(--gold); border-radius:11px; padding:11px 13px; margin-bottom:14px; box-shadow:var(--shadow)}
+  .ingest-h{display:flex; align-items:center; gap:7px; font-family:"IBM Plex Mono",monospace; font-size:10.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--gold-deep); font-weight:500}
+  .ingest-x{margin-left:auto; border:none; background:transparent; color:var(--faint); font-size:17px; line-height:1; cursor:pointer; padding:0 2px}
+  .ingest-x:hover{color:var(--ink)}
+  .ingest-list{display:flex; flex-wrap:wrap; gap:6px; margin:9px 0 7px}
+  .ic{display:inline-flex; align-items:center; gap:6px; font-size:11.5px; padding:4px 9px; border-radius:7px; border:1px solid var(--border)}
+  .ic::before{content:""; width:6px; height:6px; border-radius:50%}
+  .ic.ok{background:var(--hi-bg); color:var(--hi)} .ic.ok::before{background:var(--hi)}
+  .ic.warn{background:var(--med-bg); color:var(--med)} .ic.warn::before{background:var(--med)}
+  .ingest-note{font-size:11.5px; color:var(--faint); line-height:1.45}
+  .badge.pending{color:var(--muted); background:var(--surface-2)}
+  .emptycell{display:flex; flex-direction:column; align-items:flex-start; gap:8px; padding:4px 0}
+  .ec-lbl{font-family:"IBM Plex Mono",monospace; font-size:10.5px; letter-spacing:.04em; text-transform:uppercase; color:var(--faint)}
+  .ec-btn{height:29px; padding:0 12px; border-radius:7px; border:1px dashed var(--gold-border); background:var(--accent-soft); color:var(--gold-deep); font-weight:600; font-size:12px}
+  .ec-btn:hover{border-style:solid; background:#f7edd6}
+  .phead-sp{flex:1}
+  .addel{height:30px; padding:0 12px; border-radius:8px; border:1px solid var(--border-strong); background:var(--surface); color:var(--ink); font-size:12.5px; font-weight:500}
+  .addel:hover{border-color:var(--gold); color:var(--gold-deep)}
+
+  /* ---------- Chat ---------- */
+  .chat-panel{background:var(--surface)}
+  .chat-scroll{flex:1; overflow:auto; padding:18px 18px 8px; display:flex; flex-direction:column; gap:14px}
+  .msg{display:flex; gap:10px; max-width:100%}
+  .msg .av{width:26px; height:26px; border-radius:7px; flex:0 0 auto; display:grid; place-items:center; font-size:11px; font-weight:600; font-family:"IBM Plex Mono",monospace}
+  .msg.ai .av{background:linear-gradient(150deg,var(--gold),var(--gold-deep)); color:var(--navy)}
+  .msg.user{flex-direction:row-reverse}
+  .msg.user .av{background:var(--surface-2); color:var(--muted); border:1px solid var(--border)}
+  .bub{padding:9px 13px; border-radius:12px; font-size:13.5px; line-height:1.5; max-width:82%}
+  .msg.ai .bub{background:var(--surface-2); border:1px solid var(--border); border-top-left-radius:4px}
+  .msg.user .bub{background:var(--accent); color:#fff; border-top-right-radius:4px}
+  .msg.user .bub .mono{color:#fff}
+
+  .sugg{
+    max-width:92%; background:var(--surface); border:1px solid var(--border-strong); border-radius:12px;
+    overflow:hidden; box-shadow:var(--shadow);
+  }
+  .sugg-h{display:flex; align-items:center; gap:8px; padding:10px 12px; background:var(--raise); border-bottom:1px solid var(--border)}
+  .sugg-h .tag{font-family:"IBM Plex Mono",monospace; font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:var(--accent-ink); background:var(--accent-soft); padding:3px 7px; border-radius:5px}
+  .sugg-h .to{font-family:"IBM Plex Mono",monospace; font-size:11px; color:var(--faint)}
+  .sugg-b{padding:12px}
+  .sugg-b .lbl{font-size:10.5px; letter-spacing:.07em; text-transform:uppercase; color:var(--faint); margin:0 0 4px}
+  .sugg-b .prop{font-size:13.5px; line-height:1.55; color:var(--ink)}
+  .sugg-b .prop .quote{font-family:"Fraunces",serif; font-style:italic}
+  .sugg-meta{display:flex; flex-wrap:wrap; gap:7px; margin-top:11px; align-items:center}
+  .sugg-note{margin-top:10px; font-size:12px; color:var(--med); background:var(--med-bg); border-radius:8px; padding:8px 10px; display:flex; gap:7px}
+  .sugg-note.block{color:var(--lo); background:var(--lo-bg)}
+  .sugg-acts{display:flex; gap:7px; padding:10px 12px; border-top:1px solid var(--border); background:var(--raise); flex-wrap:wrap}
+  .act{height:31px; padding:0 12px; border-radius:7px; font-size:12.5px; font-weight:600; border:1px solid var(--border-strong); background:var(--surface); color:var(--ink); display:inline-flex; align-items:center; gap:6px}
+  .act:hover{background:var(--surface-2)}
+  .act.accept{background:var(--hi); border-color:var(--hi); color:#fff}
+  .act.accept:hover{filter:brightness(1.05)}
+  .act.ghost{border-color:transparent; background:transparent; color:var(--muted)}
+  .act.up{background:var(--accent); border-color:var(--accent); color:#fff}
+  .act.done{opacity:.6; pointer-events:none}
+  .modbox{padding:0 12px 12px}
+  .modbox textarea{width:100%; border:1px solid var(--accent); border-radius:8px; background:var(--raise); color:var(--ink); font-family:inherit; font-size:13px; padding:9px; min-height:70px; resize:vertical}
+
+  .typing{display:flex; gap:4px; padding:11px 13px}
+  .typing i{width:6px; height:6px; border-radius:50%; background:var(--faint); animation:bob 1.1s infinite}
+  .typing i:nth-child(2){animation-delay:.15s} .typing i:nth-child(3){animation-delay:.3s}
+  @keyframes bob{0%,60%,100%{transform:translateY(0);opacity:.4}30%{transform:translateY(-4px);opacity:1}}
+
+  .composer{flex:0 0 auto; border-top:1px solid var(--border); padding:12px 14px; background:var(--surface)}
+  .prompts{display:flex; gap:7px; overflow-x:auto; padding-bottom:9px; scrollbar-width:none}
+  .prompts::-webkit-scrollbar{display:none}
+  .pchip{white-space:nowrap; font-size:12px; padding:6px 11px; border-radius:20px; border:1px solid var(--border-strong); background:var(--surface); color:var(--muted); flex:0 0 auto}
+  .pchip:hover{border-color:var(--gold); color:var(--accent-ink); background:var(--accent-soft)}
+  .inrow{display:flex; gap:9px; align-items:flex-end}
+  .inrow textarea{flex:1; border:1px solid var(--border-strong); border-radius:11px; background:var(--raise); color:var(--ink); font-family:inherit; font-size:14px; padding:10px 13px; resize:none; min-height:44px; max-height:120px; line-height:1.4}
+  .inrow textarea:focus{outline:none; border-color:var(--accent)}
+  .send{width:44px; height:44px; flex:0 0 auto; border-radius:11px; border:none; background:var(--accent); color:#fff; display:grid; place-items:center}
+  .send:hover{background:var(--accent-ink)}
+  .send[disabled]{opacity:.4}
+
+  .toast{
+    position:fixed; left:50%; bottom:24px; transform:translateX(-50%) translateY(20px);
+    background:var(--ink); color:var(--ground); padding:11px 18px; border-radius:10px; font-size:13.5px;
+    box-shadow:var(--shadow-lg); opacity:0; transition:.28s; z-index:50; display:flex; gap:9px; align-items:center; pointer-events:none;
+  }
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
+
+  @media (max-width:860px){
+    .work{grid-template-columns:1fr; grid-template-rows:1fr 1fr}
+    .chart-panel{border-right:none; border-bottom:1px solid var(--border)}
+    .elrow-cols{grid-template-columns:1fr} .col + .col{border-left:none; border-top:1px solid var(--border)}
+    .matter{display:none}
+  }
+  /* ---------- Print / PDF ---------- */
+  #printDoc{display:none}
+  @media print{
+    @page{margin:14mm}
+    html,body{height:auto; background:#fff}
+    .app,.toast{display:none !important}
+    #printDoc{display:block; color:#141414; font-family:"Inter",sans-serif; padding:0}
+    #printDoc .pd-h1{font-family:"Fraunces",serif; font-size:23px; font-weight:600; margin:0 0 3px}
+    #printDoc .pd-meta{font-family:"IBM Plex Mono",monospace; font-size:10px; letter-spacing:.05em; color:#555; margin-bottom:18px}
+    #printDoc .pd-el{border:1px solid #ccced6; border-radius:8px; padding:12px 14px; margin-bottom:11px; page-break-inside:avoid}
+    #printDoc .pd-elh{display:flex; align-items:baseline; gap:10px; margin-bottom:9px}
+    #printDoc .pd-elid{font-family:"IBM Plex Mono",monospace; font-size:9.5px; color:#8a6a16}
+    #printDoc .pd-claim{font-family:"Fraunces",serif; font-size:14px; font-weight:600; flex:1}
+    #printDoc .pd-conf{font-family:"IBM Plex Mono",monospace; font-size:9px; text-transform:uppercase; color:#555}
+    #printDoc .pd-cols{display:grid; grid-template-columns:1fr 1fr; gap:16px}
+    #printDoc .pd-lbl{font-size:8px; letter-spacing:.09em; text-transform:uppercase; color:#8a8f9c; margin-bottom:3px}
+    #printDoc .pd-body{font-size:11px; line-height:1.45}
+    #printDoc .pd-body b{font-weight:600}
+    #printDoc .quote{font-family:"Fraunces",serif; font-style:italic; color:#444}
+    #printDoc .pd-cite{font-family:"IBM Plex Mono",monospace; font-size:9px; color:#555; margin-top:6px}
+    #printDoc .pd-foot{margin-top:16px; padding-top:10px; border-top:1px solid #ccced6; font-family:"IBM Plex Mono",monospace; font-size:9px; color:#555; line-height:1.5}
+  }
+  @media (prefers-reduced-motion:reduce){*{animation:none !important; transition:none !important}}
+</style>
+
+<div class="app" id="app">
+  <div class="topbar">
+    <div class="brand"><span class="mark serif">i</span><b class="serif">iLumos</b></div>
+    <div class="matter" id="matterBox" hidden>
+      <span class="k">Matter</span><span class="v" id="matterName">US123456 v. Acme Corp</span>
+    </div>
+    <div class="spacer"></div>
+    <div class="modesw" id="modeSw" hidden><button class="msw-opt active" data-mode="demo">Demo</button><button class="msw-opt" data-mode="live">Live AI</button></div>
+    <span class="verpill" id="verPill" hidden>v1 · 0 changes</span>
+    <button class="tb-btn" id="undoBtn" hidden disabled>
+      <svg class="icon" viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-1"/></svg>Undo
+    </button>
+    <button class="tb-btn primary" id="exportBtn" hidden>
+      <svg class="icon" viewBox="0 0 24 24"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>Export PDF
+    </button>
+  </div>
+
+  <!-- SETUP -->
+  <div class="setup-wrap" id="setupWrap">
+    <div class="setup">
+      <div class="setup-head">
+        <div class="eyebrow">New infringement analysis</div>
+        <h1>Set up your claim chart</h1>
+        <p>Upload the chart and the accused product's documents, tell iLumos how your firm works, then refine element by element in chat.</p>
+      </div>
+      <div class="setup-body">
+        <div class="field">
+          <div class="lab"><span class="step-n mono">1</span> Claim chart</div>
+          <div class="drop">
+            <div class="di"><svg class="icon" viewBox="0 0 24 24"><path d="M9 3h6l5 5v13H4V3z"/><path d="M14 3v6h6"/><path d="M8 13h8M8 17h5"/></svg></div>
+            <div class="dt" id="chartDt"><b>No chart loaded</b><span>US123456 v. Acme Corp Thermostat · 3 elements</span></div>
+            <button class="mini" id="loadChart">Load sample</button>
+          </div>
+        </div>
+        <div class="field">
+          <div class="lab"><span class="step-n mono">2</span> Accused-product documents</div>
+          <div class="drop">
+            <div class="di"><svg class="icon" viewBox="0 0 24 24"><path d="M4 7a2 2 0 0 1 2-2h4l2 2h6a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/></svg></div>
+            <div class="dt"><b>Product evidence</b><span>Spec sheets, manuals, marketing pages</span></div>
+            <button class="mini" id="addDocs">Add 3 docs</button>
+          </div>
+          <div class="chips" id="docChips"></div>
+        </div>
+        <div class="field">
+          <div class="lab"><span class="step-n mono">3</span> Instructions to iLumos</div>
+          <textarea class="ta" id="instr">Jurisdiction: U.S. (Federal Circuit). Follow our firm playbook: every evidence citation must map to an uploaded source or a provided URL — never assert evidence that isn't in the record. Flag any element that relies on inference rather than a technical source. Keep reasoning tight and litigation-ready.</textarea>
+        </div>
+      </div>
+      <div class="setup-foot">
+        <span class="note" id="setupNote">Load the chart and docs to continue.</span>
+        <button class="go" id="startBtn" disabled>Start refining
+          <svg class="icon" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- WORKSPACE -->
+  <div class="work" id="work" hidden>
+    <section class="panel chart-panel">
+      <div class="phead"><h2>Claim chart</h2><span class="sub" id="chartSub">US123456 · 3 elements</span><span class="phead-sp"></span><button class="addel" id="addElBtn">+ Add element</button></div>
+      <div class="chart-scroll" id="chartScroll"></div>
+    </section>
+    <section class="panel chat-panel">
+      <div class="phead"><h2>Refine in chat</h2><span class="sub">iLumos · grounded suggestions</span></div>
+      <div class="chat-scroll" id="chatScroll"></div>
+      <div class="composer">
+        <div class="prompts" id="prompts"></div>
+        <div class="inrow">
+          <textarea id="chatInput" rows="1" placeholder="Ask for a refinement, e.g. &ldquo;Strengthen the evidence for element 2&rdquo;"></textarea>
+          <button class="send" id="sendBtn" aria-label="Send">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4z"/></svg>
+          </button>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<div id="printDoc" aria-hidden="true"></div>
+
+<script>
+(function(){
+  "use strict";
+  const $ = s => document.querySelector(s);
+  const el = (t,c)=>{const e=document.createElement(t); if(c)e.className=c; return e;};
+
+  /* ---------------- Sample data ---------------- */
+  const START = [
+    { id:1, claim:"A temperature control device with a wireless communication module",
+      feature:"Acme Thermostat — WiFi connectivity",
+      evidence:'Acme product page states: <span class="quote">&ldquo;WiFi-enabled smart thermostat connects to your home network.&rdquo;</span>',
+      cite:"Acme product page", citeNone:false,
+      reasoning:"The Acme device has WiFi capability, which satisfies the wireless communication module requirement.",
+      conf:"hi" },
+    { id:2, claim:"A motion sensor for detecting occupancy",
+      feature:"Acme Thermostat — built-in motion sensor",
+      evidence:'Acme technical specs show: <span class="quote">&ldquo;Built-in motion sensor detects when people are home.&rdquo;</span>',
+      cite:"Acme spec sheet", citeNone:false,
+      reasoning:"Motion sensor is explicitly mentioned in the specs and directly maps to the claim element for occupancy detection.",
+      conf:"hi" },
+    { id:3, claim:"A machine learning algorithm that learns user temperature preferences over time",
+      feature:"Acme Thermostat — Auto-Schedule",
+      evidence:'Acme marketing claim: <span class="quote">&ldquo;Auto-Schedule learns your preferred temperatures.&rdquo;</span>',
+      cite:"Acme marketing", citeNone:false,
+      reasoning:"The learning behavior described suggests an ML algorithm, though technical implementation details are not disclosed. May need stronger technical evidence.",
+      conf:"lo" },
+  ];
+  const CONF_LABEL = {hi:"High confidence", med:"Medium confidence", lo:"Low confidence"};
+
+  /* ---------------- State ---------------- */
+  let els = [];
+  let history = [];        // snapshots for undo
+  let changes = 0;
+  let uploadedTech = false;
+  let MODE = 'demo';   // 'demo' (deterministic mock) or 'live' (Claude via /api/chat)
+  const snapshot = ()=>JSON.parse(JSON.stringify(els));
+
+  /* ---------------- Setup wiring ---------------- */
+  let hasChart=false, hasDocs=false;
+  const refreshStart=()=>{
+    const ok = hasChart && hasDocs;
+    $("#startBtn").disabled = !ok;
+    $("#setupNote").textContent = ok ? "Ready. iLumos will ground every suggestion in these sources." : "Load the chart and docs to continue.";
+  };
+  $("#loadChart").addEventListener("click", e=>{
+    hasChart=true; e.target.textContent="Loaded ✓"; e.target.disabled=true;
+    $("#chartDt").innerHTML='<b>US123456 v. Acme Corp Thermostat</b><span>3 claim elements parsed</span>';
+    refreshStart();
+  });
+  $("#addDocs").addEventListener("click", e=>{
+    hasDocs=true; e.target.textContent="Added ✓"; e.target.disabled=true;
+    const docs=["Acme_product_page.html","Acme_spec_sheet.pdf","Acme_marketing.pdf"];
+    const wrap=$("#docChips"); wrap.innerHTML="";
+    docs.forEach(d=>{ const c=el("span","chip"); c.innerHTML='<svg class="icon x" viewBox="0 0 24 24"><path d="M9 3h6l5 5v13H4V3z"/></svg>'+d; wrap.appendChild(c); });
+    refreshStart();
+  });
+  $("#startBtn").addEventListener("click", startWorkspace);
+
+  function startWorkspace(){
+    els = JSON.parse(JSON.stringify(START));
+    $("#setupWrap").hidden = true;
+    $("#work").hidden = false;
+    ["matterBox","verPill","undoBtn","exportBtn","modeSw"].forEach(id=>$("#"+id).hidden=false);
+    $("#chartScroll").innerHTML =
+      '<div class="ingest" id="ingest"><div class="ingest-h">'+
+      '<svg class="icon" viewBox="0 0 24 24" style="width:14px;height:14px"><circle cx="12" cy="12" r="9"/><path d="M8.5 12l2.5 2.5L16 9"/></svg>'+
+      'Ingest check<button class="ingest-x" id="ingestX" aria-label="Dismiss">&times;</button></div>'+
+      '<div class="ingest-list"><span class="ic ok">3 / 3 elements parsed</span>'+
+      '<span class="ic ok">All 3 columns present</span>'+
+      '<span class="ic ok">Docs match &ldquo;Acme Thermostat&rdquo;</span>'+
+      '<span class="ic warn">EL 3: marketing-only evidence, low confidence</span></div>'+
+      '<div class="ingest-note">Missing columns, unreadable docs, or a product mismatch would surface here as warnings before you refine.</div></div>'+
+      '<div id="tableHost"></div>';
+    renderChart();
+    renderPrompts();
+    seedChat();
+    updateVer();
+  }
+
+  /* ---------------- Render: chart ---------------- */
+  function renderChart(flashId){
+    const host=$("#tableHost"); if(!host) return; host.innerHTML="";
+    $("#chartSub").textContent = "US123456 · "+els.length+" elements";
+    const tbl=el("div","cchart");
+    const hd=el("div","crow chead");
+    hd.innerHTML='<div class="ccell">Patent claim element</div><div class="ccell">Accused product feature &amp; evidence</div><div class="ccell">AI reasoning</div>';
+    tbl.appendChild(hd);
+    els.forEach(e=>{
+      const rv=e._rev||{};
+      const row=el("div","crow"+(flashId===e.id?" flash":""));
+      const c1=el("div","ccell c-claim");
+      c1.innerHTML='<div class="celtop"><span class="elid">EL '+e.id+'</span>'+(e.isnew?'<span class="revtag new">New</span>':'')+'</div>'+
+        '<div class="claim">'+e.claim+'</div>'+badge(e.conf);
+      const c2=el("div","ccell"+(rv.evidence?" revised":""));
+      c2.innerHTML = e.evidence
+        ? (rv.evidence?'<span class="revtag">Revised</span>':'')+'<div class="cbody"><b>'+e.feature+'</b><br>'+e.evidence+'</div>'+citeHtml(e)
+        : emptyCell(e.id);
+      const c3=el("div","ccell"+(rv.reasoning?" revised":""));
+      c3.innerHTML = e.reasoning
+        ? (rv.reasoning?'<span class="revtag">Revised</span>':'')+'<div class="cbody">'+e.reasoning+'</div>'
+        : emptyCell(e.id);
+      row.appendChild(c1); row.appendChild(c2); row.appendChild(c3);
+      tbl.appendChild(row);
+    });
+    host.appendChild(tbl);
+  }
+  const emptyCell=id=>'<div class="emptycell"><span class="ec-lbl">Not drafted yet</span><button class="ec-btn" data-draft="'+id+'">Draft this</button></div>';
+  const badge=c=> c ? '<span class="badge '+c+'"><span class="dot"></span>'+({hi:"High",med:"Medium",lo:"Low"}[c])+'</span>'
+                     : '<span class="badge pending"><span class="dot"></span>Pending</span>';
+  const citeHtml=e=> e.citeNone
+    ? '<span class="cite none"><svg class="icon" style="width:12px;height:12px" viewBox="0 0 24 24"><path d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>No source in record</span>'
+    : '<span class="cite"><svg class="icon" style="width:12px;height:12px" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/></svg>Source: '+e.cite+'</span>';
+
+  /* ---------------- Incomplete elements (missing-data handling) ---------------- */
+  function addElement(){
+    const id=els.length+1;
+    els.push({id:id, isnew:true, claim:"A secure over-the-air (OTA) firmware update mechanism", feature:"", evidence:"", reasoning:"", conf:null, incomplete:true});
+    renderChart(id);
+    toast("Added a blank claim element");
+    addAI("Added claim element "+id+" with empty cells. Use <b>Draft this</b> in the chart and I'll only fill them with grounded, cited content, or tell you the record has no support.");
+  }
+  function draftIncomplete(id){
+    const e=els.find(x=>x.id===id); if(!e || e._drafting) return;
+    e._drafting=true;
+    addUser("Draft element "+id+" from the record");
+    run(function(){
+      const m=addAI('I searched the uploaded docs for support and found <b>no evidence in the record</b> for this element, so I won\'t draft anything unsupported. Upload a technical doc or paste a URL and I\'ll draft it with a citation.');
+      const b=el("button","act up"); b.style.marginTop="10px";
+      b.innerHTML='<svg class="icon" viewBox="0 0 24 24" style="width:14px;height:14px"><path d="M12 15V3"/><path d="m7 8 5-5 5 5"/><path d="M5 21h14"/></svg>Upload doc / paste URL';
+      b.addEventListener("click",function(){
+        b.disabled=true; b.classList.add("done");
+        addUser("Uploaded Acme_security_whitepaper.pdf");
+        run(function(){
+          pushHist();
+          e.feature="Acme Thermostat — OTA firmware updates";
+          e.evidence='Acme security whitepaper p.7: <span class="quote">&ldquo;Signed firmware images are delivered over TLS and verified on-device.&rdquo;</span>';
+          e.cite="Acme security whitepaper"; e.citeNone=false;
+          e.reasoning="The whitepaper discloses signed, TLS-delivered firmware updates that map to the claimed secure OTA update mechanism.";
+          e.conf="med"; e.incomplete=false; e._drafting=false;
+          commit(id,"Drafted element "+id+" from the uploaded doc");
+          addAI("Drafted element "+id+" and grounded it in the whitepaper. Set to medium confidence pending a second source.");
+        });
+      });
+      m.querySelector(".bub").appendChild(b);
+    });
+  }
+  $("#addElBtn").addEventListener("click", addElement);
+  $("#chartScroll").addEventListener("click", function(ev){
+    if(ev.target.id==="ingestX"){ const g=document.getElementById("ingest"); if(g) g.remove(); return; }
+    const d=ev.target.closest("[data-draft]"); if(d){ draftIncomplete(parseInt(d.getAttribute("data-draft"),10)); }
+  });
+
+  /* ---------------- Render: chat ---------------- */
+  const chat=$("#chatScroll");
+  function scrollchat(){ chat.scrollTop = chat.scrollHeight; }
+  function addUser(text){
+    const m=el("div","msg user"); m.innerHTML='<div class="av">You</div><div class="bub">'+esc(text)+'</div>';
+    chat.appendChild(m); scrollchat();
+  }
+  function addAI(html){
+    const m=el("div","msg ai"); m.innerHTML='<div class="av">iL</div><div class="bub">'+html+'</div>';
+    chat.appendChild(m); scrollchat(); return m;
+  }
+  function typing(){
+    const m=el("div","msg ai"); m.innerHTML='<div class="av">iL</div><div class="bub"><div class="typing"><i></i><i></i><i></i></div></div>';
+    chat.appendChild(m); scrollchat(); return m;
+  }
+  function seedChat(){
+    addAI("I've parsed all three claim elements and grounded each one in your uploaded docs. Element&nbsp;3 (the ML algorithm) is flagged <b>low confidence</b> — its only support is a marketing line. Tell me what to refine, or tap a suggestion below.");
+  }
+
+  /* ---------------- Prompts ---------------- */
+  const PROMPTS=[
+    "Strengthen the evidence for element 2",
+    "The reasoning for element 3 is weak — add technical detail",
+    "Acme also has a temperature sensor array — add it",
+    "Rewrite element 1 reasoning for claim construction",
+  ];
+  function renderPrompts(){
+    const p=$("#prompts"); p.innerHTML="";
+    PROMPTS.forEach(t=>{ const c=el("button","pchip"); c.textContent=t; c.addEventListener("click",()=>submit(t)); p.appendChild(c); });
+  }
+
+  /* ---------------- Suggestion engine (mock) ---------------- */
+  function analyze(text){
+    const t=text.toLowerCase();
+    let el = /\b3\b|ml|machine learning|auto.?schedule|algorithm|learn/.test(t)?3
+           : /\b2\b|motion|occupanc/.test(t)?2
+           : /\b1\b|wireless|wifi|communication/.test(t)?1 : null;
+    const add = /temperature sensor array|sensor array|missed|missing|also has|add (a|the|missing)/.test(t);
+    let type = /legal|claim construction|construction|rewrite/.test(t)?"legal"
+             : add?"add"
+             : /reason|vague|weak|specific|technical (detail|analysis)|detail/.test(t)?"reasoning"
+             : /evidence|documentation|strengthen|support|source|cite/.test(t)?"evidence" : null;
+    if(add) return {kind:"add"};
+    if(!el) el = type?2:null;
+    return {el, type:type||"evidence"};
+  }
+
+  function respondTo(text){
+    const a=analyze(text);
+    // ADD MISSING FEATURE -> new element
+    if(a.kind==="add"){
+      addAI("Good catch. The temperature-sensor array isn't in the chart yet. I found supporting language in the spec sheet — here's a new element you can add.");
+      suggestion({
+        to:"New element", tag:"Add feature",
+        prop:'<b>New EL 4 — Temperature sensor array</b><br>Evidence: <span class="quote">&ldquo;Multi-zone temperature sensor array samples every room.&rdquo;</span> (Acme spec sheet, §2.3)',
+        meta:[citePill("Acme spec sheet"), confPill("med")],
+        apply(){ pushHist(); els.push({id:els.length+1, isnew:true, claim:"A temperature sensor array for multi-zone sensing",
+          feature:"Acme Thermostat — multi-zone sensor array",
+          evidence:'Acme spec sheet §2.3: <span class="quote">&ldquo;Multi-zone temperature sensor array samples every room.&rdquo;</span>',
+          cite:"Acme spec sheet", citeNone:false,
+          reasoning:"The spec sheet explicitly describes a multi-zone sensor array, which reads directly on the claimed sensor-array element.",
+          conf:"med"});
+          commit(els.length,"Added element 4 (temperature sensor array)"); }
+      });
+      return;
+    }
+    const e = els.find(x=>x.id===a.el) || els[1];
+
+    // HERO: element 3 reasoning/evidence -> grounding gap -> edge case 3
+    if(e.id===3 && (a.type==="reasoning"||a.type==="evidence") && !uploadedTech){
+      addAI("Element 3 is your weakest link. I can tighten the reasoning now, but I <b>couldn't find technical evidence</b> in the uploaded docs for an actual ML implementation — the only source is a marketing claim. Raising confidence needs a technical source.");
+      suggestion({
+        to:"EL 3 · AI reasoning", tag:"Fix reasoning",
+        prop:'Tightened wording, honestly hedged:<br><span class="quote">&ldquo;Acme markets an adaptive &lsquo;Auto-Schedule&rsquo; that learns user preferences, which is consistent with the claimed ML algorithm. Current record is marketing-level; technical implementation is not yet corroborated.&rdquo;</span>',
+        meta:[confPill("lo")],
+        note:{type:"block", text:"No technical evidence in the record. Upload a technical doc or paste a URL to strengthen this, or accept the hedged wording as-is."},
+        upload:true,
+        apply(){ pushHist(); e.reasoning="Acme markets an adaptive “Auto-Schedule” that learns user preferences, consistent with the claimed ML algorithm. Record is marketing-level; technical implementation is not yet corroborated."; commit(e.id,"Reworded EL 3 reasoning (hedged)"); }
+      });
+      return;
+    }
+    // element 3 after upload -> strong
+    if(e.id===3 && uploadedTech){
+      addAI("Using the patent application you added, I can now ground element 3 in a technical source and raise its confidence.");
+      suggestion({
+        to:"EL 3 · evidence + reasoning", tag:"Strengthen",
+        prop:'Add citation: <span class="quote">&ldquo;A gradient-boosted model trained on per-home occupancy and setpoint history predicts preferred temperatures.&rdquo;</span> (US2024/0112233 A1, ¶[0041])<br>Reasoning: the application discloses a concrete ML method, moving this from inference to a disclosed implementation.',
+        meta:[citePill("US2024/0112233 A1 ¶[0041]"), confPill("hi")],
+        apply(){ pushHist(); e.evidence='Acme patent app US2024/0112233 A1 ¶[0041]: <span class="quote">&ldquo;A gradient-boosted model trained on per-home occupancy and setpoint history predicts preferred temperatures.&rdquo;</span>';
+          e.cite="US2024/0112233 A1"; e.citeNone=false;
+          e.reasoning="Acme's own patent application discloses a specific ML method (gradient boosting on occupancy and setpoint history), moving this element from inference to a disclosed implementation that reads on the claim.";
+          e.conf="hi"; commit(e.id,"Strengthened EL 3 with technical source"); }
+      });
+      return;
+    }
+    // strengthen evidence (e.g., element 2)
+    if(a.type==="evidence"){
+      addAI("I can strengthen element "+e.id+" by pinning the evidence to a specific section of the spec sheet.");
+      suggestion({
+        to:"EL "+e.id+" · evidence", tag:"Strengthen",
+        prop:'Pin to source: <span class="quote">&ldquo;PIR motion sensor, 5m range, occupancy sampled every 30s.&rdquo;</span> (Acme spec sheet, §1.4) — replaces the general marketing line with a technical spec.',
+        meta:[citePill("Acme spec sheet §1.4"), confPill("hi")],
+        apply(){ pushHist(); e.evidence='Acme spec sheet §1.4: <span class="quote">&ldquo;PIR motion sensor, 5m range, occupancy sampled every 30s.&rdquo;</span>';
+          e.cite="Acme spec sheet §1.4"; e.reasoning="A PIR motion sensor with a defined range and sampling interval directly practises the claimed occupancy-detection element."; e.conf="hi";
+          commit(e.id,"Strengthened EL "+e.id+" evidence"); }
+      });
+      return;
+    }
+    // legal / claim construction rewrite
+    if(a.type==="legal"){
+      addAI("Here's element "+e.id+" reworded to pre-empt a claim-construction dispute.");
+      suggestion({
+        to:"EL "+e.id+" · AI reasoning", tag:"Clarify legal",
+        prop:'<span class="quote">&ldquo;Under the broadest reasonable construction of &lsquo;wireless communication module,&rsquo; Acme’s WiFi radio is a wireless module that transmits and receives data, satisfying the element regardless of whether &lsquo;module&rsquo; is construed as hardware or a functional unit.&rdquo;</span>',
+        meta:[confPill("hi")],
+        apply(){ pushHist(); e.reasoning="Under the broadest reasonable construction of “wireless communication module,” Acme's WiFi radio is a wireless module that transmits and receives data, satisfying the element whether “module” is construed as hardware or a functional unit."; commit(e.id,"Reworded EL "+e.id+" for claim construction"); }
+      });
+      return;
+    }
+    // fallback: reasoning
+    addAI("Here's a tighter version of the reasoning for element "+e.id+".");
+    suggestion({
+      to:"EL "+e.id+" · AI reasoning", tag:"Fix reasoning",
+      prop:'A more specific, litigation-ready statement mapping the accused feature to the claim element, grounded in '+e.cite+'.',
+      meta:[citePill(e.cite), confPill(e.conf==="lo"?"med":e.conf)],
+      apply(){ pushHist(); if(e.conf==="lo")e.conf="med"; e.reasoning="Refined: "+e.reasoning; commit(e.id,"Refined EL "+e.id+" reasoning"); }
+    });
+  }
+
+  function citePill(s){ return '<span class="cite"><svg class="icon" style="width:12px;height:12px" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/></svg>'+s+'</span>'; }
+  function confPill(c){ return '<span class="badge '+c+'"><span class="dot"></span>'+CONF_LABEL[c]+'</span>'; }
+
+  /* ---------------- Suggestion card ---------------- */
+  function suggestion(cfg){
+    const card=el("div","sugg");
+    let noteHtml = cfg.note ? '<div class="sugg-note '+(cfg.note.type==="block"?"block":"")+'"><svg class="icon" style="width:14px;height:14px;flex:0 0 auto" viewBox="0 0 24 24"><path d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg><span>'+cfg.note.text+'</span></div>' : '';
+    card.innerHTML =
+      '<div class="sugg-h"><span class="tag">'+cfg.tag+'</span><span class="to">'+cfg.to+'</span></div>'+
+      '<div class="sugg-b"><p class="lbl">Proposed change</p><div class="prop">'+cfg.prop+'</div>'+
+        '<div class="sugg-meta">'+(cfg.meta||[]).join("")+'</div>'+ noteHtml +'</div>'+
+      '<div class="sugg-acts"></div>'+
+      '<div class="modbox" hidden><textarea></textarea><div style="margin-top:8px"><button class="act accept msave">Save edit</button></div></div>';
+    const acts=card.querySelector(".sugg-acts");
+    if(cfg.upload){
+      const up=el("button","act up"); up.innerHTML='<svg class="icon" viewBox="0 0 24 24" style="width:14px;height:14px"><path d="M12 15V3"/><path d="m7 8 5-5 5 5"/><path d="M5 21h14"/></svg>Upload technical doc';
+      up.innerHTML='<svg class="icon" viewBox="0 0 24 24" style="width:14px;height:14px"><path d="M12 15V3"/><path d="m7 8 5-5 5 5"/><path d="M5 21h14"/></svg>'+(cfg.uploadLabel||"Upload technical doc");
+      up.addEventListener("click",()=>{ uploadedTech=true; up.closest(".sugg").querySelectorAll(".act").forEach(b=>b.classList.add("done"));
+        addUser(cfg.uploadMsg||"Uploaded Acme_patent_app_US2024-0112233.pdf");
+        run(()=> (cfg.onUpload?cfg.onUpload():respondFromUpload())); });
+      acts.appendChild(up);
+    }
+    const acc=el("button","act accept"); acc.innerHTML='<svg class="icon" viewBox="0 0 24 24" style="width:14px;height:14px"><path d="M20 6 9 17l-5-5"/></svg>Accept';
+    acc.addEventListener("click",()=>{ cfg.apply(); lockCard(card); addAI("Applied. The chart and version history are updated."); });
+    const mod=el("button","act"); mod.textContent="Modify";
+    mod.addEventListener("click",()=>{ const mb=card.querySelector(".modbox"); mb.hidden=false;
+      const ta=mb.querySelector("textarea"); ta.value=card.querySelector(".prop").innerText; ta.focus();
+      mb.querySelector(".msave").addEventListener("click",()=>{ card.querySelector(".prop").textContent=ta.value; mb.hidden=true; cfg.apply(); lockCard(card); addAI("Applied your edited version."); }, {once:true}); });
+    const rej=el("button","act ghost"); rej.textContent="Reject";
+    rej.addEventListener("click",()=>{ lockCard(card); addAI("No problem — tell me what's wrong with it (e.g. the correct source or the reasoning it missed) and I'll try again."); });
+    acts.appendChild(acc); acts.appendChild(mod); acts.appendChild(rej);
+    const m=el("div","msg ai"); m.innerHTML='<div class="av">iL</div>'; m.appendChild(card); chat.appendChild(m); scrollchat();
+  }
+  function lockCard(card){ card.querySelectorAll(".act").forEach(b=>b.classList.add("done")); card.style.opacity=".92"; }
+
+  function respondFromUpload(){ respondTo("strengthen element 3 with the technical doc"); }
+
+  /* ---------------- Live AI (Claude via /api/chat, grounded in the doc corpus) ---------------- */
+  const DOCS_TEXT = {
+    "Acme product page": "WiFi-enabled smart thermostat connects to your home network. Control it from anywhere with the Acme app.",
+    "Acme spec sheet": "Built-in motion sensor detects when people are home. PIR motion sensor, 5 metre range, occupancy sampled every 30 seconds. Multi-zone temperature sensor array samples every room (section 2.3). Operating range 0-40 C.",
+    "Acme marketing": "Auto-Schedule learns your preferred temperatures over time and adjusts automatically."
+  };
+  const stripHtml = h => String(h||"").replace(/<[^>]+>/g,"").replace(/&ldquo;|&rdquo;/g,'"').replace(/&amp;/g,"&").trim();
+  const ILUMOS_SYSTEM = 'You are iLumos, an assistant that refines patent-infringement claim charts. You receive the current chart and the FULL TEXT of the uploaded product documents. The analyst asks you to refine ONE element (strengthen evidence, fix reasoning, clarify legal wording, or add a missing feature). Respond with ONLY a JSON object, no prose and no code fences, of exactly this shape: {"message":"one short sentence to show in chat","elementId":<number, or null for a new element>,"tag":"Strengthen|Fix reasoning|Clarify legal|Add feature","proposedFeature":"accused feature line or empty","proposedEvidence":"evidence quoted or paraphrased ONLY from the supplied documents, or empty","citation":"which supplied document it came from, or empty","confidence":"hi|med|lo","proposedReasoning":"the refined AI reasoning","needsSource":true or false,"note":"if needsSource true, what is missing; else empty"}. RULES: Only cite evidence that literally appears in the supplied document text. Never invent a document, a quote, a citation, or a fact. If the documents do not support the request, set needsSource=true, leave proposedEvidence empty, and explain in note. Keep everything concise and litigation-ready.';
+  function chartSummary(){ return els.map(e=>"EL "+e.id+" | claim: "+e.claim+" | feature: "+(e.feature||"(none)")+" | evidence: "+(stripHtml(e.evidence)||"(none)")+" | reasoning: "+(stripHtml(e.reasoning)||"(none)")+" | confidence: "+(e.conf||"none")).join("\n"); }
+  function docsBlock(){ return Object.keys(DOCS_TEXT).map(k=>"--- "+k+" ---\n"+DOCS_TEXT[k]).join("\n\n"); }
+  function parseJSON(s){ try{ const m=String(s).match(/\{[\s\S]*\}/); return m?JSON.parse(m[0]):null; }catch(_){ return null; } }
+  async function liveRespond(text){
+    const t=typing();
+    try{
+      const msg="CURRENT CHART:\n"+chartSummary()+"\n\nSUPPLIED DOCUMENTS:\n"+docsBlock()+"\n\nANALYST REQUEST: "+text;
+      const res=await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:msg,system:ILUMOS_SYSTEM,history:[]})});
+      if(!res.ok||!res.body) throw new Error("http "+res.status);
+      const reader=res.body.getReader(), dec=new TextDecoder(); let acc="";
+      while(true){ const {done,value}=await reader.read(); if(done)break; acc+=dec.decode(value,{stream:true}); }
+      acc+=dec.decode();
+      t.remove();
+      const j=parseJSON(acc); if(!j) throw new Error("parse");
+      renderLive(j,text);
+    }catch(err){
+      t.remove(); toast("Live AI unavailable — showing a demo response"); run(()=>respondTo(text));
+    }
+  }
+  function renderLive(j,reqText){
+    addAI(j.message || "Here is a grounded suggestion.");
+    const meta=[]; if(j.citation) meta.push(citePill(j.citation)); if(j.confidence) meta.push(confPill(j.confidence));
+    const cfg={
+      to: (j.elementId?("EL "+j.elementId):"New element"), tag: j.tag||"Suggestion",
+      prop: (j.proposedFeature?("<b>"+j.proposedFeature+"</b><br>"):"")+(j.proposedEvidence||j.proposedReasoning||"(see note)"),
+      meta: meta,
+      apply(){ pushHist();
+        if(j.elementId==null){ const id=els.length+1; els.push({id,isnew:true,claim:j.proposedFeature||"New element",feature:j.proposedFeature||"",evidence:j.proposedEvidence||"",cite:j.citation||"",citeNone:!j.citation,reasoning:j.proposedReasoning||"",conf:j.confidence||"med"}); commit(id,"Added element "+id); }
+        else { const e=els.find(x=>x.id===j.elementId); if(!e)return; if(j.proposedFeature)e.feature=j.proposedFeature; if(j.proposedEvidence){e.evidence=j.proposedEvidence; e.cite=j.citation||e.cite; e.citeNone=!e.cite;} if(j.proposedReasoning)e.reasoning=j.proposedReasoning; if(j.confidence)e.conf=j.confidence; commit(e.id,"Applied AI suggestion to EL "+e.id); }
+      }
+    };
+    if(j.needsSource){
+      cfg.note={type:"block", text:(j.note||"No supporting evidence in the record.")};
+      cfg.upload=true; cfg.uploadLabel="Upload doc / paste URL"; cfg.uploadMsg="Uploaded Acme_technical_doc.pdf";
+      cfg.onUpload=function(){ DOCS_TEXT["Uploaded technical doc"]="Signed firmware images are delivered over TLS and verified on-device. A gradient-boosted model trained on per-home occupancy and setpoint history predicts preferred temperatures."; liveRespond(reqText); };
+    }
+    suggestion(cfg);
+  }
+  document.querySelectorAll(".msw-opt").forEach(function(b){
+    b.addEventListener("click", function(){
+      MODE=b.getAttribute("data-mode");
+      document.querySelectorAll(".msw-opt").forEach(function(x){ x.classList.toggle("active", x.getAttribute("data-mode")===MODE); });
+      if(MODE==="live") addAI("Switched to <b>Live AI</b>. Suggestions now come from Claude on AWS Bedrock, grounded in the uploaded documents. If the backend isn't reachable I'll fall back to a demo response.");
+      else addAI("Switched to <b>Demo</b> mode. Deterministic sample responses, no backend needed.");
+    });
+  });
+
+  /* ---------------- Commit / version / undo ---------------- */
+  function pushHist(){ history.push({snap:snapshot(), changes}); }
+  function commit(flashId, label){
+    changes++;
+    const prev = history.length ? history[history.length-1].snap : null;
+    if(prev){
+      els.forEach(e=>{
+        const p = prev.find(x=>x.id===e.id);
+        if(!p) return;
+        e._rev = e._rev || {};
+        if(p.evidence!==e.evidence || p.cite!==e.cite || p.citeNone!==e.citeNone) e._rev.evidence=true;
+        if(p.reasoning!==e.reasoning) e._rev.reasoning=true;
+      });
+    }
+    updateVer(); renderChart(flashId); toast(label);
+  }
+  function updateVer(){
+    $("#verPill").textContent = "v"+(changes+1)+" · "+changes+(changes===1?" change":" changes");
+    $("#undoBtn").disabled = history.length===0;
+  }
+  $("#undoBtn").addEventListener("click",()=>{
+    if(!history.length) return;
+    const prev=history.pop(); els=prev.snap; changes=prev.changes;
+    renderChart(); updateVer(); toast("Reverted to previous version"); addAI("Reverted the last change. You're back to the previous version.");
+  });
+
+  function buildPrintDoc(){
+    const cl={hi:"High confidence",med:"Medium confidence",lo:"Low confidence"};
+    const rows=els.map(e=>
+      '<div class="pd-el"><div class="pd-elh"><span class="pd-elid">CLAIM ELEMENT '+e.id+'</span>'+
+      '<span class="pd-claim">'+e.claim+'</span><span class="pd-conf">'+(cl[e.conf]||"Not assessed")+'</span></div>'+
+      '<div class="pd-cols"><div><div class="pd-lbl">Accused feature &amp; evidence</div>'+
+      '<div class="pd-body"><b>'+(e.feature||"")+'</b><br>'+(e.evidence||"Not drafted")+'</div>'+
+      '<div class="pd-cite">'+(e.citeNone?"No source in record":(e.cite?"Source: "+e.cite:"Not drafted"))+'</div></div>'+
+      '<div><div class="pd-lbl">AI reasoning</div><div class="pd-body">'+(e.reasoning||"Not drafted")+'</div></div></div></div>'
+    ).join("");
+    $("#printDoc").innerHTML=
+      '<div class="pd-h1">Patent Infringement Claim Chart</div>'+
+      '<div class="pd-meta">US123456 v. ACME CORP THERMOSTAT &nbsp;·&nbsp; '+els.length+' ELEMENTS &nbsp;·&nbsp; VERSION '+(changes+1)+' &nbsp;·&nbsp; PREPARED WITH iLumos</div>'+
+      rows+
+      '<div class="pd-foot">Grounding QA — every evidence cell above traces to a cited source. '+changes+' refinement'+(changes===1?"":"s")+' applied and version-tracked. Prepared for legal proceedings.</div>';
+  }
+  $("#exportBtn").addEventListener("click",()=>{
+    buildPrintDoc();
+    toast('Choose "Save as PDF" in the print dialog');
+    setTimeout(()=>{ try{ window.print(); }catch(_){ } }, 250);
+    addAI('Generated a print-ready PDF of the refined chart — every citation, confidence flag, and the version count are included. Pick <b>Save as PDF</b> in the dialog. (In production this exports a filed-ready Word .docx.)');
+  });
+
+  /* ---------------- Input ---------------- */
+  function run(fn){ const t=typing(); setTimeout(()=>{ t.remove(); fn(); }, 780); }
+  function submit(text){ if(!text.trim()) return; addUser(text); if(MODE==='live'){ liveRespond(text); } else { run(()=>respondTo(text)); } }
+  function onSend(){ const ta=$("#chatInput"); const v=ta.value.trim(); if(!v) return; ta.value=""; ta.style.height="auto"; submit(v); }
+  $("#sendBtn").addEventListener("click", onSend);
+  $("#chatInput").addEventListener("keydown", e=>{ if(e.key==="Enter" && !e.shiftKey){ e.preventDefault(); onSend(); } });
+  $("#chatInput").addEventListener("input", e=>{ e.target.style.height="auto"; e.target.style.height=Math.min(e.target.scrollHeight,120)+"px"; });
+
+  /* ---------------- Helpers ---------------- */
+  let toastT;
+  function toast(msg){ const t=$("#toast"); t.innerHTML='<svg class="icon" viewBox="0 0 24 24" style="width:15px;height:15px"><path d="M20 6 9 17l-5-5"/></svg>'+msg; t.classList.add("show"); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove("show"),2600); }
+  function esc(s){ return s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+
+  // wrap commit so history is captured for the ADD path too
+  const _commit = commit;
+})();
+</script>
