@@ -102,6 +102,50 @@
   .setup-main .setup-body{padding:clamp(28px,4vw,52px) clamp(28px,4vw,56px) 20px; gap:22px; flex:1}
   .setup-main .setup-foot{padding:18px clamp(28px,4vw,56px); position:sticky; bottom:0}
   @media (max-width:820px){ .setup-wrap{grid-template-columns:1fr} .setup-aside{display:none} }
+  /* how-it-works affordance in aside */
+  .hiw-row{display:flex; flex-wrap:wrap; gap:10px; margin:0 0 30px; max-width:44ch}
+  .hiw-btn{display:inline-flex; align-items:center; gap:8px; height:38px; padding:0 15px; border-radius:9px; font-size:13.5px; font-weight:600; border:1px solid var(--gold-border); background:var(--accent-soft); color:var(--gold-deep)}
+  .hiw-btn:hover{background:#fbeecb}
+  .hiw-btn.ghost{border:1px solid var(--border-strong); background:var(--surface); color:var(--ink); font-weight:500}
+  .hiw-btn.ghost:hover{background:var(--surface-2)}
+  .hiw-btn .ci{width:18px;height:18px;border-radius:50%;display:grid;place-items:center;background:var(--gold);color:var(--navy);font-family:"Fraunces",serif;font-weight:600;font-size:12px;font-style:italic}
+  /* inline format hints under each input */
+  .fmt-hint{margin:8px 2px 0; font-size:12px; line-height:1.5; color:var(--muted); display:flex; gap:7px; align-items:flex-start}
+  .fmt-hint svg{flex:0 0 auto; width:13px; height:13px; margin-top:2px; color:var(--faint)}
+  /* modal */
+  .ovl{position:fixed; inset:0; background:rgba(15,28,63,.42); backdrop-filter:blur(3px); display:grid; place-items:center; padding:24px; z-index:60}
+  .modal{width:min(720px,100%); max-height:88vh; display:flex; flex-direction:column; background:var(--surface); border:1px solid var(--border); border-radius:16px; box-shadow:var(--shadow-lg); overflow:hidden}
+  .modal-head{display:flex; align-items:center; gap:12px; padding:20px 22px 0}
+  .modal-head .m-mark{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;background:linear-gradient(150deg,var(--gold),var(--gold-deep));color:var(--navy);font-family:"Fraunces",serif;font-style:italic;font-weight:600}
+  .modal-head h3{margin:0; font-family:"Fraunces",serif; font-weight:600; font-size:19px; color:var(--navy); flex:1}
+  .m-close{width:32px;height:32px;border-radius:8px;border:1px solid var(--border-strong);background:var(--surface);color:var(--muted);display:grid;place-items:center}
+  .m-close:hover{background:var(--surface-2);color:var(--ink)}
+  .mtabs{display:flex; gap:4px; padding:14px 22px 0}
+  .mtab{border:none;background:transparent;color:var(--muted);font-size:13px;font-weight:600;padding:9px 12px;border-radius:8px 8px 0 0;border-bottom:2px solid transparent}
+  .mtab:hover{color:var(--ink)}
+  .mtab.active{color:var(--navy);border-bottom-color:var(--gold)}
+  .modal-body{padding:20px 22px 24px; overflow:auto; border-top:1px solid var(--border)}
+  .mpanel{display:none} .mpanel.active{display:block}
+  /* how-it-works steps */
+  .hiw-step{display:flex; gap:14px; padding:12px 0; border-bottom:1px solid var(--border)}
+  .hiw-step:last-child{border-bottom:none}
+  .hiw-step .n{flex:0 0 auto;width:26px;height:26px;border-radius:50%;background:var(--navy);color:#fff;display:grid;place-items:center;font-family:"IBM Plex Mono",monospace;font-size:12px;font-weight:500}
+  .hiw-step b{display:block;font-size:14px;color:var(--ink);margin-bottom:2px}
+  .hiw-step span{font-size:13px;line-height:1.5;color:var(--muted)}
+  /* accepts / limits two-column */
+  .io-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media (max-width:560px){ .io-grid{grid-template-columns:1fr} }
+  .io-col h4{margin:0 0 10px;font-size:12px;letter-spacing:.06em;text-transform:uppercase;font-family:"IBM Plex Mono",monospace}
+  .io-col.yes h4{color:var(--hi)} .io-col.no h4{color:var(--lo)}
+  .io-item{display:flex;gap:9px;align-items:flex-start;padding:7px 0;font-size:13px;line-height:1.45}
+  .io-item svg{flex:0 0 auto;width:15px;height:15px;margin-top:2px}
+  .io-col.yes svg{color:var(--hi)} .io-col.no svg{color:var(--lo)}
+  .io-item b{color:var(--ink);font-weight:600} .io-item span{color:var(--muted)}
+  /* edge-case rows */
+  .ec-row{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)}
+  .ec-row:last-child{border-bottom:none}
+  .ec-row .ec-k{flex:0 0 38%;font-size:13px;font-weight:600;color:var(--ink)}
+  .ec-row .ec-v{flex:1;font-size:12.5px;line-height:1.5;color:var(--muted)}
   .setup{
     width:min(680px, 100%); background:var(--surface); border:1px solid var(--border);
     border-radius:16px; box-shadow:var(--shadow); overflow:hidden;
@@ -344,7 +388,11 @@
       <div class="a-mark serif">i</div>
       <div class="eyebrow">New infringement analysis</div>
       <h1>Set up your claim chart</h1>
-      <p>Upload the chart and the accused product's documents, tell iLumos how your firm works, then refine it element by element in chat.</p>
+      <p>Provide the patent claims and the accused product's documents. iLumos drafts each row from those sources; you approve every change.</p>
+      <div class="hiw-row">
+        <button class="hiw-btn" id="hiwBtn"><span class="ci">i</span> How iLumos works</button>
+        <button class="hiw-btn ghost" id="ioBtn">What you can provide</button>
+      </div>
       <ul class="setup-points">
         <li><span class="pk"><svg class="icon" viewBox="0 0 24 24" style="width:15px;height:15px"><path d="M20 6 9 17l-5-5"/></svg></span><div><b>Grounded in your documents</b><span>Every suggestion traces back to a source you supplied.</span></div></li>
         <li><span class="pk"><svg class="icon" viewBox="0 0 24 24" style="width:15px;height:15px"><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/></svg></span><div><b>Cited and confidence-scored</b><span>No invented evidence; weak elements are flagged, not hidden.</span></div></li>
@@ -360,6 +408,7 @@
             <div class="dt" id="chartDt"><b>No chart loaded</b><span>US123456 v. Acme Corp Thermostat · 3 elements</span></div>
             <button class="mini" id="loadChart">Load sample</button>
           </div>
+          <div class="fmt-hint"><svg viewBox="0 0 24 24" class="icon"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg><span>Paste a patent number or upload the claims (PDF, DOCX). Already started a chart? Load it as CSV or XLSX and iLumos fills the gaps.</span></div>
         </div>
         <div class="field">
           <div class="lab"><span class="step-n mono">2</span> Accused-product documents</div>
@@ -369,6 +418,7 @@
             <button class="mini" id="addDocs">Add 3 docs</button>
           </div>
           <div class="chips" id="docChips"></div>
+          <div class="fmt-hint"><svg viewBox="0 0 24 24" class="icon"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg><span>Text-based PDF or DOCX, or a public product URL. Image-only scans are flagged for OCR, never silently skipped. iLumos won't cite marketing claims it can't verify.</span></div>
         </div>
         <div class="field">
           <div class="lab"><span class="step-n mono">3</span> Instructions to iLumos</div>
@@ -403,6 +453,56 @@
         </div>
       </div>
     </section>
+  </div>
+</div>
+
+<!-- HOW-IT-WORKS / INPUTS MODAL -->
+<div class="ovl" id="ovl" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="mTitle">
+    <div class="modal-head">
+      <div class="m-mark serif">i</div>
+      <h3 id="mTitle">How iLumos works</h3>
+      <button class="m-close" id="mClose" aria-label="Close"><svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+    </div>
+    <div class="mtabs">
+      <button class="mtab active" data-tab="how">How it works</button>
+      <button class="mtab" data-tab="io">What you can provide</button>
+      <button class="mtab" data-tab="edge">Messy inputs</button>
+    </div>
+    <div class="modal-body">
+      <div class="mpanel active" data-panel="how">
+        <div class="hiw-step"><span class="n mono">1</span><div><b>You provide the inputs</b><span>The patent claims (the elements to prove) and the accused product's technical documents (the evidence pool). Optionally, a chart you've already started.</span></div></div>
+        <div class="hiw-step"><span class="n mono">2</span><div><b>iLumos drafts each row, grounded</b><span>It reads your documents, finds the passage that supports each claim element, writes the analysis, and cites the exact source. It never invents evidence.</span></div></div>
+        <div class="hiw-step"><span class="n mono">3</span><div><b>You review and approve</b><span>Accept, edit, or reject every suggestion. Weak or unsupported elements are confidence-flagged, not hidden. The legal judgment stays yours.</span></div></div>
+        <div class="hiw-step"><span class="n mono">4</span><div><b>Export, litigation-ready</b><span>Send the finished element-by-element chart out as PDF or Word, with citations intact.</span></div></div>
+      </div>
+      <div class="mpanel" data-panel="io">
+        <div class="io-grid">
+          <div class="io-col yes">
+            <h4>iLumos accepts</h4>
+            <div class="io-item"><svg class="icon" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg><div><b>Patent claims</b> <span>— paste a patent number or the claim text</span></div></div>
+            <div class="io-item"><svg class="icon" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg><div><b>Product technical docs</b> <span>— text-based PDF / DOCX: spec sheets, datasheets, manuals</span></div></div>
+            <div class="io-item"><svg class="icon" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg><div><b>A partial chart</b> <span>— CSV / XLSX or pasted table you've started</span></div></div>
+            <div class="io-item"><svg class="icon" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg><div><b>Public product URLs</b> <span>— a product page to pull evidence from</span></div></div>
+          </div>
+          <div class="io-col no">
+            <h4>It won't take / won't do</h4>
+            <div class="io-item"><svg class="icon" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg><div><b>Image-only scans</b> <span>— no readable text; flagged for OCR, never skipped</span></div></div>
+            <div class="io-item"><svg class="icon" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg><div><b>The infringement verdict</b> <span>— that's your legal call, not the tool's</span></div></div>
+            <div class="io-item"><svg class="icon" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg><div><b>Legal or validity opinions</b> <span>— out of scope</span></div></div>
+            <div class="io-item"><svg class="icon" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg><div><b>Unverifiable marketing fluff</b> <span>— it won't cite a claim it can't ground</span></div></div>
+          </div>
+        </div>
+      </div>
+      <div class="mpanel" data-panel="edge">
+        <p style="margin:0 0 12px;font-size:13px;color:var(--muted);line-height:1.5">iLumos validates at ingest and fails loudly, not silently. Missing is never fabricated.</p>
+        <div class="ec-row"><div class="ec-k">Missing a column</div><div class="ec-v">Renders an explicit "Not drafted yet" state with a one-click <b>Draft this</b> — grounded and confidence-flagged, never blank-filled.</div></div>
+        <div class="ec-row"><div class="ec-k">Blank cells / bare claim list</div><div class="ec-v">Treated as work to do: retrieves candidate evidence and drafts reasoning per element, each confidence-badged.</div></div>
+        <div class="ec-row"><div class="ec-k">Wrong product docs</div><div class="ec-v">"These reference 'X', not your product — right files?" It refuses to cite them until you confirm.</div></div>
+        <div class="ec-row"><div class="ec-k">Unreadable / conflicting evidence</div><div class="ec-v">Surfaced, never guessed. Conflicts show both sources; low-confidence items route back to you or a senior reviewer.</div></div>
+        <div class="ec-row"><div class="ec-k">No evidence at all</div><div class="ec-v">Says "not covered" and asks for a doc or URL. It never invents a citation to fill the gap.</div></div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -466,6 +566,22 @@
     refreshStart();
   });
   $("#startBtn").addEventListener("click", startWorkspace);
+
+  /* ---------------- How-it-works / inputs modal ---------------- */
+  const ovl = $("#ovl");
+  const openModal = (tab)=>{ ovl.hidden=false; if(tab) switchTab(tab); };
+  const closeModal = ()=>{ ovl.hidden=true; };
+  function switchTab(name){
+    document.querySelectorAll(".mtab").forEach(b=>b.classList.toggle("active", b.dataset.tab===name));
+    document.querySelectorAll(".mpanel").forEach(p=>p.classList.toggle("active", p.dataset.panel===name));
+    $("#mTitle").textContent = name==="io" ? "What you can provide" : name==="edge" ? "How iLumos handles messy inputs" : "How iLumos works";
+  }
+  $("#hiwBtn").addEventListener("click", ()=>openModal("how"));
+  $("#ioBtn").addEventListener("click", ()=>openModal("io"));
+  $("#mClose").addEventListener("click", closeModal);
+  document.querySelectorAll(".mtab").forEach(b=>b.addEventListener("click", ()=>switchTab(b.dataset.tab)));
+  ovl.addEventListener("click", e=>{ if(e.target===ovl) closeModal(); });
+  document.addEventListener("keydown", e=>{ if(e.key==="Escape" && !ovl.hidden) closeModal(); });
 
   function startWorkspace(){
     els = JSON.parse(JSON.stringify(START));
