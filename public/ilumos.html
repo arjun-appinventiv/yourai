@@ -320,6 +320,23 @@
   .prompts::-webkit-scrollbar{display:none}
   .pchip{white-space:nowrap; font-size:12px; padding:6px 11px; border-radius:20px; border:1px solid var(--border-strong); background:var(--surface); color:var(--muted); flex:0 0 auto}
   .pchip:hover{border-color:var(--gold); color:var(--accent-ink); background:var(--accent-soft)}
+  /* recommendation strip */
+  .recs-head{display:flex; align-items:center; gap:7px; margin:0 2px 9px; font-size:11px; font-weight:600; letter-spacing:.04em; text-transform:uppercase; color:var(--muted)}
+  .recs-head svg{width:13px; height:13px; color:var(--gold-deep); stroke-width:1.8; fill:none; stroke:currentColor; stroke-linecap:round; stroke-linejoin:round}
+  .recs-head .g{color:var(--faint); font-weight:500; letter-spacing:.01em; text-transform:none}
+  .rec{flex:0 0 auto; display:flex; gap:10px; align-items:center; text-align:left; padding:8px 12px 8px 9px; border-radius:12px; border:1px solid var(--border-strong); background:var(--surface); position:relative; transition:border-color .15s, background .15s, transform .06s}
+  .rec:hover{border-color:var(--gold); background:var(--accent-soft)}
+  .rec:active{transform:translateY(1px)}
+  .rec .ri{flex:0 0 auto; width:28px; height:28px; border-radius:8px; display:grid; place-items:center; background:var(--surface-2); color:var(--accent-ink)}
+  .rec .ri svg{width:15px; height:15px; stroke:currentColor; fill:none; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round}
+  .rec .rt{display:flex; flex-direction:column; gap:1px; min-width:0}
+  .rec .rl{font-size:12.5px; font-weight:600; color:var(--ink); white-space:nowrap}
+  .rec .rm{font-size:11px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:190px}
+  .rec.prio{border-color:var(--gold-border); background:linear-gradient(180deg, var(--accent-soft), var(--surface))}
+  .rec.prio .ri{background:var(--lo-bg); color:var(--lo)}
+  .rec .tag{font-family:"IBM Plex Mono",monospace; font-size:9px; letter-spacing:.06em; text-transform:uppercase; font-weight:500; color:var(--navy); background:var(--gold); padding:2px 6px; border-radius:6px; margin-left:2px}
+  .rec .conf-dot{width:7px; height:7px; border-radius:50%; flex:0 0 auto; display:inline-block; margin-right:5px; vertical-align:middle}
+  .cd-lo{background:var(--lo)} .cd-med{background:var(--med)} .cd-hi{background:var(--hi)}
   .inrow{display:flex; gap:9px; align-items:flex-end}
   .inrow textarea{flex:1; border:1px solid var(--border-strong); border-radius:11px; background:var(--raise); color:var(--ink); font-family:inherit; font-size:14px; padding:10px 13px; resize:none; min-height:44px; max-height:120px; line-height:1.4}
   .inrow textarea:focus{outline:none; border-color:var(--accent)}
@@ -444,6 +461,10 @@
       <div class="phead"><h2>Refine in chat</h2><span class="sub">iLumos · grounded suggestions</span></div>
       <div class="chat-scroll" id="chatScroll"></div>
       <div class="composer">
+        <div class="recs-head">
+          <svg viewBox="0 0 24 24"><path d="M12 3l1.9 4.9L19 9.8l-4.1 2.9L16 18l-4-2.6L8 18l1.1-5.3L5 9.8l5.1-1.9z"/></svg>
+          iLumos recommends <span class="g">· from your chart's weak spots</span>
+        </div>
         <div class="prompts" id="prompts"></div>
         <div class="inrow">
           <textarea id="chatInput" rows="1" placeholder="Ask for a refinement, e.g. &ldquo;Strengthen the evidence for element 2&rdquo;"></textarea>
@@ -697,15 +718,45 @@
   }
 
   /* ---------------- Prompts ---------------- */
-  const PROMPTS=[
-    "Strengthen the evidence for element 2",
-    "The reasoning for element 3 is weak — add technical detail",
-    "Acme also has a temperature sensor array — add it",
-    "Rewrite element 1 reasoning for claim construction",
+  const REC_ICONS={
+    strengthen:'<path d="M12 3l7 4v5c0 4.4-3 8.3-7 9.5C8 20.3 5 16.4 5 12V7z"/><path d="M9.5 12l1.8 1.8 3.2-3.6"/>',
+    evidence:'<path d="M9 3h6l5 5v13H4V3z"/><path d="M14 3v6h6"/><path d="M8 13h8M8 17h5"/>',
+    add:'<circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/>',
+    legal:'<path d="M12 3v18M5 7h14M7 7l-3 6a3 3 0 0 0 6 0zM17 7l-3 6a3 3 0 0 0 6 0z"/>'
+  };
+  // Standing recommendations that aren't tied to a single element's confidence
+  const STANDING=[
+    { kind:'evidence', label:'Tighten evidence, element 2', meta:'Map the spec quote to the claim term', prompt:'Strengthen the evidence for element 2' },
+    { kind:'add',      label:'Add a missed element',       meta:'Acme temperature sensor array',       prompt:'Acme also has a temperature sensor array — add it' },
+    { kind:'legal',    label:'Claim-construction pass',    meta:'Rewrite element 1 for litigation',     prompt:'Rewrite element 1 reasoning for claim construction' },
   ];
+  function buildRecs(){
+    const recs=[];
+    // Priority: point at the weakest element in the live chart
+    const weak = els.filter(e=>e.conf==='lo').concat(els.filter(e=>e.conf==='med'));
+    if(weak.length){
+      const e=weak[0];
+      recs.push({
+        kind:'strengthen', prio:true, conf:e.conf, tag:'Start here',
+        label:'Strengthen element '+e.id,
+        meta:(e.conf==='lo'?'Low confidence':'Medium confidence')+' · needs a technical source',
+        prompt:'The reasoning for element '+e.id+' is weak — add technical detail'
+      });
+    }
+    return recs.concat(STANDING);
+  }
   function renderPrompts(){
     const p=$("#prompts"); p.innerHTML="";
-    PROMPTS.forEach(t=>{ const c=el("button","pchip"); c.textContent=t; c.addEventListener("click",()=>submit(t)); p.appendChild(c); });
+    buildRecs().forEach(r=>{
+      const c=el("button","rec"+(r.prio?" prio":""));
+      const conf = r.conf ? '<span class="conf-dot cd-'+r.conf+'"></span>' : '';
+      c.innerHTML =
+        '<span class="ri"><svg viewBox="0 0 24 24">'+REC_ICONS[r.kind]+'</svg></span>'+
+        '<span class="rt"><span class="rl">'+r.label+(r.tag?'<span class="tag">'+r.tag+'</span>':'')+'</span>'+
+        '<span class="rm">'+conf+r.meta+'</span></span>';
+      c.addEventListener("click",()=>submit(r.prompt));
+      p.appendChild(c);
+    });
   }
 
   /* ---------------- Suggestion engine (mock) ---------------- */
@@ -912,7 +963,7 @@
         if(p.reasoning!==e.reasoning) e._rev.reasoning=true;
       });
     }
-    updateVer(); renderChart(flashId); toast(label);
+    updateVer(); renderChart(flashId); renderPrompts(); toast(label);
   }
   function updateVer(){
     $("#verPill").textContent = "v"+(changes+1)+" · "+changes+(changes===1?" change":" changes");
@@ -921,7 +972,7 @@
   $("#undoBtn").addEventListener("click",()=>{
     if(!history.length) return;
     const prev=history.pop(); els=prev.snap; changes=prev.changes;
-    renderChart(); updateVer(); toast("Reverted to previous version"); addAI("Reverted the last change. You're back to the previous version.");
+    renderChart(); renderPrompts(); updateVer(); toast("Reverted to previous version"); addAI("Reverted the last change. You're back to the previous version.");
   });
 
   function buildPrintDoc(){
