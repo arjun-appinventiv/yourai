@@ -337,6 +337,13 @@
   .rec .tag{font-family:"IBM Plex Mono",monospace; font-size:9px; letter-spacing:.06em; text-transform:uppercase; font-weight:500; color:var(--navy); background:var(--gold); padding:2px 6px; border-radius:6px; margin-left:2px}
   .rec .conf-dot{width:7px; height:7px; border-radius:50%; flex:0 0 auto; display:inline-block; margin-right:5px; vertical-align:middle}
   .cd-lo{background:var(--lo)} .cd-med{background:var(--med)} .cd-hi{background:var(--hi)}
+  /* recommendations shown inside the chat, vertically */
+  .recs-chat{align-self:stretch; margin-top:2px; border:1px solid var(--border); border-radius:14px; background:var(--surface); padding:12px 13px 13px; box-shadow:var(--shadow)}
+  .recs-chat .recs-head{margin:0 2px 10px}
+  .rec-list{display:flex; flex-direction:column; gap:8px}
+  .recs-chat .rec{width:100%}
+  .recs-chat .rec .rm{max-width:none; white-space:normal}
+  .recs-chat .rec .rl{white-space:normal}
   .inrow{display:flex; gap:9px; align-items:flex-end}
   .inrow textarea{flex:1; border:1px solid var(--border-strong); border-radius:11px; background:var(--raise); color:var(--ink); font-family:inherit; font-size:14px; padding:10px 13px; resize:none; min-height:44px; max-height:120px; line-height:1.4}
   .inrow textarea:focus{outline:none; border-color:var(--accent)}
@@ -461,11 +468,6 @@
       <div class="phead"><h2>Refine in chat</h2><span class="sub">iLumos · grounded suggestions</span></div>
       <div class="chat-scroll" id="chatScroll"></div>
       <div class="composer">
-        <div class="recs-head">
-          <svg viewBox="0 0 24 24"><path d="M12 3l1.9 4.9L19 9.8l-4.1 2.9L16 18l-4-2.6L8 18l1.1-5.3L5 9.8l5.1-1.9z"/></svg>
-          iLumos recommends <span class="g">· from your chart's weak spots</span>
-        </div>
-        <div class="prompts" id="prompts"></div>
         <div class="inrow">
           <textarea id="chatInput" rows="1" placeholder="Ask for a refinement, e.g. &ldquo;Strengthen the evidence for element 2&rdquo;"></textarea>
           <button class="send" id="sendBtn" aria-label="Send">
@@ -620,8 +622,8 @@
       '<div class="ingest-note">Missing columns, unreadable docs, or a product mismatch would surface here as warnings before you refine.</div></div>'+
       '<div id="tableHost"></div>';
     renderChart();
-    renderPrompts();
     seedChat();
+    renderPrompts();
     updateVer();
   }
 
@@ -745,9 +747,15 @@
     }
     return recs.concat(STANDING);
   }
+  let recsBlock=null;
   function renderPrompts(){
-    const p=$("#prompts"); p.innerHTML="";
-    buildRecs().forEach(r=>{
+    if(recsBlock){ recsBlock.remove(); recsBlock=null; }
+    const recs=buildRecs();
+    if(!recs.length) return;
+    const b=el("div","recs-chat");
+    b.innerHTML='<div class="recs-head"><svg viewBox="0 0 24 24"><path d="M12 3l1.9 4.9L19 9.8l-4.1 2.9L16 18l-4-2.6L8 18l1.1-5.3L5 9.8l5.1-1.9z"/></svg> iLumos recommends <span class="g">· from your chart\'s weak spots</span></div><div class="rec-list"></div>';
+    const list=b.querySelector(".rec-list");
+    recs.forEach(r=>{
       const c=el("button","rec"+(r.prio?" prio":""));
       const conf = r.conf ? '<span class="conf-dot cd-'+r.conf+'"></span>' : '';
       c.innerHTML =
@@ -755,8 +763,9 @@
         '<span class="rt"><span class="rl">'+r.label+(r.tag?'<span class="tag">'+r.tag+'</span>':'')+'</span>'+
         '<span class="rm">'+conf+r.meta+'</span></span>';
       c.addEventListener("click",()=>submit(r.prompt));
-      p.appendChild(c);
+      list.appendChild(c);
     });
+    chat.appendChild(b); recsBlock=b; scrollchat();
   }
 
   /* ---------------- Suggestion engine (mock) ---------------- */
